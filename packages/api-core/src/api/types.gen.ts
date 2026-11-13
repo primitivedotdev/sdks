@@ -1226,7 +1226,7 @@ export type EmailSummary = {
     raw_size_bytes?: number | null;
     webhook_status?: EmailWebhookStatus;
     /**
-     * The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its attempts.
+     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its attempts.
      */
     webhook_attempt_count: number;
     /**
@@ -1644,23 +1644,23 @@ export type EmailDetail = {
     rejection_reason?: string | null;
     webhook_status?: EmailWebhookStatus;
     /**
-     * The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its attempts.
+     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its attempts.
      */
     webhook_attempt_count: number;
     /**
-     * The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its last attempt.
+     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its last attempt.
      */
     webhook_last_attempt_at?: string | null;
     /**
-     * The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. What it last answered.
+     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. What it last answered.
      */
     webhook_last_status_code?: number | null;
     /**
-     * The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its last error.
+     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its last error.
      */
     webhook_last_error?: string | null;
     /**
-     * The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. When it was delivered.
+     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. When it was delivered.
      */
     webhook_fired_at?: string | null;
     smtp_helo?: string | null;
@@ -1988,7 +1988,7 @@ export type EmailDetail = {
         };
     } | null;
     /**
-     * The rule share a reader has this email through, when that is their only way to it. Null for everyone else.
+     * Only for a reader who has this email through a colleague's share of their mail, when that share is their only way to it: the share and who gave it. Null for everyone else, including on your own mail when a rule or share of yours gave it to someone: rule_deliveries counts the webhooks rules delivered it to, and GET /v1/email-rule-shares/{id}/emails lists what a share you gave has given.
      */
     shared_through?: {
         /**
@@ -2008,7 +2008,7 @@ export type EmailDetail = {
         };
     } | null;
     /**
-     * Where Email Rules delivered this email by webhook, for the owner of the mailbox it is at, on their own dashboard session or the Primitive CLI. Null for everyone else, and when it could not be read in time. A key reading it through a rule is not a delivery.
+     * Where Email Rules delivered this email by webhook, for the owner of the mailbox it is at, on their own dashboard session or the Primitive CLI. Null for everyone else, including on another member's mail even for an organization owner or admin (GET /v1/webhooks/deliveries?email_id=<email-id> lists its deliveries, a rule's included), and when it could not be read in time. A key reading it through a rule is not a delivery.
      */
     rule_deliveries?: {
         /**
@@ -6437,6 +6437,16 @@ export type EmailRuleScopeUsed = {
     } | null;
 };
 
+export type EmailRuleScopeWarning = {
+    name: string;
+    kind: 'address' | 'domain';
+    /**
+     * unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet.
+     */
+    reason: 'unknown_domain' | 'inactive_domain' | 'unknown_address';
+    message: string;
+};
+
 /**
  * For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read.
  */
@@ -6497,6 +6507,10 @@ export type CompileEmailRuleResult = {
     conditions_breadth?: EmailRuleBreadth | null;
     breadth_scope?: EmailRuleScopeUsed;
     /**
+     * Names in the scope_selection sent that match nothing this organization receives mail at (a typo, or an inbox not yet in use), as a test or write would warn of them. Present only when there are some; writes ignore it.
+     */
+    scope_warnings?: Array<EmailRuleScopeWarning>;
+    /**
      * Present only when include_sql was true.
      */
     sql?: {
@@ -6523,16 +6537,6 @@ export type EmailRuleTested = {
      * Present when a tree was sent without kind, so it was tested as grant.
      */
     note?: string;
-};
-
-export type EmailRuleScopeWarning = {
-    name: string;
-    kind: 'address' | 'domain';
-    /**
-     * unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet.
-     */
-    reason: 'unknown_domain' | 'inactive_domain' | 'unknown_address';
-    message: string;
 };
 
 export type EmailRuleSampleJudgment = {
@@ -6706,6 +6710,10 @@ export type TestEmailRuleResult = {
          */
         recipient?: string;
         subject?: string | null;
+        /**
+         * On matched and near_miss: the file names the email lists, in order, at most 10 (the names its questions are given; never what is in the files). Parts with no name are left out; absent when there are none.
+         */
+        attachment_names?: Array<string>;
         /**
          * How each top-level part of the rule decided. Present for matched, near_miss and no_match.
          */
@@ -7154,9 +7162,17 @@ export type EmailRuleWritten = {
          */
         failed_samples?: Array<number>;
         /**
-         * Made-up emails not decided, by index. Only a write sent with if_expectations_pass that saves a version or activates the rule judges them.
+         * Made-up emails not decided, by index. Only a write that saves a version or activates the rule, sent with if_expectations_pass or judged by default, judges them.
          */
         undecided_samples?: Array<number>;
+        /**
+         * failed_samples with each one's label, from a write that judged them before saving (if_expectations_pass, or by default).
+         */
+        failed_sample_details?: Array<EmailRuleSampleDetail>;
+        /**
+         * undecided_samples with each one's label, as failed_sample_details.
+         */
+        undecided_sample_details?: Array<EmailRuleSampleDetail>;
         /**
          * On an update that saved a version that did not pass, or a do_not_share rule created active: that it was saved anyway, is current, and whether it is live.
          */
@@ -7170,7 +7186,7 @@ export type EmailRuleWritten = {
         note: string;
     };
     /**
-     * After an update that saved a version: API keys listing the rule and the webhooks they own. shares_ended is always 0: a new version keeps the rule's share (share_notice says so). The rule keeps its state. Absent if not read.
+     * After an update that saved a version, or turned a grant rule active: API keys listing the rule and the webhooks they own, which read and receive what a grant rule grants from now on. shares_ended is always 0: a new version keeps the rule's share (share_notice says so). Saving a version does not by itself change the rule's state. Absent after any other write, and if not read.
      */
     affects?: {
         keys: number;
@@ -7240,6 +7256,11 @@ export type EmailRuleExpectationSample = {
     created_at: string;
 };
 
+export type EmailRuleSampleDetail = {
+    index: number;
+    label: string | null;
+};
+
 export type CreateEmailRuleRequest = {
     /**
      * A short name for the rule.
@@ -7299,6 +7320,10 @@ export type CreateEmailRuleRequest = {
      */
     conditions_breadth?: EmailRuleBreadth | null;
     breadth_scope?: EmailRuleScopeUsed;
+    /**
+     * Ignored (the compile answer's scope_warnings).
+     */
+    scope_warnings?: Array<EmailRuleScopeWarning>;
 };
 
 export type CreateEmailRuleResult = EmailRuleWritten;
@@ -7462,6 +7487,10 @@ export type UpdateEmailRuleRequest = {
     conditions_breadth?: EmailRuleBreadth | null;
     breadth_scope?: EmailRuleScopeUsed;
     /**
+     * Ignored (the compile answer's scope_warnings).
+     */
+    scope_warnings?: Array<EmailRuleScopeWarning>;
+    /**
      * Must be the rule's own (400 kind_mismatch).
      */
     kind?: 'grant' | 'do_not_share';
@@ -7616,7 +7645,7 @@ export type EmailRuleReceivers = {
         };
         count: number;
         /**
-         * On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches.
+         * On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches. It counts what they can read, not whether any has read an email.
          */
         reads_in_full?: number;
         /**
@@ -7949,6 +7978,10 @@ export type CreateEmailRuleRequestRequest = {
     conditions_breadth?: EmailRuleBreadth | null;
     breadth_scope?: EmailRuleScopeUsed;
     /**
+     * Ignored (the compile answer's scope_warnings).
+     */
+    scope_warnings?: Array<EmailRuleScopeWarning>;
+    /**
      * Only grant.
      */
     kind?: 'grant';
@@ -7971,7 +8004,7 @@ export type CreateEmailRuleRequestResult = {
      */
     server_explanation?: string | null;
     /**
-     * Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.
+     * Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes and that counts the asker quotes came from their own mail. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.
      */
     server_notes?: Array<string>;
     compiled_by: string;
@@ -8008,7 +8041,7 @@ export type CreateEmailRuleRequestResult = {
      */
     edited_on_accept?: boolean | null;
     /**
-     * For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
+     * For the member asked, while pending: who asked (as proposer names them), what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results and rule_deliveries). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
      */
     notice?: string | null;
     /**
@@ -8073,7 +8106,7 @@ export type EmailRuleRequest = {
      */
     server_explanation?: string | null;
     /**
-     * Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.
+     * Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes and that counts the asker quotes came from their own mail. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.
      */
     server_notes?: Array<string>;
     compiled_by: string;
@@ -8110,7 +8143,7 @@ export type EmailRuleRequest = {
      */
     edited_on_accept?: boolean | null;
     /**
-     * For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
+     * For the member asked, while pending: who asked (as proposer names them), what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results and rule_deliveries). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
      */
     notice?: string | null;
 };
@@ -8295,6 +8328,10 @@ export type AcceptEmailRuleRequestRequest = {
     conditions_breadth?: EmailRuleBreadth | null;
     breadth_scope?: EmailRuleScopeUsed;
     /**
+     * Ignored (the compile answer's scope_warnings).
+     */
+    scope_warnings?: Array<EmailRuleScopeWarning>;
+    /**
      * Only grant.
      */
     kind?: 'grant';
@@ -8305,13 +8342,13 @@ export type AcceptEmailRuleRequestRequest = {
 };
 
 export type AcceptEmailRuleRequestResult = {
-    request: EmailRuleRequest;
-    rule: EmailRuleWithVersion;
-    share: EmailRuleShare;
     /**
      * What is now shared, in words. When you changed the rule and it can now match mail the request left out by who it was sent to (such as mail where an address is only copied), that comes first; when you changed its english, tree or explanation (edited_on_accept; a new name alone is no change), that rule.current is what you agreed to and request what was asked.
      */
     notice?: string;
+    rule: EmailRuleWithVersion;
+    share: EmailRuleShare;
+    request: EmailRuleRequest;
 };
 
 export type ListEmailRuleSharesResult = Array<EmailRuleShare>;
@@ -8454,6 +8491,14 @@ export type EmailRuleCoveringMe = {
      */
     receivers_once_active: EmailRuleReceivers | null;
     created_at: string;
+    /**
+     * What its author asked for, in their words, at its current version. Null when it has no version, was deleted after the page was read, or the words could not be read in time; GET /v1/email-rules/covering-me/{id} shows them with its tree.
+     */
+    english?: string | null;
+    /**
+     * What its current version matches, as compiled. Null as english is.
+     */
+    explanation?: string | null;
 };
 
 export type EmailRuleCoverage = {

@@ -44,6 +44,9 @@ class TestEmailRuleResultResultsItem:
             recipient (str | Unset): The mailbox this copy of the email was received in, as GET /v1/emails/{id} shows it.
                 Given with received_at, from_address and subject, so absent for not_found.
             subject (None | str | Unset):
+            attachment_names (list[str] | Unset): On matched and near_miss: the file names the email lists, in order, at
+                most 10 (the names its questions are given; never what is in the files). Parts with no name are left out; absent
+                when there are none.
             parts (list[TestEmailRuleResultResultsItemPartsItem] | Unset): How each top-level part of the rule decided.
                 Present for matched, near_miss and no_match.
             missing_facts (list[str] | Unset): Facts the rule reads that this email's classification left out, so the rule
@@ -74,6 +77,7 @@ class TestEmailRuleResultResultsItem:
     from_address: None | str | Unset = UNSET
     recipient: str | Unset = UNSET
     subject: None | str | Unset = UNSET
+    attachment_names: list[str] | Unset = UNSET
     parts: list[TestEmailRuleResultResultsItemPartsItem] | Unset = UNSET
     missing_facts: list[str] | Unset = UNSET
     values: TestEmailRuleResultResultsItemValues | Unset = UNSET
@@ -112,6 +116,12 @@ class TestEmailRuleResultResultsItem:
             subject = UNSET
         else:
             subject = self.subject
+
+        attachment_names: list[str] | Unset = UNSET
+        if not isinstance(self.attachment_names, Unset):
+            attachment_names = self.attachment_names
+
+
 
         parts: list[dict[str, Any]] | Unset = UNSET
         if not isinstance(self.parts, Unset):
@@ -171,6 +181,8 @@ class TestEmailRuleResultResultsItem:
             field_dict["recipient"] = recipient
         if subject is not UNSET:
             field_dict["subject"] = subject
+        if attachment_names is not UNSET:
+            field_dict["attachment_names"] = attachment_names
         if parts is not UNSET:
             field_dict["parts"] = parts
         if missing_facts is not UNSET:
@@ -236,6 +248,9 @@ class TestEmailRuleResultResultsItem:
             return cast(None | str | Unset, data)
 
         subject = _parse_subject(d.pop("subject", UNSET))
+
+
+        attachment_names = cast(list[str], d.pop("attachment_names", UNSET))
 
 
         _parts = d.pop("parts", UNSET)
@@ -312,6 +327,7 @@ class TestEmailRuleResultResultsItem:
             from_address=from_address,
             recipient=recipient,
             subject=subject,
+            attachment_names=attachment_names,
             parts=parts,
             missing_facts=missing_facts,
             values=values,

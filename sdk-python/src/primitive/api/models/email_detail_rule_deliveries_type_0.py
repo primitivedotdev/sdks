@@ -24,8 +24,9 @@ T = TypeVar("T", bound="EmailDetailRuleDeliveriesType0")
 @_attrs_define
 class EmailDetailRuleDeliveriesType0:
     """ Where Email Rules delivered this email by webhook, for the owner of the mailbox it is at, on their own dashboard
-    session or the Primitive CLI. Null for everyone else, and when it could not be read in time. A key reading it
-    through a rule is not a delivery.
+    session or the Primitive CLI. Null for everyone else, including on another member's mail even for an organization
+    owner or admin (GET /v1/webhooks/deliveries?email_id=<email-id> lists its deliveries, a rule's included), and when
+    it could not be read in time. A key reading it through a rule is not a delivery.
 
         Attributes:
             rules (list[EmailDetailRuleDeliveriesType0RulesItem]): Each rule over your mail that queued a webhook delivery

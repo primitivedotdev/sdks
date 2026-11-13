@@ -18,6 +18,7 @@ if TYPE_CHECKING:
   from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput
   from ..models.email_rule_scope_selection import EmailRuleScopeSelection
   from ..models.email_rule_scope_used import EmailRuleScopeUsed
+  from ..models.email_rule_scope_warning import EmailRuleScopeWarning
   from ..models.email_rule_tree_input import EmailRuleTreeInput
   from ..models.update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0
 
@@ -51,6 +52,7 @@ class UpdateEmailRuleRequest:
             breadth (EmailRuleBreadth | None | Unset): Ignored (the compile answer's breadth).
             conditions_breadth (EmailRuleBreadth | None | Unset): Ignored.
             breadth_scope (EmailRuleScopeUsed | Unset):
+            scope_warnings (list[EmailRuleScopeWarning] | Unset): Ignored (the compile answer's scope_warnings).
             kind (UpdateEmailRuleRequestKind | Unset): Must be the rule's own (400 kind_mismatch).
             evaluation_scope (UpdateEmailRuleRequestEvaluationScope | Unset): own_mailboxes: mail to your own addresses and
                 agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
@@ -93,6 +95,7 @@ class UpdateEmailRuleRequest:
     breadth: EmailRuleBreadth | None | Unset = UNSET
     conditions_breadth: EmailRuleBreadth | None | Unset = UNSET
     breadth_scope: EmailRuleScopeUsed | Unset = UNSET
+    scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
     kind: UpdateEmailRuleRequestKind | Unset = UNSET
     evaluation_scope: UpdateEmailRuleRequestEvaluationScope | Unset = UNSET
     scope_selection: EmailRuleScopeSelection | Unset = UNSET
@@ -113,6 +116,7 @@ class UpdateEmailRuleRequest:
         from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
         from ..models.email_rule_scope_used import EmailRuleScopeUsed # noqa: PLC0415
+        from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         from ..models.update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0 # noqa: PLC0415
         name = self.name
@@ -163,6 +167,15 @@ class UpdateEmailRuleRequest:
         breadth_scope: dict[str, Any] | Unset = UNSET
         if not isinstance(self.breadth_scope, Unset):
             breadth_scope = self.breadth_scope.to_dict()
+
+        scope_warnings: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.scope_warnings, Unset):
+            scope_warnings = []
+            for scope_warnings_item_data in self.scope_warnings:
+                scope_warnings_item = scope_warnings_item_data.to_dict()
+                scope_warnings.append(scope_warnings_item)
+
+
 
         kind: str | Unset = UNSET
         if not isinstance(self.kind, Unset):
@@ -243,6 +256,8 @@ class UpdateEmailRuleRequest:
             field_dict["conditions_breadth"] = conditions_breadth
         if breadth_scope is not UNSET:
             field_dict["breadth_scope"] = breadth_scope
+        if scope_warnings is not UNSET:
+            field_dict["scope_warnings"] = scope_warnings
         if kind is not UNSET:
             field_dict["kind"] = kind
         if evaluation_scope is not UNSET:
@@ -274,6 +289,7 @@ class UpdateEmailRuleRequest:
         from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
         from ..models.email_rule_scope_used import EmailRuleScopeUsed # noqa: PLC0415
+        from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         from ..models.update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0 # noqa: PLC0415
         d = dict(src_dict)
@@ -359,6 +375,18 @@ class UpdateEmailRuleRequest:
             breadth_scope = EmailRuleScopeUsed.from_dict(_breadth_scope)
 
 
+
+
+        _scope_warnings = d.pop("scope_warnings", UNSET)
+        scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
+        if _scope_warnings is not UNSET:
+            scope_warnings = []
+            for scope_warnings_item_data in _scope_warnings:
+                scope_warnings_item = EmailRuleScopeWarning.from_dict(scope_warnings_item_data)
+
+
+
+                scope_warnings.append(scope_warnings_item)
 
 
         _kind = d.pop("kind", UNSET)
@@ -468,6 +496,7 @@ class UpdateEmailRuleRequest:
             breadth=breadth,
             conditions_breadth=conditions_breadth,
             breadth_scope=breadth_scope,
+            scope_warnings=scope_warnings,
             kind=kind,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,

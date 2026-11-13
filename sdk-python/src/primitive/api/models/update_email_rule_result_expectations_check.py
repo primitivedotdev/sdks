@@ -11,6 +11,8 @@ from ..types import UNSET, Unset
 from typing import cast
 from uuid import UUID
 
+if TYPE_CHECKING:
+  from ..models.email_rule_sample_detail import EmailRuleSampleDetail
 
 
 
@@ -40,8 +42,12 @@ class UpdateEmailRuleResultExpectationsCheck:
                 from a server that predates it.
             failed_samples (list[int] | Unset): Made-up emails that failed, by index in the set judged (saved oldest first,
                 then added; or as sent).
-            undecided_samples (list[int] | Unset): Made-up emails not decided, by index. Only a write sent with
-                if_expectations_pass that saves a version or activates the rule judges them.
+            undecided_samples (list[int] | Unset): Made-up emails not decided, by index. Only a write that saves a version
+                or activates the rule, sent with if_expectations_pass or judged by default, judges them.
+            failed_sample_details (list[EmailRuleSampleDetail] | Unset): failed_samples with each one's label, from a write
+                that judged them before saving (if_expectations_pass, or by default).
+            undecided_sample_details (list[EmailRuleSampleDetail] | Unset): undecided_samples with each one's label, as
+                failed_sample_details.
             note (str | Unset): On an update that saved a version that did not pass, or a do_not_share rule created active:
                 that it was saved anyway, is current, and whether it is live.
      """
@@ -53,6 +59,8 @@ class UpdateEmailRuleResultExpectationsCheck:
     decided: bool | Unset = UNSET
     failed_samples: list[int] | Unset = UNSET
     undecided_samples: list[int] | Unset = UNSET
+    failed_sample_details: list[EmailRuleSampleDetail] | Unset = UNSET
+    undecided_sample_details: list[EmailRuleSampleDetail] | Unset = UNSET
     note: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -61,6 +69,7 @@ class UpdateEmailRuleResultExpectationsCheck:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_rule_sample_detail import EmailRuleSampleDetail # noqa: PLC0415
         version: int | None
         version = self.version
 
@@ -95,6 +104,24 @@ class UpdateEmailRuleResultExpectationsCheck:
 
 
 
+        failed_sample_details: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.failed_sample_details, Unset):
+            failed_sample_details = []
+            for failed_sample_details_item_data in self.failed_sample_details:
+                failed_sample_details_item = failed_sample_details_item_data.to_dict()
+                failed_sample_details.append(failed_sample_details_item)
+
+
+
+        undecided_sample_details: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.undecided_sample_details, Unset):
+            undecided_sample_details = []
+            for undecided_sample_details_item_data in self.undecided_sample_details:
+                undecided_sample_details_item = undecided_sample_details_item_data.to_dict()
+                undecided_sample_details.append(undecided_sample_details_item)
+
+
+
         note = self.note
 
 
@@ -112,6 +139,10 @@ class UpdateEmailRuleResultExpectationsCheck:
             field_dict["failed_samples"] = failed_samples
         if undecided_samples is not UNSET:
             field_dict["undecided_samples"] = undecided_samples
+        if failed_sample_details is not UNSET:
+            field_dict["failed_sample_details"] = failed_sample_details
+        if undecided_sample_details is not UNSET:
+            field_dict["undecided_sample_details"] = undecided_sample_details
         if note is not UNSET:
             field_dict["note"] = note
 
@@ -121,6 +152,7 @@ class UpdateEmailRuleResultExpectationsCheck:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_rule_sample_detail import EmailRuleSampleDetail # noqa: PLC0415
         d = dict(src_dict)
         def _parse_version(data: object) -> int | None:
             if data is None:
@@ -166,6 +198,30 @@ class UpdateEmailRuleResultExpectationsCheck:
         undecided_samples = cast(list[int], d.pop("undecided_samples", UNSET))
 
 
+        _failed_sample_details = d.pop("failed_sample_details", UNSET)
+        failed_sample_details: list[EmailRuleSampleDetail] | Unset = UNSET
+        if _failed_sample_details is not UNSET:
+            failed_sample_details = []
+            for failed_sample_details_item_data in _failed_sample_details:
+                failed_sample_details_item = EmailRuleSampleDetail.from_dict(failed_sample_details_item_data)
+
+
+
+                failed_sample_details.append(failed_sample_details_item)
+
+
+        _undecided_sample_details = d.pop("undecided_sample_details", UNSET)
+        undecided_sample_details: list[EmailRuleSampleDetail] | Unset = UNSET
+        if _undecided_sample_details is not UNSET:
+            undecided_sample_details = []
+            for undecided_sample_details_item_data in _undecided_sample_details:
+                undecided_sample_details_item = EmailRuleSampleDetail.from_dict(undecided_sample_details_item_data)
+
+
+
+                undecided_sample_details.append(undecided_sample_details_item)
+
+
         note = d.pop("note", UNSET)
 
         update_email_rule_result_expectations_check = cls(
@@ -176,6 +232,8 @@ class UpdateEmailRuleResultExpectationsCheck:
             decided=decided,
             failed_samples=failed_samples,
             undecided_samples=undecided_samples,
+            failed_sample_details=failed_sample_details,
+            undecided_sample_details=undecided_sample_details,
             note=note,
         )
 

@@ -20,8 +20,10 @@ T = TypeVar("T", bound="UpdateEmailRuleResultAffects")
 
 @_attrs_define
 class UpdateEmailRuleResultAffects:
-    """ After an update that saved a version: API keys listing the rule and the webhooks they own. shares_ended is always 0:
-    a new version keeps the rule's share (share_notice says so). The rule keeps its state. Absent if not read.
+    """ After an update that saved a version, or turned a grant rule active: API keys listing the rule and the webhooks they
+    own, which read and receive what a grant rule grants from now on. shares_ended is always 0: a new version keeps the
+    rule's share (share_notice says so). Saving a version does not by itself change the rule's state. Absent after any
+    other write, and if not read.
 
         Attributes:
             keys (int):

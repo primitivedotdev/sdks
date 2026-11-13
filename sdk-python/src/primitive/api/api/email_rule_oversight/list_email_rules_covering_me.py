@@ -108,22 +108,28 @@ def sync_detailed(
 
      Every email rule that covers one of your own mailboxes now, yours included, newest first, in any
     state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your
-    member mailbox, or a personal agent's address): one whose author reads all your mail (author scope,
-    for an author who reads the organization's mail or holds an access entry for your mailbox), or one
-    that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers
-    you. You see its name, wording, current tree, state, kind and author, and which of your own
+    member mailbox, or a personal agent's address), and covers.via says how: author_reach, it runs over
+    everything its author can read, which includes your mail (an author who reads the organization's
+    mail or holds an access entry for your mailbox); selected, it names your mailbox or its domain;
+    own_mailboxes, it is your own rule over your own mail. Another member's own_mailboxes rule never
+    covers you. You see its name, wording, current tree, state, kind and author, and which of your own
     mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a
     condition on who an email is from or to). While it covers you, you also see who receives what it
     matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the
     organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares
     they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope
-    names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a
-    cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. For
-    what happened to one email of yours, every rule's decision on it and, for another member's rule
-    covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules
-    list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
-    dashboard session or the Primitive CLI.
+    names, or its saved expectations. Each listed rule carries its current version's english and
+    explanation; its tree is on GET /v1/email-rules/covering-me/{id}. A page can hold fewer rules than
+    limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading
+    until meta.cursor is null. For what happened to one email of yours, every rule's decision on it and,
+    for another member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-
+    results (primitive email-rules list-email-rule-results --email-id <email-id>). Whether a rule
+    delivered the email by webhook is not in the rule results: on your own mail, rule_deliveries on GET
+    /v1/emails/{id} (primitive emails get <email-id> --json) counts each rule's webhook deliveries; on
+    another member's mail, GET /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries
+    list --email-id <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only
+    on your own dashboard session or the Primitive CLI.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -161,22 +167,28 @@ def sync(
 
      Every email rule that covers one of your own mailboxes now, yours included, newest first, in any
     state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your
-    member mailbox, or a personal agent's address): one whose author reads all your mail (author scope,
-    for an author who reads the organization's mail or holds an access entry for your mailbox), or one
-    that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers
-    you. You see its name, wording, current tree, state, kind and author, and which of your own
+    member mailbox, or a personal agent's address), and covers.via says how: author_reach, it runs over
+    everything its author can read, which includes your mail (an author who reads the organization's
+    mail or holds an access entry for your mailbox); selected, it names your mailbox or its domain;
+    own_mailboxes, it is your own rule over your own mail. Another member's own_mailboxes rule never
+    covers you. You see its name, wording, current tree, state, kind and author, and which of your own
     mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a
     condition on who an email is from or to). While it covers you, you also see who receives what it
     matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the
     organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares
     they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope
-    names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a
-    cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. For
-    what happened to one email of yours, every rule's decision on it and, for another member's rule
-    covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules
-    list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
-    dashboard session or the Primitive CLI.
+    names, or its saved expectations. Each listed rule carries its current version's english and
+    explanation; its tree is on GET /v1/email-rules/covering-me/{id}. A page can hold fewer rules than
+    limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading
+    until meta.cursor is null. For what happened to one email of yours, every rule's decision on it and,
+    for another member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-
+    results (primitive email-rules list-email-rule-results --email-id <email-id>). Whether a rule
+    delivered the email by webhook is not in the rule results: on your own mail, rule_deliveries on GET
+    /v1/emails/{id} (primitive emails get <email-id> --json) counts each rule's webhook deliveries; on
+    another member's mail, GET /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries
+    list --email-id <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only
+    on your own dashboard session or the Primitive CLI.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -209,22 +221,28 @@ async def asyncio_detailed(
 
      Every email rule that covers one of your own mailboxes now, yours included, newest first, in any
     state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your
-    member mailbox, or a personal agent's address): one whose author reads all your mail (author scope,
-    for an author who reads the organization's mail or holds an access entry for your mailbox), or one
-    that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers
-    you. You see its name, wording, current tree, state, kind and author, and which of your own
+    member mailbox, or a personal agent's address), and covers.via says how: author_reach, it runs over
+    everything its author can read, which includes your mail (an author who reads the organization's
+    mail or holds an access entry for your mailbox); selected, it names your mailbox or its domain;
+    own_mailboxes, it is your own rule over your own mail. Another member's own_mailboxes rule never
+    covers you. You see its name, wording, current tree, state, kind and author, and which of your own
     mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a
     condition on who an email is from or to). While it covers you, you also see who receives what it
     matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the
     organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares
     they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope
-    names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a
-    cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. For
-    what happened to one email of yours, every rule's decision on it and, for another member's rule
-    covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules
-    list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
-    dashboard session or the Primitive CLI.
+    names, or its saved expectations. Each listed rule carries its current version's english and
+    explanation; its tree is on GET /v1/email-rules/covering-me/{id}. A page can hold fewer rules than
+    limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading
+    until meta.cursor is null. For what happened to one email of yours, every rule's decision on it and,
+    for another member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-
+    results (primitive email-rules list-email-rule-results --email-id <email-id>). Whether a rule
+    delivered the email by webhook is not in the rule results: on your own mail, rule_deliveries on GET
+    /v1/emails/{id} (primitive emails get <email-id> --json) counts each rule's webhook deliveries; on
+    another member's mail, GET /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries
+    list --email-id <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only
+    on your own dashboard session or the Primitive CLI.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -262,22 +280,28 @@ async def asyncio(
 
      Every email rule that covers one of your own mailboxes now, yours included, newest first, in any
     state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your
-    member mailbox, or a personal agent's address): one whose author reads all your mail (author scope,
-    for an author who reads the organization's mail or holds an access entry for your mailbox), or one
-    that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers
-    you. You see its name, wording, current tree, state, kind and author, and which of your own
+    member mailbox, or a personal agent's address), and covers.via says how: author_reach, it runs over
+    everything its author can read, which includes your mail (an author who reads the organization's
+    mail or holds an access entry for your mailbox); selected, it names your mailbox or its domain;
+    own_mailboxes, it is your own rule over your own mail. Another member's own_mailboxes rule never
+    covers you. You see its name, wording, current tree, state, kind and author, and which of your own
     mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a
     condition on who an email is from or to). While it covers you, you also see who receives what it
     matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the
     organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares
     they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope
-    names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a
-    cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. For
-    what happened to one email of yours, every rule's decision on it and, for another member's rule
-    covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules
-    list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
-    dashboard session or the Primitive CLI.
+    names, or its saved expectations. Each listed rule carries its current version's english and
+    explanation; its tree is on GET /v1/email-rules/covering-me/{id}. A page can hold fewer rules than
+    limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading
+    until meta.cursor is null. For what happened to one email of yours, every rule's decision on it and,
+    for another member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-
+    results (primitive email-rules list-email-rule-results --email-id <email-id>). Whether a rule
+    delivered the email by webhook is not in the rule results: on your own mail, rule_deliveries on GET
+    /v1/emails/{id} (primitive emails get <email-id> --json) counts each rule's webhook deliveries; on
+    another member's mail, GET /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries
+    list --email-id <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only
+    on your own dashboard session or the Primitive CLI.
 
     Args:
         limit (int | Unset):  Default: 50.

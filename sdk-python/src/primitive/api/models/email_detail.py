@@ -92,8 +92,10 @@ class EmailDetail:
             domain (str):
             created_at (datetime.datetime):
             received_at (datetime.datetime):
-            webhook_attempt_count (int): The email's own routed delivery only (where routing sent it); a rule's deliveries
-                never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its attempts.
+            webhook_attempt_count (int): Only this email's routed delivery (the webhook or Function routing sent it to),
+                never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST
+                /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET
+                /emails/{id}, for the mailbox's owner. Its attempts.
             from_email (str): Bare email address parsed from the `From:` header, with
                 display name stripped (e.g. `alice@example.com`). Falls
                 back to `sender` (the SMTP envelope MAIL FROM) when the
@@ -239,18 +241,22 @@ class EmailDetail:
                 is `pending`; it means the email is past ingestion but
                 webhook delivery has not yet begun. Two overlapping uses
                 of the word `pending` for distinct lifecycle phases.
-            webhook_last_attempt_at (datetime.datetime | None | Unset): The email's own routed delivery only (where routing
-                sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the
-                mailbox's owner. Its last attempt.
-            webhook_last_status_code (int | None | Unset): The email's own routed delivery only (where routing sent it); a
-                rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner.
-                What it last answered.
-            webhook_last_error (None | str | Unset): The email's own routed delivery only (where routing sent it); a rule's
-                deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its last
-                error.
-            webhook_fired_at (datetime.datetime | None | Unset): The email's own routed delivery only (where routing sent
-                it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's
-                owner. When it was delivered.
+            webhook_last_attempt_at (datetime.datetime | None | Unset): Only this email's routed delivery (the webhook or
+                Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless
+                the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in
+                `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its last attempt.
+            webhook_last_status_code (int | None | Unset): Only this email's routed delivery (the webhook or Function
+                routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email
+                is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries`
+                on GET /emails/{id}, for the mailbox's owner. What it last answered.
+            webhook_last_error (None | str | Unset): Only this email's routed delivery (the webhook or Function routing sent
+                it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later
+                (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET
+                /emails/{id}, for the mailbox's owner. Its last error.
+            webhook_fired_at (datetime.datetime | None | Unset): Only this email's routed delivery (the webhook or Function
+                routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email
+                is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries`
+                on GET /emails/{id}, for the mailbox's owner. When it was delivered.
             smtp_helo (None | str | Unset):
             smtp_mail_from (None | str | Unset): SMTP envelope MAIL FROM (return-path), as accepted by the
                 inbound mail server. Same value as `sender`; both fields
@@ -326,11 +332,16 @@ class EmailDetail:
             understanding (EmailDetailUnderstandingType0 | None | Unset): Classification facts for this email. Present only
                 for an org with email rules, where the body is shown. May be null: this field carries message content, which is
                 withheld when the content is not available to your credential.
-            shared_through (EmailDetailSharedThroughType0 | None | Unset): The rule share a reader has this email through,
-                when that is their only way to it. Null for everyone else.
+            shared_through (EmailDetailSharedThroughType0 | None | Unset): Only for a reader who has this email through a
+                colleague's share of their mail, when that share is their only way to it: the share and who gave it. Null for
+                everyone else, including on your own mail when a rule or share of yours gave it to someone: rule_deliveries
+                counts the webhooks rules delivered it to, and GET /v1/email-rule-shares/{id}/emails lists what a share you gave
+                has given.
             rule_deliveries (EmailDetailRuleDeliveriesType0 | None | Unset): Where Email Rules delivered this email by
                 webhook, for the owner of the mailbox it is at, on their own dashboard session or the Primitive CLI. Null for
-                everyone else, and when it could not be read in time. A key reading it through a rule is not a delivery.
+                everyone else, including on another member's mail even for an organization owner or admin (GET
+                /v1/webhooks/deliveries?email_id=<email-id> lists its deliveries, a rule's included), and when it could not be
+                read in time. A key reading it through a rule is not a delivery.
             parse_status (EmailDetailParseStatusType1 | EmailDetailParseStatusType2Type1 | EmailDetailParseStatusType3Type1
                 | None | Unset): Parsing state on inbox, history, arrival and detail reads. Failed is terminal and differs from
                 valid empty content (complete). Null covers legacy rows. Optional on shared summaries for compatibility with

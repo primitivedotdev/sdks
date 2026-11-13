@@ -583,6 +583,7 @@ from .email_rule_request_proposed_via import EmailRuleRequestProposedVia
 from .email_rule_request_proposer import EmailRuleRequestProposer
 from .email_rule_request_status import EmailRuleRequestStatus
 from .email_rule_request_target import EmailRuleRequestTarget
+from .email_rule_sample_detail import EmailRuleSampleDetail
 from .email_rule_sample_judgment import EmailRuleSampleJudgment
 from .email_rule_sample_judgment_expected import EmailRuleSampleJudgmentExpected
 from .email_rule_sample_judgment_outcome import EmailRuleSampleJudgmentOutcome
@@ -2509,6 +2510,7 @@ __all__ = (
     "EmailRuleRequestProposer",
     "EmailRuleRequestStatus",
     "EmailRuleRequestTarget",
+    "EmailRuleSampleDetail",
     "EmailRuleSampleJudgment",
     "EmailRuleSampleJudgmentExpected",
     "EmailRuleSampleJudgmentOutcome",

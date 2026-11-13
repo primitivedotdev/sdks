@@ -50,6 +50,10 @@ class EmailRuleCoveringMe:
             do_not_share_note (str | Unset): On a grant rule: that the active do-not-share rules over an email run first,
                 keeping from it what they match and holding back what they cannot decide, which is decided again for up to a day
                 and shared only if none of them then matches it.
+            english (None | str | Unset): What its author asked for, in their words, at its current version. Null when it
+                has no version, was deleted after the page was read, or the words could not be read in time; GET /v1/email-
+                rules/covering-me/{id} shows them with its tree.
+            explanation (None | str | Unset): What its current version matches, as compiled. Null as english is.
      """
 
     id: UUID
@@ -64,6 +68,8 @@ class EmailRuleCoveringMe:
     receivers_once_active: EmailRuleReceivers | None
     created_at: datetime.datetime
     do_not_share_note: str | Unset = UNSET
+    english: None | str | Unset = UNSET
+    explanation: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -107,6 +113,18 @@ class EmailRuleCoveringMe:
 
         do_not_share_note = self.do_not_share_note
 
+        english: None | str | Unset
+        if isinstance(self.english, Unset):
+            english = UNSET
+        else:
+            english = self.english
+
+        explanation: None | str | Unset
+        if isinstance(self.explanation, Unset):
+            explanation = UNSET
+        else:
+            explanation = self.explanation
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -125,6 +143,10 @@ class EmailRuleCoveringMe:
         })
         if do_not_share_note is not UNSET:
             field_dict["do_not_share_note"] = do_not_share_note
+        if english is not UNSET:
+            field_dict["english"] = english
+        if explanation is not UNSET:
+            field_dict["explanation"] = explanation
 
         return field_dict
 
@@ -216,6 +238,26 @@ class EmailRuleCoveringMe:
 
         do_not_share_note = d.pop("do_not_share_note", UNSET)
 
+        def _parse_english(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        english = _parse_english(d.pop("english", UNSET))
+
+
+        def _parse_explanation(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        explanation = _parse_explanation(d.pop("explanation", UNSET))
+
+
         email_rule_covering_me = cls(
             id=id,
             name=name,
@@ -229,6 +271,8 @@ class EmailRuleCoveringMe:
             receivers_once_active=receivers_once_active,
             created_at=created_at,
             do_not_share_note=do_not_share_note,
+            english=english,
+            explanation=explanation,
         )
 
 

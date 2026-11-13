@@ -8045,7 +8045,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                               },
                               "webhook_attempt_count": {
                                 "type": "integer",
-                                "description": "The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its attempts."
+                                "description": "Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its attempts."
                               },
                               "thread_id": {
                                 "type": [
@@ -17779,7 +17779,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule-covering-me",
-    "description": "One rule that covers one of your own mailboxes, read-only, with its current version; or one that no longer does but decided on mail at your own mailbox (covers_now false), shown as the version that last decided on your mail, without its current name. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. For what happened to one email of yours, every rule's decision on it and, for another member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
+    "description": "One rule that covers one of your own mailboxes, read-only, with its current version; or one that no longer does but decided on mail at your own mailbox (covers_now false), shown as the version that last decided on your mail, without its current name. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. For what happened to one email of yours, every rule's decision on it and, for another member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id <email-id>). Whether a rule delivered the email by webhook is not in the rule results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id> --json) counts each rule's webhook deliveries; on another member's mail, GET /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRuleCoveringMe",
@@ -17967,7 +17967,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                         "exclusiveMinimum": 0
                       },
                       "reads_in_full": {
-                        "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches.",
+                        "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches. It counts what they can read, not whether any has read an email.",
                         "type": "integer",
                         "minimum": 0
                       },
@@ -18181,7 +18181,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                         "exclusiveMinimum": 0
                       },
                       "reads_in_full": {
-                        "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches.",
+                        "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches. It counts what they can read, not whether any has read an email.",
                         "type": "integer",
                         "minimum": 0
                       },
@@ -19130,7 +19130,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rules-covering-me",
-    "description": "Every email rule that covers one of your own mailboxes now, yours included, newest first, in any state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your member mailbox, or a personal agent's address): one whose author reads all your mail (author scope, for an author who reads the organization's mail or holds an access entry for your mailbox), or one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers you. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. For what happened to one email of yours, every rule's decision on it and, for another member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
+    "description": "Every email rule that covers one of your own mailboxes now, yours included, newest first, in any state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your member mailbox, or a personal agent's address), and covers.via says how: author_reach, it runs over everything its author can read, which includes your mail (an author who reads the organization's mail or holds an access entry for your mailbox); selected, it names your mailbox or its domain; own_mailboxes, it is your own rule over your own mail. Another member's own_mailboxes rule never covers you. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. Each listed rule carries its current version's english and explanation; its tree is on GET /v1/email-rules/covering-me/{id}. A page can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. For what happened to one email of yours, every rule's decision on it and, for another member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id <email-id>). Whether a rule delivered the email by webhook is not in the rule results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id> --json) counts each rule's webhook deliveries; on another member's mail, GET /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRulesCoveringMe",
@@ -19317,7 +19317,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                           "exclusiveMinimum": 0
                         },
                         "reads_in_full": {
-                          "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches.",
+                          "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches. It counts what they can read, not whether any has read an email.",
                           "type": "integer",
                           "minimum": 0
                         },
@@ -19531,7 +19531,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                           "exclusiveMinimum": 0
                         },
                         "reads_in_full": {
-                          "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches.",
+                          "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches. It counts what they can read, not whether any has read an email.",
                           "type": "integer",
                           "minimum": 0
                         },
@@ -19689,6 +19689,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "english": {
+            "description": "What its author asked for, in their words, at its current version. Null when it has no version, was deleted after the page was read, or the words could not be read in time; GET /v1/email-rules/covering-me/{id} shows them with its tree.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "explanation": {
+            "description": "What its current version matches, as compiled. Null as english is.",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -20112,6 +20126,46 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "scope_selection"
           ]
         },
+        "scope_warnings": {
+          "description": "Ignored (the compile answer's scope_warnings).",
+          "maxItems": 150,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 320
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "address",
+                  "domain"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "unknown_domain",
+                  "inactive_domain",
+                  "unknown_address"
+                ],
+                "description": "unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet."
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "reason",
+              "message"
+            ]
+          }
+        },
         "kind": {
           "description": "Only grant.",
           "type": "string",
@@ -20256,265 +20310,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "responseSchema": {
       "type": "object",
       "properties": {
-        "request": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "status": {
-              "type": "string",
-              "enum": [
-                "pending",
-                "accepted",
-                "declined",
-                "withdrawn"
-              ]
-            },
-            "name": {
-              "type": "string"
-            },
-            "english": {
-              "type": "string"
-            },
-            "tree": {
-              "type": "object",
-              "properties": {
-                "version": {
-                  "type": "number",
-                  "const": 1
-                },
-                "vocabulary": {
-                  "type": "string",
-                  "description": "Vocabulary version, such as v1."
-                },
-                "when": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {},
-                  "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
-                },
-                "questions": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "description": "Yes/no questions asked once the conditions match, over the email's text and attachment names, never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any yes."
-                }
-              },
-              "required": [
-                "version",
-                "vocabulary",
-                "when",
-                "questions"
-              ]
-            },
-            "explanation": {
-              "type": "string"
-            },
-            "assumptions": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "warnings": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "As the member who asked sent them, normally from their compile, then every compiler note on the rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them."
-            },
-            "server_explanation": {
-              "description": "What the rule as asked actually does: Primitive's own reading of the request's tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "server_notes": {
-              "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "compiled_by": {
-              "type": "string"
-            },
-            "vocabulary": {
-              "type": "string"
-            },
-            "proposed_via": {
-              "type": "string",
-              "enum": [
-                "session",
-                "oauth"
-              ],
-              "description": "session: the proposer's own session; oauth: an OAuth or CLI token acting for them."
-            },
-            "created_at": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "decided_at": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "format": "date-time"
-            },
-            "decided_by_user_id": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "format": "uuid"
-            },
-            "proposer": {
-              "type": "object",
-              "properties": {
-                "user_id": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "name": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "email": {
-                  "description": "Sign-in email; null unless you can list member emails, this is you, or they asked you.",
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "active": {
-                  "type": "boolean",
-                  "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
-                }
-              },
-              "required": [
-                "user_id",
-                "name",
-                "email",
-                "active"
-              ]
-            },
-            "target": {
-              "type": "object",
-              "properties": {
-                "user_id": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "format": "uuid",
-                  "description": "Null unless you can list members or this is you."
-                },
-                "name": {
-                  "description": "Null unless you can list members or this is you.",
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "email": {
-                  "description": "Sign-in email; null unless you can list member emails or this is you.",
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "active": {
-                  "type": "boolean",
-                  "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
-                }
-              },
-              "required": [
-                "user_id",
-                "name",
-                "email",
-                "active"
-              ]
-            },
-            "target_address_typed": {
-              "description": "The address the proposer typed to name the target; null for anyone else, and when named by user id.",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "is_proposer": {
-              "type": "boolean"
-            },
-            "is_target": {
-              "type": "boolean"
-            },
-            "share_id": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "format": "uuid",
-              "description": "The share accepting created, while it exists."
-            },
-            "message": {
-              "description": "What the member asking wrote about why; null when they wrote nothing.",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "decline_reason": {
-              "description": "Why the member asked declined it; null unless they gave a reason when declining.",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "edited_on_accept": {
-              "description": "Once accepted: whether the rule was changed first, as on the share. Null until then, or when unreadable.",
-              "type": [
-                "boolean",
-                "null"
-              ]
-            },
-            "notice": {
-              "description": "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          },
-          "required": [
-            "id",
-            "status",
-            "name",
-            "english",
-            "tree",
-            "explanation",
-            "assumptions",
-            "warnings",
-            "compiled_by",
-            "vocabulary",
-            "proposed_via",
-            "created_at",
-            "decided_at",
-            "decided_by_user_id",
-            "proposer",
-            "target",
-            "target_address_typed",
-            "is_proposer",
-            "is_target",
-            "share_id"
-          ]
+        "notice": {
+          "description": "What is now shared, in words. When you changed the rule and it can now match mail the request left out by who it was sent to (such as mail where an address is only copied), that comes first; when you changed its english, tree or explanation (edited_on_accept; a new name alone is no change), that rule.current is what you agreed to and request what was asked.",
+          "type": "string"
         },
         "rule": {
           "type": "object",
@@ -20977,15 +20775,271 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "rule_id"
           ]
         },
-        "notice": {
-          "description": "What is now shared, in words. When you changed the rule and it can now match mail the request left out by who it was sent to (such as mail where an address is only copied), that comes first; when you changed its english, tree or explanation (edited_on_accept; a new name alone is no change), that rule.current is what you agreed to and request what was asked.",
-          "type": "string"
+        "request": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "accepted",
+                "declined",
+                "withdrawn"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "english": {
+              "type": "string"
+            },
+            "tree": {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "number",
+                  "const": 1
+                },
+                "vocabulary": {
+                  "type": "string",
+                  "description": "Vocabulary version, such as v1."
+                },
+                "when": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {},
+                  "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
+                },
+                "questions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Yes/no questions asked once the conditions match, over the email's text and attachment names, never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any yes."
+                }
+              },
+              "required": [
+                "version",
+                "vocabulary",
+                "when",
+                "questions"
+              ]
+            },
+            "explanation": {
+              "type": "string"
+            },
+            "assumptions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "warnings": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "As the member who asked sent them, normally from their compile, then every compiler note on the rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them."
+            },
+            "server_explanation": {
+              "description": "What the rule as asked actually does: Primitive's own reading of the request's tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "server_notes": {
+              "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes and that counts the asker quotes came from their own mail. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "compiled_by": {
+              "type": "string"
+            },
+            "vocabulary": {
+              "type": "string"
+            },
+            "proposed_via": {
+              "type": "string",
+              "enum": [
+                "session",
+                "oauth"
+              ],
+              "description": "session: the proposer's own session; oauth: an OAuth or CLI token acting for them."
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "decided_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "decided_by_user_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "proposer": {
+              "type": "object",
+              "properties": {
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "email": {
+                  "description": "Sign-in email; null unless you can list member emails, this is you, or they asked you.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "active": {
+                  "type": "boolean",
+                  "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
+                }
+              },
+              "required": [
+                "user_id",
+                "name",
+                "email",
+                "active"
+              ]
+            },
+            "target": {
+              "type": "object",
+              "properties": {
+                "user_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Null unless you can list members or this is you."
+                },
+                "name": {
+                  "description": "Null unless you can list members or this is you.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "email": {
+                  "description": "Sign-in email; null unless you can list member emails or this is you.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "active": {
+                  "type": "boolean",
+                  "description": "Still a member under the membership recorded (a request or share with someone who left no longer works)."
+                }
+              },
+              "required": [
+                "user_id",
+                "name",
+                "email",
+                "active"
+              ]
+            },
+            "target_address_typed": {
+              "description": "The address the proposer typed to name the target; null for anyone else, and when named by user id.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "is_proposer": {
+              "type": "boolean"
+            },
+            "is_target": {
+              "type": "boolean"
+            },
+            "share_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "The share accepting created, while it exists."
+            },
+            "message": {
+              "description": "What the member asking wrote about why; null when they wrote nothing.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "decline_reason": {
+              "description": "Why the member asked declined it; null unless they gave a reason when declining.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "edited_on_accept": {
+              "description": "Once accepted: whether the rule was changed first, as on the share. Null until then, or when unreadable.",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "notice": {
+              "description": "For the member asked, while pending: who asked (as proposer names them), what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results and rule_deliveries). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "status",
+            "name",
+            "english",
+            "tree",
+            "explanation",
+            "assumptions",
+            "warnings",
+            "compiled_by",
+            "vocabulary",
+            "proposed_via",
+            "created_at",
+            "decided_at",
+            "decided_by_user_id",
+            "proposer",
+            "target",
+            "target_address_typed",
+            "is_proposer",
+            "is_target",
+            "share_id"
+          ]
         }
       },
       "required": [
-        "request",
         "rule",
-        "share"
+        "share",
+        "request"
       ]
     },
     "sdkName": "acceptEmailRuleRequest",
@@ -21350,6 +21404,46 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "evaluation_scope",
             "scope_selection"
           ]
+        },
+        "scope_warnings": {
+          "description": "Names in the scope_selection sent that match nothing this organization receives mail at (a typo, or an inbox not yet in use), as a test or write would warn of them. Present only when there are some; writes ignore it.",
+          "maxItems": 150,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 320
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "address",
+                  "domain"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "unknown_domain",
+                  "inactive_domain",
+                  "unknown_address"
+                ],
+                "description": "unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet."
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "reason",
+              "message"
+            ]
+          }
         },
         "sql": {
           "description": "Present only when include_sql was true.",
@@ -21798,6 +21892,46 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "evaluation_scope",
             "scope_selection"
           ]
+        },
+        "scope_warnings": {
+          "description": "Ignored (the compile answer's scope_warnings).",
+          "maxItems": 150,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 320
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "address",
+                  "domain"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "unknown_domain",
+                  "inactive_domain",
+                  "unknown_address"
+                ],
+                "description": "unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet."
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "reason",
+              "message"
+            ]
+          }
         }
       },
       "required": [
@@ -22052,12 +22186,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "scope_warnings": {
           "description": "Names in scope_selection that match nothing this organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.",
+          "maxItems": 150,
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 320
               },
               "kind": {
                 "type": "string",
@@ -22076,7 +22212,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "description": "unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet."
               },
               "message": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 1000
               }
             },
             "required": [
@@ -22290,11 +22427,57 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               }
             },
             "undecided_samples": {
-              "description": "Made-up emails not decided, by index. Only a write sent with if_expectations_pass that saves a version or activates the rule judges them.",
+              "description": "Made-up emails not decided, by index. Only a write that saves a version or activates the rule, sent with if_expectations_pass or judged by default, judges them.",
               "type": "array",
               "items": {
                 "type": "integer",
                 "minimum": 0
+              }
+            },
+            "failed_sample_details": {
+              "description": "failed_samples with each one's label, from a write that judged them before saving (if_expectations_pass, or by default).",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "label": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "index",
+                  "label"
+                ]
+              }
+            },
+            "undecided_sample_details": {
+              "description": "undecided_samples with each one's label, as failed_sample_details.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "label": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "index",
+                  "label"
+                ]
               }
             },
             "note": {
@@ -22327,7 +22510,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "affects": {
-          "description": "After an update that saved a version: API keys listing the rule and the webhooks they own. shares_ended is always 0: a new version keeps the rule's share (share_notice says so). The rule keeps its state. Absent if not read.",
+          "description": "After an update that saved a version, or turned a grant rule active: API keys listing the rule and the webhooks they own, which read and receive what a grant rule grants from now on. shares_ended is always 0: a new version keeps the rule's share (share_notice says so). Saving a version does not by itself change the rule's state. Absent after any other write, and if not read.",
           "type": "object",
           "properties": {
             "keys": {
@@ -22602,6 +22785,46 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "scope_selection"
           ]
         },
+        "scope_warnings": {
+          "description": "Ignored (the compile answer's scope_warnings).",
+          "maxItems": 150,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 320
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "address",
+                  "domain"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "unknown_domain",
+                  "inactive_domain",
+                  "unknown_address"
+                ],
+                "description": "unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet."
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "reason",
+              "message"
+            ]
+          }
+        },
         "kind": {
           "description": "Only grant.",
           "type": "string",
@@ -22695,7 +22918,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "server_notes": {
-          "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
+          "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes and that counts the asker quotes came from their own mail. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
           "type": "array",
           "items": {
             "type": "string"
@@ -22845,7 +23068,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "notice": {
-          "description": "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
+          "description": "For the member asked, while pending: who asked (as proposer names them), what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results and rule_deliveries). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
           "type": [
             "string",
             "null"
@@ -23026,7 +23249,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "server_notes": {
-          "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
+          "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes and that counts the asker quotes came from their own mail. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
           "type": "array",
           "items": {
             "type": "string"
@@ -23176,7 +23399,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "notice": {
-          "description": "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
+          "description": "For the member asked, while pending: who asked (as proposer names them), what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results and rule_deliveries). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
           "type": [
             "string",
             "null"
@@ -24333,7 +24556,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "server_notes": {
-          "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
+          "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes and that counts the asker quotes came from their own mail. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
           "type": "array",
           "items": {
             "type": "string"
@@ -24483,7 +24706,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "notice": {
-          "description": "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
+          "description": "For the member asked, while pending: who asked (as proposer names them), what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results and rule_deliveries). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
           "type": [
             "string",
             "null"
@@ -24637,12 +24860,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "scope_warnings": {
           "description": "Names in scope_selection that match nothing this organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.",
+          "maxItems": 150,
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 320
               },
               "kind": {
                 "type": "string",
@@ -24661,7 +24886,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "description": "unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet."
               },
               "message": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 1000
               }
             },
             "required": [
@@ -25433,7 +25659,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ]
           },
           "server_notes": {
-            "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
+            "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes and that counts the asker quotes came from their own mail. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
             "type": "array",
             "items": {
               "type": "string"
@@ -25583,7 +25809,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ]
           },
           "notice": {
-            "description": "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
+            "description": "For the member asked, while pending: who asked (as proposer names them), what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results and rule_deliveries). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
             "type": [
               "string",
               "null"
@@ -25623,7 +25849,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-results",
-    "description": "What each rule you can see decided about this email (matched, not matched, or not run), in the words of the deciding version. A do_not_share rule that matched it blocks sharing while active; earlier shares stay. Only a caller who can read the email gets an answer. classification is every fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard and CLI only), with who receives what it shares (receivers) while it covers you; hidden counts deciding rules you cannot see. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+    "description": "What each rule you can see decided about this email (matched, not matched, or not run), in the words of the deciding version. A do_not_share rule that matched it blocks sharing while active; earlier shares stay. Only a caller who can read the email gets an answer. classification is every fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard and CLI only), with who receives what it shares (receivers) while it covers you; hidden counts deciding rules you cannot see. Whether a rule delivered the email by webhook is not in the rule results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id> --json) counts each rule's webhook deliveries; on another member's mail, GET /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleResults",
@@ -26000,7 +26226,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                               "exclusiveMinimum": 0
                             },
                             "reads_in_full": {
-                              "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches.",
+                              "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches. It counts what they can read, not whether any has read an email.",
                               "type": "integer",
                               "minimum": 0
                             },
@@ -28326,6 +28552,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "null"
                 ]
               },
+              "attachment_names": {
+                "description": "On matched and near_miss: the file names the email lists, in order, at most 10 (the names its questions are given; never what is in the files). Parts with no name are left out; absent when there are none.",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
               "parts": {
                 "description": "How each top-level part of the rule decided. Present for matched, near_miss and no_match.",
                 "type": "array",
@@ -28577,12 +28810,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "scope_warnings": {
           "description": "Names in scope_selection that match nothing this organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.",
+          "maxItems": 150,
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 320
               },
               "kind": {
                 "type": "string",
@@ -28601,7 +28836,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "description": "unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet."
               },
               "message": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 1000
               }
             },
             "required": [
@@ -29532,6 +29768,46 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "scope_selection"
           ]
         },
+        "scope_warnings": {
+          "description": "Ignored (the compile answer's scope_warnings).",
+          "maxItems": 150,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 320
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "address",
+                  "domain"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "unknown_domain",
+                  "inactive_domain",
+                  "unknown_address"
+                ],
+                "description": "unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet."
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "reason",
+              "message"
+            ]
+          }
+        },
         "kind": {
           "description": "Must be the rule's own (400 kind_mismatch).",
           "type": "string",
@@ -30139,12 +30415,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "scope_warnings": {
           "description": "Names in scope_selection that match nothing this organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.",
+          "maxItems": 150,
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 320
               },
               "kind": {
                 "type": "string",
@@ -30163,7 +30441,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "description": "unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet."
               },
               "message": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 1000
               }
             },
             "required": [
@@ -30377,11 +30656,57 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               }
             },
             "undecided_samples": {
-              "description": "Made-up emails not decided, by index. Only a write sent with if_expectations_pass that saves a version or activates the rule judges them.",
+              "description": "Made-up emails not decided, by index. Only a write that saves a version or activates the rule, sent with if_expectations_pass or judged by default, judges them.",
               "type": "array",
               "items": {
                 "type": "integer",
                 "minimum": 0
+              }
+            },
+            "failed_sample_details": {
+              "description": "failed_samples with each one's label, from a write that judged them before saving (if_expectations_pass, or by default).",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "label": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "index",
+                  "label"
+                ]
+              }
+            },
+            "undecided_sample_details": {
+              "description": "undecided_samples with each one's label, as failed_sample_details.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "label": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "index",
+                  "label"
+                ]
               }
             },
             "note": {
@@ -30414,7 +30739,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "affects": {
-          "description": "After an update that saved a version: API keys listing the rule and the webhooks they own. shares_ended is always 0: a new version keeps the rule's share (share_notice says so). The rule keeps its state. Absent if not read.",
+          "description": "After an update that saved a version, or turned a grant rule active: API keys listing the rule and the webhooks they own, which read and receive what a grant rule grants from now on. shares_ended is always 0: a new version keeps the rule's share (share_notice says so). Saving a version does not by itself change the rule's state. Absent after any other write, and if not read.",
           "type": "object",
           "properties": {
             "keys": {
@@ -30575,7 +30900,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "server_notes": {
-          "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
+          "description": "Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes and that counts the asker quotes came from their own mail. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.",
           "type": "array",
           "items": {
             "type": "string"
@@ -30725,7 +31050,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "notice": {
-          "description": "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
+          "description": "For the member asked, while pending: who asked (as proposer names them), what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results and rule_deliveries). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.",
           "type": [
             "string",
             "null"
@@ -31654,7 +31979,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "webhook_attempt_count": {
           "type": "integer",
-          "description": "The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its attempts."
+          "description": "Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its attempts."
         },
         "webhook_last_attempt_at": {
           "type": [
@@ -31662,21 +31987,21 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ],
           "format": "date-time",
-          "description": "The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its last attempt."
+          "description": "Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its last attempt."
         },
         "webhook_last_status_code": {
           "type": [
             "integer",
             "null"
           ],
-          "description": "The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. What it last answered."
+          "description": "Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. What it last answered."
         },
         "webhook_last_error": {
           "type": [
             "string",
             "null"
           ],
-          "description": "The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its last error."
+          "description": "Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its last error."
         },
         "webhook_fired_at": {
           "type": [
@@ -31684,7 +32009,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ],
           "format": "date-time",
-          "description": "The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. When it was delivered."
+          "description": "Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. When it was delivered."
         },
         "smtp_helo": {
           "type": [
@@ -32461,7 +32786,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "object",
             "null"
           ],
-          "description": "The rule share a reader has this email through, when that is their only way to it. Null for everyone else.",
+          "description": "Only for a reader who has this email through a colleague's share of their mail, when that share is their only way to it: the share and who gave it. Null for everyone else, including on your own mail when a rule or share of yours gave it to someone: rule_deliveries counts the webhooks rules delivered it to, and GET /v1/email-rule-shares/{id}/emails lists what a share you gave has given.",
           "required": [
             "share_id",
             "rule_name",
@@ -32506,7 +32831,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "object",
             "null"
           ],
-          "description": "Where Email Rules delivered this email by webhook, for the owner of the mailbox it is at, on their own dashboard session or the Primitive CLI. Null for everyone else, and when it could not be read in time. A key reading it through a rule is not a delivery.",
+          "description": "Where Email Rules delivered this email by webhook, for the owner of the mailbox it is at, on their own dashboard session or the Primitive CLI. Null for everyone else, including on another member's mail even for an organization owner or admin (GET /v1/webhooks/deliveries?email_id=<email-id> lists its deliveries, a rule's included), and when it could not be read in time. A key reading it through a rule is not a delivery.",
           "required": [
             "rules",
             "hidden",
@@ -33692,7 +34017,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "webhook_attempt_count": {
             "type": "integer",
-            "description": "The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its attempts."
+            "description": "Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its attempts."
           },
           "thread_id": {
             "type": [
@@ -34674,7 +34999,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "webhook_attempt_count": {
                 "type": "integer",
-                "description": "The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its attempts."
+                "description": "Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its attempts."
               },
               "thread_id": {
                 "type": [

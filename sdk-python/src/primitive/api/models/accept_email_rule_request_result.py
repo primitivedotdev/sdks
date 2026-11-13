@@ -27,18 +27,18 @@ T = TypeVar("T", bound="AcceptEmailRuleRequestResult")
 class AcceptEmailRuleRequestResult:
     """ 
         Attributes:
-            request (EmailRuleRequest):
             rule (EmailRuleWithVersion):
             share (EmailRuleShare):
+            request (EmailRuleRequest):
             notice (str | Unset): What is now shared, in words. When you changed the rule and it can now match mail the
                 request left out by who it was sent to (such as mail where an address is only copied), that comes first; when
                 you changed its english, tree or explanation (edited_on_accept; a new name alone is no change), that
                 rule.current is what you agreed to and request what was asked.
      """
 
-    request: EmailRuleRequest
     rule: EmailRuleWithVersion
     share: EmailRuleShare
+    request: EmailRuleRequest
     notice: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -50,11 +50,11 @@ class AcceptEmailRuleRequestResult:
         from ..models.email_rule_request import EmailRuleRequest # noqa: PLC0415
         from ..models.email_rule_share import EmailRuleShare # noqa: PLC0415
         from ..models.email_rule_with_version import EmailRuleWithVersion # noqa: PLC0415
-        request = self.request.to_dict()
-
         rule = self.rule.to_dict()
 
         share = self.share.to_dict()
+
+        request = self.request.to_dict()
 
         notice = self.notice
 
@@ -62,9 +62,9 @@ class AcceptEmailRuleRequestResult:
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
-            "request": request,
             "rule": rule,
             "share": share,
+            "request": request,
         })
         if notice is not UNSET:
             field_dict["notice"] = notice
@@ -79,11 +79,6 @@ class AcceptEmailRuleRequestResult:
         from ..models.email_rule_share import EmailRuleShare # noqa: PLC0415
         from ..models.email_rule_with_version import EmailRuleWithVersion # noqa: PLC0415
         d = dict(src_dict)
-        request = EmailRuleRequest.from_dict(d.pop("request"))
-
-
-
-
         rule = EmailRuleWithVersion.from_dict(d.pop("rule"))
 
 
@@ -94,12 +89,17 @@ class AcceptEmailRuleRequestResult:
 
 
 
+        request = EmailRuleRequest.from_dict(d.pop("request"))
+
+
+
+
         notice = d.pop("notice", UNSET)
 
         accept_email_rule_request_result = cls(
-            request=request,
             rule=rule,
             share=share,
+            request=request,
             notice=notice,
         )
 
