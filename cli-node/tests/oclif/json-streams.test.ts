@@ -568,7 +568,7 @@ function operationArgv(operation: PrimitiveOperationManifest): string[] {
     if (parameter.type === "boolean") argv.push(flag);
     else argv.push(flag, placeholderFor(parameter));
   }
-  // A required request header, such as a provider token, is a flag too.
+  // A required request header is a flag too.
   for (const parameter of operation.headerParams) {
     if (!parameter.required) continue;
     argv.push(`--${headerFlagName(parameter.name)}`, placeholderFor(parameter));
