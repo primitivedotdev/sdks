@@ -530,8 +530,15 @@ describe("chat send outcomes", () => {
         follow_up_commands: [],
       });
       expect(envelope.error).toMatchObject({ code: "request_failed" });
+      // The line names the API's own words for the problem, ahead of the error itself.
       expect(result.stderr).toContain(
-        `Message not sent: the API rejected the request (HTTP ${status}). Nothing went out`,
+        `Message not sent (HTTP ${status}): Failure request_failed. Nothing went out`,
+      );
+      expect(result.stderr.indexOf("Message not sent")).toBeLessThan(
+        result.stderr.indexOf('"code": "request_failed"'),
+      );
+      expect(envelope.outcome_message).toBe(
+        `Message not sent (HTTP ${status}): Failure request_failed. Nothing went out; fix the problem before retrying.`,
       );
     },
   );

@@ -552,6 +552,20 @@ describe("reply outcomes", () => {
     expect(result.stderr).toBe("");
   });
 
+  it("leads a refusal with the API's own words, before the error itself", async () => {
+    mocks.replyToEmail.mockResolvedValue(apiFailure(422, "validation_error"));
+
+    const result = await run("reply", replyArgs());
+
+    expect(result.exitCode).toBe(1);
+    const line =
+      "Reply not sent (HTTP 422): Failure validation_error. Nothing went out; fix the problem before retrying.";
+    expect(result.stderr).toContain(line);
+    expect(result.stderr.indexOf(line)).toBeLessThan(
+      result.stderr.indexOf('validation_error"'),
+    );
+  });
+
   it("reports not_sent with exit 1 for a definitive rejection", async () => {
     mocks.replyToEmail.mockResolvedValue(apiFailure(422, "validation_error"));
 
@@ -565,6 +579,8 @@ describe("reply outcomes", () => {
       http_status: 422,
       sent: null,
       error: { code: "validation_error" },
+      outcome_message:
+        "Reply not sent (HTTP 422): Failure validation_error. Nothing went out; fix the problem before retrying.",
       follow_up_commands: [],
       prior_replies: [],
     });
