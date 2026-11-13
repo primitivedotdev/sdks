@@ -82,12 +82,14 @@ class EmailRuleWritten:
                 made before the save, which passed.
             restored_from (EmailRuleWrittenRestoredFrom | Unset): When this write saved an earlier version again
                 (restore_version): which, and that the scope is not part of a version.
-            affects (EmailRuleWrittenAffects | Unset): After an update that saved a version: API keys listing the rule, the
-                webhooks they own, and shares this write ended. The rule keeps its state. Absent if not read.
-            notice (str | Unset): After a write that saved a version of an active rule keys or webhooks read without
-                checking it first: what it changes, and how to have the next one checked.
-            share_notice (str | Unset): After a write that ended the rule's share: that it did, given even when affects is
-                not, with whom it was with and the version they accepted when those can be read.
+            affects (EmailRuleWrittenAffects | Unset): After an update that saved a version: API keys listing the rule and
+                the webhooks they own. shares_ended is always 0: a new version keeps the rule's share (share_notice says so).
+                The rule keeps its state. Absent if not read.
+            notice (str | Unset): After a write that saved a version of an active rule keys, webhooks or a share read
+                without checking it first: what it changes, and how to have the next one checked.
+            share_notice (str | Unset): After a write that saved a version of a rule with a live share: that the share goes
+                on under it, given even when affects is not, with whom it is and the version they accepted when those can be
+                read.
      """
 
     id: UUID

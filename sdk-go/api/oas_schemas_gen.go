@@ -40519,10 +40519,12 @@ type EmailRuleShare struct {
 	CreatedAt time.Time   `json:"created_at"`
 	EndedAt   NilDateTime `json:"ended_at"`
 	// Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin,
-	// rule_changed (a new version of the rule was saved) or rule_deleted (the rule was deleted; the
-	// share keeps its record, and the rule is no longer shown). Null while it has not.
+	// rule_changed (a new version of the rule was saved, on a share that ended before new versions kept
+	// shares) or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no
+	// longer shown). Null while it has not.
 	EndReason NilEmailRuleShareEndReason `json:"end_reason"`
-	// The version of the rule that was accepted. A new version of the rule ends the share.
+	// The version of the rule that was accepted. A later version keeps the share: what each version
+	// matches is shared from when it is saved.
 	AcceptedRuleVersion int `json:"accepted_rule_version"`
 	// Whether the member who accepted changed the rule's English, tree or explanation before accepting
 	// (a new name does not count).
@@ -40749,8 +40751,9 @@ func (s *EmailRuleShareBeneficiary) SetActive(val bool) {
 }
 
 // Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin,
-// rule_changed (a new version of the rule was saved) or rule_deleted (the rule was deleted; the
-// share keeps its record, and the rule is no longer shown). Null while it has not.
+// rule_changed (a new version of the rule was saved, on a share that ended before new versions kept
+// shares) or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no
+// longer shown). Null while it has not.
 type EmailRuleShareEndReason string
 
 const (
@@ -41932,14 +41935,16 @@ type EmailRuleWritten struct {
 	// When this write saved an earlier version again (restore_version): which, and that the scope is not
 	// part of a version.
 	RestoredFrom OptEmailRuleWrittenRestoredFrom `json:"restored_from"`
-	// After an update that saved a version: API keys listing the rule, the webhooks they own, and shares
-	// this write ended. The rule keeps its state. Absent if not read.
+	// After an update that saved a version: API keys listing the rule and the webhooks they own.
+	// shares_ended is always 0: a new version keeps the rule's share (share_notice says so). The rule
+	// keeps its state. Absent if not read.
 	Affects OptEmailRuleWrittenAffects `json:"affects"`
-	// After a write that saved a version of an active rule keys or webhooks read without checking it
-	// first: what it changes, and how to have the next one checked.
+	// After a write that saved a version of an active rule keys, webhooks or a share read without
+	// checking it first: what it changes, and how to have the next one checked.
 	Notice OptString `json:"notice"`
-	// After a write that ended the rule's share: that it did, given even when affects is not, with whom
-	// it was with and the version they accepted when those can be read.
+	// After a write that saved a version of a rule with a live share: that the share goes on under it,
+	// given even when affects is not, with whom it is and the version they accepted when those can be
+	// read.
 	ShareNotice OptString `json:"share_notice"`
 }
 
@@ -42203,8 +42208,9 @@ func (s *EmailRuleWritten) SetShareNotice(val OptString) {
 	s.ShareNotice = val
 }
 
-// After an update that saved a version: API keys listing the rule, the webhooks they own, and shares
-// this write ended. The rule keeps its state. Absent if not read.
+// After an update that saved a version: API keys listing the rule and the webhooks they own.
+// shares_ended is always 0: a new version keeps the rule's share (share_notice says so). The rule
+// keeps its state. Absent if not read.
 type EmailRuleWrittenAffects struct {
 	Keys        int `json:"keys"`
 	Endpoints   int `json:"endpoints"`
@@ -141165,8 +141171,8 @@ type UpdateEmailRuleRequest struct {
 	// expectations_check); none to judge: 400 no_expectations. Refused writes save nothing; a pass saves
 	// unless the rule moved meanwhile (409 email_rule_conflict). Only writes that save a version or
 	// activate the rule are judged. Omitted: judged as with true when the write saves a version or
-	// changes the scope of an active rule that API keys or webhooks read and that has expectations.
-	// false: never judged first.
+	// changes the scope of an active rule that API keys, webhooks or a share read and that has
+	// expectations. false: never judged first.
 	IfExpectationsPass OptBool `json:"if_expectations_pass"`
 	// Save version n again as the next version (author only): its english, tree, explanation,
 	// assumptions, warnings and compiled_by. A version carries no scope: the rule keeps its own unless

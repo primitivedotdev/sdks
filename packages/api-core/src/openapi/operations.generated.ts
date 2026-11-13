@@ -20807,11 +20807,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "rule_deleted",
                 null
               ],
-              "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin, rule_changed (a new version of the rule was saved) or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not."
+              "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin, rule_changed (a new version of the rule was saved, on a share that ended before new versions kept shares) or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not."
             },
             "accepted_rule_version": {
               "type": "integer",
-              "description": "The version of the rule that was accepted. A new version of the rule ends the share."
+              "description": "The version of the rule that was accepted. A later version keeps the share: what each version matches is shared from when it is saved."
             },
             "edited_on_accept": {
               "type": "boolean",
@@ -22327,7 +22327,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "affects": {
-          "description": "After an update that saved a version: API keys listing the rule, the webhooks they own, and shares this write ended. The rule keeps its state. Absent if not read.",
+          "description": "After an update that saved a version: API keys listing the rule and the webhooks they own. shares_ended is always 0: a new version keeps the rule's share (share_notice says so). The rule keeps its state. Absent if not read.",
           "type": "object",
           "properties": {
             "keys": {
@@ -22350,11 +22350,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "notice": {
-          "description": "After a write that saved a version of an active rule keys or webhooks read without checking it first: what it changes, and how to have the next one checked.",
+          "description": "After a write that saved a version of an active rule keys, webhooks or a share read without checking it first: what it changes, and how to have the next one checked.",
           "type": "string"
         },
         "share_notice": {
-          "description": "After a write that ended the rule's share: that it did, given even when affects is not, with whom it was with and the version they accepted when those can be read.",
+          "description": "After a write that saved a version of a rule with a live share: that the share goes on under it, given even when affects is not, with whom it is and the version they accepted when those can be read.",
           "type": "string"
         }
       },
@@ -24751,11 +24751,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "rule_deleted",
             null
           ],
-          "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin, rule_changed (a new version of the rule was saved) or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not."
+          "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin, rule_changed (a new version of the rule was saved, on a share that ended before new versions kept shares) or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not."
         },
         "accepted_rule_version": {
           "type": "integer",
-          "description": "The version of the rule that was accepted. A new version of the rule ends the share."
+          "description": "The version of the rule that was accepted. A later version keeps the share: what each version matches is shared from when it is saved."
         },
         "edited_on_accept": {
           "type": "boolean",
@@ -26993,11 +26993,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "rule_deleted",
               null
             ],
-            "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin, rule_changed (a new version of the rule was saved) or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not."
+            "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin, rule_changed (a new version of the rule was saved, on a share that ended before new versions kept shares) or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not."
           },
           "accepted_rule_version": {
             "type": "integer",
-            "description": "The version of the rule that was accepted. A new version of the rule ends the share."
+            "description": "The version of the rule that was accepted. A later version keeps the share: what each version matches is shared from when it is saved."
           },
           "edited_on_accept": {
             "type": "boolean",
@@ -27605,11 +27605,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "rule_deleted",
               null
             ],
-            "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin, rule_changed (a new version of the rule was saved) or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not."
+            "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin, rule_changed (a new version of the rule was saved, on a share that ended before new versions kept shares) or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not."
           },
           "accepted_rule_version": {
             "type": "integer",
-            "description": "The version of the rule that was accepted. A new version of the rule ends the share."
+            "description": "The version of the rule that was accepted. A later version keeps the share: what each version matches is shared from when it is saved."
           },
           "edited_on_accept": {
             "type": "boolean",
@@ -29321,7 +29321,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-email-rule",
-    "description": "Renames the rule, saves a new version (english and tree together; earlier versions stay) or restores one (restore_version), changes its state (draft is off; observe; active), its scope (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in expectations_check). Anyone but its author who sees it may only set state draft, and while it is shared only if they manage members from the dashboard. A scope change saves a new version; a shared rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version refuses a write once a version was saved since you read it; if_revision, once anything changed. Without if_expectations_pass a version is saved even when its expectations fail, except on an active rule keys or webhooks read: that write is checked first unless if_expectations_pass is false. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+    "description": "Renames the rule, saves a new version (english and tree together; earlier versions stay) or restores one (restore_version), changes its state (draft is off; observe; active), its scope (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in expectations_check). Anyone but its author who sees it may only set state draft, and while it is shared only if they manage members from the dashboard. A scope change saves a new version; a shared rule keeps its scope, and a kind never changes. A saved version takes effect at once, on the rule's share too, which goes on under it. if_version refuses a write once a version was saved since you read it; if_revision, once anything changed. Without if_expectations_pass a version is saved even when its expectations fail, except on an active rule keys, webhooks or a share read: that write is checked first unless if_expectations_pass is false. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "PATCH",
     "operationId": "updateEmailRule",
@@ -29882,7 +29882,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "maximum": 2147483647
         },
         "if_expectations_pass": {
-          "description": "true: judge the rule as this write leaves it (new tree, restored version, new scope, or the version it activates) against the expectations it leaves, as POST /email-rules/test would, before saving; it can take as long as a test. Failed: 409 expectations_failed; on emails the rule cannot read: 409 expectations_unreadable; undecided: 409 expectations_undecided (each with details.expectations_check); none to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409 email_rule_conflict). Only writes that save a version or activate the rule are judged. Omitted: judged as with true when the write saves a version or changes the scope of an active rule that API keys or webhooks read and that has expectations. false: never judged first.",
+          "description": "true: judge the rule as this write leaves it (new tree, restored version, new scope, or the version it activates) against the expectations it leaves, as POST /email-rules/test would, before saving; it can take as long as a test. Failed: 409 expectations_failed; on emails the rule cannot read: 409 expectations_unreadable; undecided: 409 expectations_undecided (each with details.expectations_check); none to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409 email_rule_conflict). Only writes that save a version or activate the rule are judged. Omitted: judged as with true when the write saves a version or changes the scope of an active rule that API keys, webhooks or a share read and that has expectations. false: never judged first.",
           "type": "boolean"
         },
         "restore_version": {
@@ -30414,7 +30414,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "affects": {
-          "description": "After an update that saved a version: API keys listing the rule, the webhooks they own, and shares this write ended. The rule keeps its state. Absent if not read.",
+          "description": "After an update that saved a version: API keys listing the rule and the webhooks they own. shares_ended is always 0: a new version keeps the rule's share (share_notice says so). The rule keeps its state. Absent if not read.",
           "type": "object",
           "properties": {
             "keys": {
@@ -30437,11 +30437,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "notice": {
-          "description": "After a write that saved a version of an active rule keys or webhooks read without checking it first: what it changes, and how to have the next one checked.",
+          "description": "After a write that saved a version of an active rule keys, webhooks or a share read without checking it first: what it changes, and how to have the next one checked.",
           "type": "string"
         },
         "share_notice": {
-          "description": "After a write that ended the rule's share: that it did, given even when affects is not, with whom it was with and the version they accepted when those can be read.",
+          "description": "After a write that saved a version of a rule with a live share: that the share goes on under it, given even when affects is not, with whom it is and the version they accepted when those can be read.",
           "type": "string"
         }
       },

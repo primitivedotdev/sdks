@@ -1212,8 +1212,10 @@ function restoredLine(
 
 /**
  * Who an update that saved a version, or turned a grant rule active, reaches,
- * as its answer counts them: the keys listing the rule, the webhooks those
- * keys own, and the shares the write ended (always 0 now).
+ * as its answer counts them: the keys listing the rule and the webhooks those
+ * keys own, and the shares the write ended when it ended any. A new version
+ * keeps a rule's share, so the API counts none; the answer's `share_notice`
+ * says the share goes on.
  */
 export function affectsLine(
   affects: unknown,
@@ -1232,7 +1234,8 @@ export function affectsLine(
     typeof value === "number" && Number.isFinite(value) ? value : undefined;
   const keys = count(affects.keys);
   const endpoints = count(affects.endpoints);
-  const shares = count(affects.shares_ended);
+  // A new version ends no share, so a missing count reads as none.
+  const shares = count(affects.shares_ended) ?? 0;
   const reach = `${plural(keys ?? 0, "API key", "API keys")} listing the rule and ${plural(endpoints ?? 0, "webhook", "webhooks")} those keys own`;
   // Sent only for a saved version or a rule turned active. With no tree or
   // restored version it is the activation, and with a scope sent, the scope
@@ -1240,12 +1243,13 @@ export function affectsLine(
   // tree): what it reaches now either way.
   if (write.activatedOnly && keys !== undefined && endpoints !== undefined)
     return `Now active${write.scopeSent ? ", over the scope this write sent" : ""}: it reaches ${reach}.`;
-  if (keys === undefined || endpoints === undefined || shares === undefined)
-    return undefined;
+  if (keys === undefined || endpoints === undefined) return undefined;
+  const ended =
+    shares > 0 ? `; it ended ${plural(shares, "share", "shares")}` : "";
   // A write that also sent a state may have changed it: say what it is now.
   if (write.stateSent !== undefined && typeof write.state === "string")
-    return `This version reaches ${reach}; it ended ${plural(shares, "share", "shares")}. The rule is now ${write.state}.`;
-  return `This version reaches ${plural(keys, "API key", "API keys")} listing the rule and ${plural(endpoints, "webhook", "webhooks")} those keys own; it ended ${plural(shares, "share", "shares")}. The rule keeps its state.`;
+    return `This version reaches ${reach}${ended}. The rule is now ${write.state}.`;
+  return `This version reaches ${reach}${ended}. The rule keeps its state.`;
 }
 
 /** The rule's author, by name and email where the answer gives them. */
@@ -1320,9 +1324,10 @@ export function writtenEmailRuleReport(
           state: rule.state,
         });
   if (reach) lines.push(reach);
-  // That the write ended the rule's share, and with whom; then, for a version
-  // saved on an active rule keys or webhooks read without a check, what it
-  // changes; and, on a grant rule's create, that do-not-share rules run first.
+  // That the rule's share goes on under the new version, and with whom; then,
+  // for a version saved on an active rule keys, webhooks or a share read
+  // without a check, what it changes; and, on a grant rule's create, that
+  // do-not-share rules run first.
   for (const note of [rule.share_notice, rule.notice, rule.do_not_share_note]) {
     const line = noteLine(note);
     if (line) lines.push(line);
@@ -1519,16 +1524,28 @@ function readAgain(id: string): string {
 /**
  * Who reads an active rule, from a refusal's details.read_by: the server
  * sends it when it checked the write against the rule's expectations because
- * API keys or webhooks read the rule, whether or not the write asked.
+ * API keys, webhooks or a share read the rule, whether or not the write asked.
  * Undefined without it.
  */
 function readByText(details: Record<string, unknown>): string | undefined {
   const readBy = details.read_by;
   if (!isRecord(readBy)) return undefined;
-  const { keys, webhooks } = readBy;
-  return typeof keys === "number" && typeof webhooks === "number"
-    ? `${plural(keys, "API key", "API keys")} and ${plural(webhooks, "webhook", "webhooks")} read what it grants`
-    : "API keys or webhooks may read what it grants (they could not be counted in time)";
+  const { keys, webhooks, shares } = readBy;
+  // Null when not counted in time; an older server sends no shares at all.
+  if (
+    typeof keys !== "number" ||
+    typeof webhooks !== "number" ||
+    shares === null
+  )
+    return "API keys, webhooks or a share may read what it grants (they could not be counted in time)";
+  // A share counts as a reader too: a new version keeps it, so what the
+  // version matches reaches the member it is shared with.
+  const shared =
+    typeof shares === "number" && shares > 0
+      ? `it is shared with ${plural(shares, "member", "members")}`
+      : undefined;
+  if (keys + webhooks === 0 && shared) return shared;
+  return `${plural(keys, "API key", "API keys")} and ${plural(webhooks, "webhook", "webhooks")} read what it grants${shared ? `, and ${shared}` : ""}`;
 }
 
 /** How to save a write the default check refused, without the check. */
@@ -1545,7 +1562,7 @@ function saveUncheckedText(flags?: Record<string, unknown>): string {
  * expectations_failed, expectations_undecided, expectations_unreadable and
  * no_expectations. The guard runs when the write sends if_expectations_pass,
  * and by default (details.read_by) when it changes what an active rule that
- * API keys or webhooks read grants. Nothing was saved in any of them.
+ * API keys, webhooks or a share read grants. Nothing was saved in any of them.
  */
 export function updateEmailRuleErrorHint(
   code: string | undefined,
@@ -1558,10 +1575,10 @@ export function updateEmailRuleErrorHint(
   const details = errorDetails(payload);
   const guarded = isRecord(body) && body.if_expectations_pass === true;
   const readBy = readByText(details);
-  // Why the write was judged: asked for, or by default for a rule that keys
-  // or webhooks read; and, then, how to save it without the check.
+  // Why the write was judged: asked for, or by default for a rule that keys,
+  // webhooks or a share read; and, then, how to save it without the check.
   const judged = readBy
-    ? "was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys or webhooks read it, and nothing was saved"
+    ? "was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys, webhooks or a share read it, and nothing was saved"
     : "was judged against its expectations before saving (if_expectations_pass), and nothing was saved";
   const unchecked = readBy
     ? ` The rule is active and ${readBy}; to save the write without the check, ${saveUncheckedText(flags)}.`
@@ -1586,7 +1603,7 @@ export function updateEmailRuleErrorHint(
           ? `Hint: the rule changed after this write was judged against its expectations and before it was saved, so saving it would have gone unchecked; nothing was saved. ${readAgain(id)}.`
           : `Hint: the rule changed while this write was being saved, so nothing was saved. ${readAgain(id)}.`;
       case "readers_changed":
-        return "Hint: API keys or webhooks started reading this rule while this write was being saved, and saving it would have changed what they receive without checking it against the rule's expectations, so nothing was saved. Send the write again: it is then checked first.";
+        return "Hint: API keys, webhooks or a share started reading this rule while this write was being saved, and saving it would have changed what they receive without checking it against the rule's expectations, so nothing was saved. Send the write again: it is then checked first.";
       default:
         return undefined;
     }
@@ -1904,10 +1921,10 @@ const FAIL_ON_EXPECTATIONS_HELP =
 
 /** update-email-rule's --fail-on-expectations: the server refuses the write. */
 const UPDATE_FAIL_ON_EXPECTATIONS_HELP =
-  "Refuse the write unless the rule, as this write would leave it, passes its expectations. It sends if_expectations_pass (over any in --body-file or --raw-body), so the server judges a new version, a restored one, a new scope or turning the rule active before saving, on its emails by id and its made-up emails, and saves nothing when one failed (exit 1), one names an email the rule cannot read (exit 1, since sending again never decides it), one is undecided (exit 3, or 1 when the rule cannot run as its author or a made-up email is undecided for no reason the answer gives) or the rule has none (exit 1). It can take as long as a test of the rule; the command waits for it. Judging needs a credential that reads the mail's content. A write the server does not judge (one changing only expectations, say) is saved, and the exit code then follows the answer's expectations_check, as on create. Without it, the server still judges, and refuses the same way, a write that saves a version or changes the scope of an active rule that API keys or webhooks read and that has expectations (the refusal's details.read_by counts them), unless --no-if-expectations-pass is sent. With --json, a refused write's document holds the API's error alone; a saved write's holds the rule.";
+  "Refuse the write unless the rule, as this write would leave it, passes its expectations. It sends if_expectations_pass (over any in --body-file or --raw-body), so the server judges a new version, a restored one, a new scope or turning the rule active before saving, on its emails by id and its made-up emails, and saves nothing when one failed (exit 1), one names an email the rule cannot read (exit 1, since sending again never decides it), one is undecided (exit 3, or 1 when the rule cannot run as its author or a made-up email is undecided for no reason the answer gives) or the rule has none (exit 1). It can take as long as a test of the rule; the command waits for it. Judging needs a credential that reads the mail's content. A write the server does not judge (one changing only expectations, say) is saved, and the exit code then follows the answer's expectations_check, as on create. Without it, the server still judges, and refuses the same way, a write that saves a version or changes the scope of an active rule that API keys, webhooks or a share read and that has expectations (the refusal's details.read_by counts them), unless --no-if-expectations-pass is sent. With --json, a refused write's document holds the API's error alone; a saved write's holds the rule.";
 
 /** When update-email-rule judges the made-up emails a samples flag sets. */
-const UPDATE_JUDGES_SAMPLES = `The write judges them before saving with --${FAIL_ON_EXPECTATIONS_FLAG}, when it saves a version or turns the rule active, and without it when it saves a version or changes the scope of an active rule that API keys or webhooks read, unless --no-if-expectations-pass is sent.`;
+const UPDATE_JUDGES_SAMPLES = `The write judges them before saving with --${FAIL_ON_EXPECTATIONS_FLAG}, when it saves a version or turns the rule active, and without it when it saves a version or changes the scope of an active rule that API keys, webhooks or a share read, unless --no-if-expectations-pass is sent.`;
 
 /** What a samples file flag reads. */
 const SAMPLES_FILE_SHAPE =

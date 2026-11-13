@@ -711,9 +711,11 @@ date-time is kept as null and sorts last. A sync stops with an error after
   `kind_mismatch`). A written rule can carry a
   `notice`.
 - `updateEmailRule` without `if_expectations_pass` judges a write that saves
-  a version, or changes the scope, of an active rule that API keys or
-  webhooks read and that has expectations, as `true` would; `false` never
-  judges first. Removing the expectations of such a rule is refused with
+  a version, or changes the scope, of an active rule that API keys, webhooks
+  or a live share read and that has expectations, as `true` would; `false`
+  never judges first. The refusal's `details.read_by` counts `keys`,
+  `webhooks` and `shares` (null when they could not be counted in time).
+  Removing the expectations of such a rule is refused with
   `400` `no_expectations`. It can answer `409` `email_rule_conflict` with
   `details.reason` `readers_changed`, and `503` `service_unavailable`
   (`rule_keys_unread` or `rule_readers_unread`) when the rule's keys or
@@ -821,10 +823,15 @@ date-time is kept as null and sorts last. A sync stops with an error after
   A notice's `started` means a rule was made or turned active over your
   mailboxes, or an active rule came to reach you, once per rule; a rule in
   draft or observe gets none.
-- `createEmailRule` and `updateEmailRule` (`EmailRuleWritten`) and
-  `deleteEmailRule` carry `share_notice` after a write that ended the
-  rule's share: that it did, with whom and the version they accepted, when
-  those can be read.
+- A new version of a shared rule keeps its share: what the version matches
+  is shared from the next email on. After a write that saved a version of a
+  rule with a live share, `updateEmailRule` (`EmailRuleWritten`) carries
+  `share_notice`, saying the share goes on under it; after a delete that
+  ended the rule's share, `deleteEmailRule` carries it. Either names whom
+  the share is with and the version they accepted, when those can be read.
+  Only the rule's author, on the dashboard or the CLI, can save a new
+  version of a shared rule; another app or agent acting for them is refused
+  with `403 forbidden` (`details.reason` `first_party_required`).
 - A rule's author, on the dashboard or the CLI, reads `pending_objections`
   on it (from `listEmailRules`, `getEmailRule` and rule writes), with
   `objection_notice` while some wait for their answer. A write's answer
@@ -928,7 +935,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
   - `updateEmailRule` takes `restore_version`, which saves an earlier
     version again as the next one; its answer then carries `restored_from`.
   - After a write that saved a version, the `updateEmailRule` answer
-    carries `affects` (`keys`, `endpoints`, `shares_ended`), and
+    carries `affects` (`keys`, `endpoints`, and `shares_ended`, which is
+    always 0, since a new version keeps the rule's share), and
     `expectations_check.note` when the saved version did not pass.
   - An `email_rule_conflict` can also have `details.reason`
     `expectations_moved` or `rule_changed`.
@@ -1746,19 +1754,21 @@ parsers.
   gives one, and says to read the rule again with `primitive email-rules
   get-email-rule <id>` and reapply the change.
 - When `email-rules update-email-rule` is refused after the server checked
-  the write by default, because API keys or webhooks read the active rule
-  (`details.read_by`), the hint says so, counts them, and says how to save
-  the write without the check (`--no-if-expectations-pass`). A `409`
-  `readers_changed` gets a hint too: keys or webhooks started reading the
-  rule while it was saved, and sending the write again checks it first. The
+  the write by default, because API keys, webhooks or a share read the
+  active rule (`details.read_by`), the hint says so, counts them (the members
+  a share is with included), and says how to save the write without the
+  check (`--no-if-expectations-pass`). A `409` `readers_changed` gets a hint
+  too: API keys, webhooks or a share started reading the rule while it was
+  saved, and sending the write again checks it first. The
   help of `--fail-on-expectations` and the samples flags says when the
   server checks a write without them.
 - Without `--json`, `email-rules create-email-rule` and `update-email-rule`
-  print the answer's `share_notice` (the share a write ended, and with whom)
-  and `notice` (a version saved unchecked on a rule keys or webhooks read),
-  and they and `get-email-rule` print `objection_notice` to the rule's
-  author. `delete-email-rule` prints `share_notice` in place of its count of
-  ended shares, and `test-email-rule` says how many decided emails the
+  print the answer's `share_notice` (that the share goes on under the new
+  version, and with whom) and `notice` (a version saved unchecked on a rule
+  keys, webhooks or a share read), and they and `get-email-rule` print
+  `objection_notice` to the rule's author. The line on what a new version
+  reaches names ended shares only when there are any. `delete-email-rule`
+  prints `share_notice` in place of its count of ended shares, and `test-email-rule` says how many decided emails the
   conditions held on together (`summary.conditions_held`).
 - `email-rules test-email-rule-on-sample` takes `--with-protection`, as
   true or false like the CLI's other boolean flags, and without `--json`

@@ -38,10 +38,11 @@ class GetEmailRuleShareResult:
             ended_at (datetime.datetime | None):
             end_reason (GetEmailRuleShareResultEndReasonType1 | GetEmailRuleShareResultEndReasonType2Type1 |
                 GetEmailRuleShareResultEndReasonType3Type1 | None): Why it ended, once it has: stopped_by_granter,
-                removed_by_beneficiary, stopped_by_admin, rule_changed (a new version of the rule was saved) or rule_deleted
-                (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not.
-            accepted_rule_version (int): The version of the rule that was accepted. A new version of the rule ends the
-                share.
+                removed_by_beneficiary, stopped_by_admin, rule_changed (a new version of the rule was saved, on a share that
+                ended before new versions kept shares) or rule_deleted (the rule was deleted; the share keeps its record, and
+                the rule is no longer shown). Null while it has not.
+            accepted_rule_version (int): The version of the rule that was accepted. A later version keeps the share: what
+                each version matches is shared from when it is saved.
             edited_on_accept (bool): Whether the member who accepted changed the rule's English, tree or explanation before
                 accepting (a new name does not count).
             live (bool): Not ended, and both people are still members under the memberships that were recorded.

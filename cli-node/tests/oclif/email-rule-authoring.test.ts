@@ -12,6 +12,7 @@ import {
   overLongBodyField,
 } from "../../src/oclif/api-command.js";
 import {
+  affectsLine,
   endEmailRuleShareReport,
   formatFact,
   NOT_MATCHED_LIST_LIMIT,
@@ -2974,7 +2975,7 @@ describe("email-rules update-email-rule: the server's write guards", () => {
     );
   });
 
-  it("says a write was checked by default when keys or webhooks read the rule, and how to save it unchecked", async () => {
+  it("says a write was checked by default when keys, webhooks or a share read the rule, and how to save it unchecked", async () => {
     const check = {
       version: null,
       passed: false,
@@ -3000,9 +3001,26 @@ describe("email-rules update-email-rule: the server's write guards", () => {
     expect(result.exitCode).toBe(1);
     expect(sentBody()).toEqual({ restore_version: 3 });
     expect(stderrLines(result).at(-1)).toBe(
-      `Hint: the rule, as this write would leave it, was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys or webhooks read it, and nothing was saved. Expectations failed: ${A}. The rule is active and 2 API keys and 1 webhook read what it grants; to save the write without the check, send it again with --no-if-expectations-pass. The command exits 1.`,
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys, webhooks or a share read it, and nothing was saved. Expectations failed: ${A}. The rule is active and 2 API keys and 1 webhook read what it grants; to save the write without the check, send it again with --no-if-expectations-pass. The command exits 1.`,
     );
     const hintFor = OPERATION_ERROR_HINTS.updateEmailRule;
+    // A share counts as a reader: alone, and beside keys and webhooks.
+    const failedWith = (read_by: Record<string, unknown>) =>
+      hintFor?.(
+        "expectations_failed",
+        {},
+        {
+          code: "expectations_failed",
+          details: { expectations_check: check, read_by },
+        },
+        { id: RULE },
+      );
+    expect(failedWith({ keys: 0, webhooks: 0, shares: 1 })).toContain(
+      "The rule is active and it is shared with 1 member; to save the write without the check, send it again with --no-if-expectations-pass.",
+    );
+    expect(failedWith({ keys: 2, webhooks: 1, shares: 2 })).toContain(
+      "The rule is active and 2 API keys and 1 webhook read what it grants, and it is shared with 2 members; to save the write",
+    );
     // Readers that could not be counted in time.
     expect(
       hintFor?.(
@@ -3018,7 +3036,7 @@ describe("email-rules update-email-rule: the server's write guards", () => {
         { id: RULE },
       ),
     ).toBe(
-      `Hint: the rule, as this write would leave it, was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys or webhooks read it, and nothing was saved. An expectation names an email this rule cannot read (deleted, or outside its scope or its author's mail): ${C}. Sending the write again will not decide it: send --expectations-file without it, or an evaluation_scope that reads it. The rule is active and API keys or webhooks may read what it grants (they could not be counted in time); to save the write without the check, send it again with --no-if-expectations-pass. The command exits 1.`,
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys, webhooks or a share read it, and nothing was saved. An expectation names an email this rule cannot read (deleted, or outside its scope or its author's mail): ${C}. Sending the write again will not decide it: send --expectations-file without it, or an evaluation_scope that reads it. The rule is active and API keys, webhooks or a share may read what it grants (they could not be counted in time); to save the write without the check, send it again with --no-if-expectations-pass. The command exits 1.`,
     );
     // Removing the expectations of a rule they read, under --fail-on-expectations.
     expect(
@@ -3102,7 +3120,7 @@ describe("email-rules update-email-rule: the server's write guards", () => {
         { id: RULE },
       ),
     ).toBe(
-      "Hint: API keys or webhooks started reading this rule while this write was being saved, and saving it would have changed what they receive without checking it against the rule's expectations, so nothing was saved. Send the write again: it is then checked first.",
+      "Hint: API keys, webhooks or a share started reading this rule while this write was being saved, and saving it would have changed what they receive without checking it against the rule's expectations, so nothing was saved. Send the write again: it is then checked first.",
     );
   });
 
@@ -3144,7 +3162,7 @@ describe("email-rules update-email-rule: the server's write guards", () => {
     expect(result.exitCode).toBe(0);
     expect(stderrLines(result)).toEqual([
       "Saved version 3 again as version 6, now current. The scope is not part of a version: the rule keeps its own.",
-      "This version reaches 2 API keys listing the rule and 1 webhook those keys own; it ended 0 shares. The rule keeps its state.",
+      "This version reaches 2 API keys listing the rule and 1 webhook those keys own. The rule keeps its state.",
       `Expectations on version 6: 1 failed (${A}). It was saved anyway and is current; the rule is in observe, so it is not live.`,
     ]);
   });
@@ -3167,7 +3185,7 @@ describe("email-rules update-email-rule: the server's write guards", () => {
     ]);
     expect(both.exitCode, both.stderr).toBe(0);
     expect(stderrLines(both)).toContain(
-      "This version reaches 2 API keys listing the rule and 1 webhook those keys own; it ended 0 shares. The rule is now active.",
+      "This version reaches 2 API keys listing the rule and 1 webhook those keys own. The rule is now active.",
     );
     // A server that sends no affects: no reach line at all.
     answer({ ...written, state: "active" });
@@ -3491,11 +3509,41 @@ describe("email-rules compile-email-rule and get-email-rule reports", () => {
     expect(json.stderr).toBe("");
   });
 
-  it("prints the server's notices: objections waiting, a share a write ended, and a version saved unchecked", async () => {
+  it("names ended shares in the line on what a new version reaches only when there are any", () => {
+    expect(affectsLine({ keys: 2, endpoints: 1, shares_ended: 0 })).toBe(
+      "This version reaches 2 API keys listing the rule and 1 webhook those keys own. The rule keeps its state.",
+    );
+    expect(affectsLine({ keys: 1, endpoints: 0, shares_ended: 1 })).toBe(
+      "This version reaches 1 API key listing the rule and 0 webhooks those keys own; it ended 1 share. The rule keeps its state.",
+    );
+    // No count of ended shares reads as none: a new version ends no share.
+    expect(affectsLine({ keys: 1, endpoints: 0 })).toBe(
+      "This version reaches 1 API key listing the rule and 0 webhooks those keys own. The rule keeps its state.",
+    );
+    expect(affectsLine({ keys: 1 })).toBeUndefined();
+    // With a state sent beside the version, the state it is in now, ended shares named the same way.
+    const sentActive = { stateSent: "active", state: "active" };
+    expect(
+      affectsLine({ keys: 2, endpoints: 1, shares_ended: 1 }, sentActive),
+    ).toBe(
+      "This version reaches 2 API keys listing the rule and 1 webhook those keys own; it ended 1 share. The rule is now active.",
+    );
+    expect(affectsLine({ keys: 2, endpoints: 1 }, sentActive)).toBe(
+      "This version reaches 2 API keys listing the rule and 1 webhook those keys own. The rule is now active.",
+    );
+    // An activation names no ended shares, whatever the count.
+    expect(
+      affectsLine({ keys: 2, endpoints: 1 }, { activatedOnly: true }),
+    ).toBe(
+      "Now active: it reaches 2 API keys listing the rule and 1 webhook those keys own.",
+    );
+  });
+
+  it("prints the server's notices: objections waiting, the share a new version kept, and a version saved unchecked", async () => {
     const objectionNotice =
       "1 objection to this rule is waiting for your answer: a member whose mail it covered asked you to turn it off. Read it with GET /v1/email-rule-objections?box=incoming, or primitive email-rule-oversight list-email-rule-objections --box incoming (each names its rule). Then accept it, which turns the rule off (state draft), or decline it.";
     const shareNotice =
-      "Saving version 6 ended this rule's share with Dana (accepted at version 5): they can no longer read anything it shared through Primitive, even what it shared before; copies already delivered to their webhooks or downloaded stay with them. To share with them again, they send a new request, and accepting it writes a new rule.";
+      "Saving version 6 kept this rule's share with Dana (accepted at version 5): what version 6 matches is shared with them from the next email on.";
     const savedNotice =
       "This version is in force now and changes what 2 API keys and 1 webhook that read this rule receive. It was saved without being checked against the rule's expectations (if_expectations_pass: false).";
     const rule = {
@@ -3516,7 +3564,7 @@ describe("email-rules compile-email-rule and get-email-rule reports", () => {
     expect(stderrLines(got)).toEqual([objectionNotice]);
     answer({
       ...rule,
-      affects: { keys: 2, endpoints: 1, shares_ended: 1 },
+      affects: { keys: 2, endpoints: 1, shares_ended: 0 },
       share_notice: shareNotice,
       notice: savedNotice,
     });
@@ -3527,7 +3575,7 @@ describe("email-rules compile-email-rule and get-email-rule reports", () => {
     ]);
     expect(updated.exitCode, updated.stderr).toBe(0);
     expect(stderrLines(updated)).toEqual([
-      "This version reaches 2 API keys listing the rule and 1 webhook those keys own; it ended 1 share. The rule keeps its state.",
+      "This version reaches 2 API keys listing the rule and 1 webhook those keys own. The rule keeps its state.",
       shareNotice,
       savedNotice,
       objectionNotice,
