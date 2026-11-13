@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import { describe, expect, it, vi } from "vitest";
 import DoctorCommand, {
+  ASKED_PAGES,
   checkApiKey,
   checkAskedOfYou,
   checkNode,
@@ -537,15 +538,24 @@ describe("checkAskedOfYou", () => {
     next_cursor: null,
     ...extra,
   });
-  type Answer = { data?: unknown; status?: number; throws?: boolean };
-  /** The answers a person's asked and concerning lists give, by relation. */
+  type Answer = {
+    data?: unknown;
+    status?: number;
+    throws?: boolean;
+    /** Later pages, by the cursor that asks for them. */
+    pages?: Record<string, Answer>;
+  };
+  /** The answers a person's asked and concerning lists give, by relation and cursor. */
   function client(asked: Answer, concerning: Answer = { data: page([]) }) {
     const urls: URL[] = [];
     const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
       const url = new URL(new Request(input, init).url);
       urls.push(url);
-      const answer =
+      const list =
         url.searchParams.get("relation") === "asked" ? asked : concerning;
+      const cursor = url.searchParams.get("cursor");
+      const answer = cursor ? list.pages?.[cursor] : list;
+      if (!answer) throw new Error(`unexpected page ${cursor}`);
       if (answer.throws) throw new TypeError("fetch failed");
       const status = answer.status ?? 200;
       return new Response(
@@ -614,27 +624,87 @@ describe("checkAskedOfYou", () => {
     expect(await checkAskedOfYou(client({ data: page([]) }).api, NOW)).toEqual({
       status: "ok",
       message:
-        "nothing waiting for you; coverage notices can take about a minute to appear",
+        "nothing waiting for you; coverage notices can take a few minutes to appear",
     });
   });
 
-  it("says at least, not exactly, when either list has more than one page", async () => {
-    const requests = Array.from({ length: 50 }, () =>
-      entry("email_rule_request", "pending"),
-    );
-    const notices = Array.from({ length: 3 }, () =>
-      entry("email_rule_coverage", "started"),
-    );
-    const { api } = client(
-      { data: page(requests, { next_cursor: "next" }) },
-      { data: page(notices, { next_cursor: "next" }) },
+  it("reads later pages, counting exactly, and says at least only past its page limit", async () => {
+    const request = entry("email_rule_request", "pending");
+    const { api, urls } = client(
+      {
+        data: page([], { next_cursor: "a2" }),
+        pages: { a2: { data: page([request, request]) } },
+      },
+      {
+        data: page([], { next_cursor: "c2" }),
+        pages: {
+          c2: { data: page([entry("email_rule_coverage", "started")]) },
+        },
+      },
     );
     expect((await checkAskedOfYou(api, NOW))?.message).toBe(
-      `at least 50 rule requests and objections waiting for you; 3+ coverage notices in the last ${DAYS} days`,
+      `2 rule requests waiting for you; 1 coverage notice in the last ${DAYS} days`,
     );
+    expect(urls.map((url) => url.searchParams.get("cursor"))).toEqual([
+      null,
+      "a2",
+      null,
+      "c2",
+    ]);
+    // Every page has another after it: the row reads its limit and no more.
+    const pages = Object.fromEntries(
+      Array.from({ length: ASKED_PAGES + 1 }, (_, n) => [
+        `p${n + 2}`,
+        { data: page([request], { next_cursor: `p${n + 3}` }) },
+      ]),
+    );
+    const endless = client({
+      data: page([request], { next_cursor: "p2" }),
+      pages,
+    });
+    expect((await checkAskedOfYou(endless.api, NOW))?.message).toBe(
+      `at least ${ASKED_PAGES} rule requests and objections waiting for you`,
+    );
+    expect(
+      endless.urls.filter(
+        (url) => url.searchParams.get("relation") === "asked",
+      ),
+    ).toHaveLength(ASKED_PAGES);
+  });
+
+  it("stops reading notices at the first page that ends before the window", async () => {
+    const old = entry(
+      "email_rule_coverage",
+      "started",
+      "2026-10-01T00:00:00.000Z",
+    );
+    const { api, urls } = client(
+      { data: page([]) },
+      {
+        data: page([entry("email_rule_coverage", "started"), old], {
+          next_cursor: "c2",
+        }),
+      },
+    );
+    expect((await checkAskedOfYou(api, NOW))?.message).toBe(
+      `1 coverage notice in the last ${DAYS} days`,
+    );
+    expect(urls).toHaveLength(2);
   });
 
   it("never says nothing is waiting for what it could not see", async () => {
+    for (const concerning of [
+      { data: page([], { pending_complete: false }) },
+      { data: page([], { next_cursor: "c2" }), pages: { c2: { status: 500 } } },
+    ]) {
+      expect(
+        await checkAskedOfYou(client({ data: page([]) }, concerning).api, NOW),
+      ).toEqual({
+        status: "warn",
+        message: "the check of the rules over your mail did not finish",
+        hint: "Run `primitive activity concerning`.",
+      });
+    }
     const unreadable = await checkAskedOfYou(
       client({ data: page([]) }, { status: 500 }).api,
       NOW,

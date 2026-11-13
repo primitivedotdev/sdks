@@ -377,9 +377,15 @@ async function checkDomains(client: PrimitiveApiClient): Promise<CheckOutcome> {
 export const RECENT_COVERAGE_DAYS = 7;
 
 const ASKED_PAGE = 50;
+/** The most pages of one list the row reads before it reports a lower bound. */
+export const ASKED_PAGES = 5;
 const ASKED_KINDS = ["email_rule_request", "email_rule_objection"] as const;
 
-type ActivityPage = ListActivityObjectsResult & { as_of?: string | null };
+type ActivityPage = ListActivityObjectsResult & {
+  as_of?: string | null;
+  pending_complete?: boolean;
+};
+type ActivityItem = ListActivityObjectsResult["items"][number];
 
 /**
  * One page of the caller's activity list; "refused" when the credential may
@@ -404,6 +410,38 @@ async function activityPage(
   }
 }
 
+/**
+ * Up to ASKED_PAGES pages of a list, stopping early once `enough` says the
+ * rest cannot matter: the first page (which alone carries what a list says
+ * beyond its items), every item read, and whether a page was left unread.
+ * "refused" or null as the first page is; a later page that fails to read is
+ * a page left unread.
+ */
+async function activityPages(
+  client: PrimitiveApiClient,
+  query: NonNullable<ListActivityObjectsData["query"]>,
+  enough: (page: ActivityPage) => boolean = () => false,
+): Promise<
+  | { first: ActivityPage; items: ActivityItem[]; more: boolean }
+  | "refused"
+  | null
+> {
+  const first = await activityPage(client, query);
+  if (first === "refused" || first === null) return first;
+  const items = [...first.items];
+  let page = first;
+  for (let read = 1; ; read += 1) {
+    const cursor = page.next_cursor;
+    if (cursor == null || enough(page)) return { first, items, more: false };
+    if (read >= ASKED_PAGES) return { first, items, more: true };
+    const next = await activityPage(client, { ...query, cursor });
+    if (next === "refused" || next === null)
+      return { first, items, more: true };
+    items.push(...next.items);
+    page = next;
+  }
+}
+
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /**
@@ -413,15 +451,16 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
  * cover their mail now with no notice written yet, and coverage notices from
  * the last RECENT_COVERAGE_DAYS days. Null for a credential that is asked
  * nothing: one the list refuses, one whose list is not a person's own, or one
- * from which every asked kind is withheld. A kind withheld from it is named,
- * so the row is never OK for what it could not see. WARN when anything is
- * waiting or could not be read; never a FAIL.
+ * from which every asked kind is withheld. Whatever it could not see (a kind
+ * withheld from it, a page it did not read, a pending check the API did not
+ * finish) is said, so the row is never OK for it, and counts read past are
+ * lower bounds. WARN when anything is waiting or unchecked; never a FAIL.
  */
 export async function checkAskedOfYou(
   client: PrimitiveApiClient,
   now = Date.now(),
 ): Promise<CheckOutcome | null> {
-  const asked = await activityPage(client, {
+  const asked = await activityPages(client, {
     relation: "asked",
     state: "live",
     limit: ASKED_PAGE,
@@ -433,19 +472,30 @@ export async function checkAskedOfYou(
       message: "could not check what is waiting for you",
       hint: "Run `primitive activity asked --state live` and `primitive activity concerning`.",
     };
-  const hidden = new Set(asked.withheld.map((entry) => entry.kind));
-  if (asked.covers !== "you" || ASKED_KINDS.every((kind) => hidden.has(kind)))
+  const hidden = new Set(asked.first.withheld.map((entry) => entry.kind));
+  if (
+    asked.first.covers !== "you" ||
+    ASKED_KINDS.every((kind) => hidden.has(kind))
+  )
     return null;
-  const read = await activityPage(client, {
-    relation: "concerning",
-    state: "all",
-    limit: ASKED_PAGE,
-  });
+  const since = now - RECENT_COVERAGE_DAYS * 24 * 60 * 60 * 1000;
+  // Notices come newest first: once a page ends before the window, the rest do too.
+  const read = await activityPages(
+    client,
+    { relation: "concerning", state: "all", limit: ASKED_PAGE },
+    (page) => {
+      const last = page.items.at(-1);
+      return last !== undefined && Date.parse(last.created_at) < since;
+    },
+  );
   const concerning = read === "refused" ? null : read;
   const coverageHidden =
-    concerning?.withheld.some(
+    concerning?.first.withheld.some(
       (entry) => entry.kind === "email_rule_coverage",
     ) ?? false;
+  const coverageUnfinished =
+    concerning !== null &&
+    (concerning.more || concerning.first.pending_complete === false);
 
   const requests = asked.items.filter(
     (item) => item.kind === "email_rule_request",
@@ -453,22 +503,19 @@ export async function checkAskedOfYou(
   const objections = asked.items.filter(
     (item) => item.kind === "email_rule_objection",
   ).length;
-  const waiting =
-    asked.next_cursor != null
-      ? [`at least ${requests + objections} rule requests and objections`]
-      : [
-          ...(requests > 0 ? [plural(requests, "rule request")] : []),
-          ...(objections > 0 ? [plural(objections, "objection")] : []),
-        ];
+  const waiting = asked.more
+    ? [`at least ${requests + objections} rule requests and objections`]
+    : [
+        ...(requests > 0 ? [plural(requests, "rule request")] : []),
+        ...(objections > 0 ? [plural(objections, "objection")] : []),
+      ];
   const items = concerning?.items ?? [];
   const pending = items.filter((item) => item.state === "pending").length;
-  const since = now - RECENT_COVERAGE_DAYS * 24 * 60 * 60 * 1000;
   const notices = items.filter(
     (item) =>
       (item.state === "started" || item.state === "new_version") &&
       Date.parse(item.created_at) >= since,
   ).length;
-  const moreNotices = concerning?.next_cursor != null;
   const parts = [
     ...(waiting.length > 0 ? [`${waiting.join(" and ")} waiting for you`] : []),
     ...ASKED_KINDS.filter((kind) => hidden.has(kind)).map(
@@ -482,25 +529,27 @@ export async function checkAskedOfYou(
       : []),
     ...(notices > 0
       ? [
-          `${notices}${moreNotices ? "+" : ""} coverage notice${notices === 1 && !moreNotices ? "" : "s"} in the last ${RECENT_COVERAGE_DAYS} days`,
+          `${plural(notices, "coverage notice")} in the last ${RECENT_COVERAGE_DAYS} days`,
         ]
       : []),
     ...(coverageHidden
       ? ["rules over your mail not shown to this credential"]
-      : concerning
-        ? []
-        : ["could not check the rules over your mail"]),
+      : !concerning
+        ? ["could not check the rules over your mail"]
+        : coverageUnfinished
+          ? ["the check of the rules over your mail did not finish"]
+          : []),
   ];
   if (parts.length === 0) {
-    const asOf = concerning?.as_of;
+    const asOf = concerning?.first.as_of;
     return {
       status: "ok",
-      message: `nothing waiting for you; ${asOf ? `coverage notices as of ${minute(asOf)} UTC` : "coverage notices can take about a minute to appear"}`,
+      message: `nothing waiting for you; ${asOf ? `coverage notices as of ${minute(asOf)} UTC` : "coverage notices can take a few minutes to appear"}`,
     };
   }
   const commands = [
     ...(waiting.length > 0 ? ["`primitive activity asked --state live`"] : []),
-    ...(pending > 0 || notices > 0 || !concerning
+    ...(pending > 0 || notices > 0 || !concerning || coverageUnfinished
       ? ["`primitive activity concerning`"]
       : []),
   ];

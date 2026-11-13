@@ -469,7 +469,7 @@ describe("activity concerning command", () => {
 
   it("never reads an empty listing as no rule covering you: it says how far the notices go and where to look now", async () => {
     const now =
-      "A rule that starts covering your mail can take about a minute to appear here. `primitive email-rule-oversight list-email-rules-covering-me` shows what covers you now.";
+      "A rule that starts covering your mail can take a few minutes to appear here. `primitive email-rule-oversight list-email-rules-covering-me` shows what covers you now.";
     expect(formatConcerningRows([], true)).toBe(
       `Nothing recorded for you yet. ${now}`,
     );

@@ -177,7 +177,7 @@ const COVERING_NOW = `\`primitive email-rule-oversight list-email-rules-covering
  * changed). No id: a notice's id is not a rule's, and no command takes it.
  * `complete` says the listing is the whole of it (from the first page to the
  * last, nothing withheld). Even then an empty one is no promise that nothing
- * covers you: notices are written by a job that runs about every minute, so it
+ * covers you: notices are written by a periodic job and can lag, so it
  * says how far they go (`asOf`, when the server says) and where to look now.
  */
 export function formatConcerningRows(
@@ -187,7 +187,7 @@ export function formatConcerningRows(
 ): string {
   if (items.length === 0)
     return complete
-      ? `${asOf ? `Nothing recorded for you as of ${minute(asOf)} UTC.` : "Nothing recorded for you yet."} A rule that starts covering your mail can take about a minute to appear here. ${COVERING_NOW}`
+      ? `${asOf ? `Nothing recorded for you as of ${minute(asOf)} UTC.` : "Nothing recorded for you yet."} A rule that starts covering your mail can take a few minutes to appear here. ${COVERING_NOW}`
       : "Nothing to show.";
   const rows = items.map((item) => [
     item.state,
@@ -448,7 +448,7 @@ export class ActivityConcerningCommand extends Command {
   static description =
     `List what other members did that concerns your own mail, newest first: each time another member's rule started covering one of your mailboxes (started), or saved a new version while covering it (new_version), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline.
 
-  Notices are written by a job that runs about every minute. Until a rule's notice is written, a rule that covers you now is listed first as pending, dated when the rule last changed, and with --json its id is the rule's.
+  Notices are written by a job that runs every minute or so and can lag. Until a rule's notice is written, a rule that covers you now is listed first as pending, dated when the rule last changed, and with --json its id is the rule's.
 
   Signed in with \`primitive login\`, you see the notices about your own mail under your current membership. A key, an app or an agent has none. The rules that cover you now, with their ids, are listed by \`primitive email-rule-oversight list-email-rules-covering-me\`; ask a rule's author to turn it off with \`primitive email-rule-oversight create-email-rule-objection --rule-id <rule-id>\`. With --json each notice's id is the notice's, not the rule's.`;
 
