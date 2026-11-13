@@ -190,7 +190,8 @@ function receiverTotals(value: unknown): ReceiverTotals | null {
 
 /**
  * What a receivers_changed notice says changed, from its totals before and
- * after: "keys 3 to 2 (1 to 0 reading your mail in full), webhooks 2 to 1",
+ * after: "keys 3 to 2 (1 to 0 also reading your mail beyond the rule),
+ * webhooks 2 to 1",
  * or, when the totals are equal (an owner or a webhook site changed), that
  * they are. Null for any other notice, and for one whose totals are missing
  * or not counts (an older server).
@@ -205,9 +206,9 @@ export function receiversChangeText(item: ActivityItem): string | null {
   if (!before || !after) return null;
   const moved = (key: keyof ReceiverTotals) => before[key] !== after[key];
   const span = (key: keyof ReceiverTotals) => `${before[key]} to ${after[key]}`;
-  // Keys reading your mail in full are some of the keys, so they are told with them.
+  // Keys also reading your mail beyond the rule are some of the keys, so they are told with them.
   const full = moved("reads_in_full")
-    ? ` (${span("reads_in_full")} reading your mail in full)`
+    ? ` (${span("reads_in_full")} also reading your mail beyond the rule)`
     : "";
   const changed = [
     ...(moved("keys")
@@ -563,7 +564,7 @@ export class ActivityAskedCommand extends Command {
 
 export class ActivityConcerningCommand extends Command {
   static description =
-    `List what other members did that concerns your own mail, newest first: each time another member's rule started covering your mailboxes, that is, it was made or turned active over them or an active rule came to reach you, once per rule, not per mailbox (started), saved a new version while covering it (new_version), or changed who receives its matches: its keys, webhooks or share (receivers_changed, with the totals before and after in the table, and under receivers_change with --json, at most once every 15 minutes for a rule), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline. A rule in draft or observe grants and blocks nothing and gets no notice while it stays there, though \`primitive email-rule-oversight list-email-rules-covering-me\` lists it; turning it active is what is listed, and a rule that covers you again within an hour of its last started or baseline notice gets no new one, though a version it saved meanwhile is listed as new_version. A rule that stops covering you and a rename are not listed.
+    `List what other members did that concerns your own mail, newest first: each time another member's rule started covering your mailboxes, that is, it was made or turned active over them or an active rule came to reach you, once per rule, not per mailbox (started), saved a new version while covering it (new_version), or changed who receives its matches: its keys, webhooks or share (receivers_changed, with the totals before and after in the table, and under receivers_change with --json, at most once every 15 minutes for a rule), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline. A rule in draft or observe grants and blocks nothing and gets no notice while it stays there, though \`primitive email-rule-oversight list-email-rules-covering-me\` lists it; turning it active is what is listed, and a rule that covers you again within an hour of its last started or baseline notice gets no new one, though a version it saved meanwhile is listed as new_version, and a change in who receives its matches as receivers_changed. A rule that stops covering you and a rename are not listed.
 
   Notices can lag. Until a start is written, a rule that now covers you is listed first as pending, dated when the rule last changed, and with --json its id is the rule's. When the check for such rules did not finish, the listing says so and --json carries pending_complete: false; run it again in a moment.
 

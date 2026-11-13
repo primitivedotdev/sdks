@@ -459,20 +459,22 @@ describe("activity concerning command", () => {
       changed(totals, { ...totals, keys: 2, reads_in_full: 0, webhooks: 1 }),
       changed(totals, totals, "Same"),
       changed(totals, { ...totals, reads_in_full: 2 }, "Full"),
+      changed(totals, { ...totals, keys: 4, shares: 1 }, "Shared"),
       item({ kind: "email_rule_coverage", state: "started", name: "Other" }),
     ]);
     expect(out).toMatch(
       /^NOTICE\s+WHEN \(UTC\)\s+RULE\s+AUTHOR\s+RULE ID\s+CHANGE$/m,
     );
     expect(out).toMatch(
-      /^receivers_changed {2,}.*Vendor invoices\s+Sam Rivera\s+3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f {2}keys 3 to 2 \(1 to 0 reading your mail in full\), webhooks 2 to 1$/m,
+      /^receivers_changed {2,}.*Vendor invoices\s+Sam Rivera\s+3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f {2}keys 3 to 2 \(1 to 0 also reading your mail beyond the rule\), webhooks 2 to 1$/m,
     );
     expect(out).toMatch(
       /Same\s+.*same totals, an owner or webhook site changed$/m,
     );
     expect(out).toMatch(
-      /Full\s+.*keys 3 \(1 to 2 reading your mail in full\)$/m,
+      /Full\s+.*keys 3 \(1 to 2 also reading your mail beyond the rule\)$/m,
     );
+    expect(out).toMatch(/Shared\s+.*keys 3 to 4, shares 0 to 1$/m);
     // Other notices keep their state alone, and nothing is added to the NOTICE column.
     expect(out).toMatch(/^started {2,}.*Other/m);
     expect(out).not.toContain("receivers_changed (");
@@ -497,6 +499,7 @@ describe("activity concerning command", () => {
       { before: [], after: [] },
       { before: { ...totals, keys: "3" }, after: totals },
       { before: { ...totals, keys: -1 }, after: totals },
+      { before: { ...totals, keys: 1.5 }, after: totals },
     ]) {
       const out = formatConcerningRows([odd(change)]);
       expect(out).not.toContain("CHANGE");
