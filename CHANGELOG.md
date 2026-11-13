@@ -1282,6 +1282,14 @@ downgrading, or sign in again afterwards.
 - `keys update` changes the grant of a key whose read shows
   `grant.mail_scope.rule_versions`, which it never sends back. A mail scope
   setting it cannot restate is named in the refusal.
+- A key that lists an address or domain beside its email rules reads every
+  email there, not only the rules' emails (the `whole_mailbox` note in
+  `address_warnings`). `keys create`, and `keys update` when it writes the
+  grant, then print a warning on stderr after the key, naming the addresses
+  and saying how to make a key limited to the rules; with `--json` it is in
+  the document's `warnings`. The key is still made, and the exit code is
+  unchanged. `keys list` marks such a key with what it reads in full, and
+  `keys get` shows it in an `In full:` line.
 
 #### Rule request and objection webhook events
 

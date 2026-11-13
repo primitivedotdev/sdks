@@ -262,8 +262,23 @@ describe("keys helpers", () => {
     );
     expect(formatKeyDetail(noted).endsWith(`\nNotes:\n  ${note}`)).toBe(true);
     expect(
-      formatKeyRows([noted]).endsWith(`[1 note: primitive keys get ${KEY_ID}]`),
+      formatKeyRows([noted]).endsWith(
+        `[reads all mail at desk@example.com, not only its rules' emails] [1 note: primitive keys get ${KEY_ID}]`,
+      ),
     ).toBe(true);
+    // The detail names what it reads in full right below its mail scope.
+    expect(formatKeyDetail(noted)).toContain(
+      `Mail:         addresses desk@example.com; rules ${RULE_ID}\nIn full:      desk@example.com (listed beside its rules, so every email there is read, not only what the rules grant)\n`,
+    );
+    // Another kind of note is counted, but nothing is said to be read in full.
+    const otherNote = {
+      ...noted,
+      address_warnings: [
+        { address: "", reason: "no_send_address", description: "x" },
+      ],
+    };
+    expect(formatKeyRows([otherNote])).not.toContain("reads all mail");
+    expect(formatKeyDetail(otherNote)).not.toContain("In full:");
     // A note on more than one line stays inside the block.
     const twoLines = {
       ...noted,
@@ -959,7 +974,7 @@ describe("keys commands", () => {
     });
   });
 
-  it("create prints the address warnings, such as an address beside a rule read in full, and --json keeps them", async () => {
+  it("create warns in every mode that an address beside a rule is read in full, and prints the other notes without --json", async () => {
     const secret = `prim_${"b".repeat(64)}`;
     const whole = {
       address: "ops@acme.example",
@@ -967,6 +982,12 @@ describe("keys commands", () => {
       description:
         "ops@acme.example is listed beside email rules, so this key reads all of its mail, not only what the rules match.",
     };
+    const member = {
+      address: "ops@acme.example",
+      reason: "member_address",
+      description: "ops@acme.example is a member's own address.",
+    };
+    const warning = `Warning: this key reads every email at ops@acme.example, not only the emails its rules grant. An address or domain listed beside a rule is read in full. To limit a key to the rules' emails, create one with only --rule (no --address or --domain) and revoke this one with \`primitive keys revoke ${KEY_ID}\`.`;
     const created = {
       id: KEY_ID,
       name: "orders",
@@ -986,7 +1007,7 @@ describe("keys commands", () => {
       expires_at: null,
       conditions: null,
       warnings: [],
-      address_warnings: [whole],
+      address_warnings: [whole, member],
     };
     useServer(() =>
       Response.json({ success: true, data: created }, { status: 201 }),
@@ -1004,7 +1025,10 @@ describe("keys commands", () => {
       "pstep_x",
     ]);
     expect(result.exitCode).toBeUndefined();
-    expect(result.stderr).toContain(`Note: ${whole.description}`);
+    expect(result.stderr).toContain(`Note: ${member.description}`);
+    // Said once, as the warning, last, after the key's secret.
+    expect(result.stderr).not.toContain(`Note: ${whole.description}`);
+    expect(result.stderr.trimEnd().endsWith(warning)).toBe(true);
     const json = await run(KeysCreateCommand, [
       "--name",
       "orders",
@@ -1018,15 +1042,58 @@ describe("keys commands", () => {
       "pstep_x",
       "--json",
     ]);
-    expect(json.stderr).not.toContain("Note:");
-    expect(JSON.parse(json.stdout)).toMatchObject({
-      address_warnings: [whole],
-    });
+    // With --json stderr stays empty: the JSON guard puts the warning in the
+    // document's warnings, beside the notes as they came.
+    expect(json.exitCode).toBeUndefined();
+    expect(json.stderr).toBe("");
+    const document = JSON.parse(json.stdout);
+    expect(document.warnings).toEqual([warning]);
+    expect(document).toMatchObject({ address_warnings: [whole, member] });
   });
 
-  it("update prints the address warnings the change answers with", async () => {
+  it("create says nothing of a whole mailbox for a key whose notes have none", async () => {
+    useServer(() =>
+      Response.json(
+        {
+          success: true,
+          data: {
+            id: KEY_ID,
+            name: "orders",
+            key: `prim_${"c".repeat(64)}`,
+            key_prefix: "prim_cccccccc...",
+            grant: {
+              template: null,
+              credential_grant_id: "g",
+              permissions: ["mail:read"],
+              mail_scope: { addresses: [], domains: [], rules: [RULE_ID] },
+              resources: null,
+            },
+            expires_at: null,
+            conditions: null,
+            warnings: [],
+            address_warnings: [],
+          },
+        },
+        { status: 201 },
+      ),
+    );
+    const json = await run(KeysCreateCommand, [
+      "--permission",
+      "mail:read",
+      "--rule",
+      RULE_ID,
+      "--step-up-token",
+      "pstep_x",
+      "--json",
+    ]);
+    expect(json.stderr).toBe("");
+    expect(JSON.parse(json.stdout).warnings).toEqual([]);
+  });
+
+  it("update warns in every mode when the grant it wrote reads a whole domain beside its rules", async () => {
     const description =
       "acme.example is listed beside email rules, so this key reads all of its mail, not only what the rules match.";
+    const warning = `Warning: this key reads every email at acme.example, not only the emails its rules grant. An address or domain listed beside a rule is read in full. To limit a key to the rules' emails, create one with only --rule (no --address or --domain) and revoke this one with \`primitive keys revoke ${KEY_ID}\`.`;
     let reads = 0;
     useServer((request) => {
       if (request.method === "GET") {
@@ -1054,7 +1121,23 @@ describe("keys commands", () => {
     ]);
     expect(result.exitCode).toBeUndefined();
     expect(reads).toBeGreaterThan(0);
-    expect(result.stderr).toContain(`Note: ${description}`);
+    expect(result.stderr).not.toContain(`Note: ${description}`);
+    expect(result.stderr.trimEnd().endsWith(warning)).toBe(true);
+    const json = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add",
+      "mail:send",
+      "--step-up-token",
+      "pstep_z",
+      "--json",
+    ]);
+    expect(json.exitCode).toBeUndefined();
+    expect(json.stderr).toBe("");
+    const document = JSON.parse(json.stdout);
+    expect(document.warnings).toEqual([warning]);
+    expect(document.address_warnings).toEqual([
+      { address: "acme.example", reason: "whole_mailbox", description },
+    ]);
   });
 
   it("update adds permissions to a read-only key, guarded by the grant it read, and says what happens to held requests", async () => {
