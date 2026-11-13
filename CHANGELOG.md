@@ -550,7 +550,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 #### New operations
 
-180 operations, by area:
+184 operations, by area:
 
 - Account: `getOwnGrant`, `getSendFrom` (the addresses a credential may
   send from, and the one a send that names no From should use).
@@ -683,6 +683,13 @@ date-time is kept as null and sorts last. A sync stops with an error after
   create-email-rule-objection`, `list-email-rule-objections`,
   `get-email-rule-objection`, `withdraw-email-rule-objection`,
   `decline-email-rule-objection` and `accept-email-rule-objection`.
+- Email notifications: `getEmailNotificationPreferences` and
+  `updateEmailNotificationPreferences`, the notification emails the calling
+  member gets and turning a kind on or off where the organization lets
+  members choose, and `getEmailNotificationSettings` and
+  `updateEmailNotificationSettings`, the organization's mode for each kind
+  (`off`, `optional_on`, `optional_off` or `required`). For a person only,
+  not an API key or an agent. In the CLI: the `email-notifications` topic.
 - Email rule shares: `listEmailRuleShares`, `listGivenEmailRuleShares`,
   `getEmailRuleShare`, `listEmailRuleShareEmails`, `endEmailRuleShare`
   (whose answer carries a `note` saying the rule itself is left unchanged,
@@ -822,6 +829,16 @@ date-time is kept as null and sorts last. A sync stops with an error after
   let the rule match mail the request left out by who it was sent to. A
   covering rule's `receivers` is also null for a rule shown in draft or
   observe that turned active or was deleted after the page was read.
+- A coverage notice can be `receivers_changed`: who receives an active
+  rule's matches changed (its keys, webhooks or share). It carries
+  `receivers_change`, the totals `before` and `after` (`keys`,
+  `reads_in_full`, `webhooks`, `shares`).
+- A rule's `receivers` entries (`keys`, `webhooks` and `shares`) carry
+  `newest_at`, when the newest of them was made, to the minute.
+- `getKeyBuilder` answers `mail_limits_available`, whether a key limited to
+  some mail would be created now, and `org_reach_available`, whether the
+  credential policy lets a new key reach every mailbox.
+- New error codes: `always_sent` and `required_by_organization`.
 - `listActivityObjects` coverage notices (`email_rule_coverage`) carry
   `rule_id`, the rule each is about (for a `pending` row, the same as `id`).
   A notice's `started` means a rule was made or turned active over your

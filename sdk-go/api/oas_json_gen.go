@@ -42726,6 +42726,18 @@ func (s *CredentialsGetKeyBuilderResult) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
+		if s.MailLimitsAvailable.Set {
+			e.FieldStart("mail_limits_available")
+			s.MailLimitsAvailable.Encode(e)
+		}
+	}
+	{
+		if s.OrgReachAvailable.Set {
+			e.FieldStart("org_reach_available")
+			s.OrgReachAvailable.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("matrix")
 		e.ArrStart()
 		for _, elem := range s.Matrix {
@@ -42746,11 +42758,13 @@ func (s *CredentialsGetKeyBuilderResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfCredentialsGetKeyBuilderResult = [4]string{
+var jsonFieldsNameOfCredentialsGetKeyBuilderResult = [6]string{
 	0: "enabled",
 	1: "presets",
-	2: "matrix",
-	3: "policy",
+	2: "mail_limits_available",
+	3: "org_reach_available",
+	4: "matrix",
+	5: "policy",
 }
 
 // Decode decodes CredentialsGetKeyBuilderResult from json.
@@ -42793,8 +42807,28 @@ func (s *CredentialsGetKeyBuilderResult) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"presets\"")
 			}
+		case "mail_limits_available":
+			if err := func() error {
+				s.MailLimitsAvailable.Reset()
+				if err := s.MailLimitsAvailable.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"mail_limits_available\"")
+			}
+		case "org_reach_available":
+			if err := func() error {
+				s.OrgReachAvailable.Reset()
+				if err := s.OrgReachAvailable.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"org_reach_available\"")
+			}
 		case "matrix":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				s.Matrix = make([]CredentialsGetKeyBuilderResultMatrixItem, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -42812,7 +42846,7 @@ func (s *CredentialsGetKeyBuilderResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"matrix\"")
 			}
 		case "policy":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				if err := s.Policy.Decode(d); err != nil {
 					return err
@@ -42842,7 +42876,7 @@ func (s *CredentialsGetKeyBuilderResult) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00001111,
+		0b00110011,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -76280,6 +76314,2452 @@ func (s *EmailListMeta) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResult) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResult) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("entitled")
+		e.Bool(s.Entitled)
+	}
+	{
+		e.FieldStart("kinds")
+		e.ArrStart()
+		for _, elem := range s.Kinds {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfEmailNotificationsGetEmailNotificationPreferencesResult = [2]string{
+	0: "entitled",
+	1: "kinds",
+}
+
+// Decode decodes EmailNotificationsGetEmailNotificationPreferencesResult from json.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResult) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsGetEmailNotificationPreferencesResult to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "entitled":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Entitled = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"entitled\"")
+			}
+		case "kinds":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				s.Kinds = make([]EmailNotificationsGetEmailNotificationPreferencesResultKindsItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem EmailNotificationsGetEmailNotificationPreferencesResultKindsItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Kinds = append(s.Kinds, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kinds\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailNotificationsGetEmailNotificationPreferencesResult")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailNotificationsGetEmailNotificationPreferencesResult) {
+					name = jsonFieldsNameOfEmailNotificationsGetEmailNotificationPreferencesResult[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResult) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResult) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("kind")
+		e.Str(s.Kind)
+	}
+	{
+		e.FieldStart("label")
+		e.Str(s.Label)
+	}
+	{
+		e.FieldStart("description")
+		e.Str(s.Description)
+	}
+	{
+		e.FieldStart("class")
+		s.Class.Encode(e)
+	}
+	{
+		e.FieldStart("entitlement_required")
+		e.Bool(s.EntitlementRequired)
+	}
+	{
+		e.FieldStart("entitled")
+		e.Bool(s.Entitled)
+	}
+	{
+		e.FieldStart("org_mode")
+		s.OrgMode.Encode(e)
+	}
+	{
+		e.FieldStart("org_mode_is_default")
+		e.Bool(s.OrgModeIsDefault)
+	}
+	{
+		e.FieldStart("org_modes")
+		e.ArrStart()
+		for _, elem := range s.OrgModes {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+	{
+		e.FieldStart("member_enabled")
+		e.Bool(s.MemberEnabled)
+	}
+	{
+		e.FieldStart("member_can_change")
+		e.Bool(s.MemberCanChange)
+	}
+}
+
+var jsonFieldsNameOfEmailNotificationsGetEmailNotificationPreferencesResultKindsItem = [11]string{
+	0:  "kind",
+	1:  "label",
+	2:  "description",
+	3:  "class",
+	4:  "entitlement_required",
+	5:  "entitled",
+	6:  "org_mode",
+	7:  "org_mode_is_default",
+	8:  "org_modes",
+	9:  "member_enabled",
+	10: "member_can_change",
+}
+
+// Decode decodes EmailNotificationsGetEmailNotificationPreferencesResultKindsItem from json.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsGetEmailNotificationPreferencesResultKindsItem to nil")
+	}
+	var requiredBitSet [2]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "kind":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.Kind = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kind\"")
+			}
+		case "label":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Label = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"label\"")
+			}
+		case "description":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.Description = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"description\"")
+			}
+		case "class":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				if err := s.Class.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"class\"")
+			}
+		case "entitlement_required":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := d.Bool()
+				s.EntitlementRequired = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"entitlement_required\"")
+			}
+		case "entitled":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				v, err := d.Bool()
+				s.Entitled = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"entitled\"")
+			}
+		case "org_mode":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				if err := s.OrgMode.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"org_mode\"")
+			}
+		case "org_mode_is_default":
+			requiredBitSet[0] |= 1 << 7
+			if err := func() error {
+				v, err := d.Bool()
+				s.OrgModeIsDefault = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"org_mode_is_default\"")
+			}
+		case "org_modes":
+			requiredBitSet[1] |= 1 << 0
+			if err := func() error {
+				s.OrgModes = make([]EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.OrgModes = append(s.OrgModes, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"org_modes\"")
+			}
+		case "member_enabled":
+			requiredBitSet[1] |= 1 << 1
+			if err := func() error {
+				v, err := d.Bool()
+				s.MemberEnabled = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"member_enabled\"")
+			}
+		case "member_can_change":
+			requiredBitSet[1] |= 1 << 2
+			if err := func() error {
+				v, err := d.Bool()
+				s.MemberCanChange = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"member_can_change\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailNotificationsGetEmailNotificationPreferencesResultKindsItem")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [2]uint8{
+		0b11111111,
+		0b00000111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailNotificationsGetEmailNotificationPreferencesResultKindsItem) {
+					name = jsonFieldsNameOfEmailNotificationsGetEmailNotificationPreferencesResultKindsItem[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass as json.
+func (s EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass from json.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass(v) {
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassPlatformRequired:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassPlatformRequired
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgRequirable:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgRequirable
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOptional:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOptional
+	default:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode as json.
+func (s EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode from json.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode(v) {
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOff:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOff
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOptionalOn:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOptionalOn
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOptionalOff:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeOptionalOff
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeRequired:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModeRequired
+	default:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem as json.
+func (s EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem from json.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem(v) {
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOff:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOff
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOn:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOn
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOff:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOff
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemRequired:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItemRequired
+	default:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgModesItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailNotificationsGetEmailNotificationSettingsResult) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailNotificationsGetEmailNotificationSettingsResult) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("entitled")
+		e.Bool(s.Entitled)
+	}
+	{
+		e.FieldStart("kinds")
+		e.ArrStart()
+		for _, elem := range s.Kinds {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfEmailNotificationsGetEmailNotificationSettingsResult = [2]string{
+	0: "entitled",
+	1: "kinds",
+}
+
+// Decode decodes EmailNotificationsGetEmailNotificationSettingsResult from json.
+func (s *EmailNotificationsGetEmailNotificationSettingsResult) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsGetEmailNotificationSettingsResult to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "entitled":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Entitled = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"entitled\"")
+			}
+		case "kinds":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				s.Kinds = make([]EmailNotificationsGetEmailNotificationSettingsResultKindsItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem EmailNotificationsGetEmailNotificationSettingsResultKindsItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Kinds = append(s.Kinds, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kinds\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailNotificationsGetEmailNotificationSettingsResult")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailNotificationsGetEmailNotificationSettingsResult) {
+					name = jsonFieldsNameOfEmailNotificationsGetEmailNotificationSettingsResult[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailNotificationsGetEmailNotificationSettingsResult) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsGetEmailNotificationSettingsResult) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("kind")
+		e.Str(s.Kind)
+	}
+	{
+		e.FieldStart("label")
+		e.Str(s.Label)
+	}
+	{
+		e.FieldStart("description")
+		e.Str(s.Description)
+	}
+	{
+		e.FieldStart("class")
+		s.Class.Encode(e)
+	}
+	{
+		e.FieldStart("entitlement_required")
+		e.Bool(s.EntitlementRequired)
+	}
+	{
+		e.FieldStart("entitled")
+		e.Bool(s.Entitled)
+	}
+	{
+		e.FieldStart("org_mode")
+		s.OrgMode.Encode(e)
+	}
+	{
+		e.FieldStart("org_mode_is_default")
+		e.Bool(s.OrgModeIsDefault)
+	}
+	{
+		e.FieldStart("org_modes")
+		e.ArrStart()
+		for _, elem := range s.OrgModes {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+	{
+		e.FieldStart("member_enabled")
+		e.Bool(s.MemberEnabled)
+	}
+	{
+		e.FieldStart("member_can_change")
+		e.Bool(s.MemberCanChange)
+	}
+}
+
+var jsonFieldsNameOfEmailNotificationsGetEmailNotificationSettingsResultKindsItem = [11]string{
+	0:  "kind",
+	1:  "label",
+	2:  "description",
+	3:  "class",
+	4:  "entitlement_required",
+	5:  "entitled",
+	6:  "org_mode",
+	7:  "org_mode_is_default",
+	8:  "org_modes",
+	9:  "member_enabled",
+	10: "member_can_change",
+}
+
+// Decode decodes EmailNotificationsGetEmailNotificationSettingsResultKindsItem from json.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsGetEmailNotificationSettingsResultKindsItem to nil")
+	}
+	var requiredBitSet [2]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "kind":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.Kind = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kind\"")
+			}
+		case "label":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Label = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"label\"")
+			}
+		case "description":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.Description = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"description\"")
+			}
+		case "class":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				if err := s.Class.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"class\"")
+			}
+		case "entitlement_required":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := d.Bool()
+				s.EntitlementRequired = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"entitlement_required\"")
+			}
+		case "entitled":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				v, err := d.Bool()
+				s.Entitled = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"entitled\"")
+			}
+		case "org_mode":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				if err := s.OrgMode.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"org_mode\"")
+			}
+		case "org_mode_is_default":
+			requiredBitSet[0] |= 1 << 7
+			if err := func() error {
+				v, err := d.Bool()
+				s.OrgModeIsDefault = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"org_mode_is_default\"")
+			}
+		case "org_modes":
+			requiredBitSet[1] |= 1 << 0
+			if err := func() error {
+				s.OrgModes = make([]EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.OrgModes = append(s.OrgModes, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"org_modes\"")
+			}
+		case "member_enabled":
+			requiredBitSet[1] |= 1 << 1
+			if err := func() error {
+				v, err := d.Bool()
+				s.MemberEnabled = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"member_enabled\"")
+			}
+		case "member_can_change":
+			requiredBitSet[1] |= 1 << 2
+			if err := func() error {
+				v, err := d.Bool()
+				s.MemberCanChange = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"member_can_change\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailNotificationsGetEmailNotificationSettingsResultKindsItem")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [2]uint8{
+		0b11111111,
+		0b00000111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailNotificationsGetEmailNotificationSettingsResultKindsItem) {
+					name = jsonFieldsNameOfEmailNotificationsGetEmailNotificationSettingsResultKindsItem[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass as json.
+func (s EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass from json.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass(v) {
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassPlatformRequired:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassPlatformRequired
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgRequirable:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgRequirable
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOptional:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOptional
+	default:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode as json.
+func (s EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode from json.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode(v) {
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOff:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOff
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOptionalOn:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOptionalOn
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOptionalOff:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeOptionalOff
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeRequired:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModeRequired
+	default:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem as json.
+func (s EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem from json.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem(v) {
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOff:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOff
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOn:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOn
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOff:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOff
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemRequired:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItemRequired
+	default:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgModesItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesInput) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesInput) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("preferences")
+		s.Preferences.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationPreferencesInput = [1]string{
+	0: "preferences",
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationPreferencesInput from json.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesInput) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsUpdateEmailNotificationPreferencesInput to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "preferences":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Preferences.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"preferences\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailNotificationsUpdateEmailNotificationPreferencesInput")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationPreferencesInput) {
+					name = jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationPreferencesInput[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesInput) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s EmailNotificationsUpdateEmailNotificationPreferencesInputPreferences) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s EmailNotificationsUpdateEmailNotificationPreferencesInputPreferences) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		e.Bool(elem)
+	}
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationPreferencesInputPreferences from json.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesInputPreferences) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsUpdateEmailNotificationPreferencesInputPreferences to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem bool
+		if err := func() error {
+			v, err := d.Bool()
+			elem = bool(v)
+			if err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailNotificationsUpdateEmailNotificationPreferencesInputPreferences")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailNotificationsUpdateEmailNotificationPreferencesInputPreferences) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesInputPreferences) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResult) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResult) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("entitled")
+		e.Bool(s.Entitled)
+	}
+	{
+		e.FieldStart("kinds")
+		e.ArrStart()
+		for _, elem := range s.Kinds {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationPreferencesResult = [2]string{
+	0: "entitled",
+	1: "kinds",
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationPreferencesResult from json.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResult) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsUpdateEmailNotificationPreferencesResult to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "entitled":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Entitled = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"entitled\"")
+			}
+		case "kinds":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				s.Kinds = make([]EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Kinds = append(s.Kinds, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kinds\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailNotificationsUpdateEmailNotificationPreferencesResult")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationPreferencesResult) {
+					name = jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationPreferencesResult[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResult) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResult) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("kind")
+		e.Str(s.Kind)
+	}
+	{
+		e.FieldStart("label")
+		e.Str(s.Label)
+	}
+	{
+		e.FieldStart("description")
+		e.Str(s.Description)
+	}
+	{
+		e.FieldStart("class")
+		s.Class.Encode(e)
+	}
+	{
+		e.FieldStart("entitlement_required")
+		e.Bool(s.EntitlementRequired)
+	}
+	{
+		e.FieldStart("entitled")
+		e.Bool(s.Entitled)
+	}
+	{
+		e.FieldStart("org_mode")
+		s.OrgMode.Encode(e)
+	}
+	{
+		e.FieldStart("org_mode_is_default")
+		e.Bool(s.OrgModeIsDefault)
+	}
+	{
+		e.FieldStart("org_modes")
+		e.ArrStart()
+		for _, elem := range s.OrgModes {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+	{
+		e.FieldStart("member_enabled")
+		e.Bool(s.MemberEnabled)
+	}
+	{
+		e.FieldStart("member_can_change")
+		e.Bool(s.MemberCanChange)
+	}
+}
+
+var jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem = [11]string{
+	0:  "kind",
+	1:  "label",
+	2:  "description",
+	3:  "class",
+	4:  "entitlement_required",
+	5:  "entitled",
+	6:  "org_mode",
+	7:  "org_mode_is_default",
+	8:  "org_modes",
+	9:  "member_enabled",
+	10: "member_can_change",
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem from json.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem to nil")
+	}
+	var requiredBitSet [2]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "kind":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.Kind = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kind\"")
+			}
+		case "label":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Label = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"label\"")
+			}
+		case "description":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.Description = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"description\"")
+			}
+		case "class":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				if err := s.Class.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"class\"")
+			}
+		case "entitlement_required":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := d.Bool()
+				s.EntitlementRequired = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"entitlement_required\"")
+			}
+		case "entitled":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				v, err := d.Bool()
+				s.Entitled = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"entitled\"")
+			}
+		case "org_mode":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				if err := s.OrgMode.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"org_mode\"")
+			}
+		case "org_mode_is_default":
+			requiredBitSet[0] |= 1 << 7
+			if err := func() error {
+				v, err := d.Bool()
+				s.OrgModeIsDefault = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"org_mode_is_default\"")
+			}
+		case "org_modes":
+			requiredBitSet[1] |= 1 << 0
+			if err := func() error {
+				s.OrgModes = make([]EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.OrgModes = append(s.OrgModes, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"org_modes\"")
+			}
+		case "member_enabled":
+			requiredBitSet[1] |= 1 << 1
+			if err := func() error {
+				v, err := d.Bool()
+				s.MemberEnabled = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"member_enabled\"")
+			}
+		case "member_can_change":
+			requiredBitSet[1] |= 1 << 2
+			if err := func() error {
+				v, err := d.Bool()
+				s.MemberCanChange = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"member_can_change\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [2]uint8{
+		0b11111111,
+		0b00000111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) {
+					name = jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass as json.
+func (s EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass from json.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass(v) {
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassPlatformRequired:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassPlatformRequired
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgRequirable:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgRequirable
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOptional:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOptional
+	default:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode as json.
+func (s EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode from json.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode(v) {
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOff:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOff
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOptionalOn:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOptionalOn
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOptionalOff:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeOptionalOff
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeRequired:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModeRequired
+	default:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem as json.
+func (s EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem from json.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem(v) {
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOff:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOff
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOn:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOn
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOff:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemOptionalOff
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemRequired:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItemRequired
+	default:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgModesItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsInput) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsInput) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("modes")
+		s.Modes.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationSettingsInput = [1]string{
+	0: "modes",
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationSettingsInput from json.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsInput) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsUpdateEmailNotificationSettingsInput to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "modes":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Modes.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"modes\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailNotificationsUpdateEmailNotificationSettingsInput")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationSettingsInput) {
+					name = jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationSettingsInput[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsInput) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s EmailNotificationsUpdateEmailNotificationSettingsInputModes) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s EmailNotificationsUpdateEmailNotificationSettingsInputModes) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		elem.Encode(e)
+	}
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationSettingsInputModes from json.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsInputModes) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsUpdateEmailNotificationSettingsInputModes to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem EmailNotificationsUpdateEmailNotificationSettingsInputModesItem
+		if err := func() error {
+			if err := elem.Decode(d); err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailNotificationsUpdateEmailNotificationSettingsInputModes")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailNotificationsUpdateEmailNotificationSettingsInputModes) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsInputModes) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsUpdateEmailNotificationSettingsInputModesItem as json.
+func (s EmailNotificationsUpdateEmailNotificationSettingsInputModesItem) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationSettingsInputModesItem from json.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsInputModesItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsUpdateEmailNotificationSettingsInputModesItem to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailNotificationsUpdateEmailNotificationSettingsInputModesItem(v) {
+	case EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOff:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOff
+	case EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOptionalOn:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOptionalOn
+	case EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOptionalOff:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsInputModesItemOptionalOff
+	case EmailNotificationsUpdateEmailNotificationSettingsInputModesItemRequired:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsInputModesItemRequired
+	default:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsInputModesItem(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailNotificationsUpdateEmailNotificationSettingsInputModesItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsInputModesItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResult) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResult) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("entitled")
+		e.Bool(s.Entitled)
+	}
+	{
+		e.FieldStart("kinds")
+		e.ArrStart()
+		for _, elem := range s.Kinds {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationSettingsResult = [2]string{
+	0: "entitled",
+	1: "kinds",
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationSettingsResult from json.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResult) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsUpdateEmailNotificationSettingsResult to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "entitled":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Entitled = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"entitled\"")
+			}
+		case "kinds":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				s.Kinds = make([]EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Kinds = append(s.Kinds, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kinds\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailNotificationsUpdateEmailNotificationSettingsResult")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationSettingsResult) {
+					name = jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationSettingsResult[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResult) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResult) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("kind")
+		e.Str(s.Kind)
+	}
+	{
+		e.FieldStart("label")
+		e.Str(s.Label)
+	}
+	{
+		e.FieldStart("description")
+		e.Str(s.Description)
+	}
+	{
+		e.FieldStart("class")
+		s.Class.Encode(e)
+	}
+	{
+		e.FieldStart("entitlement_required")
+		e.Bool(s.EntitlementRequired)
+	}
+	{
+		e.FieldStart("entitled")
+		e.Bool(s.Entitled)
+	}
+	{
+		e.FieldStart("org_mode")
+		s.OrgMode.Encode(e)
+	}
+	{
+		e.FieldStart("org_mode_is_default")
+		e.Bool(s.OrgModeIsDefault)
+	}
+	{
+		e.FieldStart("org_modes")
+		e.ArrStart()
+		for _, elem := range s.OrgModes {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+	{
+		e.FieldStart("member_enabled")
+		e.Bool(s.MemberEnabled)
+	}
+	{
+		e.FieldStart("member_can_change")
+		e.Bool(s.MemberCanChange)
+	}
+}
+
+var jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationSettingsResultKindsItem = [11]string{
+	0:  "kind",
+	1:  "label",
+	2:  "description",
+	3:  "class",
+	4:  "entitlement_required",
+	5:  "entitled",
+	6:  "org_mode",
+	7:  "org_mode_is_default",
+	8:  "org_modes",
+	9:  "member_enabled",
+	10: "member_can_change",
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem from json.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem to nil")
+	}
+	var requiredBitSet [2]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "kind":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.Kind = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kind\"")
+			}
+		case "label":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Label = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"label\"")
+			}
+		case "description":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.Description = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"description\"")
+			}
+		case "class":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				if err := s.Class.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"class\"")
+			}
+		case "entitlement_required":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := d.Bool()
+				s.EntitlementRequired = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"entitlement_required\"")
+			}
+		case "entitled":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				v, err := d.Bool()
+				s.Entitled = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"entitled\"")
+			}
+		case "org_mode":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				if err := s.OrgMode.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"org_mode\"")
+			}
+		case "org_mode_is_default":
+			requiredBitSet[0] |= 1 << 7
+			if err := func() error {
+				v, err := d.Bool()
+				s.OrgModeIsDefault = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"org_mode_is_default\"")
+			}
+		case "org_modes":
+			requiredBitSet[1] |= 1 << 0
+			if err := func() error {
+				s.OrgModes = make([]EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.OrgModes = append(s.OrgModes, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"org_modes\"")
+			}
+		case "member_enabled":
+			requiredBitSet[1] |= 1 << 1
+			if err := func() error {
+				v, err := d.Bool()
+				s.MemberEnabled = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"member_enabled\"")
+			}
+		case "member_can_change":
+			requiredBitSet[1] |= 1 << 2
+			if err := func() error {
+				v, err := d.Bool()
+				s.MemberCanChange = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"member_can_change\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [2]uint8{
+		0b11111111,
+		0b00000111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) {
+					name = jsonFieldsNameOfEmailNotificationsUpdateEmailNotificationSettingsResultKindsItem[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass as json.
+func (s EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass from json.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass(v) {
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassPlatformRequired:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassPlatformRequired
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgRequirable:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgRequirable
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOptional:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOptional
+	default:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode as json.
+func (s EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode from json.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode(v) {
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOff:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOff
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOptionalOn:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOptionalOn
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOptionalOff:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeOptionalOff
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeRequired:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModeRequired
+	default:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem as json.
+func (s EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem from json.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem(v) {
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOff:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOff
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOn:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOn
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOff:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemOptionalOff
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemRequired:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItemRequired
+	default:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgModesItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *EmailReadable) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -82228,12 +84708,19 @@ func (s *EmailRuleReceiversKeysItem) encodeFields(e *jx.Encoder) {
 			s.ReadsInFull.Encode(e)
 		}
 	}
+	{
+		if s.NewestAt.Set {
+			e.FieldStart("newest_at")
+			s.NewestAt.Encode(e, json.EncodeDateTime)
+		}
+	}
 }
 
-var jsonFieldsNameOfEmailRuleReceiversKeysItem = [3]string{
+var jsonFieldsNameOfEmailRuleReceiversKeysItem = [4]string{
 	0: "owner",
 	1: "count",
 	2: "reads_in_full",
+	3: "newest_at",
 }
 
 // Decode decodes EmailRuleReceiversKeysItem from json.
@@ -82276,6 +84763,16 @@ func (s *EmailRuleReceiversKeysItem) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"reads_in_full\"")
+			}
+		case "newest_at":
+			if err := func() error {
+				s.NewestAt.Reset()
+				if err := s.NewestAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"newest_at\"")
 			}
 		default:
 			return d.Skip()
@@ -82518,11 +85015,18 @@ func (s *EmailRuleReceiversSharesItem) encodeFields(e *jx.Encoder) {
 		e.FieldStart("count")
 		e.Int(s.Count)
 	}
+	{
+		if s.NewestAt.Set {
+			e.FieldStart("newest_at")
+			s.NewestAt.Encode(e, json.EncodeDateTime)
+		}
+	}
 }
 
-var jsonFieldsNameOfEmailRuleReceiversSharesItem = [2]string{
+var jsonFieldsNameOfEmailRuleReceiversSharesItem = [3]string{
 	0: "beneficiary",
 	1: "count",
+	2: "newest_at",
 }
 
 // Decode decodes EmailRuleReceiversSharesItem from json.
@@ -82555,6 +85059,16 @@ func (s *EmailRuleReceiversSharesItem) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"count\"")
+			}
+		case "newest_at":
+			if err := func() error {
+				s.NewestAt.Reset()
+				if err := s.NewestAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"newest_at\"")
 			}
 		default:
 			return d.Skip()
@@ -82809,13 +85323,20 @@ func (s *EmailRuleReceiversWebhooksItem) encodeFields(e *jx.Encoder) {
 			s.HostsNotListed.Encode(e)
 		}
 	}
+	{
+		if s.NewestAt.Set {
+			e.FieldStart("newest_at")
+			s.NewestAt.Encode(e, json.EncodeDateTime)
+		}
+	}
 }
 
-var jsonFieldsNameOfEmailRuleReceiversWebhooksItem = [4]string{
+var jsonFieldsNameOfEmailRuleReceiversWebhooksItem = [5]string{
 	0: "owner",
 	1: "count",
 	2: "hosts",
 	3: "hosts_not_listed",
+	4: "newest_at",
 }
 
 // Decode decodes EmailRuleReceiversWebhooksItem from json.
@@ -82877,6 +85398,16 @@ func (s *EmailRuleReceiversWebhooksItem) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"hosts_not_listed\"")
+			}
+		case "newest_at":
+			if err := func() error {
+				s.NewestAt.Reset()
+				if err := s.NewestAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"newest_at\"")
 			}
 		default:
 			return d.Skip()
@@ -99276,6 +101807,8 @@ func (s *ErrorResponseErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorResponseErrorCodeAlreadyClaimed
 	case ErrorResponseErrorCodeAlreadyMember:
 		*s = ErrorResponseErrorCodeAlreadyMember
+	case ErrorResponseErrorCodeAlwaysSent:
+		*s = ErrorResponseErrorCodeAlwaysSent
 	case ErrorResponseErrorCodeArchiveBusy:
 		*s = ErrorResponseErrorCodeArchiveBusy
 	case ErrorResponseErrorCodeArchiveInvalid:
@@ -99660,6 +102193,8 @@ func (s *ErrorResponseErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorResponseErrorCodeRemovalTimeout
 	case ErrorResponseErrorCodeRequestExpired:
 		*s = ErrorResponseErrorCodeRequestExpired
+	case ErrorResponseErrorCodeRequiredByOrganization:
+		*s = ErrorResponseErrorCodeRequiredByOrganization
 	case ErrorResponseErrorCodeResendLimitExceeded:
 		*s = ErrorResponseErrorCodeResendLimitExceeded
 	case ErrorResponseErrorCodeResendTooSoon:
@@ -112883,6 +115418,456 @@ func (s *GetEmailNotFound) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *GetEmailNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes GetEmailNotificationPreferencesBadRequest as json.
+func (s *GetEmailNotificationPreferencesBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes GetEmailNotificationPreferencesBadRequest from json.
+func (s *GetEmailNotificationPreferencesBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetEmailNotificationPreferencesBadRequest to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = GetEmailNotificationPreferencesBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetEmailNotificationPreferencesBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetEmailNotificationPreferencesBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes GetEmailNotificationPreferencesForbidden as json.
+func (s *GetEmailNotificationPreferencesForbidden) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes GetEmailNotificationPreferencesForbidden from json.
+func (s *GetEmailNotificationPreferencesForbidden) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetEmailNotificationPreferencesForbidden to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = GetEmailNotificationPreferencesForbidden(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetEmailNotificationPreferencesForbidden) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetEmailNotificationPreferencesForbidden) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes GetEmailNotificationPreferencesNotFound as json.
+func (s *GetEmailNotificationPreferencesNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes GetEmailNotificationPreferencesNotFound from json.
+func (s *GetEmailNotificationPreferencesNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetEmailNotificationPreferencesNotFound to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = GetEmailNotificationPreferencesNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetEmailNotificationPreferencesNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetEmailNotificationPreferencesNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *GetEmailNotificationPreferencesOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *GetEmailNotificationPreferencesOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("success")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("data")
+		s.Data.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfGetEmailNotificationPreferencesOK = [2]string{
+	0: "success",
+	1: "data",
+}
+
+// Decode decodes GetEmailNotificationPreferencesOK from json.
+func (s *GetEmailNotificationPreferencesOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetEmailNotificationPreferencesOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "success":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Success = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"success\"")
+			}
+		case "data":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Data.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode GetEmailNotificationPreferencesOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfGetEmailNotificationPreferencesOK) {
+					name = jsonFieldsNameOfGetEmailNotificationPreferencesOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetEmailNotificationPreferencesOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetEmailNotificationPreferencesOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes GetEmailNotificationSettingsBadRequest as json.
+func (s *GetEmailNotificationSettingsBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes GetEmailNotificationSettingsBadRequest from json.
+func (s *GetEmailNotificationSettingsBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetEmailNotificationSettingsBadRequest to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = GetEmailNotificationSettingsBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetEmailNotificationSettingsBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetEmailNotificationSettingsBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes GetEmailNotificationSettingsForbidden as json.
+func (s *GetEmailNotificationSettingsForbidden) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes GetEmailNotificationSettingsForbidden from json.
+func (s *GetEmailNotificationSettingsForbidden) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetEmailNotificationSettingsForbidden to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = GetEmailNotificationSettingsForbidden(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetEmailNotificationSettingsForbidden) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetEmailNotificationSettingsForbidden) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes GetEmailNotificationSettingsNotFound as json.
+func (s *GetEmailNotificationSettingsNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes GetEmailNotificationSettingsNotFound from json.
+func (s *GetEmailNotificationSettingsNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetEmailNotificationSettingsNotFound to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = GetEmailNotificationSettingsNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetEmailNotificationSettingsNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetEmailNotificationSettingsNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *GetEmailNotificationSettingsOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *GetEmailNotificationSettingsOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("success")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("data")
+		s.Data.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfGetEmailNotificationSettingsOK = [2]string{
+	0: "success",
+	1: "data",
+}
+
+// Decode decodes GetEmailNotificationSettingsOK from json.
+func (s *GetEmailNotificationSettingsOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetEmailNotificationSettingsOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "success":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Success = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"success\"")
+			}
+		case "data":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Data.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode GetEmailNotificationSettingsOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfGetEmailNotificationSettingsOK) {
+					name = jsonFieldsNameOfGetEmailNotificationSettingsOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetEmailNotificationSettingsOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetEmailNotificationSettingsOK) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -137803,9 +140788,15 @@ func (s *ListActivityObjectsResultItemsItem) encodeFields(e *jx.Encoder) {
 			s.RuleID.Encode(e)
 		}
 	}
+	{
+		if s.ReceiversChange.Set {
+			e.FieldStart("receivers_change")
+			s.ReceiversChange.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfListActivityObjectsResultItemsItem = [9]string{
+var jsonFieldsNameOfListActivityObjectsResultItemsItem = [10]string{
 	0: "kind",
 	1: "id",
 	2: "name",
@@ -137815,6 +140806,7 @@ var jsonFieldsNameOfListActivityObjectsResultItemsItem = [9]string{
 	6: "owned_now",
 	7: "created_through",
 	8: "rule_id",
+	9: "receivers_change",
 }
 
 // Decode decodes ListActivityObjectsResultItemsItem from json.
@@ -137923,6 +140915,16 @@ func (s *ListActivityObjectsResultItemsItem) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"rule_id\"")
+			}
+		case "receivers_change":
+			if err := func() error {
+				s.ReceiversChange.Reset()
+				if err := s.ReceiversChange.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"receivers_change\"")
 			}
 		default:
 			return d.Skip()
@@ -138143,6 +141145,409 @@ func (s ListActivityObjectsResultItemsItemOwnedNow) MarshalJSON() ([]byte, error
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ListActivityObjectsResultItemsItemOwnedNow) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ListActivityObjectsResultItemsItemReceiversChange) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ListActivityObjectsResultItemsItemReceiversChange) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("before")
+		s.Before.Encode(e)
+	}
+	{
+		e.FieldStart("after")
+		s.After.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChange = [2]string{
+	0: "before",
+	1: "after",
+}
+
+// Decode decodes ListActivityObjectsResultItemsItemReceiversChange from json.
+func (s *ListActivityObjectsResultItemsItemReceiversChange) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListActivityObjectsResultItemsItemReceiversChange to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "before":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Before.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"before\"")
+			}
+		case "after":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.After.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"after\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ListActivityObjectsResultItemsItemReceiversChange")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChange) {
+					name = jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChange[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ListActivityObjectsResultItemsItemReceiversChange) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListActivityObjectsResultItemsItemReceiversChange) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("keys")
+		e.Int(s.Keys)
+	}
+	{
+		e.FieldStart("reads_in_full")
+		e.Int(s.ReadsInFull)
+	}
+	{
+		e.FieldStart("webhooks")
+		e.Int(s.Webhooks)
+	}
+	{
+		e.FieldStart("shares")
+		e.Int(s.Shares)
+	}
+}
+
+var jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChangeAfter = [4]string{
+	0: "keys",
+	1: "reads_in_full",
+	2: "webhooks",
+	3: "shares",
+}
+
+// Decode decodes ListActivityObjectsResultItemsItemReceiversChangeAfter from json.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListActivityObjectsResultItemsItemReceiversChangeAfter to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "keys":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Int()
+				s.Keys = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"keys\"")
+			}
+		case "reads_in_full":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Int()
+				s.ReadsInFull = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"reads_in_full\"")
+			}
+		case "webhooks":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Int()
+				s.Webhooks = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"webhooks\"")
+			}
+		case "shares":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Int()
+				s.Shares = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"shares\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ListActivityObjectsResultItemsItemReceiversChangeAfter")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChangeAfter) {
+					name = jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChangeAfter[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("keys")
+		e.Int(s.Keys)
+	}
+	{
+		e.FieldStart("reads_in_full")
+		e.Int(s.ReadsInFull)
+	}
+	{
+		e.FieldStart("webhooks")
+		e.Int(s.Webhooks)
+	}
+	{
+		e.FieldStart("shares")
+		e.Int(s.Shares)
+	}
+}
+
+var jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChangeBefore = [4]string{
+	0: "keys",
+	1: "reads_in_full",
+	2: "webhooks",
+	3: "shares",
+}
+
+// Decode decodes ListActivityObjectsResultItemsItemReceiversChangeBefore from json.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListActivityObjectsResultItemsItemReceiversChangeBefore to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "keys":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Int()
+				s.Keys = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"keys\"")
+			}
+		case "reads_in_full":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Int()
+				s.ReadsInFull = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"reads_in_full\"")
+			}
+		case "webhooks":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Int()
+				s.Webhooks = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"webhooks\"")
+			}
+		case "shares":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Int()
+				s.Shares = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"shares\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ListActivityObjectsResultItemsItemReceiversChangeBefore")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChangeBefore) {
+					name = jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChangeBefore[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -176155,6 +179560,182 @@ func (s *NilEmailDetailImported) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode as json.
+func (o NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode from json.
+func (o *NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v EmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilEmailNotificationsGetEmailNotificationPreferencesResultKindsItemOrgMode) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode as json.
+func (o NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode from json.
+func (o *NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v EmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilEmailNotificationsGetEmailNotificationSettingsResultKindsItemOrgMode) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode as json.
+func (o NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode from json.
+func (o *NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilEmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemOrgMode) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode as json.
+func (o NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode from json.
+func (o *NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilEmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes EmailReadableImported as json.
 func (o NilEmailReadableImported) Encode(e *jx.Encoder) {
 	if o.Null {
@@ -183112,6 +186693,39 @@ func (s OptInt) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptInt) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ListActivityObjectsResultItemsItemReceiversChange as json.
+func (o OptListActivityObjectsResultItemsItemReceiversChange) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes ListActivityObjectsResultItemsItemReceiversChange from json.
+func (o *OptListActivityObjectsResultItemsItemReceiversChange) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptListActivityObjectsResultItemsItemReceiversChange to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptListActivityObjectsResultItemsItemReceiversChange) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptListActivityObjectsResultItemsItemReceiversChange) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -268516,6 +272130,532 @@ func (s *UpdateDomainOK) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *UpdateDomainOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateEmailNotificationPreferencesBadRequest as json.
+func (s *UpdateEmailNotificationPreferencesBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateEmailNotificationPreferencesBadRequest from json.
+func (s *UpdateEmailNotificationPreferencesBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateEmailNotificationPreferencesBadRequest to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateEmailNotificationPreferencesBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateEmailNotificationPreferencesBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateEmailNotificationPreferencesBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateEmailNotificationPreferencesConflict as json.
+func (s *UpdateEmailNotificationPreferencesConflict) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateEmailNotificationPreferencesConflict from json.
+func (s *UpdateEmailNotificationPreferencesConflict) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateEmailNotificationPreferencesConflict to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateEmailNotificationPreferencesConflict(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateEmailNotificationPreferencesConflict) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateEmailNotificationPreferencesConflict) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateEmailNotificationPreferencesForbidden as json.
+func (s *UpdateEmailNotificationPreferencesForbidden) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateEmailNotificationPreferencesForbidden from json.
+func (s *UpdateEmailNotificationPreferencesForbidden) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateEmailNotificationPreferencesForbidden to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateEmailNotificationPreferencesForbidden(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateEmailNotificationPreferencesForbidden) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateEmailNotificationPreferencesForbidden) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateEmailNotificationPreferencesNotFound as json.
+func (s *UpdateEmailNotificationPreferencesNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateEmailNotificationPreferencesNotFound from json.
+func (s *UpdateEmailNotificationPreferencesNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateEmailNotificationPreferencesNotFound to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateEmailNotificationPreferencesNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateEmailNotificationPreferencesNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateEmailNotificationPreferencesNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *UpdateEmailNotificationPreferencesOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *UpdateEmailNotificationPreferencesOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("success")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("data")
+		s.Data.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfUpdateEmailNotificationPreferencesOK = [2]string{
+	0: "success",
+	1: "data",
+}
+
+// Decode decodes UpdateEmailNotificationPreferencesOK from json.
+func (s *UpdateEmailNotificationPreferencesOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateEmailNotificationPreferencesOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "success":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Success = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"success\"")
+			}
+		case "data":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Data.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode UpdateEmailNotificationPreferencesOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfUpdateEmailNotificationPreferencesOK) {
+					name = jsonFieldsNameOfUpdateEmailNotificationPreferencesOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateEmailNotificationPreferencesOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateEmailNotificationPreferencesOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateEmailNotificationSettingsBadRequest as json.
+func (s *UpdateEmailNotificationSettingsBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateEmailNotificationSettingsBadRequest from json.
+func (s *UpdateEmailNotificationSettingsBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateEmailNotificationSettingsBadRequest to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateEmailNotificationSettingsBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateEmailNotificationSettingsBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateEmailNotificationSettingsBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateEmailNotificationSettingsConflict as json.
+func (s *UpdateEmailNotificationSettingsConflict) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateEmailNotificationSettingsConflict from json.
+func (s *UpdateEmailNotificationSettingsConflict) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateEmailNotificationSettingsConflict to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateEmailNotificationSettingsConflict(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateEmailNotificationSettingsConflict) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateEmailNotificationSettingsConflict) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateEmailNotificationSettingsForbidden as json.
+func (s *UpdateEmailNotificationSettingsForbidden) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateEmailNotificationSettingsForbidden from json.
+func (s *UpdateEmailNotificationSettingsForbidden) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateEmailNotificationSettingsForbidden to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateEmailNotificationSettingsForbidden(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateEmailNotificationSettingsForbidden) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateEmailNotificationSettingsForbidden) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateEmailNotificationSettingsNotFound as json.
+func (s *UpdateEmailNotificationSettingsNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateEmailNotificationSettingsNotFound from json.
+func (s *UpdateEmailNotificationSettingsNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateEmailNotificationSettingsNotFound to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateEmailNotificationSettingsNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateEmailNotificationSettingsNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateEmailNotificationSettingsNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *UpdateEmailNotificationSettingsOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *UpdateEmailNotificationSettingsOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("success")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("data")
+		s.Data.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfUpdateEmailNotificationSettingsOK = [2]string{
+	0: "success",
+	1: "data",
+}
+
+// Decode decodes UpdateEmailNotificationSettingsOK from json.
+func (s *UpdateEmailNotificationSettingsOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateEmailNotificationSettingsOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "success":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Success = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"success\"")
+			}
+		case "data":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Data.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode UpdateEmailNotificationSettingsOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfUpdateEmailNotificationSettingsOK) {
+					name = jsonFieldsNameOfUpdateEmailNotificationSettingsOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateEmailNotificationSettingsOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateEmailNotificationSettingsOK) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

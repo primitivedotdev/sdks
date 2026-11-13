@@ -385,6 +385,14 @@ type GetDomainAgentAuthorizationRes interface {
 	getDomainAgentAuthorizationRes()
 }
 
+type GetEmailNotificationPreferencesRes interface {
+	getEmailNotificationPreferencesRes()
+}
+
+type GetEmailNotificationSettingsRes interface {
+	getEmailNotificationSettingsRes()
+}
+
 type GetEmailReadableRes interface {
 	getEmailReadableRes()
 }
@@ -1215,6 +1223,14 @@ type UpdateDefaultNetworkMemberRes interface {
 
 type UpdateDomainRes interface {
 	updateDomainRes()
+}
+
+type UpdateEmailNotificationPreferencesRes interface {
+	updateEmailNotificationPreferencesRes()
+}
+
+type UpdateEmailNotificationSettingsRes interface {
+	updateEmailNotificationSettingsRes()
 }
 
 type UpdateEmailRuleRes interface {

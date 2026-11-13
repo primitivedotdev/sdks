@@ -15,6 +15,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.list_activity_objects_result_items_item_created_through import ListActivityObjectsResultItemsItemCreatedThrough
+  from ..models.list_activity_objects_result_items_item_receivers_change import ListActivityObjectsResultItemsItemReceiversChange
 
 
 
@@ -42,9 +43,10 @@ class ListActivityObjectsResultItemsItem:
                 connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn
                 (rule requests and objections), and for a coverage notice what it told: started (a rule was made or turned
                 active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version,
-                or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the
-                notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without
-                a new one); its id is then the rule's, and created_at when the rule last changed.
+                receivers_changed (who receives an active rule's matches changed: its keys, webhooks or share), or baseline (it
+                already covered you when notices began). pending: a rule started covering your mailbox and the notices have not
+                recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its
+                id is then the rule's, and created_at when the rule last changed.
             created_at (datetime.datetime):
             ended_at (datetime.datetime | None): When it was deleted, replaced or revoked, when an API key expired, when a
                 repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null
@@ -56,6 +58,10 @@ class ListActivityObjectsResultItemsItem:
             rule_id (UUID | Unset): For email_rule_coverage, always: the rule it is about, since names need not be unique
                 (for pending, the same as id). GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or
                 as it last decided on your mail; otherwise it answers not_found.
+            receivers_change (ListActivityObjectsResultItemsItemReceiversChange | Unset): For a receivers_changed notice:
+                who received the rule's matches before and after, in totals. They can be equal when only an owner or a webhook
+                site changed; covering-me shows them by owner. A rotated key counts once here while the old one still works;
+                covering-me counts both.
      """
 
     kind: str
@@ -67,6 +73,7 @@ class ListActivityObjectsResultItemsItem:
     owned_now: ListActivityObjectsResultItemsItemOwnedNow
     created_through: ListActivityObjectsResultItemsItemCreatedThrough
     rule_id: UUID | Unset = UNSET
+    receivers_change: ListActivityObjectsResultItemsItemReceiversChange | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -75,6 +82,7 @@ class ListActivityObjectsResultItemsItem:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.list_activity_objects_result_items_item_created_through import ListActivityObjectsResultItemsItemCreatedThrough # noqa: PLC0415
+        from ..models.list_activity_objects_result_items_item_receivers_change import ListActivityObjectsResultItemsItemReceiversChange # noqa: PLC0415
         kind = self.kind
 
         id = self.id
@@ -100,6 +108,10 @@ class ListActivityObjectsResultItemsItem:
         if not isinstance(self.rule_id, Unset):
             rule_id = str(self.rule_id)
 
+        receivers_change: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.receivers_change, Unset):
+            receivers_change = self.receivers_change.to_dict()
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -115,6 +127,8 @@ class ListActivityObjectsResultItemsItem:
         })
         if rule_id is not UNSET:
             field_dict["rule_id"] = rule_id
+        if receivers_change is not UNSET:
+            field_dict["receivers_change"] = receivers_change
 
         return field_dict
 
@@ -123,6 +137,7 @@ class ListActivityObjectsResultItemsItem:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.list_activity_objects_result_items_item_created_through import ListActivityObjectsResultItemsItemCreatedThrough # noqa: PLC0415
+        from ..models.list_activity_objects_result_items_item_receivers_change import ListActivityObjectsResultItemsItemReceiversChange # noqa: PLC0415
         d = dict(src_dict)
         kind = d.pop("kind")
 
@@ -181,6 +196,16 @@ class ListActivityObjectsResultItemsItem:
 
 
 
+        _receivers_change = d.pop("receivers_change", UNSET)
+        receivers_change: ListActivityObjectsResultItemsItemReceiversChange | Unset
+        if isinstance(_receivers_change,  Unset):
+            receivers_change = UNSET
+        else:
+            receivers_change = ListActivityObjectsResultItemsItemReceiversChange.from_dict(_receivers_change)
+
+
+
+
         list_activity_objects_result_items_item = cls(
             kind=kind,
             id=id,
@@ -191,6 +216,7 @@ class ListActivityObjectsResultItemsItem:
             owned_now=owned_now,
             created_through=created_through,
             rule_id=rule_id,
+            receivers_change=receivers_change,
         )
 
 

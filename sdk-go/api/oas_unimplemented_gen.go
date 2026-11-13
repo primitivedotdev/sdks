@@ -1602,6 +1602,35 @@ func (UnimplementedHandler) GetEmail(ctx context.Context, params GetEmailParams)
 	return r, ht.ErrNotImplemented
 }
 
+// GetEmailNotificationPreferences implements getEmailNotificationPreferences operation.
+//
+// The notification emails the calling member gets, and which of them they may turn on or off. Each
+// kind lists its label and description, its class, whether it needs an entitlement and whether the
+// organization has it, the organization's mode (null for platform_required) and the modes it may
+// choose, and whether the calling member gets it and may change that.
+// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+// connected). The person's role must hold notifications:manage. API keys, agent connection keys and
+// agents are refused.
+//
+// GET /email-notification-preferences
+func (UnimplementedHandler) GetEmailNotificationPreferences(ctx context.Context) (r GetEmailNotificationPreferencesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetEmailNotificationSettings implements getEmailNotificationSettings operation.
+//
+// Every kind of notification email Primitive sends the organization's members, and who may turn it
+// off. Each kind lists its label and description, its class, whether it needs an entitlement and
+// whether the organization has it, the organization's mode (null for platform_required) and the
+// modes it may choose, and whether the calling member gets it and may change that.
+// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+// connected). API keys, agent connection keys and agents are refused.
+//
+// GET /email-notification-settings
+func (UnimplementedHandler) GetEmailNotificationSettings(ctx context.Context) (r GetEmailNotificationSettingsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetEmailReadable implements getEmailReadable operation.
 //
 // Returns an inbound email as text a person or a model can read: the words of the message in reading
@@ -2391,13 +2420,13 @@ func (UnimplementedHandler) LeaveOrganization(ctx context.Context, params LeaveO
 // each naming the member who asked or objected in created_through. A key, an app or an agent has
 // none, and gets both kinds in withheld. With relation=concerning it lists instead what other
 // members did that concerns the person's own mail: each time a rule started covering one of their
-// mailboxes or saved a new version while covering it, named as the rule was then, naming its author
-// in created_through, under their current membership; only on the dashboard or the Primitive CLI. A
-// key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads
-// as ended. Notices are written by a periodic job and can lag: until the notices record a rule
-// starting to cover you, the first page lists that rule as pending (pending_complete says whether
-// that check finished), and as_of says about when the notices last looked. For what covers you now,
-// read GET /email-rules/covering-me.
+// mailboxes, saved a new version, or changed who receives its matches while covering it, named as
+// the rule was then, naming its author in created_through, under their current membership; only on
+// the dashboard or the Primitive CLI. A key, an app or an agent has none, and gets
+// email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a periodic
+// job and can lag: until the notices record a rule starting to cover you, the first page lists that
+// rule as pending (pending_complete says whether that check finished), and as_of says about when the
+// notices last looked. For what covers you now, read GET /email-rules/covering-me.
 //
 // GET /activity/objects
 func (UnimplementedHandler) ListActivityObjects(ctx context.Context, params ListActivityObjectsParams) (r ListActivityObjectsRes, _ error) {
@@ -4657,6 +4686,50 @@ func (UnimplementedHandler) UpdateDefaultNetworkMember(ctx context.Context, req 
 //
 // PATCH /domains/{id}
 func (UnimplementedHandler) UpdateDomain(ctx context.Context, req *UpdateDomainInput, params UpdateDomainParams) (r UpdateDomainRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateEmailNotificationPreferences implements updateEmailNotificationPreferences operation.
+//
+// Turn one or more kinds on or off for the calling member. Only a kind whose organization mode is
+// optional_on or optional_off can be changed: a platform_required kind, one the organization
+// requires, and one it turned off are refused with 409 (conflict, details.reason not_member_choice,
+// details.org_mode saying which), and nothing is changed. An unknown kind is refused with 400.
+// Answers the preferences as they now stand. Each kind lists its label and description, its class,
+// whether it needs an entitlement and whether the organization has it, the organization's mode (null
+// for platform_required) and the modes it may choose, and whether the calling member gets it and may
+// change that.
+// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+// connected). The person's role must hold notifications:manage. API keys, agent connection keys and
+// agents are refused.
+//
+// PUT /email-notification-preferences
+func (UnimplementedHandler) UpdateEmailNotificationPreferences(ctx context.Context, req *EmailNotificationsUpdateEmailNotificationPreferencesInput) (r UpdateEmailNotificationPreferencesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateEmailNotificationSettings implements updateEmailNotificationSettings operation.
+//
+// Set the organization's mode for one or more kinds: off (nobody gets it), optional_on (each member
+// gets it unless they turn it off), optional_off (only members who turn it on get it) or required
+// (every member gets it). Kinds left out keep their mode. An unknown kind is refused with 400
+// (validation_error, details.reason unknown_kind). A platform_required kind is refused with 409
+// (conflict, details.reason platform_required), and required for an optional kind with 409 (conflict,
+//
+//	details.reason mode_not_allowed); nothing is changed. Answers the settings as they now stand.
+//
+// Each kind lists its label and description, its class, whether it needs an entitlement and whether
+// the organization has it, the organization's mode (null for platform_required) and the modes it may
+// choose, and whether the calling member gets it and may change that.
+// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+// `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+// when the person's role could not do it anyway). The person's role must hold
+// notification_policy:manage. API keys and agent connection keys are refused. An agent acting for
+// the person is refused unless it carries a step-up token the person issued in the dashboard.
+//
+// PUT /email-notification-settings
+func (UnimplementedHandler) UpdateEmailNotificationSettings(ctx context.Context, req *EmailNotificationsUpdateEmailNotificationSettingsInput, params UpdateEmailNotificationSettingsParams) (r UpdateEmailNotificationSettingsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

@@ -106,7 +106,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'ownership_proof_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'access_mode_unavailable' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_work_agreement_replay_conflict' | 'agent_work_deadline_not_future' | 'agent_work_inactive' | 'agent_work_not_found' | 'agent_work_replay_conflict' | 'agent_work_version_conflict' | 'already_claimed' | 'already_member' | 'archive_busy' | 'archive_invalid' | 'archive_limit_exceeded' | 'archive_unsafe_path' | 'archive_unsupported' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'authorization_unavailable' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'builtin_role' | 'chunk_size_mismatch' | 'chunk_too_large' | 'chunks_missing' | 'claim_failed' | 'claim_not_pending' | 'cleanup_incomplete' | 'cli_access_refused' | 'code_expired' | 'confirmation_required' | 'connection_already_claimed' | 'connection_cleanup_pending' | 'connection_create_request_conflict' | 'connection_owner_address_required' | 'connection_removed' | 'connection_revoked' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'delivery_held' | 'delivery_unavailable' | 'deploy_failed' | 'deploy_outcome_unknown' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_admission_unavailable' | 'email_in_use' | 'email_rule_author_only' | 'email_rule_author_unresolvable' | 'email_rule_compiler_unavailable' | 'email_rule_conflict' | 'email_rule_look_alikes_not_written' | 'email_rule_not_compiled' | 'email_rule_request_limit' | 'email_rule_request_not_pending' | 'email_rule_request_not_withdrawn' | 'email_rule_request_party_left' | 'email_rule_request_proposer_only' | 'email_rule_request_target_only' | 'email_rule_scope_locked' | 'email_rule_scope_not_readable' | 'email_rule_share_ended' | 'email_rule_share_limit' | 'embedding_provider_unavailable' | 'entitlement' | 'expectations_failed' | 'expectations_undecided' | 'expectations_unreadable' | 'expired' | 'feature_not_enabled' | 'fresh_send_not_authorized' | 'function_cannot_receive_mail' | 'function_delivery_refused' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_key_missing' | 'function_key_runtime_only' | 'function_not_deployed' | 'function_scope_forbidden' | 'function_signing_secret_missing' | 'function_suspended' | 'github_binding_owner_changed' | 'github_binding_paused' | 'grant_forbidden' | 'grant_not_available' | 'hash_mismatch' | 'hipaa_mode' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'host_key_limit' | 'idempotency_conflict' | 'idempotency_key_invalid' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_manifest' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_signature' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_accepting' | 'invitation_address_not_allowed' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'ip_not_allowed' | 'keep_refused' | 'key_change_superseded' | 'key_recently_created' | 'last_owner' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'load_test_recipient_not_allowed' | 'mail_import_cap_exceeded' | 'mail_import_content_mismatch' | 'mail_import_deadline' | 'mail_import_disabled' | 'mail_import_fenced' | 'mail_import_forbidden' | 'mail_import_invalid_input' | 'mail_import_invalid_provider_response' | 'mail_import_out_of_window' | 'mail_import_policy_mismatch' | 'mail_import_provider_auth' | 'mail_import_provider_unavailable' | 'mail_import_storage_failed' | 'mail_import_storage_limit' | 'mail_import_too_large' | 'mail_import_unavailable' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_claimable' | 'mailbox_not_found' | 'mailbox_shared_with_others' | 'managed_build_failed' | 'managed_domain' | 'member_address_domain_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_reserved' | 'member_address_unavailable' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'no_expectations' | 'no_mail_read' | 'not_a_template_install' | 'not_available' | 'not_claimable' | 'not_held' | 'not_pending' | 'object_suspended' | 'onboarding_key_in_use' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'outbound_relay_unavailable' | 'outside_key_scope' | 'path_invalid' | 'payload_too_large' | 'pending_owner_confirmation' | 'plan_required' | 'policy_forbidden' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'pull_subscription_requires_agent_connection' | 'query_invalid' | 'recipient_changed' | 'recipient_suppressed' | 'redeploy_failed' | 'removal_failed' | 'removal_timeout' | 'request_expired' | 'resend_limit_exceeded' | 'resend_too_soon' | 'role_assigned' | 'role_assignment_unavailable' | 'role_key_taken' | 'rotate_instead' | 'rotation_in_progress' | 'rotation_incomplete' | 'rotation_refused' | 'rotation_unconfirmed' | 'runtime_grant_unavailable' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_at_required' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sending_ip_warmup_cap' | 'sent_email_tail_unavailable' | 'sent_mail_search_unavailable' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'signing_secret_unavailable' | 'signup_failed' | 'standing_owner_revoked' | 'step_up_invalid' | 'step_up_not_accepted' | 'step_up_refused' | 'step_up_required' | 'stop_changed' | 'storage_error' | 'storage_limit_exceeded' | 'suspension_undecided' | 'template_role' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'thread_busy' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_unavailable' | 'usage_limit_exceeded';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'ownership_proof_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'access_mode_unavailable' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_work_agreement_replay_conflict' | 'agent_work_deadline_not_future' | 'agent_work_inactive' | 'agent_work_not_found' | 'agent_work_replay_conflict' | 'agent_work_version_conflict' | 'already_claimed' | 'already_member' | 'always_sent' | 'archive_busy' | 'archive_invalid' | 'archive_limit_exceeded' | 'archive_unsafe_path' | 'archive_unsupported' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'authorization_unavailable' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'builtin_role' | 'chunk_size_mismatch' | 'chunk_too_large' | 'chunks_missing' | 'claim_failed' | 'claim_not_pending' | 'cleanup_incomplete' | 'cli_access_refused' | 'code_expired' | 'confirmation_required' | 'connection_already_claimed' | 'connection_cleanup_pending' | 'connection_create_request_conflict' | 'connection_owner_address_required' | 'connection_removed' | 'connection_revoked' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'delivery_held' | 'delivery_unavailable' | 'deploy_failed' | 'deploy_outcome_unknown' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_admission_unavailable' | 'email_in_use' | 'email_rule_author_only' | 'email_rule_author_unresolvable' | 'email_rule_compiler_unavailable' | 'email_rule_conflict' | 'email_rule_look_alikes_not_written' | 'email_rule_not_compiled' | 'email_rule_request_limit' | 'email_rule_request_not_pending' | 'email_rule_request_not_withdrawn' | 'email_rule_request_party_left' | 'email_rule_request_proposer_only' | 'email_rule_request_target_only' | 'email_rule_scope_locked' | 'email_rule_scope_not_readable' | 'email_rule_share_ended' | 'email_rule_share_limit' | 'embedding_provider_unavailable' | 'entitlement' | 'expectations_failed' | 'expectations_undecided' | 'expectations_unreadable' | 'expired' | 'feature_not_enabled' | 'fresh_send_not_authorized' | 'function_cannot_receive_mail' | 'function_delivery_refused' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_key_missing' | 'function_key_runtime_only' | 'function_not_deployed' | 'function_scope_forbidden' | 'function_signing_secret_missing' | 'function_suspended' | 'github_binding_owner_changed' | 'github_binding_paused' | 'grant_forbidden' | 'grant_not_available' | 'hash_mismatch' | 'hipaa_mode' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'host_key_limit' | 'idempotency_conflict' | 'idempotency_key_invalid' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_manifest' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_signature' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_accepting' | 'invitation_address_not_allowed' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'ip_not_allowed' | 'keep_refused' | 'key_change_superseded' | 'key_recently_created' | 'last_owner' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'load_test_recipient_not_allowed' | 'mail_import_cap_exceeded' | 'mail_import_content_mismatch' | 'mail_import_deadline' | 'mail_import_disabled' | 'mail_import_fenced' | 'mail_import_forbidden' | 'mail_import_invalid_input' | 'mail_import_invalid_provider_response' | 'mail_import_out_of_window' | 'mail_import_policy_mismatch' | 'mail_import_provider_auth' | 'mail_import_provider_unavailable' | 'mail_import_storage_failed' | 'mail_import_storage_limit' | 'mail_import_too_large' | 'mail_import_unavailable' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_claimable' | 'mailbox_not_found' | 'mailbox_shared_with_others' | 'managed_build_failed' | 'managed_domain' | 'member_address_domain_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_reserved' | 'member_address_unavailable' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'no_expectations' | 'no_mail_read' | 'not_a_template_install' | 'not_available' | 'not_claimable' | 'not_held' | 'not_pending' | 'object_suspended' | 'onboarding_key_in_use' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'outbound_relay_unavailable' | 'outside_key_scope' | 'path_invalid' | 'payload_too_large' | 'pending_owner_confirmation' | 'plan_required' | 'policy_forbidden' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'pull_subscription_requires_agent_connection' | 'query_invalid' | 'recipient_changed' | 'recipient_suppressed' | 'redeploy_failed' | 'removal_failed' | 'removal_timeout' | 'request_expired' | 'required_by_organization' | 'resend_limit_exceeded' | 'resend_too_soon' | 'role_assigned' | 'role_assignment_unavailable' | 'role_key_taken' | 'rotate_instead' | 'rotation_in_progress' | 'rotation_incomplete' | 'rotation_refused' | 'rotation_unconfirmed' | 'runtime_grant_unavailable' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_at_required' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sending_ip_warmup_cap' | 'sent_email_tail_unavailable' | 'sent_mail_search_unavailable' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'signing_secret_unavailable' | 'signup_failed' | 'standing_owner_revoked' | 'step_up_invalid' | 'step_up_not_accepted' | 'step_up_refused' | 'step_up_required' | 'stop_changed' | 'storage_error' | 'storage_limit_exceeded' | 'suspension_undecided' | 'template_role' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'thread_busy' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_unavailable' | 'usage_limit_exceeded';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -6204,7 +6204,7 @@ export type ListActivityObjectsResult = {
          */
         name: string | null;
         /**
-         * Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed.
+         * Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, receivers_changed (who receives an active rule's matches changed: its keys, webhooks or share), or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed.
          */
         state: string;
         created_at: string;
@@ -6234,6 +6234,29 @@ export type ListActivityObjectsResult = {
          * For email_rule_coverage, always: the rule it is about, since names need not be unique (for pending, the same as id). GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or as it last decided on your mail; otherwise it answers not_found.
          */
         rule_id?: string;
+        /**
+         * For a receivers_changed notice: who received the rule's matches before and after, in totals. They can be equal when only an owner or a webhook site changed; covering-me shows them by owner. A rotated key counts once here while the old one still works; covering-me counts both.
+         */
+        receivers_change?: {
+            before: {
+                keys: number;
+                /**
+                 * Of the keys, how many also read your own mail beyond the rule.
+                 */
+                reads_in_full: number;
+                webhooks: number;
+                shares: number;
+            };
+            after: {
+                keys: number;
+                /**
+                 * Of the keys, how many also read your own mail beyond the rule.
+                 */
+                reads_in_full: number;
+                webhooks: number;
+                shares: number;
+            };
+        };
     }>;
     /**
      * Kinds left out because the caller could not list them through their own routes. Nothing is said about how many there are.
@@ -7460,6 +7483,10 @@ export type EmailRuleReceivers = {
          * On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches.
          */
         reads_in_full?: number;
+        /**
+         * When the newest of these was made, to the minute: a key, a webhook or the share, or the rule (the share, for what reaches it only through the share) if that was later. Not when a key was given access to this rule, or anything turned back on; a rotated key shows as newly made, and one key on two rules can show the same minute under both.
+         */
+        newest_at?: string;
     }>;
     /**
      * Webhooks taking received mail, bounces or reports that are sent what it matches: those of the key delivery acts as, when it lists the rule or its live share (owner: its holder, or the organization), and those of the member it is shared with (owner: that member).
@@ -7485,6 +7512,10 @@ export type EmailRuleReceivers = {
          * Hosts past those listed.
          */
         hosts_not_listed?: number;
+        /**
+         * When the newest of these was made, to the minute: a key, a webhook or the share, or the rule (the share, for what reaches it only through the share) if that was later. Not when a key was given access to this rule, or anything turned back on; a rotated key shows as newly made, and one key on two rules can show the same minute under both.
+         */
+        newest_at?: string;
     }>;
     /**
      * The rule's live share (at most one), by its member, if they can read it and it is among their newest 20 shares.
@@ -7502,6 +7533,10 @@ export type EmailRuleReceivers = {
             name: string | null;
         };
         count: number;
+        /**
+         * When the newest of these was made, to the minute: a key, a webhook or the share, or the rule (the share, for what reaches it only through the share) if that was later. Not when a key was given access to this rule, or anything turned back on; a rotated key shows as newly made, and one key on two rules can show the same minute under both.
+         */
+        newest_at?: string;
     }>;
 };
 
@@ -9948,6 +9983,14 @@ export type CredentialsGetKeyBuilderResult = {
         message: string | null;
         [key: string]: unknown;
     }>;
+    /**
+     * Whether a key limited to some mail (addresses, domains or email rules) would be created now. While false, creating one is refused, so a client offers neither the listed-address presets nor a listed mail reach for a custom key.
+     */
+    mail_limits_available?: boolean;
+    /**
+     * Whether the credential policy lets a new key reach every mailbox. While false, creating one is refused, so a client offers no preset that reaches every mailbox, and a custom key lists its addresses or domains. With mail_limits_available false as well, no key can be created and every preset is unavailable.
+     */
+    org_reach_available?: boolean;
     matrix: Array<{
         id: string;
         label: string;
@@ -10439,6 +10482,86 @@ export type OrgSettingsUpdateSearchSettingsResult = {
 
 export type OrgSettingsUpdateSearchSettingsInput = {
     semantic_search_opt_in: boolean;
+};
+
+export type EmailNotificationsGetEmailNotificationSettingsResult = {
+    entitled: boolean;
+    kinds: Array<{
+        kind: string;
+        label: string;
+        description: string;
+        class: 'platform_required' | 'org_requirable' | 'optional';
+        entitlement_required: boolean;
+        entitled: boolean;
+        org_mode: 'off' | 'optional_on' | 'optional_off' | 'required' | null;
+        org_mode_is_default: boolean;
+        org_modes: Array<'off' | 'optional_on' | 'optional_off' | 'required'>;
+        member_enabled: boolean;
+        member_can_change: boolean;
+    }>;
+};
+
+export type EmailNotificationsUpdateEmailNotificationSettingsResult = {
+    entitled: boolean;
+    kinds: Array<{
+        kind: string;
+        label: string;
+        description: string;
+        class: 'platform_required' | 'org_requirable' | 'optional';
+        entitlement_required: boolean;
+        entitled: boolean;
+        org_mode: 'off' | 'optional_on' | 'optional_off' | 'required' | null;
+        org_mode_is_default: boolean;
+        org_modes: Array<'off' | 'optional_on' | 'optional_off' | 'required'>;
+        member_enabled: boolean;
+        member_can_change: boolean;
+    }>;
+};
+
+export type EmailNotificationsUpdateEmailNotificationSettingsInput = {
+    modes: {
+        [key: string]: 'off' | 'optional_on' | 'optional_off' | 'required';
+    };
+};
+
+export type EmailNotificationsGetEmailNotificationPreferencesResult = {
+    entitled: boolean;
+    kinds: Array<{
+        kind: string;
+        label: string;
+        description: string;
+        class: 'platform_required' | 'org_requirable' | 'optional';
+        entitlement_required: boolean;
+        entitled: boolean;
+        org_mode: 'off' | 'optional_on' | 'optional_off' | 'required' | null;
+        org_mode_is_default: boolean;
+        org_modes: Array<'off' | 'optional_on' | 'optional_off' | 'required'>;
+        member_enabled: boolean;
+        member_can_change: boolean;
+    }>;
+};
+
+export type EmailNotificationsUpdateEmailNotificationPreferencesResult = {
+    entitled: boolean;
+    kinds: Array<{
+        kind: string;
+        label: string;
+        description: string;
+        class: 'platform_required' | 'org_requirable' | 'optional';
+        entitlement_required: boolean;
+        entitled: boolean;
+        org_mode: 'off' | 'optional_on' | 'optional_off' | 'required' | null;
+        org_mode_is_default: boolean;
+        org_modes: Array<'off' | 'optional_on' | 'optional_off' | 'required'>;
+        member_enabled: boolean;
+        member_can_change: boolean;
+    }>;
+};
+
+export type EmailNotificationsUpdateEmailNotificationPreferencesInput = {
+    preferences: {
+        [key: string]: boolean;
+    };
 };
 
 export type ListRolesResult = {
@@ -20993,7 +21116,7 @@ export type ListActivityObjectsData = {
     path?: never;
     query?: {
         /**
-         * created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote; kind may then name only email_rule_request and email_rule_objection. concerning: what other members did that concerns your own mail: an active rule that started covering one of your mailboxes, or saved a new version while covering it (email_rule_coverage, the only kind it takes). A rule in draft or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and concerning are for a person's own view only.
+         * created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote; kind may then name only email_rule_request and email_rule_objection. concerning: what other members did that concerns your own mail: an active rule that started covering one of your mailboxes, saved a new version, or changed who receives its matches while covering it (email_rule_coverage, the only kind it takes). A rule in draft or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and concerning are for a person's own view only.
          */
         relation?: 'created' | 'asked' | 'concerning';
         /**
@@ -27324,7 +27447,7 @@ export type UpdateOrganizationData = {
     body: OrgSettingsUpdateOrganizationInput;
     headers?: {
         /**
-         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo or semantic search setting), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
          */
         'Primitive-Step-Up'?: string;
     };
@@ -27386,7 +27509,7 @@ export type RemoveOrganizationLogoData = {
     body?: never;
     headers?: {
         /**
-         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo or semantic search setting), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
          */
         'Primitive-Step-Up'?: string;
     };
@@ -27448,7 +27571,7 @@ export type UpdateOrganizationLogoData = {
     body: OrgSettingsUpdateOrganizationLogoInput;
     headers?: {
         /**
-         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo or semantic search setting), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
          */
         'Primitive-Step-Up'?: string;
     };
@@ -27554,7 +27677,7 @@ export type UpdateSearchSettingsData = {
     body: OrgSettingsUpdateSearchSettingsInput;
     headers?: {
         /**
-         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo or semantic search setting), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
          */
         'Primitive-Step-Up'?: string;
     };
@@ -27603,6 +27726,196 @@ export type UpdateSearchSettingsResponses = {
 };
 
 export type UpdateSearchSettingsResponse = UpdateSearchSettingsResponses[keyof UpdateSearchSettingsResponses];
+
+export type GetEmailNotificationSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/email-notification-settings';
+};
+
+export type GetEmailNotificationSettingsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type GetEmailNotificationSettingsError = GetEmailNotificationSettingsErrors[keyof GetEmailNotificationSettingsErrors];
+
+export type GetEmailNotificationSettingsResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+        data: EmailNotificationsGetEmailNotificationSettingsResult;
+    };
+};
+
+export type GetEmailNotificationSettingsResponse = GetEmailNotificationSettingsResponses[keyof GetEmailNotificationSettingsResponses];
+
+export type UpdateEmailNotificationSettingsData = {
+    body: EmailNotificationsUpdateEmailNotificationSettingsInput;
+    headers?: {
+        /**
+         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+         */
+        'Primitive-Step-Up'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/email-notification-settings';
+};
+
+export type UpdateEmailNotificationSettingsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type UpdateEmailNotificationSettingsError = UpdateEmailNotificationSettingsErrors[keyof UpdateEmailNotificationSettingsErrors];
+
+export type UpdateEmailNotificationSettingsResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+        data: EmailNotificationsUpdateEmailNotificationSettingsResult;
+    };
+};
+
+export type UpdateEmailNotificationSettingsResponse = UpdateEmailNotificationSettingsResponses[keyof UpdateEmailNotificationSettingsResponses];
+
+export type GetEmailNotificationPreferencesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/email-notification-preferences';
+};
+
+export type GetEmailNotificationPreferencesErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type GetEmailNotificationPreferencesError = GetEmailNotificationPreferencesErrors[keyof GetEmailNotificationPreferencesErrors];
+
+export type GetEmailNotificationPreferencesResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+        data: EmailNotificationsGetEmailNotificationPreferencesResult;
+    };
+};
+
+export type GetEmailNotificationPreferencesResponse = GetEmailNotificationPreferencesResponses[keyof GetEmailNotificationPreferencesResponses];
+
+export type UpdateEmailNotificationPreferencesData = {
+    body: EmailNotificationsUpdateEmailNotificationPreferencesInput;
+    path?: never;
+    query?: never;
+    url: '/email-notification-preferences';
+};
+
+export type UpdateEmailNotificationPreferencesErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type UpdateEmailNotificationPreferencesError = UpdateEmailNotificationPreferencesErrors[keyof UpdateEmailNotificationPreferencesErrors];
+
+export type UpdateEmailNotificationPreferencesResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+        data: EmailNotificationsUpdateEmailNotificationPreferencesResult;
+    };
+};
+
+export type UpdateEmailNotificationPreferencesResponse = UpdateEmailNotificationPreferencesResponses[keyof UpdateEmailNotificationPreferencesResponses];
 
 export type ListRolesData = {
     body?: never;
