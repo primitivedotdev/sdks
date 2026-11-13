@@ -11,6 +11,7 @@ import {
   OPERATION_EXTENSIONS,
 } from "../../src/oclif/api-command.js";
 import {
+  affectsLine,
   endEmailRuleShareReport,
   formatFact,
   NOT_MATCHED_LIST_LIMIT,
@@ -2664,7 +2665,7 @@ describe("email-rules update-email-rule: the server's write guards", () => {
     );
   });
 
-  it("says a write was checked by default when keys or webhooks read the rule, and how to save it unchecked", async () => {
+  it("says a write was checked by default when keys, webhooks or a share read the rule, and how to save it unchecked", async () => {
     const check = {
       version: null,
       passed: false,
@@ -2693,6 +2694,23 @@ describe("email-rules update-email-rule: the server's write guards", () => {
       `Hint: the rule, as this write would leave it, was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys, webhooks or a share read it, and nothing was saved. Expectations failed: ${A}. The rule is active and 2 API keys and 1 webhook read what it grants; to save the write without the check, send it again with --no-if-expectations-pass. The command exits 1.`,
     );
     const hintFor = OPERATION_ERROR_HINTS.updateEmailRule;
+    // A share counts as a reader: alone, and beside keys and webhooks.
+    const failedWith = (read_by: Record<string, unknown>) =>
+      hintFor?.(
+        "expectations_failed",
+        {},
+        {
+          code: "expectations_failed",
+          details: { expectations_check: check, read_by },
+        },
+        { id: RULE },
+      );
+    expect(failedWith({ keys: 0, webhooks: 0, shares: 1 })).toContain(
+      "The rule is active and it is shared with 1 member; to save the write without the check, send it again with --no-if-expectations-pass.",
+    );
+    expect(failedWith({ keys: 2, webhooks: 1, shares: 2 })).toContain(
+      "The rule is active and 2 API keys and 1 webhook read what it grants, and it is shared with 2 members; to save the write",
+    );
     // Readers that could not be counted in time.
     expect(
       hintFor?.(
@@ -3073,11 +3091,25 @@ describe("email-rules compile-email-rule and get-email-rule reports", () => {
     expect(json.stderr).toBe("");
   });
 
-  it("prints the server's notices: objections waiting, a share a write ended, and a version saved unchecked", async () => {
+  it("names ended shares in the line on what a new version reaches only when there are any", () => {
+    expect(affectsLine({ keys: 2, endpoints: 1, shares_ended: 0 })).toBe(
+      "This version reaches 2 API keys listing the rule and 1 webhook those keys own. The rule keeps its state.",
+    );
+    expect(affectsLine({ keys: 1, endpoints: 0, shares_ended: 1 })).toBe(
+      "This version reaches 1 API key listing the rule and 0 webhooks those keys own; it ended 1 share. The rule keeps its state.",
+    );
+    // No count of ended shares reads as none: a new version ends no share.
+    expect(affectsLine({ keys: 1, endpoints: 0 })).toBe(
+      "This version reaches 1 API key listing the rule and 0 webhooks those keys own. The rule keeps its state.",
+    );
+    expect(affectsLine({ keys: 1 })).toBeUndefined();
+  });
+
+  it("prints the server's notices: objections waiting, the share a new version kept, and a version saved unchecked", async () => {
     const objectionNotice =
       "1 objection to this rule is waiting for your answer: a member whose mail it covered asked you to turn it off. Read it with GET /v1/email-rule-objections?box=incoming, or primitive email-rule-oversight list-email-rule-objections --box incoming (each names its rule). Then accept it, which turns the rule off (state draft), or decline it.";
     const shareNotice =
-      "Saving version 6 ended this rule's share with Dana (accepted at version 5): they can no longer read anything it shared through Primitive, even what it shared before; copies already delivered to their webhooks or downloaded stay with them. To share with them again, they send a new request, and accepting it writes a new rule.";
+      "Saving version 6 kept this rule's share with Dana (accepted at version 5): what version 6 matches is shared with them from the next email on, and they see its description. A share ends only when someone ends it or the rule is deleted, and stops if either of you leaves the organization.";
     const savedNotice =
       "This version is in force now and changes what 2 API keys and 1 webhook that read this rule receive. It was saved without being checked against the rule's expectations (if_expectations_pass: false).";
     const rule = {
@@ -3098,7 +3130,7 @@ describe("email-rules compile-email-rule and get-email-rule reports", () => {
     expect(stderrLines(got)).toEqual([objectionNotice]);
     answer({
       ...rule,
-      affects: { keys: 2, endpoints: 1, shares_ended: 1 },
+      affects: { keys: 2, endpoints: 1, shares_ended: 0 },
       share_notice: shareNotice,
       notice: savedNotice,
     });
@@ -3109,7 +3141,7 @@ describe("email-rules compile-email-rule and get-email-rule reports", () => {
     ]);
     expect(updated.exitCode, updated.stderr).toBe(0);
     expect(stderrLines(updated)).toEqual([
-      "This version reaches 2 API keys listing the rule and 1 webhook those keys own; it ended 1 share. The rule keeps its state.",
+      "This version reaches 2 API keys listing the rule and 1 webhook those keys own. The rule keeps its state.",
       shareNotice,
       savedNotice,
       objectionNotice,

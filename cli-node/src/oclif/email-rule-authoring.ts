@@ -992,9 +992,9 @@ export function affectsLine(affects: unknown): string | undefined {
     typeof value === "number" && Number.isFinite(value) ? value : undefined;
   const keys = count(affects.keys);
   const endpoints = count(affects.endpoints);
-  const shares = count(affects.shares_ended);
-  if (keys === undefined || endpoints === undefined || shares === undefined)
-    return undefined;
+  // A new version ends no share, so a missing count reads as none.
+  const shares = count(affects.shares_ended) ?? 0;
+  if (keys === undefined || endpoints === undefined) return undefined;
   const ended =
     shares > 0 ? `; it ended ${plural(shares, "share", "shares")}` : "";
   return `This version reaches ${plural(keys, "API key", "API keys")} listing the rule and ${plural(endpoints, "webhook", "webhooks")} those keys own${ended}. The rule keeps its state.`;
@@ -1051,8 +1051,8 @@ export function writtenEmailRuleReport(
   if (restored) lines.push(restored);
   const reach = affectsLine(rule.affects);
   if (reach) lines.push(reach);
-  // That the write ended the rule's share, and with whom; then, for a version
-  // saved on an active rule keys, webhooks or a share read without a check, what it
+  // That the rule's share goes on under the new version, and with whom; then,
+  // for a version saved on an active rule keys, webhooks or a share read without a check, what it
   // changes; and, on a grant rule's create, that do-not-share rules run first.
   for (const note of [rule.share_notice, rule.notice, rule.do_not_share_note]) {
     const line = noteLine(note);
@@ -1256,7 +1256,12 @@ function readByText(details: Record<string, unknown>): string | undefined {
   const readBy = details.read_by;
   if (!isRecord(readBy)) return undefined;
   const { keys, webhooks, shares } = readBy;
-  if (typeof keys !== "number" || typeof webhooks !== "number")
+  // Null when not counted in time; an older server sends no shares at all.
+  if (
+    typeof keys !== "number" ||
+    typeof webhooks !== "number" ||
+    shares === null
+  )
     return "API keys, webhooks or a share may read what it grants (they could not be counted in time)";
   // A share counts as a reader too: a new version keeps it, so what the
   // version matches reaches the member it is shared with.
