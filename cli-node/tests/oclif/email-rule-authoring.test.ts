@@ -3521,6 +3521,22 @@ describe("email-rules compile-email-rule and get-email-rule reports", () => {
       "This version reaches 1 API key listing the rule and 0 webhooks those keys own. The rule keeps its state.",
     );
     expect(affectsLine({ keys: 1 })).toBeUndefined();
+    // With a state sent beside the version, the state it is in now, ended shares named the same way.
+    const sentActive = { stateSent: "active", state: "active" };
+    expect(
+      affectsLine({ keys: 2, endpoints: 1, shares_ended: 1 }, sentActive),
+    ).toBe(
+      "This version reaches 2 API keys listing the rule and 1 webhook those keys own; it ended 1 share. The rule is now active.",
+    );
+    expect(affectsLine({ keys: 2, endpoints: 1 }, sentActive)).toBe(
+      "This version reaches 2 API keys listing the rule and 1 webhook those keys own. The rule is now active.",
+    );
+    // An activation names no ended shares, whatever the count.
+    expect(
+      affectsLine({ keys: 2, endpoints: 1 }, { activatedOnly: true }),
+    ).toBe(
+      "Now active: it reaches 2 API keys listing the rule and 1 webhook those keys own.",
+    );
   });
 
   it("prints the server's notices: objections waiting, the share a new version kept, and a version saved unchecked", async () => {
