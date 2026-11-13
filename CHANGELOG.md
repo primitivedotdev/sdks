@@ -16,44 +16,30 @@ the same OpenAPI spec. See `RELEASE.md`.
 OpenAPI document the API serves, and every client is regenerated from it. Most
 of the changes below follow from that document.
 
-Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.14` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.14`), and `3.0.0rc14` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.13` (`3.0.0rc13`), which added email detail attachments, attachment names on made-up emails, compile scope, rule share and objection notices, objection box `mine` and the mail import operations, `3.0.0-preview.12` (`3.0.0rc12`), which added imported mail, pending coverage rows, endpoint and key warnings and the default check of writes to rules that keys or webhooks read, `3.0.0-preview.11` (`3.0.0rc11`), which added server notes on rule requests, rule receivers, `activity concerning` and the rule objection webhook events, `3.0.0-preview.10` (`3.0.0rc10`), which added email rule objections, the email rule scope flags and true or false on boolean flags, `3.0.0-preview.9` (`3.0.0rc9`), which added email rule oversight and look-alikes that carry `expected`, and changed what `hidden` counts on rule results, `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
+Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.15` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.15`), and `3.0.0rc15` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.14` (`3.0.0rc14`), which added email notification settings in the SDKs, `receivers_changed` coverage notices with their totals, webhook URL query strings hidden in endpoint output and activity read retries, `3.0.0-preview.13` (`3.0.0rc13`), which added email detail attachments, attachment names on made-up emails, compile scope, rule share and objection notices, objection box `mine` and the mail import operations, `3.0.0-preview.12` (`3.0.0rc12`), which added imported mail, pending coverage rows, endpoint and key warnings and the default check of writes to rules that keys or webhooks read, `3.0.0-preview.11` (`3.0.0rc11`), which added server notes on rule requests, rule receivers, `activity concerning` and the rule objection webhook events, `3.0.0-preview.10` (`3.0.0rc10`), which added email rule objections, the email rule scope flags and true or false on boolean flags, `3.0.0-preview.9` (`3.0.0rc9`), which added email rule oversight and look-alikes that carry `expected`, and changed what `hidden` counts on rule results, `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
 
-What `3.0.0-preview.14` (`3.0.0rc14`) changes from `3.0.0-preview.13`:
+What `3.0.0-preview.15` (`3.0.0rc15`) changes from `3.0.0-preview.14`:
 
-- The spec follows the API's current release. It adds email notification
-  settings: `getEmailNotificationPreferences` and
-  `updateEmailNotificationPreferences` for the notification emails you get,
-  and `getEmailNotificationSettings` and `updateEmailNotificationSettings`
-  for the organization's mode for each kind, which are not CLI commands
-  yet. New error codes: `always_sent` and `required_by_organization`.
-- A coverage notice can be `receivers_changed`, a change in who receives an
-  active rule's matches, with `receivers_change` totals before and after.
-  `primitive activity concerning` shows what changed in a CHANGE column,
-  and `primitive doctor` counts these among recent coverage notices.
-- A rule's receivers carry `newest_at`, when the newest key, webhook or
-  share among them was made, and `getKeyBuilder` answers
-  `mail_limits_available` and `org_reach_available`.
-- `endpoints get`, `list`, `create` and `update` hide a webhook URL's query
-  string unless `--show-url` is passed, and `create` and `update` refuse a
-  URL carrying the placeholder. Without `--json`, `endpoints list` prints
-  each endpoint's ENABLED and DELIVERING.
-- `keys update` changes the grant of a key that lists a live rule, and
-  names a mail scope setting it cannot restate. A key that lists an address
-  or domain beside its email rules gets a warning in every output mode that
-  it reads those mailboxes in full.
-- `primitive send` and `primitive reply` take `--text` for `--body`.
-- The objection commands' help says a message can ask the rule's author to
-  narrow the rule or explain where its matches go.
-- `primitive activity created`, `asked` and `concerning` retry a rate
-  limit, an unavailable API or a network error with backoff, saying so on
-  stderr, and an API that cannot be reached is `network_error`, with the
-  transport's code as `cause`, with and without `--json`.
-- `primitive machine doctor` compares a preview build of the CLI with npm's
-  `preview` dist-tag and warns when a newer preview, or the release it
-  previews, is out; `--min-cli-version` compares a preview build whole.
-- A samples file whose samples or emails carry a field this CLI does not
-  know is no longer refused: the CLI names such fields on stderr and passes
-  them to the API, which decides.
+- The spec follows the API's current release. `getEmail` answers
+  `rule_deliveries` for the owner of the mailbox: where Email Rules
+  delivered the email by webhook, per rule, with delivered, pending, failed
+  and not-sent counts.
+- `testEmailRuleOnSample` takes `with_protection` and answers `protection`,
+  whether a grant rule's match would be shared or withheld by do-not-share
+  rules. `email-rules test-email-rule-on-sample --with-protection` (true or
+  false) sends it, and without `--json` the command says which.
+- `testEmailRule` and `testEmailRuleOnSample` take `request_id`, testing a
+  pending rule request as you. `testEmailRule`'s `window` carries its
+  `scope`, `oldest_at` and `newest_at`, and `compileEmailRule` answers
+  `breadth_scope`, which `compile-email-rule`'s breadth line now names.
+- A rule result's `not_run_reason` can be `outside_scope`.
+- `createEmailRuleRequest` with an `Idempotency-Key` answers the pending
+  request it matched (`200`, `existing: true`) instead of making another.
+- `rotateKey` answers the successor's `name`, `grant` and `rotated_from`.
+- A grant rule's create answer and the covering view carry
+  `do_not_share_note`, which `create-email-rule` prints.
+- A coverage notice carries `rule_now` `deleted` once its rule is deleted,
+  and `activity concerning` marks such a notice.
 
 ### Breaking changes
 
@@ -63,7 +49,7 @@ What `3.0.0-preview.14` (`3.0.0rc14`) changes from `3.0.0-preview.13`:
   CLI moves from 1.75.0.
 - The Go module path is `github.com/primitivedotdev/sdks/sdk-go/v3`. Update
   imports from `.../sdk-go/v2` and `.../sdk-go/v2/api`.
-- `primitive functions init` scaffolds projects on `^3.0.0-preview.14` of both
+- `primitive functions init` scaffolds projects on `^3.0.0-preview.15` of both
   `@primitivedotdev/sdk` and `primitive`.
 
 #### Removed code
