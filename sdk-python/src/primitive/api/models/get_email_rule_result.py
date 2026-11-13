@@ -53,6 +53,11 @@ class GetEmailRuleResult:
             scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.
             revision (int | Unset): Moves on by one with every update. Send it as if_revision.
             author (EmailRuleAuthor | Unset):
+            pending_objections (int | Unset): To its author, on the dashboard or the Primitive CLI: objections to it waiting
+                for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time:
+                absent is not 0.
+            objection_notice (str | Unset): With pending_objections above 0: that members asked you to turn it off, and how
+                to answer.
             expectations (GetEmailRuleResultExpectations | Unset): Its saved expectations, each list by email id.
             expectation_samples (list[EmailRuleExpectationSample] | Unset): Its saved made-up emails, oldest first.
      """
@@ -72,6 +77,8 @@ class GetEmailRuleResult:
     scope_selection: EmailRuleScopeNames | None | Unset = UNSET
     revision: int | Unset = UNSET
     author: EmailRuleAuthor | Unset = UNSET
+    pending_objections: int | Unset = UNSET
+    objection_notice: str | Unset = UNSET
     expectations: GetEmailRuleResultExpectations | Unset = UNSET
     expectation_samples: list[EmailRuleExpectationSample] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -135,6 +142,10 @@ class GetEmailRuleResult:
         if not isinstance(self.author, Unset):
             author = self.author.to_dict()
 
+        pending_objections = self.pending_objections
+
+        objection_notice = self.objection_notice
+
         expectations: dict[str, Any] | Unset = UNSET
         if not isinstance(self.expectations, Unset):
             expectations = self.expectations.to_dict()
@@ -174,6 +185,10 @@ class GetEmailRuleResult:
             field_dict["revision"] = revision
         if author is not UNSET:
             field_dict["author"] = author
+        if pending_objections is not UNSET:
+            field_dict["pending_objections"] = pending_objections
+        if objection_notice is not UNSET:
+            field_dict["objection_notice"] = objection_notice
         if expectations is not UNSET:
             field_dict["expectations"] = expectations
         if expectation_samples is not UNSET:
@@ -300,6 +315,10 @@ class GetEmailRuleResult:
 
 
 
+        pending_objections = d.pop("pending_objections", UNSET)
+
+        objection_notice = d.pop("objection_notice", UNSET)
+
         _expectations = d.pop("expectations", UNSET)
         expectations: GetEmailRuleResultExpectations | Unset
         if isinstance(_expectations,  Unset):
@@ -338,6 +357,8 @@ class GetEmailRuleResult:
             scope_selection=scope_selection,
             revision=revision,
             author=author,
+            pending_objections=pending_objections,
+            objection_notice=objection_notice,
             expectations=expectations,
             expectation_samples=expectation_samples,
         )

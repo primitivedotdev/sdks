@@ -4048,7 +4048,15 @@ export const openapiDocument: Record<string, unknown> = {
             "schema": {
               "type": "boolean"
             },
-            "description": "When true, include only outbound DNS records. Verified domains default to outbound-only; pending claims default to all required records."
+            "description": "When true, include only outbound DNS records. Cannot be combined with inbound_only=true. By default, include all records."
+          },
+          {
+            "name": "inbound_only",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "When true, include only inbound MX and ownership TXT records. Cannot be combined with outbound_only=true."
           }
         ],
         "responses": {
@@ -34410,7 +34418,7 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "created (the default), asked or concerning.",
             "schema": {
               "default": "created",
-              "description": "created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote; kind may then name only email_rule_request and email_rule_objection. concerning: what other members did that concerns your own mail: a rule that started covering one of your mailboxes, or saved a new version while covering it (email_rule_coverage, the only kind it takes). asked and concerning are for a person's own view only.",
+              "description": "created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote; kind may then name only email_rule_request and email_rule_objection. concerning: what other members did that concerns your own mail: an active rule that started covering one of your mailboxes, or saved a new version while covering it (email_rule_coverage, the only kind it takes). A rule in draft or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and concerning are for a person's own view only.",
               "type": "string",
               "enum": [
                 "created",
@@ -34757,7 +34765,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "compileEmailRule",
         "summary": "Compile a rule description",
-        "description": "Turns a plain-English description of which received emails to match into a rule tree over the column contract, with an explanation of what it matches, the assumptions made, and warnings for what the columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only after the conditions match; they read the subject, the new text and attachment file names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how much of your recent classified mail its conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+        "description": "Turns a plain-English description of which received emails to match into a rule tree over the column contract, with an explanation of what it matches, the assumptions made, and warnings for what the columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only after the conditions match; they read the subject, the new text and attachment file names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how much of the recent classified mail in evaluation_scope (by default your own mailboxes) its conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
         "tags": [
           "Email Rules"
         ],
@@ -34865,7 +34873,17 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "403": {
-            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden.",
+            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "email_rule_author_unresolvable: with evaluation_scope selected, you cannot act as a rule's author right now (details.reason left, revoked, suspended, membership_ended or no_mail_read).",
             "content": {
               "application/json": {
                 "schema": {
@@ -35055,7 +35073,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "403": {
-            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and a rule decides on what emails say. email_rule_scope_not_readable: scope_selection names something you cannot read.",
+            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and a rule decides on what emails say. email_rule_scope_not_readable: scope_selection names something you cannot read. forbidden with details.reason covering_view_only: you read this rule only in the covering view, since it decided on your mail before and covers none of your mailboxes now (details.covering_view).",
             "content": {
               "application/json": {
                 "schema": {
@@ -35245,7 +35263,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "403": {
-            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read.",
+            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read. forbidden with details.reason covering_view_only: you read this rule only in the covering view, since it decided on your mail before and covers none of your mailboxes now (details.covering_view).",
             "content": {
               "application/json": {
                 "schema": {
@@ -35255,7 +35273,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "404": {
-            "description": "not_found: rule_id names no rule you can see (details.reason rule_not_found), or request_id no rule request you can see (request_not_found).",
+            "description": "not_found: rule_id names no rule you can see or that covers your mailboxes (details.reason rule_not_found), or request_id no rule request you can see (request_not_found).",
             "content": {
               "application/json": {
                 "schema": {
@@ -35265,7 +35283,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "409": {
-            "description": "email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree or a request, you). email_rule_request_not_pending: request_id names a request already decided.",
+            "description": "email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, a request or a rule covering you, you). email_rule_request_not_pending: request_id names a request already decided.",
             "content": {
               "application/json": {
                 "schema": {
@@ -35354,7 +35372,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "testEmailRuleOnSample",
         "summary": "Test a rule against a made-up email",
-        "description": "Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text, attachment types; optionally automated, from a mailing list, and a spam score), classified and decided as received mail would be. A rule reading a spam score you gave none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+        "description": "Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text, attachment types and file names; optionally automated, from a mailing list, and a spam score), classified and decided as received mail would be. A rule reading a spam score you gave none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
         "tags": [
           "Email Rules"
         ],
@@ -35455,7 +35473,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "403": {
-            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read.",
+            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read. forbidden with details.reason covering_view_only: you read this rule only in the covering view, since it decided on your mail before and covers none of your mailboxes now (details.covering_view).",
             "content": {
               "application/json": {
                 "schema": {
@@ -35465,7 +35483,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "404": {
-            "description": "not_found: rule_id names no rule you can see (details.reason rule_not_found).",
+            "description": "not_found: rule_id names no rule you can see or that covers your mailboxes (details.reason rule_not_found).",
             "content": {
               "application/json": {
                 "schema": {
@@ -35475,7 +35493,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "409": {
-            "description": "email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, you), so it would decide nothing for real. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox.",
+            "description": "email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree or a rule covering you, you), so it would decide nothing for real. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox.",
             "content": {
               "application/json": {
                 "schema": {
@@ -36031,7 +36049,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "403": {
-            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox; details.covering_view is where (getEmailRuleCoveringMe).",
+            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox or decided on your mail; details.covering_view is where (getEmailRuleCoveringMe).",
             "content": {
               "application/json": {
                 "schema": {
@@ -36299,7 +36317,7 @@ export const openapiDocument: Record<string, unknown> = {
       "delete": {
         "operationId": "deleteEmailRule",
         "summary": "Delete a rule",
-        "description": "Deletes a rule with its versions, its decisions and the access it granted. A share of it ends (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out when they could not be read). The author or a reader of all the organization's mail may delete it; while it is shared, only the author or someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+        "description": "Deletes a rule with its versions, its decisions and the access it granted. A share of it ends (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer lists the shares it ended (ended_shares), says whom with (share_notice), and lists the unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out when they could not be read). The author or a reader of all the organization's mail may delete it; while it is shared, only the author or someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
         "tags": [
           "Email Rules"
         ],
@@ -36615,7 +36633,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "403": {
-            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say.",
+            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox or decided on your mail; details.covering_view is where (listEmailRuleDecisionsOnMyMail).",
             "content": {
               "application/json": {
                 "schema": {
@@ -36894,7 +36912,7 @@ export const openapiDocument: Record<string, unknown> = {
             "required": false,
             "description": "Read only these version numbers, comma-separated, at most 100. Not with limit or cursor.",
             "schema": {
-              "description": "Read only these version numbers, comma-separated. Without it, every version, newest first, a page at a time.",
+              "description": "Read only these version numbers, comma-separated. Without it, the versions listed, newest first, a page at a time.",
               "type": "string",
               "pattern": "^[1-9]\\d{0,8}(,[1-9]\\d{0,8}){0,99}$"
             }
@@ -36993,7 +37011,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "403": {
-            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden.",
+            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox or decided on your mail; details.covering_view is where (listEmailRuleVersionsCoveringMe while it covers you).",
             "content": {
               "application/json": {
                 "schema": {
@@ -40365,6 +40383,211 @@ export const openapiDocument: Record<string, unknown> = {
         ]
       }
     },
+    "/email-rules/covering-me/{id}/versions": {
+      "get": {
+        "operationId": "listEmailRuleVersionsCoveringMe",
+        "summary": "Read versions of a rule over your mail",
+        "description": "The versions of a rule that covers one of your own mailboxes now that applied to your mail: its current version and each earlier one that decided on mail at your own mailboxes, so a decision can be read in the words of the version that made it. Each has what the covering view shows of a version: its wording, tree, explanation and assumptions. A version that did neither is not listed. Without versions, newest first, a page at a time (meta.cursor); with versions, only those named that are listed, oldest first. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
+        "tags": [
+          "Email Rule Oversight"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The rule id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Versions per page when versions is not given: 1 to 100, default 50.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "meta.cursor from the preceding page. Omit for the first page. Not with versions.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "versions",
+            "in": "query",
+            "required": false,
+            "description": "Read only these version numbers, comma-separated, at most 100. Not with limit or cursor.",
+            "schema": {
+              "description": "Read only these version numbers, comma-separated. Without it, the versions listed, newest first, a page at a time.",
+              "type": "string",
+              "pattern": "^[1-9]\\d{0,8}(,[1-9]\\d{0,8}){0,99}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read versions of a rule over your mail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ListEmailRuleVersionsCoveringMeResult"
+                        },
+                        "meta": {
+                          "$ref": "#/components/schemas/CursorPageMeta",
+                          "description": "Absent when versions is given."
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "400": {
+            "description": "validation_error: a cursor not returned in meta.cursor, or versions with limit or cursor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason no_longer_covers: it decided on your mail before but covers none of your mailboxes now; details.covering_view (getEmailRuleCoveringMe) shows the version that last decided on your mail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: no rule with this id covers your mailboxes or decided on your mail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "mail:read"
+        ]
+      }
+    },
     "/email-rule-objections": {
       "post": {
         "operationId": "createEmailRuleObjection",
@@ -40567,7 +40790,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "listEmailRuleObjections",
         "summary": "List objections",
-        "description": "Objections you made, objections to rules you wrote, or every objection you can see, newest first. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
+        "description": "Objections you made and objections to rules you wrote (by default), only one of the two, or every objection you can see, newest first. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
         "tags": [
           "Email Rule Oversight"
         ],
@@ -40581,12 +40804,13 @@ export const openapiDocument: Record<string, unknown> = {
             "name": "box",
             "in": "query",
             "required": false,
-            "description": "outgoing (the default): objections you made. incoming: objections to rules you wrote. all: every objection you can see.",
+            "description": "mine (the default): objections you made and objections to rules you wrote, each saying which (is_objector, is_author). outgoing: only those you made. incoming: only those to rules you wrote. all: every objection you can see.",
             "schema": {
-              "default": "outgoing",
-              "description": "outgoing: objections you made; incoming: objections to rules you wrote; all: every objection you can see (owners and admins see the organization's).",
+              "default": "mine",
+              "description": "mine: objections you made and objections to rules you wrote (is_objector or is_author says which); outgoing: only those you made; incoming: only those to rules you wrote; each in your current membership. all: every objection you can see (owners and admins see the organization's).",
               "type": "string",
               "enum": [
+                "mine",
                 "outgoing",
                 "incoming",
                 "all"
@@ -42036,6 +42260,401 @@ export const openapiDocument: Record<string, unknown> = {
         },
         "x-primitive-permission": [
           "domains:manage"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ]
+      }
+    },
+    "/mail-imports/google/messages": {
+      "post": {
+        "operationId": "importGoogleMailMessage",
+        "summary": "Import one historical Google Workspace message",
+        "description": "Requires the organization email_import entitlement, granted by staff. Only the configured current owner, using a full personal session or verified first-party CLI, may import into the configured primary mailbox. Primitive verifies the transient provider token and fetches RAW content itself. No raw uploads or client provenance are accepted. Sent, draft, spam and trash messages are skipped. Historical mail appears in normal history without live delivery effects. An indeterminate response requires retrying the same provider ID. User provider credentials are never stored or queued.",
+        "tags": [
+          "Emails"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportGoogleMailMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Import one historical Google Workspace message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ImportGoogleMailMessageResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "mail_import_provider_auth: reauthorize the provider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "feature_disabled: the organization lacks email_import; or mail_import_forbidden: identity or current access differs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "mail_import_cap_exceeded or mail_import_storage_limit: the fixed pilot budget is exhausted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Mail import input, content, storage or publication fence could not be accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Provider acquisition failed or exceeded its deadline.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "mail_import_disabled or mail_import_unavailable; retry the same ID after resolving the cause.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Primitive-Google-Access-Token",
+            "required": true,
+            "description": "Transient provider user access token. Send only in this redacted header, never in a URL or JSON body. Uses the dedicated configured desktop client and readonly/identity scopes.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192,
+              "writeOnly": true
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "x-primitive-permission": [
+          "mail:read"
+        ]
+      }
+    },
+    "/mail-imports/google/reconcile": {
+      "post": {
+        "operationId": "reconcileGoogleMailImport",
+        "summary": "Reconcile scoped historical import attempts",
+        "description": "The same configured owner may recover expired attempts after the email_import entitlement is revoked. Recovery does not require that entitlement. Selects only server-owned manifests for the configured mailbox/account/policy. No provider token, object keys, prefixes or email IDs are accepted. Unsettled uploads remain unresolved and charged; this operation does not promise automatic cleanup after a process dies.",
+        "tags": [
+          "Emails"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconcileGoogleMailImportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reconcile scoped historical import attempts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReconcileGoogleMailImportResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-unauthenticated"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-unauthenticated"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset-unauthenticated"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-unauthenticated"
+              }
+            }
+          },
+          "403": {
+            "description": "mail_import_forbidden: current owner access is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              },
+              "ratelimit-limit": {
+                "$ref": "#/components/headers/ratelimit-limit-429"
+              },
+              "ratelimit-remaining": {
+                "$ref": "#/components/headers/ratelimit-remaining-429"
+              },
+              "ratelimit-reset": {
+                "$ref": "#/components/headers/ratelimit-reset"
+              },
+              "ratelimit-policy": {
+                "$ref": "#/components/headers/ratelimit-policy-429"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "mail_import_disabled: no valid policy is configured; or mail_import_unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-primitive-permission": [
+          "mail:read"
         ],
         "parameters": [
           {
@@ -64888,6 +65507,22 @@ export const openapiDocument: Record<string, unknown> = {
                   "latest_message_mismatch",
                   "latest_message_thread_unresolved",
                   "load_test_recipient_not_allowed",
+                  "mail_import_cap_exceeded",
+                  "mail_import_content_mismatch",
+                  "mail_import_deadline",
+                  "mail_import_disabled",
+                  "mail_import_fenced",
+                  "mail_import_forbidden",
+                  "mail_import_invalid_input",
+                  "mail_import_invalid_provider_response",
+                  "mail_import_out_of_window",
+                  "mail_import_policy_mismatch",
+                  "mail_import_provider_auth",
+                  "mail_import_provider_unavailable",
+                  "mail_import_storage_failed",
+                  "mail_import_storage_limit",
+                  "mail_import_too_large",
+                  "mail_import_unavailable",
                   "mail_relay_unavailable",
                   "mail_routing_conflict",
                   "mail_topic_edit_conflict",
@@ -68628,6 +69263,13 @@ export const openapiDocument: Record<string, unknown> = {
               }
             }
           },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmailAttachment"
+            },
+            "description": "Attachment metadata (file name, type, size), the same items in the same order as `parsed.attachments`. Kept for a credential that reads headers only, where `parsed` is null. Empty when the email has none, its content is withheld (read `status` and `rejection_reason`), or it is not parsed yet or its parse failed (read `parse_status`). No bytes; download a part with `/emails/{id}/attachments/{part_index}`."
+          },
           "imported": {
             "type": [
               "object",
@@ -68698,6 +69340,7 @@ export const openapiDocument: Record<string, unknown> = {
           "from_verified",
           "from_header_email",
           "from_name",
+          "attachments",
           "imported",
           "snippet"
         ]
@@ -69830,6 +70473,35 @@ export const openapiDocument: Record<string, unknown> = {
                   "pattern": "^[A-Za-z0-9_-]+$",
                   "description": "ASCII letters, digits, underscores or dashes."
                 }
+              }
+            }
+          },
+          "unsubscribe": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "url"
+            ],
+            "description": "One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the unsubscribe. Every recipient of the message gets the same `url`, so send one message per recipient when the URL identifies who to unsubscribe. The `headers` map refuses both header names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send.",
+            "properties": {
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 700,
+                "pattern": "^[Hh][Tt][Tt][Pp][Ss]://(?:[A-Za-z0-9\\-._~:/?#\\[\\]@!$&'()*+;=]|%[0-9A-Fa-f]{2})+$",
+                "description": "Absolute https URL that unsubscribes the recipient, at most 700 characters of URL characters only: printable ASCII with no spaces, double quotes, angle brackets or commas (percent-encode a comma as %2C), `%` only as a percent-encoded byte, `[` and `]` only around an IPv6 address host, a port from 1 to 65535, no `=?` (which mail readers can decode as an encoded word), and no user name or password. The host must be public: not a single-label name, `localhost` or a name under `.localhost`, `.internal`, `.local`, `.home.arpa` or `.localdomain`, or a loopback, link-local, private, shared, reserved, multicast or unspecified IP address, including an IPv6 address that embeds one. The scheme is written in lower case."
+              },
+              "one_click": {
+                "type": "boolean",
+                "default": true,
+                "description": "Whether to also write `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, which tells the receiver it may unsubscribe with a single POST to `url`. Set false when `url` needs the recipient to open a page and confirm."
+              },
+              "mailto": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 254,
+                "pattern": "^[A-Za-z0-9!$'*+=_~-]+(?:\\.[A-Za-z0-9!$'*+=_~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$",
+                "description": "An address to also offer as a `mailto:` unsubscribe, written after `url`. The address alone, without the `mailto:` prefix: at most 64 letters, digits and `.!$'*+=_~-` before the `@`, and a dotted domain after it. An `=` is written as `%3D` in the header."
               }
             }
           },
@@ -71235,6 +71907,35 @@ export const openapiDocument: Record<string, unknown> = {
           "fyi": {
             "type": "boolean",
             "description": "Send an informational message the receiver need not answer or wake for. It is sent as an `ack` signal (status `received`) about the message in `in_reply_to`, whose note is `body_text` (at most 2000 characters, which may be omitted). Receivers see it as `fyi: true`. Plain text only: it cannot be combined with `body_html`, `attachments`, `payload_attachments` or `scheduled_at`, and on `/send-mail` it requires `in_reply_to`."
+          },
+          "unsubscribe": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "url"
+            ],
+            "description": "One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the unsubscribe. Every recipient of the message gets the same `url`, so send one message per recipient when the URL identifies who to unsubscribe. The `headers` map refuses both header names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send.",
+            "properties": {
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 700,
+                "pattern": "^[Hh][Tt][Tt][Pp][Ss]://(?:[A-Za-z0-9\\-._~:/?#\\[\\]@!$&'()*+;=]|%[0-9A-Fa-f]{2})+$",
+                "description": "Absolute https URL that unsubscribes the recipient, at most 700 characters of URL characters only: printable ASCII with no spaces, double quotes, angle brackets or commas (percent-encode a comma as %2C), `%` only as a percent-encoded byte, `[` and `]` only around an IPv6 address host, a port from 1 to 65535, no `=?` (which mail readers can decode as an encoded word), and no user name or password. The host must be public: not a single-label name, `localhost` or a name under `.localhost`, `.internal`, `.local`, `.home.arpa` or `.localdomain`, or a loopback, link-local, private, shared, reserved, multicast or unspecified IP address, including an IPv6 address that embeds one. The scheme is written in lower case."
+              },
+              "one_click": {
+                "type": "boolean",
+                "default": true,
+                "description": "Whether to also write `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, which tells the receiver it may unsubscribe with a single POST to `url`. Set false when `url` needs the recipient to open a page and confirm."
+              },
+              "mailto": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 254,
+                "pattern": "^[A-Za-z0-9!$'*+=_~-]+(?:\\.[A-Za-z0-9!$'*+=_~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$",
+                "description": "An address to also offer as a `mailto:` unsubscribe, written after `url`. The address alone, without the `mailto:` prefix: at most 64 letters, digits and `.!$'*+=_~-` before the `@`, and a dotted domain after it. An `=` is written as `%3D` in the header."
+              }
+            }
           },
           "headers": {
             "type": "object",
@@ -77985,7 +78686,7 @@ export const openapiDocument: Record<string, unknown> = {
                 },
                 "state": {
                   "type": "string",
-                  "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule began covering your mailbox), new_version, or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed."
+                  "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed."
                 },
                 "created_at": {
                   "type": "string",
@@ -77997,7 +78698,7 @@ export const openapiDocument: Record<string, unknown> = {
                     "null"
                   ],
                   "format": "date-time",
-                  "description": "When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null otherwise."
+                  "description": "When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null otherwise, as on every coverage notice."
                 },
                 "owned_now": {
                   "type": "string",
@@ -78034,6 +78735,11 @@ export const openapiDocument: Record<string, unknown> = {
                     "id",
                     "name"
                   ]
+                },
+                "rule_id": {
+                  "description": "For email_rule_coverage, always: the rule it is about, since names need not be unique (for pending, the same as id). GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or as it last decided on your mail; otherwise it answers not_found.",
+                  "type": "string",
+                  "format": "uuid"
                 }
               },
               "required": [
@@ -78315,7 +79021,7 @@ export const openapiDocument: Record<string, unknown> = {
           "checked": {
             "type": "integer",
             "minimum": 0,
-            "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+            "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in the scope counted (evaluation_scope as sent; by default your own mailboxes, for a grant rule those you may share), the ones you can still read."
           },
           "matched": {
             "type": "integer",
@@ -78327,6 +79033,33 @@ export const openapiDocument: Record<string, unknown> = {
           "checked",
           "matched"
         ]
+      },
+      "EmailRuleScopeSelection": {
+        "type": "object",
+        "properties": {
+          "addresses": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 320,
+              "pattern": "^[^\\s@]+@[^\\s@]+$"
+            }
+          },
+          "domains": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253,
+              "pattern": "^[^\\s@]+\\.[^\\s@]+$"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "description": "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
       },
       "CompileEmailRuleRequest": {
         "type": "object",
@@ -78348,6 +79081,18 @@ export const openapiDocument: Record<string, unknown> = {
           "include_sql": {
             "description": "Also return the SQL the rule renders to. Off by default.",
             "type": "boolean"
+          },
+          "evaluation_scope": {
+            "description": "The scope breadth is counted over, as a test of the tree runs it: send the one you will save the rule with. Nothing is saved. own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.",
+            "type": "string",
+            "enum": [
+              "author",
+              "own_mailboxes",
+              "selected"
+            ]
+          },
+          "scope_selection": {
+            "$ref": "#/components/schemas/EmailRuleScopeSelection"
           }
         },
         "required": [
@@ -78392,7 +79137,7 @@ export const openapiDocument: Record<string, unknown> = {
             ]
           },
           "breadth": {
-            "description": "How many of your recent emails its conditions hold for, counted over your own mailboxes whatever scope you save it with, warning or not. Null when not counted in full: a rule with questions, headers-only access, no test of it possible as you, or a count that failed or ran out of time. Writes ignore it, so a compile answer (without include_sql) can be sent back unchanged.",
+            "description": "How many recent emails its conditions hold for, warning or not, counted over evaluation_scope as sent (by default your own mailboxes, whatever scope you save it with). Null when not counted in full: a rule with questions, headers-only access, no test of it possible as you, a count that failed or ran out of time, or, with no scope sent, a rule that holds only for mail to To or Cc addresses outside your own mailboxes (a warning says so). Writes ignore it, so a compile answer (without include_sql) can be sent back unchanged.",
             "anyOf": [
               {
                 "$ref": "#/components/schemas/EmailRuleBreadth"
@@ -78633,33 +79378,6 @@ export const openapiDocument: Record<string, unknown> = {
         ],
         "additionalProperties": false
       },
-      "EmailRuleScopeSelection": {
-        "type": "object",
-        "properties": {
-          "addresses": {
-            "maxItems": 100,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 3,
-              "maxLength": 320,
-              "pattern": "^[^\\s@]+@[^\\s@]+$"
-            }
-          },
-          "domains": {
-            "maxItems": 50,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 253,
-              "pattern": "^[^\\s@]+\\.[^\\s@]+$"
-            }
-          }
-        },
-        "additionalProperties": false,
-        "description": "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
-      },
       "EmailRuleExpectationSampleInput": {
         "type": "object",
         "properties": {
@@ -78759,6 +79477,16 @@ export const openapiDocument: Record<string, unknown> = {
               "minLength": 1,
               "maxLength": 255,
               "pattern": "^[^\\u0000]*$"
+            }
+          },
+          "attachment_names": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
             }
           },
           "automated": {
@@ -79182,6 +79910,11 @@ export const openapiDocument: Record<string, unknown> = {
                 "minimum": 0,
                 "description": "Emails decided on their conditions: matched, near_miss and no_match, less any missing a fact the rule reads."
               },
+              "conditions_held": {
+                "description": "Of decided, how many its conditions alone held for. Compile's breadth and conditions_breadth count this over recent mail in the scope sent to it, by default your own; here it is counted over the emails this test decided.",
+                "type": "integer",
+                "minimum": 0
+              },
               "conditions": {
                 "type": "array",
                 "items": {
@@ -79253,7 +79986,7 @@ export const openapiDocument: Record<string, unknown> = {
                 "items": {
                   "type": "string"
                 },
-                "description": "What to look at first, such as what stopped every email when nothing matched."
+                "description": "What to look at first, such as what stopped every email when nothing matched. On a test of the recent window, a grant rule whose conditions held for more than 20% of at least 20 emails checked (at least 90% if it has no questions), or for every one of fewer, gets a warning saying so, before those about what it decided."
               }
             },
             "required": [
@@ -79435,6 +80168,12 @@ export const openapiDocument: Record<string, unknown> = {
                   "type": "string"
                 }
               },
+              "attachment_names": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
               "automated": {
                 "type": "boolean"
               },
@@ -79449,6 +80188,7 @@ export const openapiDocument: Record<string, unknown> = {
               "subject",
               "text",
               "attachment_types",
+              "attachment_names",
               "automated",
               "from_mailing_list"
             ],
@@ -79540,7 +80280,7 @@ export const openapiDocument: Record<string, unknown> = {
             "$ref": "#/components/schemas/EmailRuleScopeSelection"
           },
           "rule_id": {
-            "description": "A saved rule you can see: its current version and words.",
+            "description": "A saved rule you can see, or one that covers your mailboxes (as you, sent to one of them; dashboard or Primitive CLI only): its current version and words.",
             "type": "string",
             "format": "uuid"
           },
@@ -79661,7 +80401,7 @@ export const openapiDocument: Record<string, unknown> = {
             "$ref": "#/components/schemas/EmailRuleScopeSelection"
           },
           "rule_id": {
-            "description": "A saved rule you can see. Its current version is tested.",
+            "description": "A saved rule you can see, or one that covers your mailboxes (as you; dashboard or Primitive CLI only). Its current version is tested.",
             "type": "string",
             "format": "uuid"
           },
@@ -79735,6 +80475,17 @@ export const openapiDocument: Record<string, unknown> = {
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 255
+                }
+              },
+              "attachment_names": {
+                "description": "File names of those attachments, which the classifier and the questions read. With attachment_types, the same number, paired in order.",
+                "maxItems": 20,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
                 }
               },
               "automated": {
@@ -80036,6 +80787,15 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "boolean",
             "description": "Whether you are its author, in your current membership. Only its author edits it."
           },
+          "pending_objections": {
+            "description": "To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0.",
+            "type": "integer",
+            "minimum": 0
+          },
+          "objection_notice": {
+            "description": "With pending_objections above 0: that members asked you to turn it off, and how to answer.",
+            "type": "string"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -80061,6 +80821,30 @@ export const openapiDocument: Record<string, unknown> = {
             "items": {
               "$ref": "#/components/schemas/EmailRuleScopeWarning"
             }
+          },
+          "expectations": {
+            "description": "Its saved expectations, each list by email id, as stored: on every create, and on an update that set or removed them.",
+            "type": "object",
+            "properties": {
+              "match": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "no_match": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "required": [
+              "match",
+              "no_match"
+            ]
           },
           "expectation_samples": {
             "description": "Its saved made-up emails, when this write set or added some.",
@@ -80175,6 +80959,10 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "notice": {
             "description": "After a write that saved a version of an active rule keys or webhooks read without checking it first: what it changes, and how to have the next one checked.",
+            "type": "string"
+          },
+          "share_notice": {
+            "description": "After a write that ended the rule's share: that it did, given even when affects is not, with whom it was with and the version they accepted when those can be read.",
             "type": "string"
           }
         },
@@ -80443,7 +81231,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "warnings": {
-            "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).",
+            "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -80564,6 +81352,15 @@ export const openapiDocument: Record<string, unknown> = {
           "is_author": {
             "type": "boolean",
             "description": "Whether you are its author, in your current membership. Only its author edits it."
+          },
+          "pending_objections": {
+            "description": "To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0.",
+            "type": "integer",
+            "minimum": 0
+          },
+          "objection_notice": {
+            "description": "With pending_objections above 0: that members asked you to turn it off, and how to answer.",
+            "type": "string"
           },
           "created_at": {
             "type": "string",
@@ -80686,6 +81483,15 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "boolean",
             "description": "Whether you are its author, in your current membership. Only its author edits it."
           },
+          "pending_objections": {
+            "description": "To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0.",
+            "type": "integer",
+            "minimum": 0
+          },
+          "objection_notice": {
+            "description": "With pending_objections above 0: that members asked you to turn it off, and how to answer.",
+            "type": "string"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -80797,7 +81603,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "warnings": {
-            "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).",
+            "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -80971,6 +81777,10 @@ export const openapiDocument: Record<string, unknown> = {
           "other_keys": {
             "description": "How many more keys, not revoked, list the rule that you may not read. They are not named.",
             "type": "integer"
+          },
+          "share_notice": {
+            "description": "When the delete ended a share: that it did, with whom it was with and the version they accepted when those can be read.",
+            "type": "string"
           }
         },
         "required": [
@@ -81180,6 +81990,11 @@ export const openapiDocument: Record<string, unknown> = {
                 "count": {
                   "type": "integer",
                   "exclusiveMinimum": 0
+                },
+                "reads_in_full": {
+                  "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches.",
+                  "type": "integer",
+                  "minimum": 0
                 }
               },
               "required": [
@@ -81242,7 +82057,7 @@ export const openapiDocument: Record<string, unknown> = {
                   "exclusiveMinimum": 0
                 },
                 "hosts": {
-                  "description": "Distinct sites they deliver to (a host's registrable domain, or a tunnel, preview or function service alone), sorted, at most 10; \"unknown host\" (last) for any that cannot be named.",
+                  "description": "Distinct sites they deliver to (the domain a host is registered under, an app's own name on a known app platform, or a function URL service in its region), sorted, at most 10; \"unknown host\" (last) for any that cannot be named.",
                   "type": "array",
                   "items": {
                     "type": "string"
@@ -81310,7 +82125,7 @@ export const openapiDocument: Record<string, unknown> = {
           "webhooks",
           "shares"
         ],
-        "description": "Who receives what the rule shares now, by person and count; empty unless it is an active grant rule."
+        "description": "Who receives what the rule shares, by person and count. As receivers, empty unless it is an active grant rule."
       },
       "ListEmailRuleResultsResult": {
         "type": "object",
@@ -81908,7 +82723,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "warnings": {
-            "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).",
+            "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -82492,6 +83307,15 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "boolean",
             "description": "Whether you are its author, in your current membership. Only its author edits it."
           },
+          "pending_objections": {
+            "description": "To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0.",
+            "type": "integer",
+            "minimum": 0
+          },
+          "objection_notice": {
+            "description": "With pending_objections above 0: that members asked you to turn it off, and how to answer.",
+            "type": "string"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -82771,7 +83595,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "warnings": {
-            "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).",
+            "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).",
             "maxItems": 10,
             "type": "array",
             "items": {
@@ -82838,7 +83662,7 @@ export const openapiDocument: Record<string, unknown> = {
             "$ref": "#/components/schemas/EmailRuleShare"
           },
           "notice": {
-            "description": "What is now shared, in words.",
+            "description": "What is now shared, in words. When you changed the rule and it can now match mail the request left out by who it was sent to (such as mail where an address is only copied), that comes first.",
             "type": "string"
           }
         },
@@ -83429,7 +84253,18 @@ export const openapiDocument: Record<string, unknown> = {
             "exclusiveMinimum": 0
           },
           "receivers": {
-            "description": "Null when it could not be read in time; try again.",
+            "description": "Null when it could not be read in time, or for a rule shown in draft or observe that turned active or was deleted after the page was read; try again.",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmailRuleReceivers"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "receivers_once_active": {
+            "description": "For a grant rule in draft or observe: who would receive what it matches once it is turned active. None of them receives anything yet. Null for any other rule, and as receivers is null.",
             "anyOf": [
               {
                 "$ref": "#/components/schemas/EmailRuleReceivers"
@@ -83454,6 +84289,7 @@ export const openapiDocument: Record<string, unknown> = {
           "covers",
           "current_version",
           "receivers",
+          "receivers_once_active",
           "created_at"
         ]
       },
@@ -83547,7 +84383,18 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "Null when covers_now is false."
           },
           "receivers": {
-            "description": "Null when covers_now is false (who receives it now is not about your mail), or when it could not be read in time.",
+            "description": "Null when covers_now is false (who receives it now is not about your mail), when it could not be read in time, or for a rule shown in draft or observe that turned active or was deleted after it was read; try again.",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmailRuleReceivers"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "receivers_once_active": {
+            "description": "As on the list; also null when covers_now is false.",
             "anyOf": [
               {
                 "$ref": "#/components/schemas/EmailRuleReceivers"
@@ -83591,6 +84438,7 @@ export const openapiDocument: Record<string, unknown> = {
           "covers",
           "current_version",
           "receivers",
+          "receivers_once_active",
           "created_at",
           "covers_now",
           "current"
@@ -83733,6 +84581,12 @@ export const openapiDocument: Record<string, unknown> = {
           "$ref": "#/components/schemas/EmailRuleDecisionOnMyMail"
         }
       },
+      "ListEmailRuleVersionsCoveringMeResult": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/EmailRuleCoveringMeVersion"
+        }
+      },
       "EmailRuleObjection": {
         "type": "object",
         "properties": {
@@ -83780,10 +84634,12 @@ export const openapiDocument: Record<string, unknown> = {
             "$ref": "#/components/schemas/EmailRuleObjectionPerson"
           },
           "is_objector": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether you made it, in your current membership."
           },
           "is_author": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether it is to a rule you wrote, in your current membership."
           },
           "message": {
             "description": "Why the objector objects; null when none was given, or once withdrawn.",
@@ -84090,6 +84946,104 @@ export const openapiDocument: Record<string, unknown> = {
           "subdomain",
           "domain",
           "outbound_ready"
+        ]
+      },
+      "ImportGoogleMailMessageRequest": {
+        "type": "object",
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,128}$"
+          }
+        },
+        "required": [
+          "message_id"
+        ],
+        "additionalProperties": false
+      },
+      "ImportGoogleMailMessageResult": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "imported",
+                  "already_present"
+                ]
+              },
+              "email_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            },
+            "required": [
+              "status",
+              "email_id"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "suppressed",
+                  "in_progress",
+                  "indeterminate"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "skipped"
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "excluded_label",
+                  "out_of_window",
+                  "too_large",
+                  "provider_missing"
+                ]
+              }
+            },
+            "required": [
+              "status",
+              "reason"
+            ]
+          }
+        ]
+      },
+      "ReconcileGoogleMailImportRequest": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "ReconcileGoogleMailImportResult": {
+        "type": "object",
+        "properties": {
+          "cleaned": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unresolved": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "cleaned",
+          "unresolved"
         ]
       },
       "ThreadMute": {
@@ -90590,6 +91544,35 @@ export const openapiDocument: Record<string, unknown> = {
                 "address",
                 "reason",
                 "description"
+              ],
+              "additionalProperties": {}
+            }
+          },
+          "rules_added": {
+            "description": "Each rule (or share) the edit put on a key that reads mail, with granted_emails, how many emails it has already shared, which the key can now read while it is active: counted up to 10,000, with more: true past that; null when not counted.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "granted_emails": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "more": {
+                  "type": "boolean",
+                  "const": true
+                }
+              },
+              "required": [
+                "id",
+                "granted_emails"
               ],
               "additionalProperties": {}
             }

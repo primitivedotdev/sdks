@@ -19,7 +19,7 @@ from typing import cast
 
 def _get_kwargs(
     *,
-    box: ListEmailRuleObjectionsBox | Unset = ListEmailRuleObjectionsBox.OUTGOING,
+    box: ListEmailRuleObjectionsBox | Unset = ListEmailRuleObjectionsBox.MINE,
     status: ListEmailRuleObjectionsStatus | Unset = ListEmailRuleObjectionsStatus.PENDING,
     limit: int | Unset = 25,
     cursor: str | Unset = UNSET,
@@ -116,7 +116,7 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
-    box: ListEmailRuleObjectionsBox | Unset = ListEmailRuleObjectionsBox.OUTGOING,
+    box: ListEmailRuleObjectionsBox | Unset = ListEmailRuleObjectionsBox.MINE,
     status: ListEmailRuleObjectionsStatus | Unset = ListEmailRuleObjectionsStatus.PENDING,
     limit: int | Unset = 25,
     cursor: str | Unset = UNSET,
@@ -124,17 +124,20 @@ def sync_detailed(
 ) -> Response[ErrorResponse | ListEmailRuleObjectionsResponse200]:
     """ List objections
 
-     Objections you made, objections to rules you wrote, or every objection you can see, newest first. An
-    objection is seen by the member who made it, the rule's author and the organization's owners and
-    admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
-    or the member who made it withdraws it, which clears its message. It never changes after that. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+     Objections you made and objections to rules you wrote (by default), only one of the two, or every
+    objection you can see, newest first. An objection is seen by the member who made it, the rule's
+    author and the organization's owners and admins. It stays pending until the rule's author accepts
+    it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its
+    message. It never changes after that. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
+    or the Primitive CLI.
 
     Args:
-        box (ListEmailRuleObjectionsBox | Unset): outgoing: objections you made; incoming:
-            objections to rules you wrote; all: every objection you can see (owners and admins see the
-            organization's). Default: ListEmailRuleObjectionsBox.OUTGOING.
+        box (ListEmailRuleObjectionsBox | Unset): mine: objections you made and objections to
+            rules you wrote (is_objector or is_author says which); outgoing: only those you made;
+            incoming: only those to rules you wrote; each in your current membership. all: every
+            objection you can see (owners and admins see the organization's). Default:
+            ListEmailRuleObjectionsBox.MINE.
         status (ListEmailRuleObjectionsStatus | Unset):  Default:
             ListEmailRuleObjectionsStatus.PENDING.
         limit (int | Unset):  Default: 25.
@@ -166,7 +169,7 @@ cursor=cursor,
 def sync(
     *,
     client: AuthenticatedClient | Client,
-    box: ListEmailRuleObjectionsBox | Unset = ListEmailRuleObjectionsBox.OUTGOING,
+    box: ListEmailRuleObjectionsBox | Unset = ListEmailRuleObjectionsBox.MINE,
     status: ListEmailRuleObjectionsStatus | Unset = ListEmailRuleObjectionsStatus.PENDING,
     limit: int | Unset = 25,
     cursor: str | Unset = UNSET,
@@ -174,17 +177,20 @@ def sync(
 ) -> ErrorResponse | ListEmailRuleObjectionsResponse200 | None:
     """ List objections
 
-     Objections you made, objections to rules you wrote, or every objection you can see, newest first. An
-    objection is seen by the member who made it, the rule's author and the organization's owners and
-    admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
-    or the member who made it withdraws it, which clears its message. It never changes after that. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+     Objections you made and objections to rules you wrote (by default), only one of the two, or every
+    objection you can see, newest first. An objection is seen by the member who made it, the rule's
+    author and the organization's owners and admins. It stays pending until the rule's author accepts
+    it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its
+    message. It never changes after that. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
+    or the Primitive CLI.
 
     Args:
-        box (ListEmailRuleObjectionsBox | Unset): outgoing: objections you made; incoming:
-            objections to rules you wrote; all: every objection you can see (owners and admins see the
-            organization's). Default: ListEmailRuleObjectionsBox.OUTGOING.
+        box (ListEmailRuleObjectionsBox | Unset): mine: objections you made and objections to
+            rules you wrote (is_objector or is_author says which); outgoing: only those you made;
+            incoming: only those to rules you wrote; each in your current membership. all: every
+            objection you can see (owners and admins see the organization's). Default:
+            ListEmailRuleObjectionsBox.MINE.
         status (ListEmailRuleObjectionsStatus | Unset):  Default:
             ListEmailRuleObjectionsStatus.PENDING.
         limit (int | Unset):  Default: 25.
@@ -211,7 +217,7 @@ cursor=cursor,
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
-    box: ListEmailRuleObjectionsBox | Unset = ListEmailRuleObjectionsBox.OUTGOING,
+    box: ListEmailRuleObjectionsBox | Unset = ListEmailRuleObjectionsBox.MINE,
     status: ListEmailRuleObjectionsStatus | Unset = ListEmailRuleObjectionsStatus.PENDING,
     limit: int | Unset = 25,
     cursor: str | Unset = UNSET,
@@ -219,17 +225,20 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | ListEmailRuleObjectionsResponse200]:
     """ List objections
 
-     Objections you made, objections to rules you wrote, or every objection you can see, newest first. An
-    objection is seen by the member who made it, the rule's author and the organization's owners and
-    admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
-    or the member who made it withdraws it, which clears its message. It never changes after that. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+     Objections you made and objections to rules you wrote (by default), only one of the two, or every
+    objection you can see, newest first. An objection is seen by the member who made it, the rule's
+    author and the organization's owners and admins. It stays pending until the rule's author accepts
+    it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its
+    message. It never changes after that. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
+    or the Primitive CLI.
 
     Args:
-        box (ListEmailRuleObjectionsBox | Unset): outgoing: objections you made; incoming:
-            objections to rules you wrote; all: every objection you can see (owners and admins see the
-            organization's). Default: ListEmailRuleObjectionsBox.OUTGOING.
+        box (ListEmailRuleObjectionsBox | Unset): mine: objections you made and objections to
+            rules you wrote (is_objector or is_author says which); outgoing: only those you made;
+            incoming: only those to rules you wrote; each in your current membership. all: every
+            objection you can see (owners and admins see the organization's). Default:
+            ListEmailRuleObjectionsBox.MINE.
         status (ListEmailRuleObjectionsStatus | Unset):  Default:
             ListEmailRuleObjectionsStatus.PENDING.
         limit (int | Unset):  Default: 25.
@@ -261,7 +270,7 @@ cursor=cursor,
 async def asyncio(
     *,
     client: AuthenticatedClient | Client,
-    box: ListEmailRuleObjectionsBox | Unset = ListEmailRuleObjectionsBox.OUTGOING,
+    box: ListEmailRuleObjectionsBox | Unset = ListEmailRuleObjectionsBox.MINE,
     status: ListEmailRuleObjectionsStatus | Unset = ListEmailRuleObjectionsStatus.PENDING,
     limit: int | Unset = 25,
     cursor: str | Unset = UNSET,
@@ -269,17 +278,20 @@ async def asyncio(
 ) -> ErrorResponse | ListEmailRuleObjectionsResponse200 | None:
     """ List objections
 
-     Objections you made, objections to rules you wrote, or every objection you can see, newest first. An
-    objection is seen by the member who made it, the rule's author and the organization's owners and
-    admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
-    or the member who made it withdraws it, which clears its message. It never changes after that. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+     Objections you made and objections to rules you wrote (by default), only one of the two, or every
+    objection you can see, newest first. An objection is seen by the member who made it, the rule's
+    author and the organization's owners and admins. It stays pending until the rule's author accepts
+    it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its
+    message. It never changes after that. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
+    or the Primitive CLI.
 
     Args:
-        box (ListEmailRuleObjectionsBox | Unset): outgoing: objections you made; incoming:
-            objections to rules you wrote; all: every objection you can see (owners and admins see the
-            organization's). Default: ListEmailRuleObjectionsBox.OUTGOING.
+        box (ListEmailRuleObjectionsBox | Unset): mine: objections you made and objections to
+            rules you wrote (is_objector or is_author says which); outgoing: only those you made;
+            incoming: only those to rules you wrote; each in your current membership. all: every
+            objection you can see (owners and admins see the organization's). Default:
+            ListEmailRuleObjectionsBox.MINE.
         status (ListEmailRuleObjectionsStatus | Unset):  Default:
             ListEmailRuleObjectionsStatus.PENDING.
         limit (int | Unset):  Default: 25.

@@ -35,8 +35,8 @@ class DeclineEmailRuleObjectionResult:
             rule (DeclineEmailRuleObjectionResultRule):
             objector (EmailRuleObjectionPerson):
             author (EmailRuleObjectionPerson):
-            is_objector (bool):
-            is_author (bool):
+            is_objector (bool): Whether you made it, in your current membership.
+            is_author (bool): Whether it is to a rule you wrote, in your current membership.
             message (None | str): Why the objector objects; null when none was given, or once withdrawn.
             decline_reason (None | str):
             created_at (datetime.datetime):

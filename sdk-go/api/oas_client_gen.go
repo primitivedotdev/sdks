@@ -309,10 +309,11 @@ type Invoker interface {
 	// what the columns cannot express. Where the columns fall short it adds up to five yes/no questions,
 	// asked only after the conditions match; they read the subject, the new text and attachment file
 	// names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts,
-	// read only, how much of your recent classified mail its conditions match; for a grant rule with
-	// questions, conditions_breadth counts its conditions alone. include_sql returns the SQL it renders
-	// to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a
-	// member's own full-access credential (no API key, agent key or narrowed token).
+	// read only, how much of the recent classified mail in evaluation_scope (by default your own
+	// mailboxes) its conditions match; for a grant rule with questions, conditions_breadth counts its
+	// conditions alone. include_sql returns the SQL it renders to. kind do_not_share compiles for recall.
+	//  Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+	// agent key or narrowed token).
 	//
 	// POST /email-rules/compile
 	CompileEmailRule(ctx context.Context, request *CompileEmailRuleRequest, params CompileEmailRuleParams) (CompileEmailRuleRes, error)
@@ -756,11 +757,12 @@ type Invoker interface {
 	//
 	// Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
 	// (end_reason rule_deleted), and the member who shared can still list what it handed over. The
-	// answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which
-	// now read nothing through it (keys, other_keys; left out when they could not be read). The author
-	// or a reader of all the organization's mail may delete it; while it is shared, only the author or
-	// someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a
-	// member's own full-access credential (no API key, agent key or narrowed token).
+	// answer lists the shares it ended (ended_shares), says whom with (share_notice), and lists the
+	// unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out
+	// when they could not be read). The author or a reader of all the organization's mail may delete it;
+	// while it is shared, only the author or someone who manages members from the dashboard. Needs
+	// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+	// key or narrowed token).
 	//
 	// DELETE /email-rules/{id}
 	DeleteEmailRule(ctx context.Context, params DeleteEmailRuleParams) (DeleteEmailRuleRes, error)
@@ -1832,6 +1834,18 @@ type Invoker interface {
 	//
 	// GET /account/webhook-secret
 	GetWebhookSecret(ctx context.Context) (GetWebhookSecretRes, error)
+	// ImportGoogleMailMessage invokes importGoogleMailMessage operation.
+	//
+	// Requires the organization email_import entitlement, granted by staff. Only the configured current
+	// owner, using a full personal session or verified first-party CLI, may import into the configured
+	// primary mailbox. Primitive verifies the transient provider token and fetches RAW content itself.
+	// No raw uploads or client provenance are accepted. Sent, draft, spam and trash messages are skipped.
+	//  Historical mail appears in normal history without live delivery effects. An indeterminate
+	// response requires retrying the same provider ID. User provider credentials are never stored or
+	// queued.
+	//
+	// POST /mail-imports/google/messages
+	ImportGoogleMailMessage(ctx context.Context, request *ImportGoogleMailMessageRequest, params ImportGoogleMailMessageParams) (ImportGoogleMailMessageRes, error)
 	// InstallTemplate invokes installTemplate operation.
 	//
 	// Start a one-shot deploy of an approved deploy-mode Function template. The response returns an
@@ -2140,12 +2154,13 @@ type Invoker interface {
 	ListEmailRuleDecisionsOnMyMail(ctx context.Context, params ListEmailRuleDecisionsOnMyMailParams) (ListEmailRuleDecisionsOnMyMailRes, error)
 	// ListEmailRuleObjections invokes listEmailRuleObjections operation.
 	//
-	// Objections you made, objections to rules you wrote, or every objection you can see, newest first.
-	// An objection is seen by the member who made it, the rule's author and the organization's owners
-	// and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines
-	// it, or the member who made it withdraws it, which clears its message. It never changes after that.
-	// Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
-	// agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+	// Objections you made and objections to rules you wrote (by default), only one of the two, or every
+	// objection you can see, newest first. An objection is seen by the member who made it, the rule's
+	// author and the organization's owners and admins. It stays pending until the rule's author accepts
+	// it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its
+	// message. It never changes after that. Needs mail:read, the email rules feature, and a member's own
+	// full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+	// session or the Primitive CLI.
 	//
 	// GET /email-rule-objections
 	ListEmailRuleObjections(ctx context.Context, params ListEmailRuleObjectionsParams) (ListEmailRuleObjectionsRes, error)
@@ -2214,6 +2229,19 @@ type Invoker interface {
 	//
 	// GET /email-rules/{id}/versions
 	ListEmailRuleVersions(ctx context.Context, params ListEmailRuleVersionsParams) (ListEmailRuleVersionsRes, error)
+	// ListEmailRuleVersionsCoveringMe invokes listEmailRuleVersionsCoveringMe operation.
+	//
+	// The versions of a rule that covers one of your own mailboxes now that applied to your mail: its
+	// current version and each earlier one that decided on mail at your own mailboxes, so a decision can
+	// be read in the words of the version that made it. Each has what the covering view shows of a
+	// version: its wording, tree, explanation and assumptions. A version that did neither is not listed.
+	// Without versions, newest first, a page at a time (meta.cursor); with versions, only those named
+	// that are listed, oldest first. Needs mail:read, the email rules feature, and a member's own
+	// full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+	// session or the Primitive CLI.
+	//
+	// GET /email-rules/covering-me/{id}/versions
+	ListEmailRuleVersionsCoveringMe(ctx context.Context, params ListEmailRuleVersionsCoveringMeParams) (ListEmailRuleVersionsCoveringMeRes, error)
 	// ListEmailRules invokes listEmailRules operation.
 	//
 	// The rules the caller can see, newest first: their own, or every member's rules for a caller who
@@ -2852,6 +2880,16 @@ type Invoker interface {
 	//
 	// POST /functions/{id}/runtime-key/reaffirm
 	ReaffirmFunctionRuntimeKey(ctx context.Context, request OptReaffirmFunctionRuntimeKeyRequest, params ReaffirmFunctionRuntimeKeyParams) (ReaffirmFunctionRuntimeKeyRes, error)
+	// ReconcileGoogleMailImport invokes reconcileGoogleMailImport operation.
+	//
+	// The same configured owner may recover expired attempts after the email_import entitlement is
+	// revoked. Recovery does not require that entitlement. Selects only server-owned manifests for the
+	// configured mailbox/account/policy. No provider token, object keys, prefixes or email IDs are
+	// accepted. Unsettled uploads remain unresolved and charged; this operation does not promise
+	// automatic cleanup after a process dies.
+	//
+	// POST /mail-imports/google/reconcile
+	ReconcileGoogleMailImport(ctx context.Context, request *ReconcileGoogleMailImportRequest, params ReconcileGoogleMailImportParams) (ReconcileGoogleMailImportRes, error)
 	// RedeemCreditCode invokes redeemCreditCode operation.
 	//
 	// Redeem a credit code for the authenticated organization. The credit is added to the organization
@@ -3519,11 +3557,11 @@ type Invoker interface {
 	// TestEmailRuleOnSample invokes testEmailRuleOnSample operation.
 	//
 	// Reports what a rule would decide for an email you describe (sender, recipients, subject, plain
-	// text, attachment types; optionally automated, from a mailing list, and a spam score), classified
-	// and decided as received mail would be. A rule reading a spam score you gave none for decides on
-	// none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The
-	// answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's
-	// own full-access credential (no API key, agent key or narrowed token).
+	// text, attachment types and file names; optionally automated, from a mailing list, and a spam
+	// score), classified and decided as received mail would be. A rule reading a spam score you gave
+	// none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule
+	// by rule_id. The answer includes what the classifier read. Needs mail:read, the email rules feature,
+	//  and a member's own full-access credential (no API key, agent key or narrowed token).
 	//
 	// POST /email-rules/test-sample
 	TestEmailRuleOnSample(ctx context.Context, request *TestEmailRuleOnSampleRequest, params TestEmailRuleOnSampleParams) (TestEmailRuleOnSampleRes, error)
@@ -7471,10 +7509,13 @@ func (c *Client) sendCliLogout(ctx context.Context, request OptCliLogoutInput, p
 // what the columns cannot express. Where the columns fall short it adds up to five yes/no questions,
 // asked only after the conditions match; they read the subject, the new text and attachment file
 // names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts,
-// read only, how much of your recent classified mail its conditions match; for a grant rule with
-// questions, conditions_breadth counts its conditions alone. include_sql returns the SQL it renders
-// to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a
-// member's own full-access credential (no API key, agent key or narrowed token).
+// read only, how much of the recent classified mail in evaluation_scope (by default your own
+// mailboxes) its conditions match; for a grant rule with questions, conditions_breadth counts its
+// conditions alone. include_sql returns the SQL it renders to. kind do_not_share compiles for recall.
+//
+//	Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+//
+// agent key or narrowed token).
 //
 // POST /email-rules/compile
 func (c *Client) CompileEmailRule(ctx context.Context, request *CompileEmailRuleRequest, params CompileEmailRuleParams) (CompileEmailRuleRes, error) {
@@ -11692,11 +11733,12 @@ func (c *Client) sendDeleteEmail(ctx context.Context, params DeleteEmailParams) 
 //
 // Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
 // (end_reason rule_deleted), and the member who shared can still list what it handed over. The
-// answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which
-// now read nothing through it (keys, other_keys; left out when they could not be read). The author
-// or a reader of all the organization's mail may delete it; while it is shared, only the author or
-// someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a
-// member's own full-access credential (no API key, agent key or narrowed token).
+// answer lists the shares it ended (ended_shares), says whom with (share_notice), and lists the
+// unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out
+// when they could not be read). The author or a reader of all the organization's mail may delete it;
+// while it is shared, only the author or someone who manages members from the dashboard. Needs
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token).
 //
 // DELETE /email-rules/{id}
 func (c *Client) DeleteEmailRule(ctx context.Context, params DeleteEmailRuleParams) (DeleteEmailRuleRes, error) {
@@ -14272,6 +14314,23 @@ func (c *Client) sendDownloadDomainZoneFile(ctx context.Context, params Download
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.OutboundOnly.Get(); ok {
+				return e.EncodeValue(conv.BoolToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "inbound_only" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "inbound_only",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.InboundOnly.Get(); ok {
 				return e.EncodeValue(conv.BoolToString(val))
 			}
 			return nil
@@ -24390,6 +24449,152 @@ func (c *Client) sendGetWebhookSecret(ctx context.Context) (res GetWebhookSecret
 	return result, nil
 }
 
+// ImportGoogleMailMessage invokes importGoogleMailMessage operation.
+//
+// Requires the organization email_import entitlement, granted by staff. Only the configured current
+// owner, using a full personal session or verified first-party CLI, may import into the configured
+// primary mailbox. Primitive verifies the transient provider token and fetches RAW content itself.
+// No raw uploads or client provenance are accepted. Sent, draft, spam and trash messages are skipped.
+//
+//	Historical mail appears in normal history without live delivery effects. An indeterminate
+//
+// response requires retrying the same provider ID. User provider credentials are never stored or
+// queued.
+//
+// POST /mail-imports/google/messages
+func (c *Client) ImportGoogleMailMessage(ctx context.Context, request *ImportGoogleMailMessageRequest, params ImportGoogleMailMessageParams) (ImportGoogleMailMessageRes, error) {
+	res, err := c.sendImportGoogleMailMessage(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendImportGoogleMailMessage(ctx context.Context, request *ImportGoogleMailMessageRequest, params ImportGoogleMailMessageParams) (res ImportGoogleMailMessageRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("importGoogleMailMessage"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/mail-imports/google/messages"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ImportGoogleMailMessageOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/mail-imports/google/messages"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeImportGoogleMailMessageRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Primitive-Google-Access-Token",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.XPrimitiveGoogleAccessToken))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ImportGoogleMailMessageOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeImportGoogleMailMessageResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // InstallTemplate invokes installTemplate operation.
 //
 // Start a one-shot deploy of an approved deploy-mode Function template. The response returns an
@@ -28474,12 +28679,13 @@ func (c *Client) sendListEmailRuleDecisionsOnMyMail(ctx context.Context, params 
 
 // ListEmailRuleObjections invokes listEmailRuleObjections operation.
 //
-// Objections you made, objections to rules you wrote, or every objection you can see, newest first.
-// An objection is seen by the member who made it, the rule's author and the organization's owners
-// and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines
-// it, or the member who made it withdraws it, which clears its message. It never changes after that.
-// Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
-// agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+// Objections you made and objections to rules you wrote (by default), only one of the two, or every
+// objection you can see, newest first. An objection is seen by the member who made it, the rule's
+// author and the organization's owners and admins. It stays pending until the rule's author accepts
+// it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its
+// message. It never changes after that. Needs mail:read, the email rules feature, and a member's own
+// full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+// session or the Primitive CLI.
 //
 // GET /email-rule-objections
 func (c *Client) ListEmailRuleObjections(ctx context.Context, params ListEmailRuleObjectionsParams) (ListEmailRuleObjectionsRes, error) {
@@ -29639,6 +29845,194 @@ func (c *Client) sendListEmailRuleVersions(ctx context.Context, params ListEmail
 
 	stage = "DecodeResponse"
 	result, err := decodeListEmailRuleVersionsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListEmailRuleVersionsCoveringMe invokes listEmailRuleVersionsCoveringMe operation.
+//
+// The versions of a rule that covers one of your own mailboxes now that applied to your mail: its
+// current version and each earlier one that decided on mail at your own mailboxes, so a decision can
+// be read in the words of the version that made it. Each has what the covering view shows of a
+// version: its wording, tree, explanation and assumptions. A version that did neither is not listed.
+// Without versions, newest first, a page at a time (meta.cursor); with versions, only those named
+// that are listed, oldest first. Needs mail:read, the email rules feature, and a member's own
+// full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+// session or the Primitive CLI.
+//
+// GET /email-rules/covering-me/{id}/versions
+func (c *Client) ListEmailRuleVersionsCoveringMe(ctx context.Context, params ListEmailRuleVersionsCoveringMeParams) (ListEmailRuleVersionsCoveringMeRes, error) {
+	res, err := c.sendListEmailRuleVersionsCoveringMe(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListEmailRuleVersionsCoveringMe(ctx context.Context, params ListEmailRuleVersionsCoveringMeParams) (res ListEmailRuleVersionsCoveringMeRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listEmailRuleVersionsCoveringMe"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/email-rules/covering-me/{id}/versions"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListEmailRuleVersionsCoveringMeOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/email-rules/covering-me/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/versions"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "cursor" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "versions" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "versions",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Versions.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListEmailRuleVersionsCoveringMeOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListEmailRuleVersionsCoveringMeResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -38205,6 +38599,137 @@ func (c *Client) sendReaffirmFunctionRuntimeKey(ctx context.Context, request Opt
 	return result, nil
 }
 
+// ReconcileGoogleMailImport invokes reconcileGoogleMailImport operation.
+//
+// The same configured owner may recover expired attempts after the email_import entitlement is
+// revoked. Recovery does not require that entitlement. Selects only server-owned manifests for the
+// configured mailbox/account/policy. No provider token, object keys, prefixes or email IDs are
+// accepted. Unsettled uploads remain unresolved and charged; this operation does not promise
+// automatic cleanup after a process dies.
+//
+// POST /mail-imports/google/reconcile
+func (c *Client) ReconcileGoogleMailImport(ctx context.Context, request *ReconcileGoogleMailImportRequest, params ReconcileGoogleMailImportParams) (ReconcileGoogleMailImportRes, error) {
+	res, err := c.sendReconcileGoogleMailImport(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendReconcileGoogleMailImport(ctx context.Context, request *ReconcileGoogleMailImportRequest, params ReconcileGoogleMailImportParams) (res ReconcileGoogleMailImportRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("reconcileGoogleMailImport"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/mail-imports/google/reconcile"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ReconcileGoogleMailImportOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/mail-imports/google/reconcile"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeReconcileGoogleMailImportRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ReconcileGoogleMailImportOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeReconcileGoogleMailImportResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // RedeemCreditCode invokes redeemCreditCode operation.
 //
 // Redeem a credit code for the authenticated organization. The credit is added to the organization
@@ -46499,11 +47024,12 @@ func (c *Client) sendTestEmailRule(ctx context.Context, request *TestEmailRuleRe
 // TestEmailRuleOnSample invokes testEmailRuleOnSample operation.
 //
 // Reports what a rule would decide for an email you describe (sender, recipients, subject, plain
-// text, attachment types; optionally automated, from a mailing list, and a spam score), classified
-// and decided as received mail would be. A rule reading a spam score you gave none for decides on
-// none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The
-// answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's
-// own full-access credential (no API key, agent key or narrowed token).
+// text, attachment types and file names; optionally automated, from a mailing list, and a spam
+// score), classified and decided as received mail would be. A rule reading a spam score you gave
+// none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule
+// by rule_id. The answer includes what the classifier read. Needs mail:read, the email rules feature,
+//
+//	and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // POST /email-rules/test-sample
 func (c *Client) TestEmailRuleOnSample(ctx context.Context, request *TestEmailRuleOnSampleRequest, params TestEmailRuleOnSampleParams) (TestEmailRuleOnSampleRes, error) {

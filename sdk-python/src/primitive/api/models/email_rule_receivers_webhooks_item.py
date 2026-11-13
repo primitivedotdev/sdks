@@ -27,8 +27,9 @@ class EmailRuleReceiversWebhooksItem:
         Attributes:
             owner (EmailRuleReceiversWebhooksItemOwner):
             count (int):
-            hosts (list[str] | Unset): Distinct sites they deliver to (a host's registrable domain, or a tunnel, preview or
-                function service alone), sorted, at most 10; "unknown host" (last) for any that cannot be named.
+            hosts (list[str] | Unset): Distinct sites they deliver to (the domain a host is registered under, an app's own
+                name on a known app platform, or a function URL service in its region), sorted, at most 10; "unknown host"
+                (last) for any that cannot be named.
             hosts_not_listed (int | Unset): Hosts past those listed.
      """
 

@@ -4945,10 +4945,13 @@ func (s *Server) handleCliLogoutRequest(args [0]string, argsEscaped bool, w http
 // what the columns cannot express. Where the columns fall short it adds up to five yes/no questions,
 // asked only after the conditions match; they read the subject, the new text and attachment file
 // names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts,
-// read only, how much of your recent classified mail its conditions match; for a grant rule with
-// questions, conditions_breadth counts its conditions alone. include_sql returns the SQL it renders
-// to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a
-// member's own full-access credential (no API key, agent key or narrowed token).
+// read only, how much of the recent classified mail in evaluation_scope (by default your own
+// mailboxes) its conditions match; for a grant rule with questions, conditions_breadth counts its
+// conditions alone. include_sql returns the SQL it renders to. kind do_not_share compiles for recall.
+//
+//	Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+//
+// agent key or narrowed token).
 //
 // POST /email-rules/compile
 func (s *Server) handleCompileEmailRuleRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -11035,11 +11038,12 @@ func (s *Server) handleDeleteEmailRequest(args [1]string, argsEscaped bool, w ht
 //
 // Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
 // (end_reason rule_deleted), and the member who shared can still list what it handed over. The
-// answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which
-// now read nothing through it (keys, other_keys; left out when they could not be read). The author
-// or a reader of all the organization's mail may delete it; while it is shared, only the author or
-// someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a
-// member's own full-access credential (no API key, agent key or narrowed token).
+// answer lists the shares it ended (ended_shares), says whom with (share_notice), and lists the
+// unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out
+// when they could not be read). The author or a reader of all the organization's mail may delete it;
+// while it is shared, only the author or someone who manages members from the dashboard. Needs
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token).
 //
 // DELETE /email-rules/{id}
 func (s *Server) handleDeleteEmailRuleRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -14660,6 +14664,10 @@ func (s *Server) handleDownloadDomainZoneFileRequest(args [1]string, argsEscaped
 					Name: "outbound_only",
 					In:   "query",
 				}: params.OutboundOnly,
+				{
+					Name: "inbound_only",
+					In:   "query",
+				}: params.InboundOnly,
 				{
 					Name: "id",
 					In:   "path",
@@ -28969,6 +28977,220 @@ func (s *Server) handleGetWebhookSecretRequest(args [0]string, argsEscaped bool,
 	}
 }
 
+// handleImportGoogleMailMessageRequest handles importGoogleMailMessage operation.
+//
+// Requires the organization email_import entitlement, granted by staff. Only the configured current
+// owner, using a full personal session or verified first-party CLI, may import into the configured
+// primary mailbox. Primitive verifies the transient provider token and fetches RAW content itself.
+// No raw uploads or client provenance are accepted. Sent, draft, spam and trash messages are skipped.
+//
+//	Historical mail appears in normal history without live delivery effects. An indeterminate
+//
+// response requires retrying the same provider ID. User provider credentials are never stored or
+// queued.
+//
+// POST /mail-imports/google/messages
+func (s *Server) handleImportGoogleMailMessageRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("importGoogleMailMessage"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/mail-imports/google/messages"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), ImportGoogleMailMessageOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ImportGoogleMailMessageOperation,
+			ID:   "importGoogleMailMessage",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, ImportGoogleMailMessageOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeImportGoogleMailMessageParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeImportGoogleMailMessageRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response ImportGoogleMailMessageRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ImportGoogleMailMessageOperation,
+			OperationSummary: "Import one historical Google Workspace message",
+			OperationID:      "importGoogleMailMessage",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "X-Primitive-Google-Access-Token",
+					In:   "header",
+				}: params.XPrimitiveGoogleAccessToken,
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *ImportGoogleMailMessageRequest
+			Params   = ImportGoogleMailMessageParams
+			Response = ImportGoogleMailMessageRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackImportGoogleMailMessageParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ImportGoogleMailMessage(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ImportGoogleMailMessage(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeImportGoogleMailMessageResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleInstallTemplateRequest handles installTemplate operation.
 //
 // Start a one-shot deploy of an approved deploy-mode Function template. The response returns an
@@ -33861,12 +34083,13 @@ func (s *Server) handleListEmailRuleDecisionsOnMyMailRequest(args [1]string, arg
 
 // handleListEmailRuleObjectionsRequest handles listEmailRuleObjections operation.
 //
-// Objections you made, objections to rules you wrote, or every objection you can see, newest first.
-// An objection is seen by the member who made it, the rule's author and the organization's owners
-// and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines
-// it, or the member who made it withdraws it, which clears its message. It never changes after that.
-// Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
-// agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+// Objections you made and objections to rules you wrote (by default), only one of the two, or every
+// objection you can see, newest first. An objection is seen by the member who made it, the rule's
+// author and the organization's owners and admins. It stays pending until the rule's author accepts
+// it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its
+// message. It never changes after that. Needs mail:read, the email rules feature, and a member's own
+// full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+// session or the Primitive CLI.
 //
 // GET /email-rule-objections
 func (s *Server) handleListEmailRuleObjectionsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -35254,6 +35477,212 @@ func (s *Server) handleListEmailRuleVersionsRequest(args [1]string, argsEscaped 
 	}
 
 	if err := encodeListEmailRuleVersionsResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleListEmailRuleVersionsCoveringMeRequest handles listEmailRuleVersionsCoveringMe operation.
+//
+// The versions of a rule that covers one of your own mailboxes now that applied to your mail: its
+// current version and each earlier one that decided on mail at your own mailboxes, so a decision can
+// be read in the words of the version that made it. Each has what the covering view shows of a
+// version: its wording, tree, explanation and assumptions. A version that did neither is not listed.
+// Without versions, newest first, a page at a time (meta.cursor); with versions, only those named
+// that are listed, oldest first. Needs mail:read, the email rules feature, and a member's own
+// full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+// session or the Primitive CLI.
+//
+// GET /email-rules/covering-me/{id}/versions
+func (s *Server) handleListEmailRuleVersionsCoveringMeRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listEmailRuleVersionsCoveringMe"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/email-rules/covering-me/{id}/versions"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), ListEmailRuleVersionsCoveringMeOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ListEmailRuleVersionsCoveringMeOperation,
+			ID:   "listEmailRuleVersionsCoveringMe",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, ListEmailRuleVersionsCoveringMeOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeListEmailRuleVersionsCoveringMeParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response ListEmailRuleVersionsCoveringMeRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ListEmailRuleVersionsCoveringMeOperation,
+			OperationSummary: "Read versions of a rule over your mail",
+			OperationID:      "listEmailRuleVersionsCoveringMe",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+				{
+					Name: "limit",
+					In:   "query",
+				}: params.Limit,
+				{
+					Name: "cursor",
+					In:   "query",
+				}: params.Cursor,
+				{
+					Name: "versions",
+					In:   "query",
+				}: params.Versions,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = ListEmailRuleVersionsCoveringMeParams
+			Response = ListEmailRuleVersionsCoveringMeRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackListEmailRuleVersionsCoveringMeParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ListEmailRuleVersionsCoveringMe(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ListEmailRuleVersionsCoveringMe(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeListEmailRuleVersionsCoveringMeResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -46087,6 +46516,212 @@ func (s *Server) handleReaffirmFunctionRuntimeKeyRequest(args [1]string, argsEsc
 	}
 
 	if err := encodeReaffirmFunctionRuntimeKeyResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleReconcileGoogleMailImportRequest handles reconcileGoogleMailImport operation.
+//
+// The same configured owner may recover expired attempts after the email_import entitlement is
+// revoked. Recovery does not require that entitlement. Selects only server-owned manifests for the
+// configured mailbox/account/policy. No provider token, object keys, prefixes or email IDs are
+// accepted. Unsettled uploads remain unresolved and charged; this operation does not promise
+// automatic cleanup after a process dies.
+//
+// POST /mail-imports/google/reconcile
+func (s *Server) handleReconcileGoogleMailImportRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("reconcileGoogleMailImport"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/mail-imports/google/reconcile"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), ReconcileGoogleMailImportOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ReconcileGoogleMailImportOperation,
+			ID:   "reconcileGoogleMailImport",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, ReconcileGoogleMailImportOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeReconcileGoogleMailImportParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeReconcileGoogleMailImportRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response ReconcileGoogleMailImportRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ReconcileGoogleMailImportOperation,
+			OperationSummary: "Reconcile scoped historical import attempts",
+			OperationID:      "reconcileGoogleMailImport",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *ReconcileGoogleMailImportRequest
+			Params   = ReconcileGoogleMailImportParams
+			Response = ReconcileGoogleMailImportRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackReconcileGoogleMailImportParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ReconcileGoogleMailImport(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ReconcileGoogleMailImport(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeReconcileGoogleMailImportResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -57508,11 +58143,12 @@ func (s *Server) handleTestEmailRuleRequest(args [0]string, argsEscaped bool, w 
 // handleTestEmailRuleOnSampleRequest handles testEmailRuleOnSample operation.
 //
 // Reports what a rule would decide for an email you describe (sender, recipients, subject, plain
-// text, attachment types; optionally automated, from a mailing list, and a spam score), classified
-// and decided as received mail would be. A rule reading a spam score you gave none for decides on
-// none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The
-// answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's
-// own full-access credential (no API key, agent key or narrowed token).
+// text, attachment types and file names; optionally automated, from a mailing list, and a spam
+// score), classified and decided as received mail would be. A rule reading a spam score you gave
+// none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule
+// by rule_id. The answer includes what the classifier read. Needs mail:read, the email rules feature,
+//
+//	and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // POST /email-rules/test-sample
 func (s *Server) handleTestEmailRuleOnSampleRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

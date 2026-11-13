@@ -80,6 +80,14 @@ func (s *RepeatInput) setDefaults() {
 }
 
 // setDefaults set default value of fields.
+func (s *ReplyInputUnsubscribe) setDefaults() {
+	{
+		val := bool(true)
+		s.OneClick.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
 func (s *SemanticSearchInput) setDefaults() {
 	{
 		val := SemanticSearchInputMode("hybrid")
@@ -88,6 +96,14 @@ func (s *SemanticSearchInput) setDefaults() {
 	{
 		val := int(10)
 		s.Limit.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *SendMailInputUnsubscribe) setDefaults() {
+	{
+		val := bool(true)
+		s.OneClick.SetTo(val)
 	}
 }
 

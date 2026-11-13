@@ -596,6 +596,20 @@ func encodeGenerateLookAlikesRequest(
 	return nil
 }
 
+func encodeImportGoogleMailMessageRequest(
+	req *ImportGoogleMailMessageRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeInstallTemplateRequest(
 	req *InstallTemplateBody,
 	r *http.Request,
@@ -820,6 +834,20 @@ func encodeReaffirmFunctionRuntimeKeyRequest(
 		if req.Set {
 			req.Encode(e)
 		}
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeReconcileGoogleMailImportRequest(
+	req *ReconcileGoogleMailImportRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
 	}
 	encoded := e.Bytes()
 	ht.SetBody(r, bytes.NewReader(encoded), contentType)

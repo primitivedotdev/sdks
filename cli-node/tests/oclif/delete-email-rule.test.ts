@@ -312,6 +312,23 @@ describe("delete-email-rule says what the delete left", () => {
     ]);
   });
 
+  it("prints the server's share notice in place of the share count", () => {
+    const notice =
+      "Deleting this rule ended its share with Dana (accepted at version 2): they can no longer read anything it shared through Primitive, even what it shared before; copies already delivered to their webhooks or downloaded stay with them. The share keeps its record.";
+    expect(
+      deleteEmailRuleReport(
+        {
+          deleted: true,
+          ended_shares: [SHARE],
+          keys: [],
+          other_keys: 0,
+          share_notice: `  ${notice} `,
+        },
+        { path: { id: RULE } },
+      ).lines,
+    ).toEqual([notice]);
+  });
+
   it("says when the keys could not be checked", () => {
     expect(
       deleteEmailRuleReport(

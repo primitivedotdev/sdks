@@ -32,6 +32,7 @@ class EmailRuleLookAlikeEmail:
             subject (str):
             text (str):
             attachment_types (list[str]):
+            attachment_names (list[str]):
             automated (bool):
             from_mailing_list (bool):
      """
@@ -42,6 +43,7 @@ class EmailRuleLookAlikeEmail:
     subject: str
     text: str
     attachment_types: list[str]
+    attachment_names: list[str]
     automated: bool
     from_mailing_list: bool
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -70,6 +72,10 @@ class EmailRuleLookAlikeEmail:
 
 
 
+        attachment_names = self.attachment_names
+
+
+
         automated = self.automated
 
         from_mailing_list = self.from_mailing_list
@@ -84,6 +90,7 @@ class EmailRuleLookAlikeEmail:
             "subject": subject,
             "text": text,
             "attachment_types": attachment_types,
+            "attachment_names": attachment_names,
             "automated": automated,
             "from_mailing_list": from_mailing_list,
         })
@@ -114,6 +121,9 @@ class EmailRuleLookAlikeEmail:
         attachment_types = cast(list[str], d.pop("attachment_types"))
 
 
+        attachment_names = cast(list[str], d.pop("attachment_names"))
+
+
         automated = d.pop("automated")
 
         from_mailing_list = d.pop("from_mailing_list")
@@ -125,6 +135,7 @@ class EmailRuleLookAlikeEmail:
             subject=subject,
             text=text,
             attachment_types=attachment_types,
+            attachment_names=attachment_names,
             automated=automated,
             from_mailing_list=from_mailing_list,
         )

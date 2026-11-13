@@ -43,10 +43,12 @@ class CompileEmailRuleResult:
             compiled_by (str): An opaque name for the version of the rule compiler that produced the rule, such as rule-
                 compiler-v1. Send it back as compiled_by when you save the rule.
             kind (CompileEmailRuleResultKind | Unset): The kind it was compiled for. Send it with the tree to a test.
-            breadth (EmailRuleBreadth | None | Unset): How many of your recent emails its conditions hold for, counted over
-                your own mailboxes whatever scope you save it with, warning or not. Null when not counted in full: a rule with
-                questions, headers-only access, no test of it possible as you, or a count that failed or ran out of time. Writes
-                ignore it, so a compile answer (without include_sql) can be sent back unchanged.
+            breadth (EmailRuleBreadth | None | Unset): How many recent emails its conditions hold for, warning or not,
+                counted over evaluation_scope as sent (by default your own mailboxes, whatever scope you save it with). Null
+                when not counted in full: a rule with questions, headers-only access, no test of it possible as you, a count
+                that failed or ran out of time, or, with no scope sent, a rule that holds only for mail to To or Cc addresses
+                outside your own mailboxes (a warning says so). Writes ignore it, so a compile answer (without include_sql) can
+                be sent back unchanged.
             conditions_breadth (EmailRuleBreadth | None | Unset): For a grant rule with questions, breadth counted on its
                 conditions alone: the emails its questions are asked about. Null for any other rule, or when not counted in full
                 (as breadth).

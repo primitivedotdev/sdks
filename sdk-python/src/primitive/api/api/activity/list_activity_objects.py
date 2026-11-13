@@ -154,10 +154,11 @@ def sync_detailed(
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
             asked: what other members asked of you, open or answered: rule requests made to you, and
             objections to rules you wrote; kind may then name only email_rule_request and
-            email_rule_objection. concerning: what other members did that concerns your own mail: a
-            rule that started covering one of your mailboxes, or saved a new version while covering it
-            (email_rule_coverage, the only kind it takes). asked and concerning are for a person's own
-            view only. Default: ListActivityObjectsRelation.CREATED.
+            email_rule_objection. concerning: what other members did that concerns your own mail: an
+            active rule that started covering one of your mailboxes, or saved a new version while
+            covering it (email_rule_coverage, the only kind it takes). A rule in draft or observe is
+            not told of; GET /v1/email-rules/covering-me lists it. asked and concerning are for a
+            person's own view only. Default: ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
         limit (int | Unset):  Default: 50.
@@ -225,10 +226,11 @@ def sync(
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
             asked: what other members asked of you, open or answered: rule requests made to you, and
             objections to rules you wrote; kind may then name only email_rule_request and
-            email_rule_objection. concerning: what other members did that concerns your own mail: a
-            rule that started covering one of your mailboxes, or saved a new version while covering it
-            (email_rule_coverage, the only kind it takes). asked and concerning are for a person's own
-            view only. Default: ListActivityObjectsRelation.CREATED.
+            email_rule_objection. concerning: what other members did that concerns your own mail: an
+            active rule that started covering one of your mailboxes, or saved a new version while
+            covering it (email_rule_coverage, the only kind it takes). A rule in draft or observe is
+            not told of; GET /v1/email-rules/covering-me lists it. asked and concerning are for a
+            person's own view only. Default: ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
         limit (int | Unset):  Default: 50.
@@ -291,10 +293,11 @@ async def asyncio_detailed(
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
             asked: what other members asked of you, open or answered: rule requests made to you, and
             objections to rules you wrote; kind may then name only email_rule_request and
-            email_rule_objection. concerning: what other members did that concerns your own mail: a
-            rule that started covering one of your mailboxes, or saved a new version while covering it
-            (email_rule_coverage, the only kind it takes). asked and concerning are for a person's own
-            view only. Default: ListActivityObjectsRelation.CREATED.
+            email_rule_objection. concerning: what other members did that concerns your own mail: an
+            active rule that started covering one of your mailboxes, or saved a new version while
+            covering it (email_rule_coverage, the only kind it takes). A rule in draft or observe is
+            not told of; GET /v1/email-rules/covering-me lists it. asked and concerning are for a
+            person's own view only. Default: ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
         limit (int | Unset):  Default: 50.
@@ -362,10 +365,11 @@ async def asyncio(
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
             asked: what other members asked of you, open or answered: rule requests made to you, and
             objections to rules you wrote; kind may then name only email_rule_request and
-            email_rule_objection. concerning: what other members did that concerns your own mail: a
-            rule that started covering one of your mailboxes, or saved a new version while covering it
-            (email_rule_coverage, the only kind it takes). asked and concerning are for a person's own
-            view only. Default: ListActivityObjectsRelation.CREATED.
+            email_rule_objection. concerning: what other members did that concerns your own mail: an
+            active rule that started covering one of your mailboxes, or saved a new version while
+            covering it (email_rule_coverage, the only kind it takes). A rule in draft or observe is
+            not told of; GET /v1/email-rules/covering-me lists it. asked and concerning are for a
+            person's own view only. Default: ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
         limit (int | Unset):  Default: 50.

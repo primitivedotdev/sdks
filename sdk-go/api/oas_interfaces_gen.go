@@ -589,6 +589,10 @@ type GetWebhookSecretRes interface {
 	getWebhookSecretRes()
 }
 
+type ImportGoogleMailMessageRes interface {
+	importGoogleMailMessageRes()
+}
+
 type InstallTemplateRes interface {
 	installTemplateRes()
 }
@@ -707,6 +711,10 @@ type ListEmailRuleShareEmailsRes interface {
 
 type ListEmailRuleSharesRes interface {
 	listEmailRuleSharesRes()
+}
+
+type ListEmailRuleVersionsCoveringMeRes interface {
+	listEmailRuleVersionsCoveringMeRes()
 }
 
 type ListEmailRuleVersionsRes interface {
@@ -931,6 +939,10 @@ type PutContactRes interface {
 
 type ReaffirmFunctionRuntimeKeyRes interface {
 	reaffirmFunctionRuntimeKeyRes()
+}
+
+type ReconcileGoogleMailImportRes interface {
+	reconcileGoogleMailImportRes()
 }
 
 type RedeemCreditCodeRes interface {

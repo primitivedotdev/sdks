@@ -14,6 +14,7 @@ from uuid import UUID
 if TYPE_CHECKING:
   from ..models.repeat_input import RepeatInput
   from ..models.reply_input_headers import ReplyInputHeaders
+  from ..models.reply_input_unsubscribe import ReplyInputUnsubscribe
   from ..models.send_mail_attachment import SendMailAttachment
 
 
@@ -93,6 +94,14 @@ class ReplyInput:
                 characters, which may be omitted). Receivers see it as `fyi: true`. Plain text only: it cannot be combined with
                 `body_html`, `attachments`, `payload_attachments` or `scheduled_at`, and on `/send-mail` it requires
                 `in_reply_to`.
+            unsubscribe (ReplyInputUnsubscribe | Unset): One-click unsubscribe for the message. Primitive writes a `List-
+                Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-
+                Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe
+                sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the
+                unsubscribe. Every recipient of the message gets the same `url`, so send one message per recipient when the URL
+                identifies who to unsubscribe. The `headers` map refuses both header names, so this field is the only way to set
+                them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-
+                Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send.
             headers (ReplyInputHeaders | Unset): Extra headers, as `{ "Name": "value" }`, at most 25. A name is one of
                 `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-
                 Ref`, `X-Primitive-Function-Hop`, or a custom `X-` name of letters, digits and hyphens that is not credential-
@@ -116,6 +125,7 @@ class ReplyInput:
     repeat: RepeatInput | Unset = UNSET
     if_latest_message_id: UUID | Unset = UNSET
     fyi: bool | Unset = UNSET
+    unsubscribe: ReplyInputUnsubscribe | Unset = UNSET
     headers: ReplyInputHeaders | Unset = UNSET
 
 
@@ -125,6 +135,7 @@ class ReplyInput:
     def to_dict(self) -> dict[str, Any]:
         from ..models.repeat_input import RepeatInput # noqa: PLC0415
         from ..models.reply_input_headers import ReplyInputHeaders # noqa: PLC0415
+        from ..models.reply_input_unsubscribe import ReplyInputUnsubscribe # noqa: PLC0415
         from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
         body_text = self.body_text
 
@@ -155,6 +166,10 @@ class ReplyInput:
 
         fyi = self.fyi
 
+        unsubscribe: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.unsubscribe, Unset):
+            unsubscribe = self.unsubscribe.to_dict()
+
         headers: dict[str, Any] | Unset = UNSET
         if not isinstance(self.headers, Unset):
             headers = self.headers.to_dict()
@@ -182,6 +197,8 @@ class ReplyInput:
             field_dict["if_latest_message_id"] = if_latest_message_id
         if fyi is not UNSET:
             field_dict["fyi"] = fyi
+        if unsubscribe is not UNSET:
+            field_dict["unsubscribe"] = unsubscribe
         if headers is not UNSET:
             field_dict["headers"] = headers
 
@@ -193,6 +210,7 @@ class ReplyInput:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.repeat_input import RepeatInput # noqa: PLC0415
         from ..models.reply_input_headers import ReplyInputHeaders # noqa: PLC0415
+        from ..models.reply_input_unsubscribe import ReplyInputUnsubscribe # noqa: PLC0415
         from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
         d = dict(src_dict)
         body_text = d.pop("body_text", UNSET)
@@ -239,6 +257,16 @@ class ReplyInput:
 
         fyi = d.pop("fyi", UNSET)
 
+        _unsubscribe = d.pop("unsubscribe", UNSET)
+        unsubscribe: ReplyInputUnsubscribe | Unset
+        if isinstance(_unsubscribe,  Unset):
+            unsubscribe = UNSET
+        else:
+            unsubscribe = ReplyInputUnsubscribe.from_dict(_unsubscribe)
+
+
+
+
         _headers = d.pop("headers", UNSET)
         headers: ReplyInputHeaders | Unset
         if isinstance(_headers,  Unset):
@@ -259,6 +287,7 @@ class ReplyInput:
             repeat=repeat,
             if_latest_message_id=if_latest_message_id,
             fyi=fyi,
+            unsubscribe=unsubscribe,
             headers=headers,
         )
 

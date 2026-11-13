@@ -8503,9 +8503,12 @@ func decodeDownloadAttachmentsParams(args [1]string, argsEscaped bool, r *http.R
 
 // DownloadDomainZoneFileParams is parameters of downloadDomainZoneFile operation.
 type DownloadDomainZoneFileParams struct {
-	// When true, include only outbound DNS records. Verified domains default to outbound-only; pending
-	// claims default to all required records.
+	// When true, include only outbound DNS records. Cannot be combined with inbound_only=true. By
+	// default, include all records.
 	OutboundOnly OptBool `json:",omitempty,omitzero"`
+	// When true, include only inbound MX and ownership TXT records. Cannot be combined with
+	// outbound_only=true.
+	InboundOnly OptBool `json:",omitempty,omitzero"`
 	// Resource UUID.
 	ID uuid.UUID
 }
@@ -8518,6 +8521,15 @@ func unpackDownloadDomainZoneFileParams(packed middleware.Parameters) (params Do
 		}
 		if v, ok := packed[key]; ok {
 			params.OutboundOnly = v.(OptBool)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "inbound_only",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.InboundOnly = v.(OptBool)
 		}
 	}
 	{
@@ -8569,6 +8581,47 @@ func decodeDownloadDomainZoneFileParams(args [1]string, argsEscaped bool, r *htt
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "outbound_only",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: inbound_only.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "inbound_only",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotInboundOnlyVal bool
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToBool(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotInboundOnlyVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.InboundOnly.SetTo(paramsDotInboundOnlyVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "inbound_only",
 			In:   "query",
 			Err:  err,
 		}
@@ -14531,6 +14584,163 @@ func decodeGetWebhookDeliveryStatsParams(args [0]string, argsEscaped bool, r *ht
 	return params, nil
 }
 
+// ImportGoogleMailMessageParams is parameters of importGoogleMailMessage operation.
+type ImportGoogleMailMessageParams struct {
+	// Transient provider user access token. Send only in this redacted header, never in a URL or JSON
+	// body. Uses the dedicated configured desktop client and readonly/identity scopes.
+	XPrimitiveGoogleAccessToken string
+	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
+	// the same key runs the request again. Operations that need a credential refuse a key that is empty,
+	// longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one
+	// in the Idempotency-Key response header; operations that need none ignore it.
+	IdempotencyKey OptString `json:",omitempty,omitzero"`
+}
+
+func unpackImportGoogleMailMessageParams(packed middleware.Parameters) (params ImportGoogleMailMessageParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-Primitive-Google-Access-Token",
+			In:   "header",
+		}
+		params.XPrimitiveGoogleAccessToken = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.IdempotencyKey = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeImportGoogleMailMessageParams(args [0]string, argsEscaped bool, r *http.Request) (params ImportGoogleMailMessageParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: X-Primitive-Google-Access-Token.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-Primitive-Google-Access-Token",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XPrimitiveGoogleAccessToken = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     8192,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.XPrimitiveGoogleAccessToken)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-Primitive-Google-Access-Token",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIdempotencyKeyVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIdempotencyKeyVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IdempotencyKey.SetTo(paramsDotIdempotencyKeyVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.IdempotencyKey.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     255,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // InstallTemplateParams is parameters of installTemplate operation.
 type InstallTemplateParams struct {
 	// Template slug from the template manifest.
@@ -20210,8 +20420,9 @@ func decodeListEmailRuleDecisionsOnMyMailParams(args [1]string, argsEscaped bool
 
 // ListEmailRuleObjectionsParams is parameters of listEmailRuleObjections operation.
 type ListEmailRuleObjectionsParams struct {
-	// Outgoing (the default): objections you made. incoming: objections to rules you wrote. all: every
-	// objection you can see.
+	// Mine (the default): objections you made and objections to rules you wrote, each saying which
+	// (is_objector, is_author). outgoing: only those you made. incoming: only those to rules you wrote.
+	// all: every objection you can see.
 	Box OptListEmailRuleObjectionsBox `json:",omitempty,omitzero"`
 	// Pending (the default), decided, or any.
 	Status OptListEmailRuleObjectionsStatus `json:",omitempty,omitzero"`
@@ -20265,7 +20476,7 @@ func decodeListEmailRuleObjectionsParams(args [0]string, argsEscaped bool, r *ht
 	q := uri.NewQueryDecoder(r.URL.Query())
 	// Set default value for query: box.
 	{
-		val := ListEmailRuleObjectionsBox("outgoing")
+		val := ListEmailRuleObjectionsBox("mine")
 		params.Box.SetTo(val)
 	}
 	// Decode query: box.
@@ -21604,6 +21815,308 @@ func unpackListEmailRuleVersionsParams(packed middleware.Parameters) (params Lis
 }
 
 func decodeListEmailRuleVersionsParams(args [1]string, argsEscaped bool, r *http.Request) (params ListEmailRuleVersionsParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode query: limit.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotLimitVal int
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotLimitVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Limit.SetTo(paramsDotLimitVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Limit.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "limit",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: cursor.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotCursorVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotCursorVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Cursor.SetTo(paramsDotCursorVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Cursor.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     200,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "cursor",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: versions.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "versions",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotVersionsVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotVersionsVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Versions.SetTo(paramsDotVersionsVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Versions.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     0,
+							MaxLengthSet:  false,
+							Email:         false,
+							Hostname:      false,
+							Regex:         regexMap["^[1-9]\\d{0,8}(,[1-9]\\d{0,8}){0,99}$"],
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "versions",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// ListEmailRuleVersionsCoveringMeParams is parameters of listEmailRuleVersionsCoveringMe operation.
+type ListEmailRuleVersionsCoveringMeParams struct {
+	// The rule id.
+	ID uuid.UUID
+	// Versions per page when versions is not given: 1 to 100, default 50.
+	Limit OptInt `json:",omitempty,omitzero"`
+	// Meta.cursor from the preceding page. Omit for the first page. Not with versions.
+	Cursor OptString `json:",omitempty,omitzero"`
+	// Read only these version numbers, comma-separated, at most 100. Not with limit or cursor.
+	Versions OptString `json:",omitempty,omitzero"`
+}
+
+func unpackListEmailRuleVersionsCoveringMeParams(packed middleware.Parameters) (params ListEmailRuleVersionsCoveringMeParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "limit",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Limit = v.(OptInt)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "cursor",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Cursor = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "versions",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Versions = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeListEmailRuleVersionsCoveringMeParams(args [1]string, argsEscaped bool, r *http.Request) (params ListEmailRuleVersionsCoveringMeParams, _ error) {
 	q := uri.NewQueryDecoder(r.URL.Query())
 	// Decode path: id.
 	if err := func() error {
@@ -31763,6 +32276,99 @@ func decodeReaffirmFunctionRuntimeKeyParams(args [1]string, argsEscaped bool, r 
 			Err:  err,
 		}
 	}
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIdempotencyKeyVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIdempotencyKeyVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IdempotencyKey.SetTo(paramsDotIdempotencyKeyVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.IdempotencyKey.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     255,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// ReconcileGoogleMailImportParams is parameters of reconcileGoogleMailImport operation.
+type ReconcileGoogleMailImportParams struct {
+	// Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with
+	// the same key runs the request again. Operations that need a credential refuse a key that is empty,
+	// longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one
+	// in the Idempotency-Key response header; operations that need none ignore it.
+	IdempotencyKey OptString `json:",omitempty,omitzero"`
+}
+
+func unpackReconcileGoogleMailImportParams(packed middleware.Parameters) (params ReconcileGoogleMailImportParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.IdempotencyKey = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeReconcileGoogleMailImportParams(args [0]string, argsEscaped bool, r *http.Request) (params ReconcileGoogleMailImportParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
 	// Decode header: Idempotency-Key.
 	if err := func() error {
 		cfg := uri.HeaderParameterDecodingConfig{

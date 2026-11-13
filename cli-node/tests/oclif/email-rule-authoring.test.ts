@@ -639,6 +639,18 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     ]);
   });
 
+  it("says how many decided emails the conditions held on together", async () => {
+    const data = testResult();
+    answer({ ...data, summary: { ...data.summary, conditions_held: 2 } });
+    const result = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+    ]);
+    expect(stderrLines(result)).toContain(
+      "Conditions (3 decided; together they held on 2):",
+    );
+  });
+
   it("exits 3 when nothing failed but an expectation is undecided", async () => {
     answer(testResult(UNDECIDED_EXPECTATIONS));
     const result = await run("email-rules:test-email-rule", [
@@ -2652,6 +2664,69 @@ describe("email-rules update-email-rule: the server's write guards", () => {
     );
   });
 
+  it("says a write was checked by default when keys or webhooks read the rule, and how to save it unchecked", async () => {
+    const check = {
+      version: null,
+      passed: false,
+      decided: true,
+      failed: [A],
+      undecided: [],
+    };
+    responder = () =>
+      jsonResponse(
+        409,
+        refusal("expectations_failed", {
+          current_version: 5,
+          state: "active",
+          expectations_check: check,
+          read_by: { keys: 2, webhooks: 1 },
+        }),
+      );
+    const result = await run("email-rules:update-email-rule", [
+      RULE,
+      "--restore-version",
+      "3",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(sentBody()).toEqual({ restore_version: 3 });
+    expect(stderrLines(result).at(-1)).toBe(
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys or webhooks read it, and nothing was saved. Expectations failed: ${A}. The rule is active and 2 API keys and 1 webhook read what it grants; to save the write without the check, send it again with --no-if-expectations-pass. The command exits 1.`,
+    );
+    const hintFor = OPERATION_ERROR_HINTS.updateEmailRule;
+    // Readers that could not be counted in time.
+    expect(
+      hintFor?.(
+        "expectations_unreadable",
+        {},
+        {
+          code: "expectations_unreadable",
+          details: {
+            unreadable: [C],
+            read_by: { keys: null, webhooks: null },
+          },
+        },
+        { id: RULE },
+      ),
+    ).toBe(
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys or webhooks read it, and nothing was saved. An expectation names an email this rule cannot read (deleted, or outside its scope or its author's mail): ${C}. Sending the write again will not decide it: send --expectations-file without it, or an evaluation_scope that reads it. The rule is active and API keys or webhooks may read what it grants (they could not be counted in time); to save the write without the check, send it again with --no-if-expectations-pass. The command exits 1.`,
+    );
+    // Removing the expectations of a rule they read, under --fail-on-expectations.
+    expect(
+      hintFor?.(
+        "no_expectations",
+        { expectations: null, if_expectations_pass: true },
+        {
+          code: "no_expectations",
+          details: { read_by: { keys: 1, webhooks: 0 } },
+        },
+        { id: RULE },
+        { "fail-on-expectations": true },
+      ),
+    ).toBe(
+      "Hint: nothing was saved: this write removes the rule's expectations, and the rule is active and 1 API key and 0 webhooks read what it grants, so a write that changes what it grants is checked against them first. Keep some with --expectations-file, --expectation-samples-file or --add-expectation-samples-file, or, to save the write without the check, send it again without --fail-on-expectations and with --no-if-expectations-pass.",
+    );
+  });
+
   it("explains each conflict reason", () => {
     const hintFor = OPERATION_ERROR_HINTS.updateEmailRule;
     const conflict = (details: unknown) => ({
@@ -2708,6 +2783,16 @@ describe("email-rules update-email-rule: the server's write guards", () => {
       ),
     ).toBe(
       `Hint: the rule changed while this write was being saved, so nothing was saved. ${read}.`,
+    );
+    expect(
+      hintFor?.(
+        "email_rule_conflict",
+        {},
+        conflict({ reason: "readers_changed" }),
+        { id: RULE },
+      ),
+    ).toBe(
+      "Hint: API keys or webhooks started reading this rule while this write was being saved, and saving it would have changed what they receive without checking it against the rule's expectations, so nothing was saved. Send the write again: it is then checked first.",
     );
   });
 
@@ -2774,7 +2859,7 @@ describe("email-rules compile-email-rule and get-email-rule reports", () => {
     expect(result.exitCode).toBe(0);
     expect(stderrLines(result)).toEqual([
       "Warning: The description names Acme but gives no domain, so the sender is judged by sender_relationship alone.",
-      "Breadth: its conditions hold for 3 of 20 recent emails checked in your own mailboxes, whatever scope you save it with.",
+      "Breadth: its conditions hold for 3 of 20 recent emails checked in your own mailboxes, the default; pass --evaluation-scope to count over the scope you will save it with.",
     ]);
   });
 
@@ -2906,8 +2991,41 @@ describe("email-rules compile-email-rule and get-email-rule reports", () => {
       "invoices",
     ]);
     expect(stderrLines(counted)).toEqual([
-      "Breadth: its conditions hold for 52 of 200 recent emails checked in your own mailboxes, whatever scope you save it with.",
+      "Breadth: its conditions hold for 52 of 200 recent emails checked in your own mailboxes, the default; pass --evaluation-scope to count over the scope you will save it with.",
     ]);
+    // Counted over the scope sent, with the flag or in the body.
+    for (const [args, where] of [
+      [["--evaluation-scope", "author"], "in all the mail you can read"],
+      [
+        [
+          "--raw-body",
+          JSON.stringify({
+            english: "invoices",
+            evaluation_scope: "own_mailboxes",
+          }),
+        ],
+        "in your own mailboxes",
+      ],
+      [
+        ["--evaluation-scope", "selected", "--scope-domain", "example.org"],
+        "in the inboxes and domains the selected scope names",
+      ],
+    ] as const) {
+      const scoped = await run("email-rules:compile-email-rule", [
+        "--english",
+        "invoices",
+        ...args,
+      ]);
+      expect(scoped.exitCode, scoped.stderr).toBe(0);
+      expect(stderrLines(scoped)).toEqual([
+        `Breadth: its conditions hold for 52 of 200 recent emails checked ${where}.`,
+      ]);
+    }
+    expect(calls.at(-1)?.body).toEqual({
+      english: "invoices",
+      evaluation_scope: "selected",
+      scope_selection: { addresses: [], domains: ["example.org"] },
+    });
     answer({
       tree: { version: 1, vocabulary: "v1", when: { all: [] } },
       explanation: "Invoices.",
@@ -2953,6 +3071,56 @@ describe("email-rules compile-email-rule and get-email-rule reports", () => {
     );
     const json = await run("email-rules:get-email-rule", [RULE, "--json"]);
     expect(json.stderr).toBe("");
+  });
+
+  it("prints the server's notices: objections waiting, a share a write ended, and a version saved unchecked", async () => {
+    const objectionNotice =
+      "1 objection to this rule is waiting for your answer: a member whose mail it covered asked you to turn it off. Read it with GET /v1/email-rule-objections?box=incoming, or primitive email-rule-oversight list-email-rule-objections --box incoming (each names its rule). Then accept it, which turns the rule off (state draft), or decline it.";
+    const shareNotice =
+      "Saving version 6 ended this rule's share with Dana (accepted at version 5): they can no longer read anything it shared through Primitive, even what it shared before; copies already delivered to their webhooks or downloaded stay with them. To share with them again, they send a new request, and accepting it writes a new rule.";
+    const savedNotice =
+      "This version is in force now and changes what 2 API keys and 1 webhook that read this rule receive. It was saved without being checked against the rule's expectations (if_expectations_pass: false).";
+    const rule = {
+      id: RULE,
+      name: "Cold outreach",
+      state: "active",
+      current_version: 6,
+      author_user_id: "00000000-0000-4000-8000-0000000000f1",
+      is_author: true,
+      created_at: "2026-11-01T00:00:00Z",
+      updated_at: "2026-11-10T00:00:00Z",
+      current: null,
+      pending_objections: 1,
+      objection_notice: objectionNotice,
+    };
+    answer(rule);
+    const got = await run("email-rules:get-email-rule", [RULE]);
+    expect(stderrLines(got)).toEqual([objectionNotice]);
+    answer({
+      ...rule,
+      affects: { keys: 2, endpoints: 1, shares_ended: 1 },
+      share_notice: shareNotice,
+      notice: savedNotice,
+    });
+    const updated = await run("email-rules:update-email-rule", [
+      RULE,
+      "--raw-body",
+      JSON.stringify({ restore_version: 3, if_expectations_pass: false }),
+    ]);
+    expect(updated.exitCode, updated.stderr).toBe(0);
+    expect(stderrLines(updated)).toEqual([
+      "This version reaches 2 API keys listing the rule and 1 webhook those keys own; it ended 1 share. The rule keeps its state.",
+      shareNotice,
+      savedNotice,
+      objectionNotice,
+    ]);
+    const quiet = await run("email-rules:update-email-rule", [
+      RULE,
+      "--name",
+      "Cold outreach",
+      "--json",
+    ]);
+    expect(quiet.stderr).toBe("");
   });
 });
 
@@ -3362,6 +3530,7 @@ describe("--scope-address and --scope-domain", () => {
     "email-rules:test-email-rule",
     "email-rules:test-email-rule-on-sample",
     "email-rules:generate-look-alikes",
+    "email-rules:compile-email-rule",
   ];
 
   it("are on every email-rules command whose request takes evaluation_scope, and take scope_selection out of the --raw-body list", () => {

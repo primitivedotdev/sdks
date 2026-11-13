@@ -44,7 +44,9 @@ class GetEmailRuleCoveringMeResult:
                 decided on your mail.
             current_version (int | None): Null when covers_now is false.
             receivers (EmailRuleReceivers | None): Null when covers_now is false (who receives it now is not about your
-                mail), or when it could not be read in time.
+                mail), when it could not be read in time, or for a rule shown in draft or observe that turned active or was
+                deleted after it was read; try again.
+            receivers_once_active (EmailRuleReceivers | None): As on the list; also null when covers_now is false.
             created_at (datetime.datetime):
             covers_now (bool): Whether it covers one of your own mailboxes now. False for a rule you see only because it
                 decided on mail at your own mailbox before.
@@ -62,6 +64,7 @@ class GetEmailRuleCoveringMeResult:
     covers: EmailRuleCoverage | None
     current_version: int | None
     receivers: EmailRuleReceivers | None
+    receivers_once_active: EmailRuleReceivers | None
     created_at: datetime.datetime
     covers_now: bool
     current: EmailRuleCoveringMeVersion | None
@@ -105,6 +108,12 @@ class GetEmailRuleCoveringMeResult:
         else:
             receivers = self.receivers
 
+        receivers_once_active: dict[str, Any] | None
+        if isinstance(self.receivers_once_active, EmailRuleReceivers):
+            receivers_once_active = self.receivers_once_active.to_dict()
+        else:
+            receivers_once_active = self.receivers_once_active
+
         created_at = self.created_at.isoformat()
 
         covers_now = self.covers_now
@@ -130,6 +139,7 @@ class GetEmailRuleCoveringMeResult:
             "covers": covers,
             "current_version": current_version,
             "receivers": receivers,
+            "receivers_once_active": receivers_once_active,
             "created_at": created_at,
             "covers_now": covers_now,
             "current": current,
@@ -222,6 +232,24 @@ class GetEmailRuleCoveringMeResult:
         receivers = _parse_receivers(d.pop("receivers"))
 
 
+        def _parse_receivers_once_active(data: object) -> EmailRuleReceivers | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                receivers_once_active_type_1 = EmailRuleReceivers.from_dict(data)
+
+
+
+                return receivers_once_active_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleReceivers | None, data)
+
+        receivers_once_active = _parse_receivers_once_active(d.pop("receivers_once_active"))
+
+
         created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
@@ -259,6 +287,7 @@ class GetEmailRuleCoveringMeResult:
             covers=covers,
             current_version=current_version,
             receivers=receivers,
+            receivers_once_active=receivers_once_active,
             created_at=created_at,
             covers_now=covers_now,
             current=current,

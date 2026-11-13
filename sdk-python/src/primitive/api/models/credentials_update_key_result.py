@@ -12,6 +12,7 @@ from typing import cast
 
 if TYPE_CHECKING:
   from ..models.credentials_update_key_result_address_warnings_item import CredentialsUpdateKeyResultAddressWarningsItem
+  from ..models.credentials_update_key_result_rules_added_item import CredentialsUpdateKeyResultRulesAddedItem
   from ..models.credentials_update_key_result_warnings_item import CredentialsUpdateKeyResultWarningsItem
 
 
@@ -30,6 +31,9 @@ class CredentialsUpdateKeyResult:
             changed (list[str]):
             warnings (list[CredentialsUpdateKeyResultWarningsItem]):
             address_warnings (list[CredentialsUpdateKeyResultAddressWarningsItem] | Unset):
+            rules_added (list[CredentialsUpdateKeyResultRulesAddedItem] | Unset): Each rule (or share) the edit put on a key
+                that reads mail, with granted_emails, how many emails it has already shared, which the key can now read while it
+                is active: counted up to 10,000, with more: true past that; null when not counted.
             grant_unguarded (bool | Unset): Present, as true, when the grant was changed without expected_grant_ref, so the
                 change was not checked against changes made since the key was read. Send grant.ref from GET /v1/keys/{id} as
                 expected_grant_ref to have such a change refused instead (409 conflict, details.reason grant_changed).
@@ -39,6 +43,7 @@ class CredentialsUpdateKeyResult:
     changed: list[str]
     warnings: list[CredentialsUpdateKeyResultWarningsItem]
     address_warnings: list[CredentialsUpdateKeyResultAddressWarningsItem] | Unset = UNSET
+    rules_added: list[CredentialsUpdateKeyResultRulesAddedItem] | Unset = UNSET
     grant_unguarded: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -48,6 +53,7 @@ class CredentialsUpdateKeyResult:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.credentials_update_key_result_address_warnings_item import CredentialsUpdateKeyResultAddressWarningsItem # noqa: PLC0415
+        from ..models.credentials_update_key_result_rules_added_item import CredentialsUpdateKeyResultRulesAddedItem # noqa: PLC0415
         from ..models.credentials_update_key_result_warnings_item import CredentialsUpdateKeyResultWarningsItem # noqa: PLC0415
         id = self.id
 
@@ -71,6 +77,15 @@ class CredentialsUpdateKeyResult:
 
 
 
+        rules_added: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.rules_added, Unset):
+            rules_added = []
+            for rules_added_item_data in self.rules_added:
+                rules_added_item = rules_added_item_data.to_dict()
+                rules_added.append(rules_added_item)
+
+
+
         grant_unguarded = self.grant_unguarded
 
 
@@ -83,6 +98,8 @@ class CredentialsUpdateKeyResult:
         })
         if address_warnings is not UNSET:
             field_dict["address_warnings"] = address_warnings
+        if rules_added is not UNSET:
+            field_dict["rules_added"] = rules_added
         if grant_unguarded is not UNSET:
             field_dict["grant_unguarded"] = grant_unguarded
 
@@ -93,6 +110,7 @@ class CredentialsUpdateKeyResult:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.credentials_update_key_result_address_warnings_item import CredentialsUpdateKeyResultAddressWarningsItem # noqa: PLC0415
+        from ..models.credentials_update_key_result_rules_added_item import CredentialsUpdateKeyResultRulesAddedItem # noqa: PLC0415
         from ..models.credentials_update_key_result_warnings_item import CredentialsUpdateKeyResultWarningsItem # noqa: PLC0415
         d = dict(src_dict)
         id = d.pop("id")
@@ -122,6 +140,18 @@ class CredentialsUpdateKeyResult:
                 address_warnings.append(address_warnings_item)
 
 
+        _rules_added = d.pop("rules_added", UNSET)
+        rules_added: list[CredentialsUpdateKeyResultRulesAddedItem] | Unset = UNSET
+        if _rules_added is not UNSET:
+            rules_added = []
+            for rules_added_item_data in _rules_added:
+                rules_added_item = CredentialsUpdateKeyResultRulesAddedItem.from_dict(rules_added_item_data)
+
+
+
+                rules_added.append(rules_added_item)
+
+
         grant_unguarded = d.pop("grant_unguarded", UNSET)
 
         credentials_update_key_result = cls(
@@ -129,6 +159,7 @@ class CredentialsUpdateKeyResult:
             changed=changed,
             warnings=warnings,
             address_warnings=address_warnings,
+            rules_added=rules_added,
             grant_unguarded=grant_unguarded,
         )
 

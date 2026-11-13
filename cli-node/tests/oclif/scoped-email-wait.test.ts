@@ -92,6 +92,7 @@ function replyEmail(overrides: Partial<EmailDetail> = {}): EmailDetail {
     to_email: "agent@sender.example",
     webhook_attempt_count: 1,
     imported: null,
+    attachments: [],
     webhook_status: "fired",
     parsed: {
       status: "complete",

@@ -32,6 +32,7 @@ class EmailRuleSavedSampleEmail:
             cc (list[str] | Unset):
             subject (str | Unset):
             attachment_types (list[str] | Unset):
+            attachment_names (list[str] | Unset):
             automated (bool | Unset):
             from_mailing_list (bool | Unset):
             spam_score (float | Unset):
@@ -43,6 +44,7 @@ class EmailRuleSavedSampleEmail:
     cc: list[str] | Unset = UNSET
     subject: str | Unset = UNSET
     attachment_types: list[str] | Unset = UNSET
+    attachment_names: list[str] | Unset = UNSET
     automated: bool | Unset = UNSET
     from_mailing_list: bool | Unset = UNSET
     spam_score: float | Unset = UNSET
@@ -76,6 +78,12 @@ class EmailRuleSavedSampleEmail:
 
 
 
+        attachment_names: list[str] | Unset = UNSET
+        if not isinstance(self.attachment_names, Unset):
+            attachment_names = self.attachment_names
+
+
+
         automated = self.automated
 
         from_mailing_list = self.from_mailing_list
@@ -96,6 +104,8 @@ class EmailRuleSavedSampleEmail:
             field_dict["subject"] = subject
         if attachment_types is not UNSET:
             field_dict["attachment_types"] = attachment_types
+        if attachment_names is not UNSET:
+            field_dict["attachment_names"] = attachment_names
         if automated is not UNSET:
             field_dict["automated"] = automated
         if from_mailing_list is not UNSET:
@@ -129,6 +139,9 @@ class EmailRuleSavedSampleEmail:
         attachment_types = cast(list[str], d.pop("attachment_types", UNSET))
 
 
+        attachment_names = cast(list[str], d.pop("attachment_names", UNSET))
+
+
         automated = d.pop("automated", UNSET)
 
         from_mailing_list = d.pop("from_mailing_list", UNSET)
@@ -142,6 +155,7 @@ class EmailRuleSavedSampleEmail:
             cc=cc,
             subject=subject,
             attachment_types=attachment_types,
+            attachment_names=attachment_names,
             automated=automated,
             from_mailing_list=from_mailing_list,
             spam_score=spam_score,

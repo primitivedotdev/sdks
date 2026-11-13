@@ -423,6 +423,15 @@ describe("activity concerning command", () => {
     expect(COMMANDS["activity:concerning"]).toBeDefined();
   });
 
+  it("says in its help that notices can lag, promising no cadence, and which id is the rule's", () => {
+    const help = ActivityConcerningCommand.description;
+    expect(help).toContain("Notices can lag.");
+    expect(help).not.toMatch(/every minute|a few minutes/);
+    expect(help).toContain(
+      "RULE ID, and rule_id with --json, is the rule's id",
+    );
+  });
+
   it("lists coverage notices with the rule's author, and asks the API for exactly that", async () => {
     const urls = useApi([
       page(
@@ -430,6 +439,7 @@ describe("activity concerning command", () => {
           item({
             kind: "email_rule_coverage",
             id: "6e2d3c4b-5a69-4b1a-9c8d-7e6f5a4b3c2d",
+            rule_id: "3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f",
             name: "Vendor invoices",
             state: "new_version",
             owned_now: "someone_else",
@@ -459,8 +469,11 @@ describe("activity concerning command", () => {
       limit: "50",
     });
     const out = lines.join("\n");
-    expect(out).toMatch(/^NOTICE\s+WHEN \(UTC\)\s+RULE\s+AUTHOR$/m);
-    expect(out).toMatch(/^new_version\s+.*Vendor invoices\s+Sam Rivera$/m);
+    expect(out).toMatch(/^NOTICE\s+WHEN \(UTC\)\s+RULE\s+AUTHOR\s+RULE ID$/m);
+    expect(out).toMatch(
+      /^new_version\s+.*Vendor invoices\s+Sam Rivera\s+3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f$/m,
+    );
+    // An older server sends no rule_id: the column is left empty.
     expect(out).toMatch(/^started\s+.*Vendor invoices\s+u-3$/m);
     // A notice's id is not a rule's, so the table leaves it out.
     expect(out).not.toContain("6e2d3c4b-5a69-4b1a-9c8d-7e6f5a4b3c2d");
@@ -469,7 +482,7 @@ describe("activity concerning command", () => {
 
   it("never reads an empty listing as no rule covering you: it says how far the notices go and where to look now", async () => {
     const now =
-      "A rule that starts covering your mail can take a few minutes to appear here. `primitive email-rule-oversight list-email-rules-covering-me` shows what covers you now.";
+      "Notices can lag, so a rule that starts covering your mail may not appear here yet. `primitive email-rule-oversight list-email-rules-covering-me` shows what covers you now.";
     expect(formatConcerningRows([], true)).toBe(
       `Nothing recorded for you yet. ${now}`,
     );
@@ -517,7 +530,7 @@ describe("activity concerning command", () => {
     });
     const out = formatConcerningRows([pending], true, null);
     expect(out).toMatch(
-      /^pending\s+2026-11-12 23:49\s+edge-test-noshare-secrets\s+Ethan Byrd$/m,
+      /^pending\s+2026-11-12 23:49\s+edge-test-noshare-secrets\s+Ethan Byrd\s+6e4dc223-0000-4000-8000-000000000001$/m,
     );
     expect(out).toContain(
       "pending: the rule covers you now and its notice is not written yet.",

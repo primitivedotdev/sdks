@@ -25,7 +25,7 @@ T = TypeVar("T", bound="EmailRuleReceivers")
 
 @_attrs_define
 class EmailRuleReceivers:
-    """ Who receives what the rule shares now, by person and count; empty unless it is an active grant rule.
+    """ Who receives what the rule shares, by person and count. As receivers, empty unless it is an active grant rule.
 
         Attributes:
             keys (list[EmailRuleReceiversKeysItem]): API keys that work now (not revoked, expired or suspended) and hold

@@ -17,6 +17,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.create_email_rule_result_affects import CreateEmailRuleResultAffects
+  from ..models.create_email_rule_result_expectations import CreateEmailRuleResultExpectations
   from ..models.create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck
   from ..models.create_email_rule_result_restored_from import CreateEmailRuleResultRestoredFrom
   from ..models.email_rule_author import EmailRuleAuthor
@@ -56,8 +57,15 @@ class CreateEmailRuleResult:
             scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.
             revision (int | Unset): Moves on by one with every update. Send it as if_revision.
             author (EmailRuleAuthor | Unset):
+            pending_objections (int | Unset): To its author, on the dashboard or the Primitive CLI: objections to it waiting
+                for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time:
+                absent is not 0.
+            objection_notice (str | Unset): With pending_objections above 0: that members asked you to turn it off, and how
+                to answer.
             scope_warnings (list[EmailRuleScopeWarning] | Unset): Names in scope_selection that match nothing this
                 organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
+            expectations (CreateEmailRuleResultExpectations | Unset): Its saved expectations, each list by email id, as
+                stored: on every create, and on an update that set or removed them.
             expectation_samples (list[EmailRuleExpectationSample] | Unset): Its saved made-up emails, when this write set or
                 added some.
             expectations_check (CreateEmailRuleResultExpectationsCheck | Unset): After a write that saved a version or
@@ -74,6 +82,8 @@ class CreateEmailRuleResult:
                 the webhooks they own, and shares this write ended. The rule keeps its state. Absent if not read.
             notice (str | Unset): After a write that saved a version of an active rule keys or webhooks read without
                 checking it first: what it changes, and how to have the next one checked.
+            share_notice (str | Unset): After a write that ended the rule's share: that it did, given even when affects is
+                not, with whom it was with and the version they accepted when those can be read.
      """
 
     id: UUID
@@ -91,12 +101,16 @@ class CreateEmailRuleResult:
     scope_selection: EmailRuleScopeNames | None | Unset = UNSET
     revision: int | Unset = UNSET
     author: EmailRuleAuthor | Unset = UNSET
+    pending_objections: int | Unset = UNSET
+    objection_notice: str | Unset = UNSET
     scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
+    expectations: CreateEmailRuleResultExpectations | Unset = UNSET
     expectation_samples: list[EmailRuleExpectationSample] | Unset = UNSET
     expectations_check: CreateEmailRuleResultExpectationsCheck | Unset = UNSET
     restored_from: CreateEmailRuleResultRestoredFrom | Unset = UNSET
     affects: CreateEmailRuleResultAffects | Unset = UNSET
     notice: str | Unset = UNSET
+    share_notice: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -105,6 +119,7 @@ class CreateEmailRuleResult:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.create_email_rule_result_affects import CreateEmailRuleResultAffects # noqa: PLC0415
+        from ..models.create_email_rule_result_expectations import CreateEmailRuleResultExpectations # noqa: PLC0415
         from ..models.create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck # noqa: PLC0415
         from ..models.create_email_rule_result_restored_from import CreateEmailRuleResultRestoredFrom # noqa: PLC0415
         from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
@@ -161,6 +176,10 @@ class CreateEmailRuleResult:
         if not isinstance(self.author, Unset):
             author = self.author.to_dict()
 
+        pending_objections = self.pending_objections
+
+        objection_notice = self.objection_notice
+
         scope_warnings: list[dict[str, Any]] | Unset = UNSET
         if not isinstance(self.scope_warnings, Unset):
             scope_warnings = []
@@ -169,6 +188,10 @@ class CreateEmailRuleResult:
                 scope_warnings.append(scope_warnings_item)
 
 
+
+        expectations: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.expectations, Unset):
+            expectations = self.expectations.to_dict()
 
         expectation_samples: list[dict[str, Any]] | Unset = UNSET
         if not isinstance(self.expectation_samples, Unset):
@@ -192,6 +215,8 @@ class CreateEmailRuleResult:
             affects = self.affects.to_dict()
 
         notice = self.notice
+
+        share_notice = self.share_notice
 
 
         field_dict: dict[str, Any] = {}
@@ -219,8 +244,14 @@ class CreateEmailRuleResult:
             field_dict["revision"] = revision
         if author is not UNSET:
             field_dict["author"] = author
+        if pending_objections is not UNSET:
+            field_dict["pending_objections"] = pending_objections
+        if objection_notice is not UNSET:
+            field_dict["objection_notice"] = objection_notice
         if scope_warnings is not UNSET:
             field_dict["scope_warnings"] = scope_warnings
+        if expectations is not UNSET:
+            field_dict["expectations"] = expectations
         if expectation_samples is not UNSET:
             field_dict["expectation_samples"] = expectation_samples
         if expectations_check is not UNSET:
@@ -231,6 +262,8 @@ class CreateEmailRuleResult:
             field_dict["affects"] = affects
         if notice is not UNSET:
             field_dict["notice"] = notice
+        if share_notice is not UNSET:
+            field_dict["share_notice"] = share_notice
 
         return field_dict
 
@@ -239,6 +272,7 @@ class CreateEmailRuleResult:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.create_email_rule_result_affects import CreateEmailRuleResultAffects # noqa: PLC0415
+        from ..models.create_email_rule_result_expectations import CreateEmailRuleResultExpectations # noqa: PLC0415
         from ..models.create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck # noqa: PLC0415
         from ..models.create_email_rule_result_restored_from import CreateEmailRuleResultRestoredFrom # noqa: PLC0415
         from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
@@ -356,6 +390,10 @@ class CreateEmailRuleResult:
 
 
 
+        pending_objections = d.pop("pending_objections", UNSET)
+
+        objection_notice = d.pop("objection_notice", UNSET)
+
         _scope_warnings = d.pop("scope_warnings", UNSET)
         scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
         if _scope_warnings is not UNSET:
@@ -366,6 +404,16 @@ class CreateEmailRuleResult:
 
 
                 scope_warnings.append(scope_warnings_item)
+
+
+        _expectations = d.pop("expectations", UNSET)
+        expectations: CreateEmailRuleResultExpectations | Unset
+        if isinstance(_expectations,  Unset):
+            expectations = UNSET
+        else:
+            expectations = CreateEmailRuleResultExpectations.from_dict(_expectations)
+
+
 
 
         _expectation_samples = d.pop("expectation_samples", UNSET)
@@ -412,6 +460,8 @@ class CreateEmailRuleResult:
 
         notice = d.pop("notice", UNSET)
 
+        share_notice = d.pop("share_notice", UNSET)
+
         create_email_rule_result = cls(
             id=id,
             name=name,
@@ -428,12 +478,16 @@ class CreateEmailRuleResult:
             scope_selection=scope_selection,
             revision=revision,
             author=author,
+            pending_objections=pending_objections,
+            objection_notice=objection_notice,
             scope_warnings=scope_warnings,
+            expectations=expectations,
             expectation_samples=expectation_samples,
             expectations_check=expectations_check,
             restored_from=restored_from,
             affects=affects,
             notice=notice,
+            share_notice=share_notice,
         )
 
 

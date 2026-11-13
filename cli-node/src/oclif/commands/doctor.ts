@@ -544,7 +544,7 @@ export async function checkAskedOfYou(
     const asOf = concerning?.first.as_of;
     return {
       status: "ok",
-      message: `nothing waiting for you; ${asOf ? `coverage notices as of ${minute(asOf)} UTC` : "coverage notices can take a few minutes to appear"}`,
+      message: `nothing waiting for you; ${asOf ? `coverage notices as of ${minute(asOf)} UTC` : "coverage notices can lag"}`,
     };
   }
   const commands = [

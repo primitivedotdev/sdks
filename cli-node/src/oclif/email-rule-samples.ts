@@ -150,6 +150,7 @@ const SAMPLE_EMAIL_KEYS = new Set([
   "subject",
   "text",
   "attachment_types",
+  "attachment_names",
   "automated",
   "from_mailing_list",
   "spam_score",
@@ -190,6 +191,21 @@ function checkSampleEmail(email: Record<string, unknown>, at: string): void {
   list("to", 1);
   list("cc", 0);
   list("attachment_types", 0);
+  list("attachment_names", 0);
+  // The names pair with the types by position, so when both list files they
+  // are one length.
+  const types = email.attachment_types;
+  const names = email.attachment_names;
+  if (
+    Array.isArray(types) &&
+    Array.isArray(names) &&
+    types.length > 0 &&
+    names.length > 0 &&
+    types.length !== names.length
+  )
+    fail(
+      "attachment_names pairs with attachment_types by position, so give the same number of each",
+    );
   if (
     email.subject !== undefined &&
     (typeof email.subject !== "string" ||

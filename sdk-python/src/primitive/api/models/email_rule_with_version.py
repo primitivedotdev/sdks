@@ -51,6 +51,11 @@ class EmailRuleWithVersion:
             scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.
             revision (int | Unset): Moves on by one with every update. Send it as if_revision.
             author (EmailRuleAuthor | Unset):
+            pending_objections (int | Unset): To its author, on the dashboard or the Primitive CLI: objections to it waiting
+                for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time:
+                absent is not 0.
+            objection_notice (str | Unset): With pending_objections above 0: that members asked you to turn it off, and how
+                to answer.
      """
 
     id: UUID
@@ -68,6 +73,8 @@ class EmailRuleWithVersion:
     scope_selection: EmailRuleScopeNames | None | Unset = UNSET
     revision: int | Unset = UNSET
     author: EmailRuleAuthor | Unset = UNSET
+    pending_objections: int | Unset = UNSET
+    objection_notice: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -127,6 +134,10 @@ class EmailRuleWithVersion:
         if not isinstance(self.author, Unset):
             author = self.author.to_dict()
 
+        pending_objections = self.pending_objections
+
+        objection_notice = self.objection_notice
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -153,6 +164,10 @@ class EmailRuleWithVersion:
             field_dict["revision"] = revision
         if author is not UNSET:
             field_dict["author"] = author
+        if pending_objections is not UNSET:
+            field_dict["pending_objections"] = pending_objections
+        if objection_notice is not UNSET:
+            field_dict["objection_notice"] = objection_notice
 
         return field_dict
 
@@ -273,6 +288,10 @@ class EmailRuleWithVersion:
 
 
 
+        pending_objections = d.pop("pending_objections", UNSET)
+
+        objection_notice = d.pop("objection_notice", UNSET)
+
         email_rule_with_version = cls(
             id=id,
             name=name,
@@ -289,6 +308,8 @@ class EmailRuleWithVersion:
             scope_selection=scope_selection,
             revision=revision,
             author=author,
+            pending_objections=pending_objections,
+            objection_notice=objection_notice,
         )
 
 

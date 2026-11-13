@@ -137,6 +137,7 @@ from .cli_user_login_poll_result import CliUserLoginPollResult
 from .cli_user_login_poll_result_auth_method import CliUserLoginPollResultAuthMethod
 from .cli_user_login_poll_result_token_type import CliUserLoginPollResultTokenType
 from .compile_email_rule_request import CompileEmailRuleRequest
+from .compile_email_rule_request_evaluation_scope import CompileEmailRuleRequestEvaluationScope
 from .compile_email_rule_request_kind import CompileEmailRuleRequestKind
 from .compile_email_rule_response_200 import CompileEmailRuleResponse200
 from .compile_email_rule_result import CompileEmailRuleResult
@@ -205,6 +206,7 @@ from .create_email_rule_response_201 import CreateEmailRuleResponse201
 from .create_email_rule_result import CreateEmailRuleResult
 from .create_email_rule_result_affects import CreateEmailRuleResultAffects
 from .create_email_rule_result_evaluation_scope import CreateEmailRuleResultEvaluationScope
+from .create_email_rule_result_expectations import CreateEmailRuleResultExpectations
 from .create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck
 from .create_email_rule_result_kind import CreateEmailRuleResultKind
 from .create_email_rule_result_restored_from import CreateEmailRuleResultRestoredFrom
@@ -355,6 +357,7 @@ from .credentials_update_key_input_grant_type_1_preset import CredentialsUpdateK
 from .credentials_update_key_input_grant_type_1_resources import CredentialsUpdateKeyInputGrantType1Resources
 from .credentials_update_key_result import CredentialsUpdateKeyResult
 from .credentials_update_key_result_address_warnings_item import CredentialsUpdateKeyResultAddressWarningsItem
+from .credentials_update_key_result_rules_added_item import CredentialsUpdateKeyResultRulesAddedItem
 from .credentials_update_key_result_warnings_item import CredentialsUpdateKeyResultWarningsItem
 from .credit_balance import CreditBalance
 from .credit_balance_budget_type_0 import CreditBalanceBudgetType0
@@ -583,6 +586,7 @@ from .email_rule_withheld_by_reason import EmailRuleWithheldByReason
 from .email_rule_written import EmailRuleWritten
 from .email_rule_written_affects import EmailRuleWrittenAffects
 from .email_rule_written_evaluation_scope import EmailRuleWrittenEvaluationScope
+from .email_rule_written_expectations import EmailRuleWrittenExpectations
 from .email_rule_written_expectations_check import EmailRuleWrittenExpectationsCheck
 from .email_rule_written_kind import EmailRuleWrittenKind
 from .email_rule_written_restored_from import EmailRuleWrittenRestoredFrom
@@ -882,6 +886,11 @@ from .get_wake_schedule_response_200 import GetWakeScheduleResponse200
 from .get_webhook_delivery_stats_response_200 import GetWebhookDeliveryStatsResponse200
 from .get_webhook_delivery_stats_result import GetWebhookDeliveryStatsResult
 from .get_webhook_secret_response_200 import GetWebhookSecretResponse200
+from .import_google_mail_message_request import ImportGoogleMailMessageRequest
+from .import_google_mail_message_response_200 import ImportGoogleMailMessageResponse200
+from .import_google_mail_message_result import ImportGoogleMailMessageResult
+from .import_google_mail_message_result_reason import ImportGoogleMailMessageResultReason
+from .import_google_mail_message_result_status import ImportGoogleMailMessageResultStatus
 from .inbox_status import InboxStatus
 from .inbox_status_domain import InboxStatusDomain
 from .inbox_status_domain_status import InboxStatusDomainStatus
@@ -1015,6 +1024,7 @@ from .list_email_rule_share_emails_result_item_sender_member_type_0 import ListE
 from .list_email_rule_shares_box import ListEmailRuleSharesBox
 from .list_email_rule_shares_live import ListEmailRuleSharesLive
 from .list_email_rule_shares_response_200 import ListEmailRuleSharesResponse200
+from .list_email_rule_versions_covering_me_response_200 import ListEmailRuleVersionsCoveringMeResponse200
 from .list_email_rule_versions_response_200 import ListEmailRuleVersionsResponse200
 from .list_email_rules_covering_me_response_200 import ListEmailRulesCoveringMeResponse200
 from .list_email_rules_response_200 import ListEmailRulesResponse200
@@ -1365,6 +1375,9 @@ from .reaffirm_function_runtime_key_result_suspended_by_type_2_type_1 import Rea
 from .reaffirm_function_runtime_key_result_suspended_by_type_3_type_1 import ReaffirmFunctionRuntimeKeyResultSuspendedByType3Type1
 from .recipient_route import RecipientRoute
 from .recipient_route_match_type import RecipientRouteMatchType
+from .reconcile_google_mail_import_request import ReconcileGoogleMailImportRequest
+from .reconcile_google_mail_import_response_200 import ReconcileGoogleMailImportResponse200
+from .reconcile_google_mail_import_result import ReconcileGoogleMailImportResult
 from .redeem_credit_code_input import RedeemCreditCodeInput
 from .redeem_credit_code_response_200 import RedeemCreditCodeResponse200
 from .redeploy_function_response_200 import RedeployFunctionResponse200
@@ -1412,6 +1425,7 @@ from .replay_result import ReplayResult
 from .reply_email import ReplyEmail
 from .reply_input import ReplyInput
 from .reply_input_headers import ReplyInputHeaders
+from .reply_input_unsubscribe import ReplyInputUnsubscribe
 from .reply_to_email_response_200 import ReplyToEmailResponse200
 from .request_function_runtime_key_runner_request import RequestFunctionRuntimeKeyRunnerRequest
 from .request_function_runtime_key_runner_response_200 import RequestFunctionRuntimeKeyRunnerResponse200
@@ -1488,6 +1502,7 @@ from .send_mail_idempotency_replay_key_source import SendMailIdempotencyReplayKe
 from .send_mail_input import SendMailInput
 from .send_mail_input_headers import SendMailInputHeaders
 from .send_mail_input_tags_item import SendMailInputTagsItem
+from .send_mail_input_unsubscribe import SendMailInputUnsubscribe
 from .send_mail_payload_ref import SendMailPayloadRef
 from .send_mail_result import SendMailResult
 from .send_mail_result_dedup_reason_type_1 import SendMailResultDedupReasonType1
@@ -1773,6 +1788,7 @@ from .update_email_rule_response_200 import UpdateEmailRuleResponse200
 from .update_email_rule_result import UpdateEmailRuleResult
 from .update_email_rule_result_affects import UpdateEmailRuleResultAffects
 from .update_email_rule_result_evaluation_scope import UpdateEmailRuleResultEvaluationScope
+from .update_email_rule_result_expectations import UpdateEmailRuleResultExpectations
 from .update_email_rule_result_expectations_check import UpdateEmailRuleResultExpectationsCheck
 from .update_email_rule_result_kind import UpdateEmailRuleResultKind
 from .update_email_rule_result_restored_from import UpdateEmailRuleResultRestoredFrom
@@ -1995,6 +2011,7 @@ __all__ = (
     "CliUserLoginPollResultAuthMethod",
     "CliUserLoginPollResultTokenType",
     "CompileEmailRuleRequest",
+    "CompileEmailRuleRequestEvaluationScope",
     "CompileEmailRuleRequestKind",
     "CompileEmailRuleResponse200",
     "CompileEmailRuleResult",
@@ -2064,6 +2081,7 @@ __all__ = (
     "CreateEmailRuleResult",
     "CreateEmailRuleResultAffects",
     "CreateEmailRuleResultEvaluationScope",
+    "CreateEmailRuleResultExpectations",
     "CreateEmailRuleResultExpectationsCheck",
     "CreateEmailRuleResultKind",
     "CreateEmailRuleResultRestoredFrom",
@@ -2213,6 +2231,7 @@ __all__ = (
     "CredentialsUpdateKeyInputGrantType1Resources",
     "CredentialsUpdateKeyResult",
     "CredentialsUpdateKeyResultAddressWarningsItem",
+    "CredentialsUpdateKeyResultRulesAddedItem",
     "CredentialsUpdateKeyResultWarningsItem",
     "CreditBalance",
     "CreditBalanceBudgetType0",
@@ -2441,6 +2460,7 @@ __all__ = (
     "EmailRuleWritten",
     "EmailRuleWrittenAffects",
     "EmailRuleWrittenEvaluationScope",
+    "EmailRuleWrittenExpectations",
     "EmailRuleWrittenExpectationsCheck",
     "EmailRuleWrittenKind",
     "EmailRuleWrittenRestoredFrom",
@@ -2740,6 +2760,11 @@ __all__ = (
     "GetWebhookDeliveryStatsResponse200",
     "GetWebhookDeliveryStatsResult",
     "GetWebhookSecretResponse200",
+    "ImportGoogleMailMessageRequest",
+    "ImportGoogleMailMessageResponse200",
+    "ImportGoogleMailMessageResult",
+    "ImportGoogleMailMessageResultReason",
+    "ImportGoogleMailMessageResultStatus",
     "InboxStatus",
     "InboxStatusDomain",
     "InboxStatusDomainStatus",
@@ -2875,6 +2900,7 @@ __all__ = (
     "ListEmailRuleSharesLive",
     "ListEmailRuleSharesResponse200",
     "ListEmailRulesResponse200",
+    "ListEmailRuleVersionsCoveringMeResponse200",
     "ListEmailRuleVersionsResponse200",
     "ListEmailsAutomated",
     "ListEmailsAwaiting",
@@ -3223,6 +3249,9 @@ __all__ = (
     "ReaffirmFunctionRuntimeKeyResultSuspendedByType3Type1",
     "RecipientRoute",
     "RecipientRouteMatchType",
+    "ReconcileGoogleMailImportRequest",
+    "ReconcileGoogleMailImportResponse200",
+    "ReconcileGoogleMailImportResult",
     "RedeemCreditCodeInput",
     "RedeemCreditCodeResponse200",
     "RedeployFunctionResponse200",
@@ -3270,6 +3299,7 @@ __all__ = (
     "ReplyEmail",
     "ReplyInput",
     "ReplyInputHeaders",
+    "ReplyInputUnsubscribe",
     "ReplyToEmailResponse200",
     "RequestFunctionRuntimeKeyRunnerRequest",
     "RequestFunctionRuntimeKeyRunnerResponse200",
@@ -3346,6 +3376,7 @@ __all__ = (
     "SendMailInput",
     "SendMailInputHeaders",
     "SendMailInputTagsItem",
+    "SendMailInputUnsubscribe",
     "SendMailPayloadRef",
     "SendMailResult",
     "SendMailResultDedupReasonType1",
@@ -3634,6 +3665,7 @@ __all__ = (
     "UpdateEmailRuleResult",
     "UpdateEmailRuleResultAffects",
     "UpdateEmailRuleResultEvaluationScope",
+    "UpdateEmailRuleResultExpectations",
     "UpdateEmailRuleResultExpectationsCheck",
     "UpdateEmailRuleResultKind",
     "UpdateEmailRuleResultRestoredFrom",

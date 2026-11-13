@@ -405,8 +405,13 @@ function conditionLines(summary: TestEmailRuleResult["summary"]): string[] {
     ? summary.conditions
     : [];
   if (conditions.length === 0) return [];
+  // How many of those decided the conditions held for together, before any
+  // question: an older server sends none.
+  const held = summary?.conditions_held;
+  const together =
+    typeof held === "number" ? `; together they held on ${held}` : "";
   return [
-    `Conditions (${summary?.decided ?? 0} decided):`,
+    `Conditions (${summary?.decided ?? 0} decided${together}):`,
     ...conditions.map(
       (condition) =>
         `  ${condition.index}. ${condition.text}: held on ${condition.held}, failed on ${condition.failed} (the only failure on ${condition.only_failure})`,
@@ -1008,6 +1013,11 @@ export function authorLine(author: unknown): string | undefined {
   return `Author: user ${author.user_id} (name and email not shown to you)`;
 }
 
+/** A note the server wrote on a rule answer, as a line, or undefined. */
+function noteLine(note: unknown): string | undefined {
+  return typeof note === "string" && note.trim() ? note.trim() : undefined;
+}
+
 /** The stderr report of a rule written by create-email-rule or update-email-rule. */
 export function writtenEmailRuleReport(
   data: unknown,
@@ -1038,6 +1048,13 @@ export function writtenEmailRuleReport(
   if (restored) lines.push(restored);
   const reach = affectsLine(rule.affects);
   if (reach) lines.push(reach);
+  // That the write ended the rule's share, and with whom; then, for a version
+  // saved on an active rule keys or webhooks read without a check, what it
+  // changes.
+  for (const note of [rule.share_notice, rule.notice]) {
+    const line = noteLine(note);
+    if (line) lines.push(line);
+  }
   const sentExpectations = sentExpectationsIn(request.body);
   const name = writtenSampleNamer(
     request.body,
@@ -1050,6 +1067,9 @@ export function writtenEmailRuleReport(
     lines.push(
       `Expectations were not checked on this write. Test them with \`primitive email-rules test-email-rule --rule-id ${ruleId}\`.`,
     );
+  // To its author: objections to the rule waiting for an answer.
+  const objections = noteLine(rule.objection_notice);
+  if (objections) lines.push(objections);
   if (request.flags?.[FAIL_ON_EXPECTATIONS_FLAG] !== true) return { lines };
   return {
     lines,
@@ -1139,7 +1159,11 @@ export function deleteEmailRuleReport(
   const ended = Array.isArray(answer.ended_shares)
     ? answer.ended_shares.length
     : 0;
-  if (ended > 0) {
+  // The server's notice says with whom each share was and what ending it
+  // takes away; without one (an older server), the count.
+  const shareNotice = noteLine(answer.share_notice);
+  if (shareNotice) lines.push(shareNotice);
+  else if (ended > 0) {
     lines.push(
       `Ended ${ended === 1 ? "1 share" : `${ended} shares`} of this rule (end_reason rule_deleted). ${ended === 1 ? "It keeps its record" : "Each keeps its record"}.`,
     );
@@ -1220,11 +1244,35 @@ function readAgain(id: string): string {
 }
 
 /**
+ * Who reads an active rule, from a refusal's details.read_by: the server
+ * sends it when it checked the write against the rule's expectations because
+ * API keys or webhooks read the rule, whether or not the write asked.
+ * Undefined without it.
+ */
+function readByText(details: Record<string, unknown>): string | undefined {
+  const readBy = details.read_by;
+  if (!isRecord(readBy)) return undefined;
+  const { keys, webhooks } = readBy;
+  return typeof keys === "number" && typeof webhooks === "number"
+    ? `${plural(keys, "API key", "API keys")} and ${plural(webhooks, "webhook", "webhooks")} read what it grants`
+    : "API keys or webhooks may read what it grants (they could not be counted in time)";
+}
+
+/** How to save a write the default check refused, without the check. */
+function saveUncheckedText(flags?: Record<string, unknown>): string {
+  return flags?.[FAIL_ON_EXPECTATIONS_FLAG] === true
+    ? `send it again without --${FAIL_ON_EXPECTATIONS_FLAG} and with --no-if-expectations-pass`
+    : "send it again with --no-if-expectations-pass";
+}
+
+/**
  * The hint for update-email-rule's refusals: an email_rule_conflict by its
  * details.reason (version_moved, revision_moved, expectations_moved,
- * rule_changed), and the expectations guard's expectations_failed,
- * expectations_undecided, expectations_unreadable and no_expectations.
- * Nothing was saved in any of them.
+ * rule_changed, readers_changed), and the expectations guard's
+ * expectations_failed, expectations_undecided, expectations_unreadable and
+ * no_expectations. The guard runs when the write sends if_expectations_pass,
+ * and by default (details.read_by) when it changes what an active rule that
+ * API keys or webhooks read grants. Nothing was saved in any of them.
  */
 export function updateEmailRuleErrorHint(
   code: string | undefined,
@@ -1236,6 +1284,15 @@ export function updateEmailRuleErrorHint(
   const id = typeof ruleId === "string" && ruleId ? ruleId : "<rule-id>";
   const details = errorDetails(payload);
   const guarded = isRecord(body) && body.if_expectations_pass === true;
+  const readBy = readByText(details);
+  // Why the write was judged: asked for, or by default for a rule that keys
+  // or webhooks read; and, then, how to save it without the check.
+  const judged = readBy
+    ? "was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys or webhooks read it, and nothing was saved"
+    : "was judged against its expectations before saving (if_expectations_pass), and nothing was saved";
+  const unchecked = readBy
+    ? ` The rule is active and ${readBy}; to save the write without the check, ${saveUncheckedText(flags)}.`
+    : "";
   if (code === "email_rule_conflict") {
     switch (details.reason) {
       case "version_moved":
@@ -1255,6 +1312,8 @@ export function updateEmailRuleErrorHint(
         return guarded
           ? `Hint: the rule changed after this write was judged against its expectations and before it was saved, so saving it would have gone unchecked; nothing was saved. ${readAgain(id)}.`
           : `Hint: the rule changed while this write was being saved, so nothing was saved. ${readAgain(id)}.`;
+      case "readers_changed":
+        return "Hint: API keys or webhooks started reading this rule while this write was being saved, and saving it would have changed what they receive without checking it against the rule's expectations, so nothing was saved. Send the write again: it is then checked first.";
       default:
         return undefined;
     }
@@ -1304,7 +1363,7 @@ export function updateEmailRuleErrorHint(
         : samplesMayStay
           ? `${undecided.length > 0 ? ` ${byReason}` : ""} ${UNDECIDED_SAMPLES_NEXT_STEP} ${refusedSampleTest(body, id)}`
           : ` ${byReason}`;
-    return `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved.${which}${next} The command exits ${updateEmailRuleErrorExitCode(payload) ?? EXIT_EXPECTATION_FAILED}.`;
+    return `Hint: the rule, as this write would leave it, ${judged}.${which}${next}${unchecked} The command exits ${updateEmailRuleErrorExitCode(payload) ?? EXIT_EXPECTATION_FAILED}.`;
   }
   if (code === "expectations_unreadable") {
     // Emails the rule cannot read (deleted, or outside its scope or its
@@ -1319,10 +1378,12 @@ export function updateEmailRuleErrorHint(
     const one = unreadable.length === 1;
     const named = unreadable.length > 0 ? `: ${unreadable.join(", ")}` : "";
     const them = one ? "it" : "them";
-    return `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. ${one ? "An expectation names an email" : "Expectations name emails"} this rule cannot read (deleted, or outside its scope or its author's mail)${named}. Sending the write again will not decide ${them}: send --expectations-file without ${them}, or an evaluation_scope that reads ${them}. The command exits ${EXIT_EXPECTATION_FAILED}.`;
+    return `Hint: the rule, as this write would leave it, ${judged}. ${one ? "An expectation names an email" : "Expectations name emails"} this rule cannot read (deleted, or outside its scope or its author's mail)${named}. Sending the write again will not decide ${them}: send --expectations-file without ${them}, or an evaluation_scope that reads ${them}.${unchecked} The command exits ${EXIT_EXPECTATION_FAILED}.`;
   }
   if (code === "no_expectations")
-    return "Hint: nothing was saved. Give the rule expectations with --expectations-file or made-up emails with --expectation-samples-file or --add-expectation-samples-file (in this write or before it), or send the write without if_expectations_pass (--fail-on-expectations or --if-expectations-pass).";
+    return readBy
+      ? `Hint: nothing was saved: this write removes the rule's expectations, and the rule is active and ${readBy}, so a write that changes what it grants is checked against them first. Keep some with --expectations-file, --expectation-samples-file or --add-expectation-samples-file, or, to save the write without the check, ${saveUncheckedText(flags)}.`
+      : "Hint: nothing was saved. Give the rule expectations with --expectations-file or made-up emails with --expectation-samples-file or --add-expectation-samples-file (in this write or before it), or send the write without if_expectations_pass (--fail-on-expectations or --if-expectations-pass).";
   return undefined;
 }
 
@@ -1411,8 +1472,18 @@ function undecidedSamplesMayStay(count: number, reason: string): boolean {
 
 // compile-email-rule
 
+/** Where compile counted breadth, by the evaluation_scope it was sent. */
+const BREADTH_SCOPE: Readonly<Record<string, string>> = {
+  own_mailboxes: "in your own mailboxes",
+  author: "in all the mail you can read",
+  selected: "in the inboxes and domains the selected scope names",
+};
+
 /** The stderr report of compile-email-rule: how many recent emails it holds for. */
-export function compileEmailRuleReport(data: unknown): OperationReport {
+export function compileEmailRuleReport(
+  data: unknown,
+  request?: { body?: unknown },
+): OperationReport {
   if (!isRecord(data)) return { lines: [] };
   const lines = (Array.isArray(data.warnings) ? data.warnings : [])
     .filter(
@@ -1421,13 +1492,22 @@ export function compileEmailRuleReport(data: unknown): OperationReport {
     )
     .map((warning) => `Warning: ${warning.trim()}`);
   const breadth = data.breadth;
+  // Counted over the evaluation_scope sent, by default your own mailboxes.
+  const sent =
+    isRecord(request?.body) && typeof request.body.evaluation_scope === "string"
+      ? request.body.evaluation_scope
+      : undefined;
+  const where =
+    sent === undefined
+      ? "in your own mailboxes, the default; pass --evaluation-scope to count over the scope you will save it with"
+      : (BREADTH_SCOPE[sent] ?? `in evaluation_scope ${sent}`);
   if (
     isRecord(breadth) &&
     typeof breadth.checked === "number" &&
     typeof breadth.matched === "number"
   )
     lines.push(
-      `Breadth: its conditions hold for ${breadth.matched} of ${plural(breadth.checked, "recent email", "recent emails")} checked in your own mailboxes, whatever scope you save it with.`,
+      `Breadth: its conditions hold for ${breadth.matched} of ${plural(breadth.checked, "recent email", "recent emails")} checked ${where}.`,
     );
   return { lines };
 }
@@ -1446,6 +1526,9 @@ export function getEmailRuleReport(data: unknown): OperationReport {
     lines.push(
       `Revision ${data.revision}: pass --if-revision ${data.revision} to update-email-rule so a change made since is never replaced unseen.`,
     );
+  // To its author: objections to the rule waiting for an answer.
+  const objections = noteLine(data.objection_notice);
+  if (objections) lines.push(objections);
   return { lines };
 }
 
@@ -1477,11 +1560,14 @@ const FAIL_ON_EXPECTATIONS_HELP =
 
 /** update-email-rule's --fail-on-expectations: the server refuses the write. */
 const UPDATE_FAIL_ON_EXPECTATIONS_HELP =
-  "Refuse the write unless the rule, as this write would leave it, passes its expectations. It sends if_expectations_pass (over any in --body-file or --raw-body), so the server judges a new version, a restored one, a new scope or turning the rule active before saving, on its emails by id and its made-up emails, and saves nothing when one failed (exit 1), one names an email the rule cannot read (exit 1, since sending again never decides it), one is undecided (exit 3, or 1 when the rule cannot run as its author or a made-up email is undecided for no reason the answer gives) or the rule has none (exit 1). It can take as long as a test of the rule; the command waits for it. Judging needs a credential that reads the mail's content. A write the server does not judge (one changing only expectations, say) is saved, and the exit code then follows the answer's expectations_check, as on create. With --json, a refused write's document holds the API's error alone; a saved write's holds the rule.";
+  "Refuse the write unless the rule, as this write would leave it, passes its expectations. It sends if_expectations_pass (over any in --body-file or --raw-body), so the server judges a new version, a restored one, a new scope or turning the rule active before saving, on its emails by id and its made-up emails, and saves nothing when one failed (exit 1), one names an email the rule cannot read (exit 1, since sending again never decides it), one is undecided (exit 3, or 1 when the rule cannot run as its author or a made-up email is undecided for no reason the answer gives) or the rule has none (exit 1). It can take as long as a test of the rule; the command waits for it. Judging needs a credential that reads the mail's content. A write the server does not judge (one changing only expectations, say) is saved, and the exit code then follows the answer's expectations_check, as on create. Without it, the server still judges, and refuses the same way, a write that saves a version or changes the scope of an active rule that API keys or webhooks read and that has expectations (the refusal's details.read_by counts them), unless --no-if-expectations-pass is sent. With --json, a refused write's document holds the API's error alone; a saved write's holds the rule.";
+
+/** When update-email-rule judges the made-up emails a samples flag sets. */
+const UPDATE_JUDGES_SAMPLES = `The write judges them before saving with --${FAIL_ON_EXPECTATIONS_FLAG}, when it saves a version or turns the rule active, and without it when it saves a version or changes the scope of an active rule that API keys or webhooks read, unless --no-if-expectations-pass is sent.`;
 
 /** What a samples file flag reads. */
 const SAMPLES_FILE_SHAPE =
-  'A JSON file of made-up emails the rule must match or not: an array such as [{"expected": "no_match", "label": "a personal bill", "email": {...}}], with email as test-email-rule-on-sample takes it (text up to 4,000 characters, at most 10 each of to, cc and attachment_types), like the one generate-look-alikes --samples-file writes, or a generate-look-alikes answer saved as it printed it.';
+  'A JSON file of made-up emails the rule must match or not: an array such as [{"expected": "no_match", "label": "a personal bill", "email": {...}}], with email as test-email-rule-on-sample takes it (text up to 4,000 characters, at most 10 each of to, cc, attachment_types and attachment_names), like the one generate-look-alikes --samples-file writes, or a generate-look-alikes answer saved as it printed it.';
 
 const EXPECTATION_FLAG_NOTE =
   "Replaces any expect in --body-file or --raw-body. The answer reports them in expectations (passed, counts, results) and the exit code follows it; see --help-full.";
@@ -1596,11 +1682,11 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
           'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}, replacing its saved expectations; a file holding null removes them. Sets expectations, over any in --body-file or --raw-body; the answer judges them in expectations_check (passed, decided, failed, undecided); the report test-email-rule answers with is named expectations instead.',
       }),
       [SAMPLES_FILE_FLAG]: Flags.string({
-        description: `${SAMPLES_FILE_SHAPE} They replace the rule's saved ones, and a file holding [] removes them. Sets expectation_samples, over any in --body-file or --raw-body. Not with --${ADD_SAMPLES_FILE_FLAG}. The write judges them only with --${FAIL_ON_EXPECTATIONS_FLAG}, and only when it saves a version or turns the rule active.`,
+        description: `${SAMPLES_FILE_SHAPE} They replace the rule's saved ones, and a file holding [] removes them. Sets expectation_samples, over any in --body-file or --raw-body. Not with --${ADD_SAMPLES_FILE_FLAG}. ${UPDATE_JUDGES_SAMPLES}`,
         exclusive: [ADD_SAMPLES_FILE_FLAG],
       }),
       [ADD_SAMPLES_FILE_FLAG]: Flags.string({
-        description: `${SAMPLES_FILE_SHAPE} They are added to the rule's saved ones, ${SAMPLES_MAX} at most in all. Sets add_expectation_samples, over any in --body-file or --raw-body. Not with --${SAMPLES_FILE_FLAG}. The write judges them only with --${FAIL_ON_EXPECTATIONS_FLAG}, and only when it saves a version or turns the rule active.`,
+        description: `${SAMPLES_FILE_SHAPE} They are added to the rule's saved ones, ${SAMPLES_MAX} at most in all. Sets add_expectation_samples, over any in --body-file or --raw-body. Not with --${SAMPLES_FILE_FLAG}. ${UPDATE_JUDGES_SAMPLES}`,
         exclusive: [SAMPLES_FILE_FLAG],
       }),
       [PICK_FLAG]: Flags.string({
@@ -1656,7 +1742,9 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
     bodyProperties: ["expectation_samples"],
   },
   compileEmailRule: {
-    flags: {},
+    flags: scopeSelectionFlags(),
+    bodyFields: scopeSelectionBodyFields,
+    bodyProperties: ["scope_selection"],
     report: compileEmailRuleReport,
   },
   endEmailRuleShare: {

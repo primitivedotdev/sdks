@@ -24,7 +24,10 @@ vi.mock("node:child_process", async (original) => {
   };
 });
 
-import { OPERATION_EXTENSIONS } from "../../src/oclif/api-command.js";
+import {
+  headerFlagName,
+  OPERATION_EXTENSIONS,
+} from "../../src/oclif/api-command.js";
 import {
   claimAutoRead,
   readWorkingLease,
@@ -564,6 +567,11 @@ function operationArgv(operation: PrimitiveOperationManifest): string[] {
     const flag = `--${parameter.name.replace(/_/g, "-")}`;
     if (parameter.type === "boolean") argv.push(flag);
     else argv.push(flag, placeholderFor(parameter));
+  }
+  // A required request header is a flag too.
+  for (const parameter of operation.headerParams) {
+    if (!parameter.required) continue;
+    argv.push(`--${headerFlagName(parameter.name)}`, placeholderFor(parameter));
   }
   if (operation.hasJsonBody && operation.bodyRequired) {
     argv.push("--raw-body", "{}");

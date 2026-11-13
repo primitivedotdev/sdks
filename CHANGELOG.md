@@ -522,7 +522,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 #### New operations
 
-177 operations, by area:
+180 operations, by area:
 
 - Account: `getOwnGrant`, `getSendFrom` (the addresses a credential may
   send from, and the one a send that names no From should use).
@@ -565,7 +565,14 @@ date-time is kept as null and sorts last. A sync stops with an error after
   writes, carry their `evaluation_scope` and `scope_selection`, and
   `listEmailRuleScopeOptions` says with `may_name_unlisted` whether you may
   name an inbox its list does not show.
-- Emails: `getEmailReadable`.
+- Emails: `getEmailReadable`; `importGoogleMailMessage`, which imports one
+  historical Google Workspace message into the organization's configured
+  mailbox, fetched by the API itself with a transient provider token sent
+  only in the `X-Primitive-Google-Access-Token` header; and
+  `reconcileGoogleMailImport`, which recovers import attempts that expired.
+  Both are for the configured owner only, and importing needs the
+  organization's `email_import` entitlement. `importGoogleMailMessage`
+  takes a credential header and is not a CLI command.
 - Endpoints: `getEndpoint`, `getEndpointSigningSecret`,
   `rotateEndpointSigningSecret`.
 - Functions: `lookupFunction`, `getOrgFunctionUsage`,
@@ -620,14 +627,21 @@ date-time is kept as null and sorts last. A sync stops with an error after
   what it shares, each by its owner and a count, and its live share by the
   member it gives to; null when they could not be read in time. They need
   `mail:read` on a member's own
-  session or the CLI, not narrowed. In the CLI: `email-rule-oversight
-  list-email-rules-covering-me`, `get-email-rule-covering-me` and
-  `list-email-rule-decisions-on-my-mail`.
+  session or the CLI, not narrowed. `listEmailRuleVersionsCoveringMe`
+  (`GET /email-rules/covering-me/{id}/versions`) reads the versions of such
+  a rule that applied to your mail: its current version and each earlier
+  one that decided on mail at your own mailboxes, with the wording, tree,
+  explanation and assumptions the covering view shows. In the CLI:
+  `email-rule-oversight list-email-rules-covering-me`,
+  `get-email-rule-covering-me`, `list-email-rule-decisions-on-my-mail` and
+  `list-email-rule-versions-covering-me`.
   Objections (`/email-rule-objections`, each an `EmailRuleObjection`) ask
   the author of a rule that covers one of your own mailboxes now to turn
   it off: `createEmailRuleObjection` (`rule_id` and an optional `message`),
-  `listEmailRuleObjections` (`box` `outgoing`, the default, `incoming` or
-  `all`; `status` `pending`, the default, `decided` or `any`),
+  `listEmailRuleObjections` (`box` `mine`, the default, objections you made
+  and those to rules you wrote, `outgoing`, `incoming` or `all`, with each
+  objection's `is_objector` and `is_author` saying which side you are on;
+  `status` `pending`, the default, `decided` or `any`),
   `getEmailRuleObjection`, `withdrawEmailRuleObjection` (by the member who
   objected), and `declineEmailRuleObjection` (with an optional `reason`)
   and `acceptEmailRuleObjection` (which turns the rule off, state `draft`)
@@ -730,6 +744,69 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - A rule's `receivers` webhooks carry `hosts`, the distinct sites they
   deliver to (at most 10), and `hosts_not_listed`.
 - New error codes: `chunk_size_mismatch` and `invalid_manifest`.
+- `getEmail` answers `attachments` at the top level: each attachment's
+  metadata (file name, type, size), in the order of `parsed.attachments`,
+  and kept for a credential that reads headers only, where `parsed` is null.
+  It is required on `EmailDetail`, so the Python and Go clients expect it.
+- A made-up email takes `attachment_names`, its attachments' file names,
+  paired with `attachment_types` by position (the same number of each when
+  both list files): in `testEmailRuleOnSample`, in the expectation samples
+  rule writes and tests take and rule reads return, and in
+  `generateLookAlikes`' look-alikes, where it is required.
+- `updateKey` answers `rules_added` when an edit puts rules on a key that
+  reads mail: each rule's `id` and `granted_emails`, how many emails it has
+  already shared, which the key can now read (counted up to 10,000, with
+  `more: true` past that; null when not counted).
+- `testEmailRule`'s `summary` carries `conditions_held`: of the emails
+  decided, how many its conditions alone held for.
+- `compileEmailRule` takes `evaluation_scope` and `scope_selection`, as a
+  test does, and counts `breadth` and `conditions_breadth` over that scope
+  (by default your own mailboxes). Nothing is saved. With `selected` it can
+  answer `409` `email_rule_author_unresolvable`. With no scope sent, a rule
+  that holds only for mail to addresses outside your own mailboxes has
+  `breadth` null, and a warning says so.
+- `listEmailRulesCoveringMe` and `getEmailRuleCoveringMe` carry
+  `receivers_once_active`, required and nullable: for a grant rule in draft
+  or observe, who would receive what it matches once it is turned active.
+  In a rule's `receivers`, each `keys` entry over your mail carries
+  `reads_in_full`, how many of those keys also list one of your own
+  mailboxes or its domain.
+- `createEmailRule` and `updateEmailRule` answer the rule's saved
+  `expectations` (`match` and `no_match`, by email id, as stored): on every
+  create, and on an update that set or removed them.
+- `sendEmail`, `sendMailBatch` and `replyToEmail` take `unsubscribe`: a
+  one-click unsubscribe `url` (https, public host, at most 700 characters),
+  an optional `mailto`, and `one_click` (default true). Primitive writes
+  and DKIM-signs `List-Unsubscribe` and, unless `one_click` is false,
+  `List-Unsubscribe-Post` (RFC 8058). The `headers` map refuses both
+  names, and a repeating send refuses `unsubscribe`.
+- `testEmailRuleOnSample` and `generateLookAlikes` take as `rule_id` a
+  rule that covers your mailboxes, run as you (on the dashboard or the CLI
+  only). `acceptEmailRuleRequest`'s `notice` says first when your changes
+  let the rule match mail the request left out by who it was sent to. A
+  covering rule's `receivers` is also null for a rule shown in draft or
+  observe that turned active or was deleted after the page was read.
+- `listActivityObjects` coverage notices (`email_rule_coverage`) carry
+  `rule_id`, the rule each is about (for a `pending` row, the same as `id`).
+- `createEmailRule` and `updateEmailRule` (`EmailRuleWritten`) and
+  `deleteEmailRule` carry `share_notice` after a write that ended the
+  rule's share: that it did, with whom and the version they accepted, when
+  those can be read.
+- A rule's author, on the dashboard or the CLI, reads `pending_objections`
+  on it (from `listEmailRules`, `getEmailRule` and rule writes), with
+  `objection_notice` while some wait for their answer. A write's answer
+  leaves the count out when it could not be read in time.
+- `downloadDomainZoneFile` takes `inbound_only`: only the inbound MX and
+  ownership TXT records, not with `outbound_only`. Without either, the file
+  has every record.
+- New error codes for mail import: `mail_import_cap_exceeded`,
+  `mail_import_content_mismatch`, `mail_import_deadline`,
+  `mail_import_disabled`, `mail_import_fenced`, `mail_import_forbidden`,
+  `mail_import_invalid_input`, `mail_import_invalid_provider_response`,
+  `mail_import_out_of_window`, `mail_import_policy_mismatch`,
+  `mail_import_provider_auth`, `mail_import_provider_unavailable`,
+  `mail_import_storage_failed`, `mail_import_storage_limit`,
+  `mail_import_too_large` and `mail_import_unavailable`.
 - For a caller who cannot read the webhook, a delivery's `response_body`
   is null, its `last_error` gives the status and a note without quoting
   the webhook's answer, and its `last_error_code` is `handler_4xx` or
@@ -1246,8 +1323,8 @@ parsers.
   version without its leading `v`). It needs no login and does not call
   the API, and it is listed in the root help.
 - `email-rules create-email-rule`, `update-email-rule`, `test-email-rule`,
-  `test-email-rule-on-sample` and `generate-look-alikes` take
-  `--scope-address` and `--scope-domain`, so a selected scope no longer
+  `test-email-rule-on-sample`, `generate-look-alikes` and
+  `compile-email-rule` take `--scope-address` and `--scope-domain`, so a selected scope no longer
   needs `--raw-body`: `--evaluation-scope selected --scope-address
   support@example.com --scope-domain example.org` sends `scope_selection`
   with both lists, and a list not given is sent empty. Repeat a flag or give
@@ -1274,7 +1351,9 @@ parsers.
   cut short (`meta.truncated`). `--json` output is unchanged.
 - Without `--json`, `email-rules compile-email-rule` prints each of the
   compile answer's warnings (such as a sender judged by the classifier
-  alone, or a grant worded as a prohibition) before its breadth, and
+  alone, or a grant worded as a prohibition) before its breadth, which says
+  the scope it was counted over (`--evaluation-scope`, by default your own
+  mailboxes), and
   `create-email-rule`, `update-email-rule`, `get-email-rule` and
   `list-email-rules` print a do-not-share rule's `protection_note` (that it
   protects nothing yet, that a classifier fact narrows it, or that its
@@ -1387,7 +1466,12 @@ parsers.
   `new_version` or `baseline`), when, the rule's name then and its author.
   It takes `--limit`, `--cursor`, `--all` and `--json`. `--json` keeps the
   answer's `pending_complete`, and when that is false the text says the
-  check for rules covering you with no notice yet did not finish.
+  check for rules covering you with no notice yet did not finish. Its
+  `RULE ID` column is each notice's `rule_id`, which
+  `email-rule-oversight get-email-rule-covering-me` and
+  `create-email-rule-objection --rule-id` take, and its help and empty
+  listing, like `primitive doctor`'s "Asked of you" row, say only that
+  notices can lag, naming no interval.
 - When the API lists no address and no domain a credential can send from,
   send's error no longer suggests `--from`, which cannot help then.
 - `primitive activity created` lists what you created, newest first, with
@@ -1572,6 +1656,30 @@ parsers.
   rule's version moved, a hint names its current version, when the answer
   gives one, and says to read the rule again with `primitive email-rules
   get-email-rule <id>` and reapply the change.
+- When `email-rules update-email-rule` is refused after the server checked
+  the write by default, because API keys or webhooks read the active rule
+  (`details.read_by`), the hint says so, counts them, and says how to save
+  the write without the check (`--no-if-expectations-pass`). A `409`
+  `readers_changed` gets a hint too: keys or webhooks started reading the
+  rule while it was saved, and sending the write again checks it first. The
+  help of `--fail-on-expectations` and the samples flags says when the
+  server checks a write without them.
+- Without `--json`, `email-rules create-email-rule` and `update-email-rule`
+  print the answer's `share_notice` (the share a write ended, and with whom)
+  and `notice` (a version saved unchecked on a rule keys or webhooks read),
+  and they and `get-email-rule` print `objection_notice` to the rule's
+  author. `delete-email-rule` prints `share_notice` in place of its count of
+  ended shares, and `test-email-rule` says how many decided emails the
+  conditions held on together (`summary.conditions_held`).
+- Samples files (`--expectation-samples-file`, `--add-expectation-samples-file`,
+  `--expect-samples-file`) take `attachment_names`, as look-alikes now carry
+  them, and refuse a sample whose names and types differ in number when both
+  list files.
+- `domains zone-file` takes `--inbound-only`, the MX and ownership TXT
+  records only, not with `--outbound-only`; `--outbound-only`'s help no
+  longer says verified domains default to it. Without either, the file has
+  every record.
+- `keys update --json` carries the answer's `rules_added`.
 - `primitive emails facts <id>` prints what the classifier read from a
   received email, one fact per line with its value and confidence. With
   `--json` it prints the `classification` object, or null when the email has
@@ -1582,7 +1690,8 @@ parsers.
   routes' refusal.
 - Generated commands for the new operations, except `createKey`, `rotateKey`,
   `updateKey` and `revokeCredential`, which the `primitive keys` commands
-  cover instead.
+  cover instead, and `importGoogleMailMessage`, which takes a credential
+  header.
 - The generated command for `leaveOrganization` is
   `roles-and-members:leave-organization`, following the operation's tag.
   `account:leave-organization` keeps working as an alias.

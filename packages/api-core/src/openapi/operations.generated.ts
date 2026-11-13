@@ -1161,7 +1161,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "state": {
                 "type": "string",
-                "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule began covering your mailbox), new_version, or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed."
+                "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed."
               },
               "created_at": {
                 "type": "string",
@@ -1173,7 +1173,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "null"
                 ],
                 "format": "date-time",
-                "description": "When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null otherwise."
+                "description": "When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null otherwise, as on every coverage notice."
               },
               "owned_now": {
                 "type": "string",
@@ -1210,6 +1210,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "id",
                   "name"
                 ]
+              },
+              "rule_id": {
+                "description": "For email_rule_coverage, always: the rule it is about, since names need not be unique (for pending, the same as id). GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or as it last decided on your mail; otherwise it answers not_found.",
+                "type": "string",
+                "format": "uuid"
               }
             },
             "required": [
@@ -14503,6 +14508,35 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "additionalProperties": {}
           }
         },
+        "rules_added": {
+          "description": "Each rule (or share) the edit put on a key that reads mail, with granted_emails, how many emails it has already shared, which the key can now read while it is active: counted up to 10,000, with more: true past that; null when not counted.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "granted_emails": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "more": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "id",
+              "granted_emails"
+            ],
+            "additionalProperties": {}
+          }
+        },
         "grant_unguarded": {
           "description": "Present, as true, when the grant was changed without expected_grant_ref, so the change was not checked against changes made since the key was read. Send grant.ref from GET /v1/keys/{id} as expected_grant_ref to have such a change refused instead (409 conflict, details.reason grant_changed).",
           "type": "boolean",
@@ -15731,9 +15765,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [
       {
-        "description": "When true, include only outbound DNS records. Verified domains default to outbound-only; pending claims default to all required records.",
+        "description": "When true, include only outbound DNS records. Cannot be combined with inbound_only=true. By default, include all records.",
         "enum": null,
         "name": "outbound_only",
+        "required": false,
+        "type": "boolean"
+      },
+      {
+        "description": "When true, include only inbound MX and ownership TXT records. Cannot be combined with outbound_only=true.",
+        "enum": null,
+        "name": "inbound_only",
         "required": false,
         "type": "boolean"
       }
@@ -16646,10 +16687,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "is_objector": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether you made it, in your current membership."
         },
         "is_author": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether it is to a rule you wrote, in your current membership."
         },
         "message": {
           "description": "Why the objector objects; null when none was given, or once withdrawn.",
@@ -16843,10 +16886,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "is_objector": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether you made it, in your current membership."
         },
         "is_author": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether it is to a rule you wrote, in your current membership."
         },
         "message": {
           "description": "Why the objector objects; null when none was given, or once withdrawn.",
@@ -17040,10 +17085,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "is_objector": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether you made it, in your current membership."
         },
         "is_author": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether it is to a rule you wrote, in your current membership."
         },
         "message": {
           "description": "Why the objector objects; null when none was given, or once withdrawn.",
@@ -17227,7 +17274,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "Null when covers_now is false."
         },
         "receivers": {
-          "description": "Null when covers_now is false (who receives it now is not about your mail), or when it could not be read in time.",
+          "description": "Null when covers_now is false (who receives it now is not about your mail), when it could not be read in time, or for a rule shown in draft or observe that turned active or was deleted after it was read; try again.",
           "anyOf": [
             {
               "type": "object",
@@ -17283,6 +17330,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "count": {
                         "type": "integer",
                         "exclusiveMinimum": 0
+                      },
+                      "reads_in_full": {
+                        "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches.",
+                        "type": "integer",
+                        "minimum": 0
                       }
                     },
                     "required": [
@@ -17345,7 +17397,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                         "exclusiveMinimum": 0
                       },
                       "hosts": {
-                        "description": "Distinct sites they deliver to (a host's registrable domain, or a tunnel, preview or function service alone), sorted, at most 10; \"unknown host\" (last) for any that cannot be named.",
+                        "description": "Distinct sites they deliver to (the domain a host is registered under, an app's own name on a known app platform, or a function URL service in its region), sorted, at most 10; \"unknown host\" (last) for any that cannot be named.",
                         "type": "array",
                         "items": {
                           "type": "string"
@@ -17413,7 +17465,206 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "webhooks",
                 "shares"
               ],
-              "description": "Who receives what the rule shares now, by person and count; empty unless it is an active grant rule."
+              "description": "Who receives what the rule shares, by person and count. As receivers, empty unless it is an active grant rule."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "receivers_once_active": {
+          "description": "As on the list; also null when covers_now is false.",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "keys": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "owner": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "member"
+                              },
+                              "user_id": {
+                                "type": "string",
+                                "description": "The member's user id.",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "description": "Their name; null when they have none set.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "user_id",
+                              "name"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "organization",
+                                "description": "Held by no member: an organization key, or one whose holder has left."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ]
+                          }
+                        ]
+                      },
+                      "count": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "reads_in_full": {
+                        "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches.",
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "owner",
+                      "count"
+                    ]
+                  },
+                  "description": "API keys that work now (not revoked, expired or suspended) and hold mail:read, whose access lists the rule or its live share. Owner: who holds each, or the organization."
+                },
+                "webhooks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "owner": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "member"
+                              },
+                              "user_id": {
+                                "type": "string",
+                                "description": "The member's user id.",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "description": "Their name; null when they have none set.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "user_id",
+                              "name"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "organization",
+                                "description": "Held by no member: an organization key, or one whose holder has left."
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ]
+                          }
+                        ]
+                      },
+                      "count": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "hosts": {
+                        "description": "Distinct sites they deliver to (the domain a host is registered under, an app's own name on a known app platform, or a function URL service in its region), sorted, at most 10; \"unknown host\" (last) for any that cannot be named.",
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "hosts_not_listed": {
+                        "description": "Hosts past those listed.",
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "owner",
+                      "count"
+                    ]
+                  },
+                  "description": "Webhooks taking received mail, bounces or reports that are sent what it matches: those of the key delivery acts as, when it lists the rule or its live share (owner: its holder, or the organization), and those of the member it is shared with (owner: that member)."
+                },
+                "shares": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "beneficiary": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "member"
+                          },
+                          "user_id": {
+                            "type": "string",
+                            "description": "The member's user id.",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "description": "Their name; null when they have none set.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "user_id",
+                          "name"
+                        ]
+                      },
+                      "count": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": [
+                      "beneficiary",
+                      "count"
+                    ]
+                  },
+                  "description": "The rule's live share (at most one), by its member, if they can read it and it is among their newest 20 shares."
+                }
+              },
+              "required": [
+                "keys",
+                "webhooks",
+                "shares"
+              ],
+              "description": "Who receives what the rule shares, by person and count. As receivers, empty unless it is an active grant rule."
             },
             {
               "type": "null"
@@ -17528,6 +17779,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "covers",
         "current_version",
         "receivers",
+        "receivers_once_active",
         "created_at",
         "covers_now",
         "current"
@@ -17656,10 +17908,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "is_objector": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether you made it, in your current membership."
         },
         "is_author": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether it is to a rule you wrote, in your current membership."
         },
         "message": {
           "description": "Why the objector objects; null when none was given, or once withdrawn.",
@@ -17860,7 +18114,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-objections",
-    "description": "Objections you made, objections to rules you wrote, or every objection you can see, newest first. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
+    "description": "Objections you made and objections to rules you wrote (by default), only one of the two, or every objection you can see, newest first. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleObjections",
@@ -17868,9 +18122,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [
       {
-        "default": "outgoing",
-        "description": "outgoing (the default): objections you made. incoming: objections to rules you wrote. all: every objection you can see.",
+        "default": "mine",
+        "description": "mine (the default): objections you made and objections to rules you wrote, each saying which (is_objector, is_author). outgoing: only those you made. incoming: only those to rules you wrote. all: every objection you can see.",
         "enum": [
+          "mine",
           "outgoing",
           "incoming",
           "all"
@@ -18010,10 +18265,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ]
           },
           "is_objector": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether you made it, in your current membership."
           },
           "is_author": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether it is to a rule you wrote, in your current membership."
           },
           "message": {
             "description": "Why the objector objects; null when none was given, or once withdrawn.",
@@ -18065,6 +18322,140 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "listEmailRuleObjections",
     "summary": "List objections",
+    "tag": "Email Rule Oversight",
+    "tagCommand": "email-rule-oversight"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-email-rule-versions-covering-me",
+    "description": "The versions of a rule that covers one of your own mailboxes now that applied to your mail: its current version and each earlier one that decided on mail at your own mailboxes, so a decision can be read in the words of the version that made it. Each has what the covering view shows of a version: its wording, tree, explanation and assumptions. A version that did neither is not listed. Without versions, newest first, a page at a time (meta.cursor); with versions, only those named that are listed, oldest first. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listEmailRuleVersionsCoveringMe",
+    "path": "/email-rules/covering-me/{id}/versions",
+    "pathParams": [
+      {
+        "description": "The rule id.",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [
+      {
+        "description": "Versions per page when versions is not given: 1 to 100, default 50.",
+        "enum": null,
+        "maximum": 100,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "meta.cursor from the preceding page. Omit for the first page. Not with versions.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Read only these version numbers, comma-separated, at most 100. Not with limit or cursor.",
+        "enum": null,
+        "name": "versions",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "headerParams": [],
+    "permissions": [
+      "mail:read"
+    ],
+    "access": null,
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "english": {
+            "type": "string",
+            "description": "What its author asked for, in their words."
+          },
+          "tree": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "number",
+                "const": 1
+              },
+              "vocabulary": {
+                "type": "string",
+                "description": "Vocabulary version, such as v1."
+              },
+              "when": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {},
+                "description": "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
+              },
+              "questions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Yes/no questions asked once the conditions match, over the email's text and attachment names, never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any yes."
+              }
+            },
+            "required": [
+              "version",
+              "vocabulary",
+              "when",
+              "questions"
+            ]
+          },
+          "explanation": {
+            "type": "string",
+            "description": "What the rule matches, as compiled."
+          },
+          "assumptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "compiled_by": {
+            "type": "string"
+          },
+          "vocabulary": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "version",
+          "english",
+          "tree",
+          "explanation",
+          "assumptions",
+          "compiled_by",
+          "vocabulary",
+          "created_at"
+        ]
+      }
+    },
+    "sdkName": "listEmailRuleVersionsCoveringMe",
+    "summary": "Read versions of a rule over your mail",
     "tag": "Email Rule Oversight",
     "tagCommand": "email-rule-oversight"
   },
@@ -18197,7 +18588,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "exclusiveMinimum": 0
           },
           "receivers": {
-            "description": "Null when it could not be read in time; try again.",
+            "description": "Null when it could not be read in time, or for a rule shown in draft or observe that turned active or was deleted after the page was read; try again.",
             "anyOf": [
               {
                 "type": "object",
@@ -18253,6 +18644,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                         "count": {
                           "type": "integer",
                           "exclusiveMinimum": 0
+                        },
+                        "reads_in_full": {
+                          "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches.",
+                          "type": "integer",
+                          "minimum": 0
                         }
                       },
                       "required": [
@@ -18315,7 +18711,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                           "exclusiveMinimum": 0
                         },
                         "hosts": {
-                          "description": "Distinct sites they deliver to (a host's registrable domain, or a tunnel, preview or function service alone), sorted, at most 10; \"unknown host\" (last) for any that cannot be named.",
+                          "description": "Distinct sites they deliver to (the domain a host is registered under, an app's own name on a known app platform, or a function URL service in its region), sorted, at most 10; \"unknown host\" (last) for any that cannot be named.",
                           "type": "array",
                           "items": {
                             "type": "string"
@@ -18383,7 +18779,206 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "webhooks",
                   "shares"
                 ],
-                "description": "Who receives what the rule shares now, by person and count; empty unless it is an active grant rule."
+                "description": "Who receives what the rule shares, by person and count. As receivers, empty unless it is an active grant rule."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "receivers_once_active": {
+            "description": "For a grant rule in draft or observe: who would receive what it matches once it is turned active. None of them receives anything yet. Null for any other rule, and as receivers is null.",
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "keys": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "owner": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "member"
+                                },
+                                "user_id": {
+                                  "type": "string",
+                                  "description": "The member's user id.",
+                                  "format": "uuid"
+                                },
+                                "name": {
+                                  "description": "Their name; null when they have none set.",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "user_id",
+                                "name"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "organization",
+                                  "description": "Held by no member: an organization key, or one whose holder has left."
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ]
+                            }
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "reads_in_full": {
+                          "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches.",
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "owner",
+                        "count"
+                      ]
+                    },
+                    "description": "API keys that work now (not revoked, expired or suspended) and hold mail:read, whose access lists the rule or its live share. Owner: who holds each, or the organization."
+                  },
+                  "webhooks": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "owner": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "member"
+                                },
+                                "user_id": {
+                                  "type": "string",
+                                  "description": "The member's user id.",
+                                  "format": "uuid"
+                                },
+                                "name": {
+                                  "description": "Their name; null when they have none set.",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "user_id",
+                                "name"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "organization",
+                                  "description": "Held by no member: an organization key, or one whose holder has left."
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ]
+                            }
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "hosts": {
+                          "description": "Distinct sites they deliver to (the domain a host is registered under, an app's own name on a known app platform, or a function URL service in its region), sorted, at most 10; \"unknown host\" (last) for any that cannot be named.",
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "hosts_not_listed": {
+                          "description": "Hosts past those listed.",
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "owner",
+                        "count"
+                      ]
+                    },
+                    "description": "Webhooks taking received mail, bounces or reports that are sent what it matches: those of the key delivery acts as, when it lists the rule or its live share (owner: its holder, or the organization), and those of the member it is shared with (owner: that member)."
+                  },
+                  "shares": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "beneficiary": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "member"
+                            },
+                            "user_id": {
+                              "type": "string",
+                              "description": "The member's user id.",
+                              "format": "uuid"
+                            },
+                            "name": {
+                              "description": "Their name; null when they have none set.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "user_id",
+                            "name"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "required": [
+                        "beneficiary",
+                        "count"
+                      ]
+                    },
+                    "description": "The rule's live share (at most one), by its member, if they can read it and it is among their newest 20 shares."
+                  }
+                },
+                "required": [
+                  "keys",
+                  "webhooks",
+                  "shares"
+                ],
+                "description": "Who receives what the rule shares, by person and count. As receivers, empty unless it is an active grant rule."
               },
               {
                 "type": "null"
@@ -18405,6 +19000,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "covers",
           "current_version",
           "receivers",
+          "receivers_once_active",
           "created_at"
         ]
       }
@@ -18540,10 +19136,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "is_objector": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether you made it, in your current membership."
         },
         "is_author": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether it is to a rule you wrote, in your current membership."
         },
         "message": {
           "description": "Why the objector objects; null when none was given, or once withdrawn.",
@@ -18696,7 +19294,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "warnings": {
-          "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).",
+          "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).",
           "maxItems": 10,
           "type": "array",
           "items": {
@@ -18720,7 +19318,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "checked": {
                   "type": "integer",
                   "minimum": 0,
-                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in the scope counted (evaluation_scope as sent; by default your own mailboxes, for a grant rule those you may share), the ones you can still read."
                 },
                 "matched": {
                   "type": "integer",
@@ -18747,7 +19345,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "checked": {
                   "type": "integer",
                   "minimum": 0,
-                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in the scope counted (evaluation_scope as sent; by default your own mailboxes, for a grant rule those you may share), the ones you can still read."
                 },
                 "matched": {
                   "type": "integer",
@@ -18857,6 +19455,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "minLength": 1,
                       "maxLength": 255,
                       "pattern": "^[^\\u0000]*$"
+                    }
+                  },
+                  "attachment_names": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
                     }
                   },
                   "automated": {
@@ -19275,6 +19883,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "type": "boolean",
               "description": "Whether you are its author, in your current membership. Only its author edits it."
             },
+            "pending_objections": {
+              "description": "To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0.",
+              "type": "integer",
+              "minimum": 0
+            },
+            "objection_notice": {
+              "description": "With pending_objections above 0: that members asked you to turn it off, and how to answer.",
+              "type": "string"
+            },
             "created_at": {
               "type": "string",
               "format": "date-time"
@@ -19612,7 +20229,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "notice": {
-          "description": "What is now shared, in words.",
+          "description": "What is now shared, in words. When you changed the rule and it can now match mail the request left out by who it was sent to (such as mail where an address is only copied), that comes first.",
           "type": "string"
         }
       },
@@ -19734,7 +20351,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "compile-email-rule",
-    "description": "Turns a plain-English description of which received emails to match into a rule tree over the column contract, with an explanation of what it matches, the assumptions made, and warnings for what the columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only after the conditions match; they read the subject, the new text and attachment file names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how much of your recent classified mail its conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+    "description": "Turns a plain-English description of which received emails to match into a rule tree over the column contract, with an explanation of what it matches, the assumptions made, and warnings for what the columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only after the conditions match; they read the subject, the new text and attachment file names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how much of the recent classified mail in evaluation_scope (by default your own mailboxes) its conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "compileEmailRule",
@@ -19774,6 +20391,42 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "include_sql": {
           "description": "Also return the SQL the rule renders to. Off by default.",
           "type": "boolean"
+        },
+        "evaluation_scope": {
+          "description": "The scope breadth is counted over, as a test of the tree runs it: send the one you will save the rule with. Nothing is saved. own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.",
+          "type": "string",
+          "enum": [
+            "author",
+            "own_mailboxes",
+            "selected"
+          ]
+        },
+        "scope_selection": {
+          "type": "object",
+          "properties": {
+            "addresses": {
+              "maxItems": 100,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 320,
+                "pattern": "^[^\\s@]+@[^\\s@]+$"
+              }
+            },
+            "domains": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253,
+                "pattern": "^[^\\s@]+\\.[^\\s@]+$"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "description": "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
         }
       },
       "required": [
@@ -19849,7 +20502,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "breadth": {
-          "description": "How many of your recent emails its conditions hold for, counted over your own mailboxes whatever scope you save it with, warning or not. Null when not counted in full: a rule with questions, headers-only access, no test of it possible as you, or a count that failed or ran out of time. Writes ignore it, so a compile answer (without include_sql) can be sent back unchanged.",
+          "description": "How many recent emails its conditions hold for, warning or not, counted over evaluation_scope as sent (by default your own mailboxes, whatever scope you save it with). Null when not counted in full: a rule with questions, headers-only access, no test of it possible as you, a count that failed or ran out of time, or, with no scope sent, a rule that holds only for mail to To or Cc addresses outside your own mailboxes (a warning says so). Writes ignore it, so a compile answer (without include_sql) can be sent back unchanged.",
           "anyOf": [
             {
               "type": "object",
@@ -19857,7 +20510,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "checked": {
                   "type": "integer",
                   "minimum": 0,
-                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in the scope counted (evaluation_scope as sent; by default your own mailboxes, for a grant rule those you may share), the ones you can still read."
                 },
                 "matched": {
                   "type": "integer",
@@ -19884,7 +20537,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "checked": {
                   "type": "integer",
                   "minimum": 0,
-                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in the scope counted (evaluation_scope as sent; by default your own mailboxes, for a grant rule those you may share), the ones you can still read."
                 },
                 "matched": {
                   "type": "integer",
@@ -20133,6 +20786,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "pattern": "^[^\\u0000]*$"
                     }
                   },
+                  "attachment_names": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
+                    }
+                  },
                   "automated": {
                     "type": "boolean"
                   },
@@ -20224,7 +20887,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "warnings": {
-          "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).",
+          "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).",
           "maxItems": 10,
           "type": "array",
           "items": {
@@ -20248,7 +20911,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "checked": {
                   "type": "integer",
                   "minimum": 0,
-                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in the scope counted (evaluation_scope as sent; by default your own mailboxes, for a grant rule those you may share), the ones you can still read."
                 },
                 "matched": {
                   "type": "integer",
@@ -20275,7 +20938,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "checked": {
                   "type": "integer",
                   "minimum": 0,
-                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in the scope counted (evaluation_scope as sent; by default your own mailboxes, for a grant rule those you may share), the ones you can still read."
                 },
                 "matched": {
                   "type": "integer",
@@ -20416,6 +21079,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "is_author": {
           "type": "boolean",
           "description": "Whether you are its author, in your current membership. Only its author edits it."
+        },
+        "pending_objections": {
+          "description": "To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "objection_notice": {
+          "description": "With pending_objections above 0: that members asked you to turn it off, and how to answer.",
+          "type": "string"
         },
         "created_at": {
           "type": "string",
@@ -20572,6 +21244,30 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ]
           }
         },
+        "expectations": {
+          "description": "Its saved expectations, each list by email id, as stored: on every create, and on an update that set or removed them.",
+          "type": "object",
+          "properties": {
+            "match": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "no_match": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "required": [
+            "match",
+            "no_match"
+          ]
+        },
         "expectation_samples": {
           "description": "Its saved made-up emails, when this write set or added some.",
           "type": "array",
@@ -20657,6 +21353,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "minLength": 1,
                       "maxLength": 255,
                       "pattern": "^[^\\u0000]*$"
+                    }
+                  },
+                  "attachment_names": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
                     }
                   },
                   "automated": {
@@ -20799,6 +21505,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "notice": {
           "description": "After a write that saved a version of an active rule keys or webhooks read without checking it first: what it changes, and how to have the next one checked.",
           "type": "string"
+        },
+        "share_notice": {
+          "description": "After a write that ended the rule's share: that it did, given even when affects is not, with whom it was with and the version they accepted when those can be read.",
+          "type": "string"
         }
       },
       "required": [
@@ -20929,7 +21639,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "warnings": {
-          "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).",
+          "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).",
           "maxItems": 10,
           "type": "array",
           "items": {
@@ -20953,7 +21663,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "checked": {
                   "type": "integer",
                   "minimum": 0,
-                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in the scope counted (evaluation_scope as sent; by default your own mailboxes, for a grant rule those you may share), the ones you can still read."
                 },
                 "matched": {
                   "type": "integer",
@@ -20980,7 +21690,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "checked": {
                   "type": "integer",
                   "minimum": 0,
-                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in the scope counted (evaluation_scope as sent; by default your own mailboxes, for a grant rule those you may share), the ones you can still read."
                 },
                 "matched": {
                   "type": "integer",
@@ -21606,7 +22316,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "delete-email-rule",
-    "description": "Deletes a rule with its versions, its decisions and the access it granted. A share of it ends (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out when they could not be read). The author or a reader of all the organization's mail may delete it; while it is shared, only the author or someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+    "description": "Deletes a rule with its versions, its decisions and the access it granted. A share of it ends (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer lists the shares it ended (ended_shares), says whom with (share_notice), and lists the unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out when they could not be read). The author or a reader of all the organization's mail may delete it; while it is shared, only the author or someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "DELETE",
     "operationId": "deleteEmailRule",
@@ -21671,6 +22381,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "other_keys": {
           "description": "How many more keys, not revoked, list the rule that you may not read. They are not named.",
           "type": "integer"
+        },
+        "share_notice": {
+          "description": "When the delete ended a share: that it did, with whom it was with and the version they accepted when those can be read.",
+          "type": "string"
         }
       },
       "required": [
@@ -21873,7 +22587,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
         },
         "rule_id": {
-          "description": "A saved rule you can see: its current version and words.",
+          "description": "A saved rule you can see, or one that covers your mailboxes (as you, sent to one of them; dashboard or Primitive CLI only): its current version and words.",
           "type": "string",
           "format": "uuid"
         },
@@ -22032,6 +22746,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "type": "string"
                     }
                   },
+                  "attachment_names": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
                   "automated": {
                     "type": "boolean"
                   },
@@ -22046,6 +22766,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "subject",
                   "text",
                   "attachment_types",
+                  "attachment_names",
                   "automated",
                   "from_mailing_list"
                 ],
@@ -22309,6 +23030,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "boolean",
           "description": "Whether you are its author, in your current membership. Only its author edits it."
         },
+        "pending_objections": {
+          "description": "To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "objection_notice": {
+          "description": "With pending_objections above 0: that members asked you to turn it off, and how to answer.",
+          "type": "string"
+        },
         "created_at": {
           "type": "string",
           "format": "date-time"
@@ -22536,6 +23266,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "minLength": 1,
                       "maxLength": 255,
                       "pattern": "^[^\\u0000]*$"
+                    }
+                  },
+                  "attachment_names": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
                     }
                   },
                   "automated": {
@@ -24358,6 +25098,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                             "count": {
                               "type": "integer",
                               "exclusiveMinimum": 0
+                            },
+                            "reads_in_full": {
+                              "description": "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches.",
+                              "type": "integer",
+                              "minimum": 0
                             }
                           },
                           "required": [
@@ -24420,7 +25165,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                               "exclusiveMinimum": 0
                             },
                             "hosts": {
-                              "description": "Distinct sites they deliver to (a host's registrable domain, or a tunnel, preview or function service alone), sorted, at most 10; \"unknown host\" (last) for any that cannot be named.",
+                              "description": "Distinct sites they deliver to (the domain a host is registered under, an app's own name on a known app platform, or a function URL service in its region), sorted, at most 10; \"unknown host\" (last) for any that cannot be named.",
                               "type": "array",
                               "items": {
                                 "type": "string"
@@ -24488,7 +25233,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "webhooks",
                       "shares"
                     ],
-                    "description": "Who receives what the rule shares now, by person and count; empty unless it is an active grant rule."
+                    "description": "Who receives what the rule shares, by person and count. As receivers, empty unless it is an active grant rule."
                   },
                   {
                     "type": "null"
@@ -25828,6 +26573,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "type": "boolean",
             "description": "Whether you are its author, in your current membership. Only its author edits it."
           },
+          "pending_objections": {
+            "description": "To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0.",
+            "type": "integer",
+            "minimum": 0
+          },
+          "objection_notice": {
+            "description": "With pending_objections above 0: that members asked you to turn it off, and how to answer.",
+            "type": "string"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -26342,6 +27096,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                           "pattern": "^[^\\u0000]*$"
                         }
                       },
+                      "attachment_names": {
+                        "maxItems": 10,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
+                        }
+                      },
                       "automated": {
                         "type": "boolean"
                       },
@@ -26742,6 +27506,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "minimum": 0,
               "description": "Emails decided on their conditions: matched, near_miss and no_match, less any missing a fact the rule reads."
             },
+            "conditions_held": {
+              "description": "Of decided, how many its conditions alone held for. Compile's breadth and conditions_breadth count this over recent mail in the scope sent to it, by default your own; here it is counted over the emails this test decided.",
+              "type": "integer",
+              "minimum": 0
+            },
             "conditions": {
               "type": "array",
               "items": {
@@ -26813,7 +27582,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "items": {
                 "type": "string"
               },
-              "description": "What to look at first, such as what stopped every email when nothing matched."
+              "description": "What to look at first, such as what stopped every email when nothing matched. On a test of the recent window, a grant rule whose conditions held for more than 20% of at least 20 emails checked (at least 90% if it has no questions), or for every one of fewer, gets a warning saying so, before those about what it decided."
             }
           },
           "required": [
@@ -27051,7 +27820,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "test-email-rule-on-sample",
-    "description": "Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text, attachment types; optionally automated, from a mailing list, and a spam score), classified and decided as received mail would be. A rule reading a spam score you gave none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+    "description": "Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text, attachment types and file names; optionally automated, from a mailing list, and a spam score), classified and decided as received mail would be. A rule reading a spam score you gave none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "testEmailRuleOnSample",
@@ -27145,7 +27914,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
         },
         "rule_id": {
-          "description": "A saved rule you can see. Its current version is tested.",
+          "description": "A saved rule you can see, or one that covers your mailboxes (as you; dashboard or Primitive CLI only). Its current version is tested.",
           "type": "string",
           "format": "uuid"
         },
@@ -27219,6 +27988,17 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 255
+              }
+            },
+            "attachment_names": {
+              "description": "File names of those attachments, which the classifier and the questions read. With attachment_types, the same number, paired in order.",
+              "maxItems": 20,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
               }
             },
             "automated": {
@@ -27586,7 +28366,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "warnings": {
-          "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).",
+          "description": "The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).",
           "maxItems": 10,
           "type": "array",
           "items": {
@@ -27610,7 +28390,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "checked": {
                   "type": "integer",
                   "minimum": 0,
-                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in the scope counted (evaluation_scope as sent; by default your own mailboxes, for a grant rule those you may share), the ones you can still read."
                 },
                 "matched": {
                   "type": "integer",
@@ -27637,7 +28417,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "checked": {
                   "type": "integer",
                   "minimum": 0,
-                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in the scope counted (evaluation_scope as sent; by default your own mailboxes, for a grant rule those you may share), the ones you can still read."
                 },
                 "matched": {
                   "type": "integer",
@@ -27820,6 +28600,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "pattern": "^[^\\u0000]*$"
                     }
                   },
+                  "attachment_names": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
+                    }
+                  },
                   "automated": {
                     "type": "boolean"
                   },
@@ -27942,6 +28732,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "minLength": 1,
                       "maxLength": 255,
                       "pattern": "^[^\\u0000]*$"
+                    }
+                  },
+                  "attachment_names": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
                     }
                   },
                   "automated": {
@@ -28113,6 +28913,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "boolean",
           "description": "Whether you are its author, in your current membership. Only its author edits it."
         },
+        "pending_objections": {
+          "description": "To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "objection_notice": {
+          "description": "With pending_objections above 0: that members asked you to turn it off, and how to answer.",
+          "type": "string"
+        },
         "created_at": {
           "type": "string",
           "format": "date-time"
@@ -28268,6 +29077,30 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ]
           }
         },
+        "expectations": {
+          "description": "Its saved expectations, each list by email id, as stored: on every create, and on an update that set or removed them.",
+          "type": "object",
+          "properties": {
+            "match": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "no_match": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "required": [
+            "match",
+            "no_match"
+          ]
+        },
         "expectation_samples": {
           "description": "Its saved made-up emails, when this write set or added some.",
           "type": "array",
@@ -28353,6 +29186,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "minLength": 1,
                       "maxLength": 255,
                       "pattern": "^[^\\u0000]*$"
+                    }
+                  },
+                  "attachment_names": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
                     }
                   },
                   "automated": {
@@ -28494,6 +29337,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "notice": {
           "description": "After a write that saved a version of an active rule keys or webhooks read without checking it first: what it changes, and how to have the next one checked.",
+          "type": "string"
+        },
+        "share_notice": {
+          "description": "After a write that ended the rule's share: that it did, given even when affects is not, with whom it was with and the version they accepted when those can be read.",
           "type": "string"
         }
       },
@@ -30707,6 +31554,48 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           }
         },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "Metadata for one attachment. The bytes are not inline; download\nall attachments for a message as a gzipped tarball via\n`/emails/{id}/attachments.tar.gz`. `sha256` lets you verify a\nspecific part after extraction.\n",
+            "properties": {
+              "filename": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "content_type": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "size_bytes": {
+                "type": "integer"
+              },
+              "sha256": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "part_index": {
+                "type": "integer",
+                "description": "Zero-based index of this part within the message."
+              },
+              "tar_path": {
+                "type": "string",
+                "description": "This part's file name inside the message's attachments archive. Absent on attachments stored before it was recorded."
+              }
+            },
+            "required": [
+              "size_bytes"
+            ]
+          },
+          "description": "Attachment metadata (file name, type, size), the same items in the same order as `parsed.attachments`. Kept for a credential that reads headers only, where `parsed` is null. Empty when the email has none, its content is withheld (read `status` and `rejection_reason`), or it is not parsed yet or its parse failed (read `parse_status`). No bytes; download a part with `/emails/{id}/attachments/{part_index}`."
+        },
         "imported": {
           "type": [
             "object",
@@ -30777,6 +31666,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "from_verified",
         "from_header_email",
         "from_name",
+        "attachments",
         "imported",
         "snippet"
       ]
@@ -31080,6 +31970,118 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "getEmailReadable",
     "summary": "Read what an inbound email says",
+    "tag": "Emails",
+    "tagCommand": "emails"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "import-google-mail-message",
+    "description": "Requires the organization email_import entitlement, granted by staff. Only the configured current owner, using a full personal session or verified first-party CLI, may import into the configured primary mailbox. Primitive verifies the transient provider token and fetches RAW content itself. No raw uploads or client provenance are accepted. Sent, draft, spam and trash messages are skipped. Historical mail appears in normal history without live delivery effects. An indeterminate response requires retrying the same provider ID. User provider credentials are never stored or queued.",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "importGoogleMailMessage",
+    "path": "/mail-imports/google/messages",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [
+      {
+        "description": "Transient provider user access token. Send only in this redacted header, never in a URL or JSON body. Uses the dedicated configured desktop client and readonly/identity scopes.",
+        "enum": null,
+        "name": "X-Primitive-Google-Access-Token",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.",
+        "enum": null,
+        "name": "Idempotency-Key",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "permissions": [
+      "mail:read"
+    ],
+    "access": null,
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "message_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        }
+      },
+      "required": [
+        "message_id"
+      ],
+      "additionalProperties": false
+    },
+    "responseSchema": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "imported",
+                "already_present"
+              ]
+            },
+            "email_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": [
+            "status",
+            "email_id"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "suppressed",
+                "in_progress",
+                "indeterminate"
+              ]
+            }
+          },
+          "required": [
+            "status"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "const": "skipped"
+            },
+            "reason": {
+              "type": "string",
+              "enum": [
+                "excluded_label",
+                "out_of_window",
+                "too_large",
+                "provider_missing"
+              ]
+            }
+          },
+          "required": [
+            "status",
+            "reason"
+          ]
+        }
+      ]
+    },
+    "sdkName": "importGoogleMailMessage",
+    "summary": "Import one historical Google Workspace message",
     "tag": "Emails",
     "tagCommand": "emails"
   },
@@ -32040,6 +33042,57 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "listEmails",
     "summary": "List inbound emails",
+    "tag": "Emails",
+    "tagCommand": "emails"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "reconcile-google-mail-import",
+    "description": "The same configured owner may recover expired attempts after the email_import entitlement is revoked. Recovery does not require that entitlement. Selects only server-owned manifests for the configured mailbox/account/policy. No provider token, object keys, prefixes or email IDs are accepted. Unsettled uploads remain unresolved and charged; this operation does not promise automatic cleanup after a process dies.",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "reconcileGoogleMailImport",
+    "path": "/mail-imports/google/reconcile",
+    "pathParams": [],
+    "queryParams": [],
+    "headerParams": [
+      {
+        "description": "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.",
+        "enum": null,
+        "name": "Idempotency-Key",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "permissions": [
+      "mail:read"
+    ],
+    "access": null,
+    "requestSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "cleaned": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unresolved": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "cleaned",
+        "unresolved"
+      ]
+    },
+    "sdkName": "reconcileGoogleMailImport",
+    "summary": "Reconcile scoped historical import attempts",
     "tag": "Emails",
     "tagCommand": "emails"
   },
@@ -58752,6 +59805,35 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "boolean",
           "description": "Send an informational message the receiver need not answer or wake for. It is sent as an `ack` signal (status `received`) about the message in `in_reply_to`, whose note is `body_text` (at most 2000 characters, which may be omitted). Receivers see it as `fyi: true`. Plain text only: it cannot be combined with `body_html`, `attachments`, `payload_attachments` or `scheduled_at`, and on `/send-mail` it requires `in_reply_to`."
         },
+        "unsubscribe": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "url"
+          ],
+          "description": "One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the unsubscribe. Every recipient of the message gets the same `url`, so send one message per recipient when the URL identifies who to unsubscribe. The `headers` map refuses both header names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send.",
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 700,
+              "pattern": "^[Hh][Tt][Tt][Pp][Ss]://(?:[A-Za-z0-9\\-._~:/?#\\[\\]@!$&'()*+;=]|%[0-9A-Fa-f]{2})+$",
+              "description": "Absolute https URL that unsubscribes the recipient, at most 700 characters of URL characters only: printable ASCII with no spaces, double quotes, angle brackets or commas (percent-encode a comma as %2C), `%` only as a percent-encoded byte, `[` and `]` only around an IPv6 address host, a port from 1 to 65535, no `=?` (which mail readers can decode as an encoded word), and no user name or password. The host must be public: not a single-label name, `localhost` or a name under `.localhost`, `.internal`, `.local`, `.home.arpa` or `.localdomain`, or a loopback, link-local, private, shared, reserved, multicast or unspecified IP address, including an IPv6 address that embeds one. The scheme is written in lower case."
+            },
+            "one_click": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether to also write `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, which tells the receiver it may unsubscribe with a single POST to `url`. Set false when `url` needs the recipient to open a page and confirm."
+            },
+            "mailto": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 254,
+              "pattern": "^[A-Za-z0-9!$'*+=_~-]+(?:\\.[A-Za-z0-9!$'*+=_~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$",
+              "description": "An address to also offer as a `mailto:` unsubscribe, written after `url`. The address alone, without the `mailto:` prefix: at most 64 letters, digits and `.!$'*+=_~-` before the `@`, and a dotted domain after it. An `=` is written as `%3D` in the header."
+            }
+          }
+        },
         "headers": {
           "type": "object",
           "maxProperties": 25,
@@ -60235,6 +61317,35 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           }
         },
+        "unsubscribe": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "url"
+          ],
+          "description": "One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the unsubscribe. Every recipient of the message gets the same `url`, so send one message per recipient when the URL identifies who to unsubscribe. The `headers` map refuses both header names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send.",
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 700,
+              "pattern": "^[Hh][Tt][Tt][Pp][Ss]://(?:[A-Za-z0-9\\-._~:/?#\\[\\]@!$&'()*+;=]|%[0-9A-Fa-f]{2})+$",
+              "description": "Absolute https URL that unsubscribes the recipient, at most 700 characters of URL characters only: printable ASCII with no spaces, double quotes, angle brackets or commas (percent-encode a comma as %2C), `%` only as a percent-encoded byte, `[` and `]` only around an IPv6 address host, a port from 1 to 65535, no `=?` (which mail readers can decode as an encoded word), and no user name or password. The host must be public: not a single-label name, `localhost` or a name under `.localhost`, `.internal`, `.local`, `.home.arpa` or `.localdomain`, or a loopback, link-local, private, shared, reserved, multicast or unspecified IP address, including an IPv6 address that embeds one. The scheme is written in lower case."
+            },
+            "one_click": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether to also write `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, which tells the receiver it may unsubscribe with a single POST to `url`. Set false when `url` needs the recipient to open a page and confirm."
+            },
+            "mailto": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 254,
+              "pattern": "^[A-Za-z0-9!$'*+=_~-]+(?:\\.[A-Za-z0-9!$'*+=_~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$",
+              "description": "An address to also offer as a `mailto:` unsubscribe, written after `url`. The address alone, without the `mailto:` prefix: at most 64 letters, digits and `.!$'*+=_~-` before the `@`, and a dotted domain after it. An `=` is written as `%3D` in the header."
+            }
+          }
+        },
         "headers": {
           "type": "object",
           "maxProperties": 25,
@@ -60765,6 +61876,35 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "pattern": "^[A-Za-z0-9_-]+$",
                       "description": "ASCII letters, digits, underscores or dashes."
                     }
+                  }
+                }
+              },
+              "unsubscribe": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "url"
+                ],
+                "description": "One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the unsubscribe. Every recipient of the message gets the same `url`, so send one message per recipient when the URL identifies who to unsubscribe. The `headers` map refuses both header names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send.",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 700,
+                    "pattern": "^[Hh][Tt][Tt][Pp][Ss]://(?:[A-Za-z0-9\\-._~:/?#\\[\\]@!$&'()*+;=]|%[0-9A-Fa-f]{2})+$",
+                    "description": "Absolute https URL that unsubscribes the recipient, at most 700 characters of URL characters only: printable ASCII with no spaces, double quotes, angle brackets or commas (percent-encode a comma as %2C), `%` only as a percent-encoded byte, `[` and `]` only around an IPv6 address host, a port from 1 to 65535, no `=?` (which mail readers can decode as an encoded word), and no user name or password. The host must be public: not a single-label name, `localhost` or a name under `.localhost`, `.internal`, `.local`, `.home.arpa` or `.localdomain`, or a loopback, link-local, private, shared, reserved, multicast or unspecified IP address, including an IPv6 address that embeds one. The scheme is written in lower case."
+                  },
+                  "one_click": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether to also write `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, which tells the receiver it may unsubscribe with a single POST to `url`. Set false when `url` needs the recipient to open a page and confirm."
+                  },
+                  "mailto": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 254,
+                    "pattern": "^[A-Za-z0-9!$'*+=_~-]+(?:\\.[A-Za-z0-9!$'*+=_~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$",
+                    "description": "An address to also offer as a `mailto:` unsubscribe, written after `url`. The address alone, without the `mailto:` prefix: at most 64 letters, digits and `.!$'*+=_~-` before the `@`, and a dotted domain after it. An `=` is written as `%3D` in the header."
                   }
                 }
               },

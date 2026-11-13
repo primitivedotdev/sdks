@@ -1047,7 +1047,7 @@ export class KeysUpdateCommand extends Command {
 
   The change runs directly; if your organization requires approval, the command prints the approval link and takes --step-up-token, as for a new key. A key never holds more than you do.
 
-  With --json it prints the key as it is now, in the shape keys get prints, with changed, warnings and address_warnings alongside, notice when its permissions or mail changed, rules_removed when a change took rules off, and rules_not_on_key for rules asked to be taken off that it did not have. A permission or rule change that leaves the grant as it is, with no --name, --expires-at or --no-expiry, sends nothing and prints the key with changed: []. If the key cannot be read back after the change, key_error says why and only the change's fields are printed.`;
+  With --json it prints the key as it is now, in the shape keys get prints, with changed, warnings and address_warnings alongside, notice when its permissions or mail changed, rules_added when a change put rules on it (each with granted_emails, how many emails the rule has already shared), rules_removed when a change took rules off, and rules_not_on_key for rules asked to be taken off that it did not have. A permission or rule change that leaves the grant as it is, with no --name, --expires-at or --no-expiry, sends nothing and prints the key with changed: []. If the key cannot be read back after the change, key_error says why and only the change's fields are printed.`;
 
   static summary = "Change an API key";
 

@@ -33,6 +33,8 @@ class TestEmailRuleOnSampleRequestEmail:
             subject (str | Unset):
             attachment_types (list[str] | Unset): Content types of attachments the email carries, such as application/pdf.
                 No attachment content.
+            attachment_names (list[str] | Unset): File names of those attachments, which the classifier and the questions
+                read. With attachment_types, the same number, paired in order.
             automated (bool | Unset): Whether the email was sent automatically, as its headers would show. Defaults to
                 false.
             from_mailing_list (bool | Unset): Whether the email came from a mailing list, as its headers would show.
@@ -47,6 +49,7 @@ class TestEmailRuleOnSampleRequestEmail:
     cc: list[str] | Unset = UNSET
     subject: str | Unset = UNSET
     attachment_types: list[str] | Unset = UNSET
+    attachment_names: list[str] | Unset = UNSET
     automated: bool | Unset = UNSET
     from_mailing_list: bool | Unset = UNSET
     spam_score: float | Unset = UNSET
@@ -79,6 +82,12 @@ class TestEmailRuleOnSampleRequestEmail:
 
 
 
+        attachment_names: list[str] | Unset = UNSET
+        if not isinstance(self.attachment_names, Unset):
+            attachment_names = self.attachment_names
+
+
+
         automated = self.automated
 
         from_mailing_list = self.from_mailing_list
@@ -99,6 +108,8 @@ class TestEmailRuleOnSampleRequestEmail:
             field_dict["subject"] = subject
         if attachment_types is not UNSET:
             field_dict["attachment_types"] = attachment_types
+        if attachment_names is not UNSET:
+            field_dict["attachment_names"] = attachment_names
         if automated is not UNSET:
             field_dict["automated"] = automated
         if from_mailing_list is not UNSET:
@@ -132,6 +143,9 @@ class TestEmailRuleOnSampleRequestEmail:
         attachment_types = cast(list[str], d.pop("attachment_types", UNSET))
 
 
+        attachment_names = cast(list[str], d.pop("attachment_names", UNSET))
+
+
         automated = d.pop("automated", UNSET)
 
         from_mailing_list = d.pop("from_mailing_list", UNSET)
@@ -145,6 +159,7 @@ class TestEmailRuleOnSampleRequestEmail:
             cc=cc,
             subject=subject,
             attachment_types=attachment_types,
+            attachment_names=attachment_names,
             automated=automated,
             from_mailing_list=from_mailing_list,
             spam_score=spam_score,

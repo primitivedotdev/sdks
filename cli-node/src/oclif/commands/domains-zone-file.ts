@@ -15,11 +15,13 @@ export function zoneFileUrl(
   baseUrl: string,
   domainId: string,
   outboundOnly: boolean,
+  inboundOnly = false,
 ): string {
   const url = new URL(
     `${baseUrl.replace(/\/$/, "")}/domains/${encodeURIComponent(domainId)}/zone-file`,
   );
   if (outboundOnly) url.searchParams.set("outbound_only", "true");
+  if (inboundOnly) url.searchParams.set("inbound_only", "true");
   return url.toString();
 }
 
@@ -75,6 +77,7 @@ class DomainsZoneFileCommand extends Command {
     "<%= config.bin %> domains zone-file --id <domain-id> --output example.com.zone",
     "<%= config.bin %> domains zone-file --domain example.com --output example.com.zone",
     "<%= config.bin %> domains zone-file --id <domain-id> --outbound-only",
+    "<%= config.bin %> domains zone-file --id <domain-id> --inbound-only",
   ];
 
   static flags = {
@@ -104,7 +107,13 @@ class DomainsZoneFileCommand extends Command {
     }),
     "outbound-only": Flags.boolean({
       description:
-        "Include only outbound DNS records. Verified domains default to outbound-only at the API; this flag is explicit for agents and scripts.",
+        "Include only the outbound DNS records. Without it or --inbound-only, the file has every record. Not with --inbound-only.",
+      exclusive: ["inbound-only"],
+    }),
+    "inbound-only": Flags.boolean({
+      description:
+        "Include only the inbound records: MX and the ownership TXT record. Not with --outbound-only.",
+      exclusive: ["outbound-only"],
     }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
@@ -170,6 +179,7 @@ class DomainsZoneFileCommand extends Command {
             requestConfig.resolvedApiBaseUrl,
             domainId,
             flags["outbound-only"],
+            flags["inbound-only"],
           ),
           {
             headers: {

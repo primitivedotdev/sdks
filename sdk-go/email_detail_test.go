@@ -35,6 +35,7 @@ const emailDetailSampleJSON = `{
   "webhook_status": "fired",
   "webhook_attempt_count": 1,
   "imported": null,
+  "attachments": [],
   "webhook_last_attempt_at": null,
   "webhook_last_status_code": 200,
   "webhook_last_error": null,
@@ -349,5 +350,46 @@ func TestEmailDetailImportedRoundTrips(t *testing.T) {
 	if back, ok := again.Imported.Get(); !ok || back.From != got.From || back.Method != got.Method ||
 		back.Verification != got.Verification || !back.At.Equal(got.At) {
 		t.Errorf("imported after round trip: got (%+v, %v), want %+v", back, ok, got)
+	}
+}
+
+func TestEmailDetailAttachmentsRoundTrip(t *testing.T) {
+	const anchor = `"attachments": [],`
+	if !strings.Contains(emailDetailSampleJSON, anchor) {
+		t.Fatalf("sample JSON no longer contains %q", anchor)
+	}
+	withPart := strings.Replace(emailDetailSampleJSON, anchor, `"attachments": [{"filename": "invoice.pdf", "content_type": "application/pdf", "size_bytes": 2048, "sha256": null, "part_index": 0}],`, 1)
+
+	var none primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(emailDetailSampleJSON), &none); err != nil {
+		t.Fatalf("unmarshal with no attachments: %v", err)
+	}
+	if none.Attachments == nil || len(none.Attachments) != 0 {
+		t.Errorf("attachments: got %+v, want an empty list", none.Attachments)
+	}
+
+	var detail primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(withPart), &detail); err != nil {
+		t.Fatalf("unmarshal with an attachment: %v", err)
+	}
+	encoded, err := json.Marshal(&detail)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var again primitiveapi.EmailDetail
+	if err := json.Unmarshal(encoded, &again); err != nil {
+		t.Fatalf("unmarshal re-encoded: %v", err)
+	}
+	for _, got := range []primitiveapi.EmailDetail{detail, again} {
+		if len(got.Attachments) != 1 {
+			t.Fatalf("attachments: got %+v, want one", got.Attachments)
+		}
+		part := got.Attachments[0]
+		name, _ := part.Filename.Get()
+		kind, _ := part.ContentType.Get()
+		index, _ := part.PartIndex.Get()
+		if name != "invoice.pdf" || kind != "application/pdf" || part.SizeBytes != 2048 || index != 0 || !part.SHA256.Null {
+			t.Errorf("attachment: got %+v", part)
+		}
 	}
 }

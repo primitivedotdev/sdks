@@ -371,10 +371,13 @@ func (UnimplementedHandler) CliLogout(ctx context.Context, req OptCliLogoutInput
 // what the columns cannot express. Where the columns fall short it adds up to five yes/no questions,
 // asked only after the conditions match; they read the subject, the new text and attachment file
 // names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts,
-// read only, how much of your recent classified mail its conditions match; for a grant rule with
-// questions, conditions_breadth counts its conditions alone. include_sql returns the SQL it renders
-// to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a
-// member's own full-access credential (no API key, agent key or narrowed token).
+// read only, how much of the recent classified mail in evaluation_scope (by default your own
+// mailboxes) its conditions match; for a grant rule with questions, conditions_breadth counts its
+// conditions alone. include_sql returns the SQL it renders to. kind do_not_share compiles for recall.
+//
+//	Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+//
+// agent key or narrowed token).
 //
 // POST /email-rules/compile
 func (UnimplementedHandler) CompileEmailRule(ctx context.Context, req *CompileEmailRuleRequest, params CompileEmailRuleParams) (r CompileEmailRuleRes, _ error) {
@@ -911,11 +914,12 @@ func (UnimplementedHandler) DeleteEmail(ctx context.Context, params DeleteEmailP
 //
 // Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
 // (end_reason rule_deleted), and the member who shared can still list what it handed over. The
-// answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which
-// now read nothing through it (keys, other_keys; left out when they could not be read). The author
-// or a reader of all the organization's mail may delete it; while it is shared, only the author or
-// someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a
-// member's own full-access credential (no API key, agent key or narrowed token).
+// answer lists the shares it ended (ended_shares), says whom with (share_notice), and lists the
+// unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out
+// when they could not be read). The author or a reader of all the organization's mail may delete it;
+// while it is shared, only the author or someone who manages members from the dashboard. Needs
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token).
 //
 // DELETE /email-rules/{id}
 func (UnimplementedHandler) DeleteEmailRule(ctx context.Context, params DeleteEmailRuleParams) (r DeleteEmailRuleRes, _ error) {
@@ -2286,6 +2290,23 @@ func (UnimplementedHandler) GetWebhookSecret(ctx context.Context) (r GetWebhookS
 	return r, ht.ErrNotImplemented
 }
 
+// ImportGoogleMailMessage implements importGoogleMailMessage operation.
+//
+// Requires the organization email_import entitlement, granted by staff. Only the configured current
+// owner, using a full personal session or verified first-party CLI, may import into the configured
+// primary mailbox. Primitive verifies the transient provider token and fetches RAW content itself.
+// No raw uploads or client provenance are accepted. Sent, draft, spam and trash messages are skipped.
+//
+//	Historical mail appears in normal history without live delivery effects. An indeterminate
+//
+// response requires retrying the same provider ID. User provider credentials are never stored or
+// queued.
+//
+// POST /mail-imports/google/messages
+func (UnimplementedHandler) ImportGoogleMailMessage(ctx context.Context, req *ImportGoogleMailMessageRequest, params ImportGoogleMailMessageParams) (r ImportGoogleMailMessageRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // InstallTemplate implements installTemplate operation.
 //
 // Start a one-shot deploy of an approved deploy-mode Function template. The response returns an
@@ -2675,12 +2696,13 @@ func (UnimplementedHandler) ListEmailRuleDecisionsOnMyMail(ctx context.Context, 
 
 // ListEmailRuleObjections implements listEmailRuleObjections operation.
 //
-// Objections you made, objections to rules you wrote, or every objection you can see, newest first.
-// An objection is seen by the member who made it, the rule's author and the organization's owners
-// and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines
-// it, or the member who made it withdraws it, which clears its message. It never changes after that.
-// Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
-// agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+// Objections you made and objections to rules you wrote (by default), only one of the two, or every
+// objection you can see, newest first. An objection is seen by the member who made it, the rule's
+// author and the organization's owners and admins. It stays pending until the rule's author accepts
+// it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its
+// message. It never changes after that. Needs mail:read, the email rules feature, and a member's own
+// full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+// session or the Primitive CLI.
 //
 // GET /email-rule-objections
 func (UnimplementedHandler) ListEmailRuleObjections(ctx context.Context, params ListEmailRuleObjectionsParams) (r ListEmailRuleObjectionsRes, _ error) {
@@ -2771,6 +2793,22 @@ func (UnimplementedHandler) ListEmailRuleShares(ctx context.Context, params List
 //
 // GET /email-rules/{id}/versions
 func (UnimplementedHandler) ListEmailRuleVersions(ctx context.Context, params ListEmailRuleVersionsParams) (r ListEmailRuleVersionsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListEmailRuleVersionsCoveringMe implements listEmailRuleVersionsCoveringMe operation.
+//
+// The versions of a rule that covers one of your own mailboxes now that applied to your mail: its
+// current version and each earlier one that decided on mail at your own mailboxes, so a decision can
+// be read in the words of the version that made it. Each has what the covering view shows of a
+// version: its wording, tree, explanation and assumptions. A version that did neither is not listed.
+// Without versions, newest first, a page at a time (meta.cursor); with versions, only those named
+// that are listed, oldest first. Needs mail:read, the email rules feature, and a member's own
+// full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+// session or the Primitive CLI.
+//
+// GET /email-rules/covering-me/{id}/versions
+func (UnimplementedHandler) ListEmailRuleVersionsCoveringMe(ctx context.Context, params ListEmailRuleVersionsCoveringMeParams) (r ListEmailRuleVersionsCoveringMeRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -3582,6 +3620,19 @@ func (UnimplementedHandler) PutContactPolicy(ctx context.Context, req PutContact
 //
 // POST /functions/{id}/runtime-key/reaffirm
 func (UnimplementedHandler) ReaffirmFunctionRuntimeKey(ctx context.Context, req OptReaffirmFunctionRuntimeKeyRequest, params ReaffirmFunctionRuntimeKeyParams) (r ReaffirmFunctionRuntimeKeyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ReconcileGoogleMailImport implements reconcileGoogleMailImport operation.
+//
+// The same configured owner may recover expired attempts after the email_import entitlement is
+// revoked. Recovery does not require that entitlement. Selects only server-owned manifests for the
+// configured mailbox/account/policy. No provider token, object keys, prefixes or email IDs are
+// accepted. Unsettled uploads remain unresolved and charged; this operation does not promise
+// automatic cleanup after a process dies.
+//
+// POST /mail-imports/google/reconcile
+func (UnimplementedHandler) ReconcileGoogleMailImport(ctx context.Context, req *ReconcileGoogleMailImportRequest, params ReconcileGoogleMailImportParams) (r ReconcileGoogleMailImportRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -4429,11 +4480,12 @@ func (UnimplementedHandler) TestEmailRule(ctx context.Context, req *TestEmailRul
 // TestEmailRuleOnSample implements testEmailRuleOnSample operation.
 //
 // Reports what a rule would decide for an email you describe (sender, recipients, subject, plain
-// text, attachment types; optionally automated, from a mailing list, and a spam score), classified
-// and decided as received mail would be. A rule reading a spam score you gave none for decides on
-// none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The
-// answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's
-// own full-access credential (no API key, agent key or narrowed token).
+// text, attachment types and file names; optionally automated, from a mailing list, and a spam
+// score), classified and decided as received mail would be. A rule reading a spam score you gave
+// none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule
+// by rule_id. The answer includes what the classifier read. Needs mail:read, the email rules feature,
+//
+//	and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // POST /email-rules/test-sample
 func (UnimplementedHandler) TestEmailRuleOnSample(ctx context.Context, req *TestEmailRuleOnSampleRequest, params TestEmailRuleOnSampleParams) (r TestEmailRuleOnSampleRes, _ error) {
