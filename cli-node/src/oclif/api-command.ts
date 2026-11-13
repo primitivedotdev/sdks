@@ -84,6 +84,10 @@ import {
 } from "./reply-state.js";
 import {
   emptyRuleListHint,
+  isObjectionBoxRefused,
+  OBJECTION_BOX_FALLBACK,
+  OBJECTION_BOX_FLAG,
+  objectionBoxErrorHint,
   ruleListDefaultsNote,
   withDefaultObjectionBox,
 } from "./rule-list-defaults.js";
@@ -217,6 +221,8 @@ export type PathFlagOverride = {
   /** The flag's name, when not the parameter's; the parameter's name stays as an alias. */
   flag?: string;
   description?: string;
+  /** The values it takes, when not the spec's. */
+  options?: readonly string[];
 };
 
 const EMAIL_ID_NOT_SENT =
@@ -237,6 +243,8 @@ export const OPERATION_PATH_FLAGS: Record<
         "The id of the email (from `primitive emails list`), not a rule id: lists what every rule you can see decided about this email, and why a rule did not run. --id is accepted too.",
     },
   },
+  // The CLI's own default box, asked for by name (rule-list-defaults.ts).
+  listEmailRuleObjections: { box: OBJECTION_BOX_FLAG },
   replyToEmail: { id: { flag: "email-id", description: EMAIL_ID_NOT_SENT } },
   signalEmail: { id: { flag: "email-id", description: EMAIL_ID_NOT_SENT } },
   stopRepeatFromEmail: {
@@ -594,7 +602,10 @@ export function flagForParameter(
   }
 
   if (parameter.enum && parameter.enum.length > 0) {
-    return Flags.string({ ...common, options: parameter.enum });
+    return Flags.string({
+      ...common,
+      options: [...(override?.options ?? parameter.enum)],
+    });
   }
 
   return Flags.string(common);
@@ -1557,6 +1568,8 @@ export const OPERATION_ERROR_HINTS: Record<
     updateEndpointRuleRequestHint(code, body, payload),
   updateEmailRule: (code, body, payload, path, flags) =>
     updateEmailRuleErrorHint(code, payload, path?.id, body, flags),
+  listEmailRuleObjections: (_code, _body, payload, _path, flags) =>
+    objectionBoxErrorHint(payload, flags),
   verifyDomain: (code, _body, payload) =>
     code === "dns_verification_failed"
       ? domainVerificationFailedHint(payload)
@@ -1863,7 +1876,10 @@ export function createOperationCommand(
         // What is sent: the query as given, with the objection list's default
         // box asked for by name (rule-list-defaults.ts). `query` stays as
         // given, for the notes that say which defaults applied.
-        const sentQuery = withDefaultObjectionBox(operation.sdkName, query);
+        let sentQuery = withDefaultObjectionBox(operation.sdkName, query);
+        // Set when the server refused that box, so objections you made were
+        // read instead.
+        let objectionBoxRefused = false;
         const callOperation = (
           stepUpToken?: string,
           pageQuery: Record<string, unknown> = sentQuery,
@@ -2004,22 +2020,36 @@ export function createOperationCommand(
               : null;
           if (warning) process.stderr.write(`${warning}\n`);
         }
-        const result = paged
-          ? await callPaged()
-          : takesStepUp(operation)
-            ? await callWithApproval()
-            : ATTACHMENT_WAIT_OPERATIONS.has(operation.sdkName)
-              ? await withAttachmentWait(callOperation, {
-                  wait: parsedFlags.wait !== false,
-                  errorCode: (error) =>
-                    extractErrorCode(extractErrorPayload(error)),
-                  onFirstWait: () => {
-                    process.stderr.write(
-                      `Attachment content is not ready yet; waiting up to ${ATTACHMENT_WAIT_MAX_MS / 1000}s. Pass --no-wait to return immediately.\n`,
-                    );
-                  },
-                })
-              : await callOperation();
+        const send = async () =>
+          paged
+            ? await callPaged()
+            : takesStepUp(operation)
+              ? await callWithApproval()
+              : ATTACHMENT_WAIT_OPERATIONS.has(operation.sdkName)
+                ? await withAttachmentWait(callOperation, {
+                    wait: parsedFlags.wait !== false,
+                    errorCode: (error) =>
+                      extractErrorCode(extractErrorPayload(error)),
+                    onFirstWait: () => {
+                      process.stderr.write(
+                        `Attachment content is not ready yet; waiting up to ${ATTACHMENT_WAIT_MAX_MS / 1000}s. Pass --no-wait to return immediately.\n`,
+                      );
+                    },
+                  })
+                : await callOperation();
+        let result = await send();
+        // A server that predates the objection list's default box refuses
+        // it: read the list once more with objections you made, which such a
+        // server lists by default, and say so in the line below.
+        if (
+          result.error &&
+          sentQuery !== query &&
+          isObjectionBoxRefused(extractErrorPayload(result.error))
+        ) {
+          sentQuery = { ...query, box: OBJECTION_BOX_FALLBACK };
+          objectionBoxRefused = true;
+          result = await send();
+        }
 
         if (result.error) {
           const errorPayload = extractErrorPayload(result.error);
@@ -2203,7 +2233,9 @@ export function createOperationCommand(
           // the grant too, and nor does a page with more to read.
           const tail = query.since !== undefined;
           const more = envelope?.meta?.cursor ?? null;
-          const ruleListHint = emptyRuleListHint(operation.sdkName, query);
+          const ruleListHint = emptyRuleListHint(operation.sdkName, query, {
+            objectionBoxRefused,
+          });
           ruleListHintSaid = ruleListHint !== undefined;
           const hint =
             operation.sdkName === "listEmails"
@@ -2237,7 +2269,9 @@ export function createOperationCommand(
         if (Array.isArray(envelope?.data) && (!jsonOutput || withEnvelope)) {
           const note = ruleListHintSaid
             ? undefined
-            : ruleListDefaultsNote(operation.sdkName, query);
+            : ruleListDefaultsNote(operation.sdkName, query, {
+                objectionBoxRefused,
+              });
           if (note && jsonOutput) summary.push(note);
           else if (note) process.stderr.write(`${note}\n`);
         }

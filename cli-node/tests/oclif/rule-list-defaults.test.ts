@@ -5,7 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COMMANDS } from "../../src/oclif/index.js";
 import {
   emptyRuleListHint,
+  isObjectionBoxRefused,
+  objectionBoxErrorHint,
   ruleListDefaultsNote,
+  withDefaultObjectionBox,
 } from "../../src/oclif/rule-list-defaults.js";
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
@@ -21,6 +24,17 @@ function jsonResponse(status: number, body: unknown): Response {
     status,
   });
 }
+
+/** What a server that predates box=mine answers for it. */
+const boxRefused = () =>
+  jsonResponse(400, {
+    success: false,
+    error: {
+      code: "validation_error",
+      message:
+        'box: Invalid option: expected one of "outgoing"|"incoming"|"all"',
+    },
+  });
 
 const page = (rows: unknown[], cursor: string | null = null) =>
   jsonResponse(200, { success: true, data: rows, meta: { cursor } });
@@ -148,19 +162,37 @@ describe("ruleListDefaultsNote", () => {
     expect(ruleListDefaultsNote("listEmails", {})).toBeUndefined();
   });
 
-  it("says what the objection list's defaults leave out", () => {
+  it("names both sides of the caller's own objections, or what a server that refused that box listed", () => {
     expect(ruleListDefaultsNote("listEmailRuleObjections", {})).toBe(
-      "By default this lists only pending objections you made: add `--box all --status any` to widen it.",
+      "By default this lists only pending objections you made and those to rules you wrote: add `--box all --status any` to widen it.",
     );
     expect(
       ruleListDefaultsNote("listEmailRuleObjections", { status: "any" }),
     ).toBe(
-      "By default this lists only objections you made: add `--box all` to widen it.",
+      "By default this lists only objections you made and those to rules you wrote: add `--box all` to widen it.",
     );
     expect(
       ruleListDefaultsNote("listEmailRuleObjections", { box: "incoming" }),
     ).toBe(
       "By default this lists only pending objections: add `--status any` to widen it.",
+    );
+    expect(
+      ruleListDefaultsNote(
+        "listEmailRuleObjections",
+        {},
+        { objectionBoxRefused: true },
+      ),
+    ).toBe(
+      "By default this server lists only pending objections you made: add `--box incoming` for objections to rules you wrote, or `--box all --status any` for every one you can see.",
+    );
+    expect(
+      ruleListDefaultsNote(
+        "listEmailRuleObjections",
+        { status: "decided" },
+        { objectionBoxRefused: true },
+      ),
+    ).toBe(
+      "By default this server lists only objections you made: add `--box incoming` for objections to rules you wrote, or `--box all` for every one you can see.",
     );
     expect(
       ruleListDefaultsNote("listEmailRuleObjections", {
@@ -172,7 +204,7 @@ describe("ruleListDefaultsNote", () => {
 
   it("puts that nothing matched in front on an empty first page only", () => {
     expect(emptyRuleListHint("listEmailRuleObjections", {})).toBe(
-      "(no results) No objections match. By default this lists only pending objections you made: add `--box all --status any` to widen it.",
+      "(no results) No objections match. By default this lists only pending objections you made and those to rules you wrote: add `--box all --status any` to widen it.",
     );
     expect(
       emptyRuleListHint("listEmailRuleObjections", { cursor: "c" }),
@@ -180,17 +212,149 @@ describe("ruleListDefaultsNote", () => {
   });
 });
 
+describe("the objection list's default box", () => {
+  it("is asked for by name when --box is not given, and never in place of one given", () => {
+    expect(withDefaultObjectionBox("listEmailRuleObjections", {})).toEqual({
+      box: "mine",
+    });
+    expect(
+      withDefaultObjectionBox("listEmailRuleObjections", { box: "outgoing" }),
+    ).toEqual({ box: "outgoing" });
+    const other = { live: "any" };
+    expect(withDefaultObjectionBox("listEmailRuleShares", other)).toBe(other);
+  });
+
+  it("tells an older server's refusal of the value from any other error naming box", () => {
+    const refusal = (message: string, code = "validation_error") => ({
+      error: { code, message },
+    });
+    expect(
+      isObjectionBoxRefused(
+        refusal(
+          'box: Invalid option: expected one of "outgoing"|"incoming"|"all"',
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      isObjectionBoxRefused(refusal("limit: Too big, box: Invalid enum value")),
+    ).toBe(true);
+    expect(
+      isObjectionBoxRefused(refusal("box: mine needs a member credential")),
+    ).toBe(false);
+    expect(
+      isObjectionBoxRefused(
+        refusal("cursor must be a value returned in meta.cursor"),
+      ),
+    ).toBe(false);
+    expect(
+      isObjectionBoxRefused(refusal("box: Invalid option", "forbidden")),
+    ).toBe(false);
+    expect(
+      objectionBoxErrorHint(refusal("box: Invalid option"), { box: "mine" }),
+    ).toContain("--box outgoing");
+    expect(
+      objectionBoxErrorHint(refusal("box: Invalid option"), { box: "all" }),
+    ).toBeUndefined();
+  });
+});
+
 describe("rule lists say what their defaults leave out", () => {
-  it("asks for the objection list's default box by name, and says so above a page that holds some", async () => {
+  it("asks for both sides of the caller's own objections and says so above rows", async () => {
     responder = () => page([objection]);
     const result = await run(OBJECTIONS, []);
     expect(result.exitCode).toBe(0);
     expect(requested.map((url) => url.searchParams.get("box"))).toEqual([
-      "outgoing",
+      "mine",
     ]);
     expect(JSON.parse(result.stdout)).toEqual([objection]);
     expect(result.stderr).toContain(
-      "By default this lists only pending objections you made: add `--box all --status any` to widen it.",
+      "By default this lists only pending objections you made and those to rules you wrote: add `--box all --status any` to widen it.",
+    );
+  });
+
+  it("asks a server that refuses mine for objections you made, once, and says what that listed", async () => {
+    responder = (url) =>
+      url.searchParams.get("box") === "mine" ? boxRefused() : page([]);
+    const result = await run(OBJECTIONS, []);
+    expect(result.exitCode).toBe(0);
+    expect(requested.map((url) => url.searchParams.get("box"))).toEqual([
+      "mine",
+      "outgoing",
+    ]);
+    expect(result.stderr).toContain(
+      "(no results) No objections match. By default this server lists only pending objections you made: add `--box incoming` for objections to rules you wrote",
+    );
+    expect(result.stderr).not.toContain("validation_error");
+  });
+
+  it("keeps --json to one document after that retry, with the line in --envelope's summary", async () => {
+    responder = (url) =>
+      url.searchParams.get("box") === "mine" ? boxRefused() : page([objection]);
+    const bare = await run(OBJECTIONS, ["--json"]);
+    expect(bare.stderr).toBe("");
+    expect(JSON.parse(bare.stdout)).toEqual([objection]);
+    const enveloped = await run(OBJECTIONS, ["--json", "--envelope"]);
+    expect(enveloped.stderr).toBe("");
+    const document = JSON.parse(enveloped.stdout) as Record<string, unknown>;
+    expect(document).toMatchObject({ data: [objection] });
+    expect(document.summary).toMatch(
+      /^By default this server lists only pending objections you made: /,
+    );
+  });
+
+  it("keeps a --cursor and a paged --limit on the retry, and pages it with the box it fell back to", async () => {
+    responder = (url) =>
+      url.searchParams.get("box") === "mine"
+        ? boxRefused()
+        : url.searchParams.get("cursor") === "p2"
+          ? page([objection])
+          : page([objection], "p2");
+    await run(OBJECTIONS, ["--cursor", "p1"]);
+    expect(
+      requested.map((url) => [
+        url.searchParams.get("box"),
+        url.searchParams.get("cursor"),
+      ]),
+    ).toEqual([
+      ["mine", "p1"],
+      ["outgoing", "p1"],
+    ]);
+    requested = [];
+    await run(OBJECTIONS, ["--limit", "150"]);
+    expect(
+      requested.map((url) => [
+        url.searchParams.get("box"),
+        url.searchParams.get("cursor"),
+      ]),
+    ).toEqual([
+      ["mine", null],
+      ["outgoing", null],
+      ["outgoing", "p2"],
+    ]);
+  });
+
+  it("answers a retry that fails again with its own error, after exactly two requests", async () => {
+    responder = (url) =>
+      url.searchParams.get("box") === "mine"
+        ? boxRefused()
+        : jsonResponse(403, {
+            success: false,
+            error: { code: "forbidden", message: "Not for this credential" },
+          });
+    const result = await run(OBJECTIONS, []);
+    expect(result.exitCode).toBe(1);
+    expect(requested).toHaveLength(2);
+    expect(result.stderr).toContain("Not for this credential");
+    expect(result.stderr).not.toContain("Invalid option");
+  });
+
+  it("does not retry a --box the caller gave, and says which boxes a server that refuses mine takes", async () => {
+    responder = boxRefused;
+    const result = await run(OBJECTIONS, ["--box", "mine"]);
+    expect(result.exitCode).toBe(1);
+    expect(requested).toHaveLength(1);
+    expect(result.stderr).toContain(
+      "This server does not take --box mine: use --box outgoing for objections you made, and --box incoming for objections to rules you wrote.",
     );
   });
 
@@ -234,10 +398,12 @@ describe("rule lists say what their defaults leave out", () => {
     expect(document).not.toHaveProperty("warnings");
   });
 
-  it("sends --box as given", async () => {
+  it("sends --box as given, and takes mine by name", async () => {
     await run(OBJECTIONS, ["--box", "incoming"]);
+    await run(OBJECTIONS, ["--box", "mine"]);
     expect(requested.map((url) => url.searchParams.get("box"))).toEqual([
       "incoming",
+      "mine",
     ]);
   });
 
