@@ -6,6 +6,7 @@ import datetime
 # from_known_address, sender_connected_agent_verified, body_text, body_html). A future regen that
 # drops one of these fields would silently break the SDK contract;
 # this test fails loudly when that happens.
+from primitive.api.models.email_attachment import EmailAttachment
 from primitive.api.models.email_detail import EmailDetail
 from primitive.api.models.email_detail_awaiting import EmailDetailAwaiting
 from primitive.api.models.email_detail_imported_type_0 import (
@@ -39,6 +40,7 @@ SAMPLE = {
     "webhook_status": "fired",
     "webhook_attempt_count": 1,
     "imported": None,
+    "attachments": [],
     "webhook_last_attempt_at": None,
     "webhook_last_status_code": 200,
     "webhook_last_error": None,
@@ -287,3 +289,28 @@ def test_email_detail_imported_is_null_for_live_mail_and_round_trips() -> None:
     assert isinstance(again.imported, EmailDetailImportedType0)
     assert again.imported.to_dict() == detail.imported.to_dict()
     assert detail.to_dict()["imported"]["from"] == "google_workspace"
+
+
+def test_email_detail_attachments_are_required_and_round_trip() -> None:
+    none = EmailDetail.from_dict(SAMPLE)
+    assert none.attachments == []
+    assert none.to_dict()["attachments"] == []
+
+    part = {
+        "filename": "invoice.pdf",
+        "content_type": "application/pdf",
+        "size_bytes": 2048,
+        "sha256": None,
+        "part_index": 0,
+    }
+    detail = EmailDetail.from_dict({**SAMPLE, "attachments": [part]})
+    assert len(detail.attachments) == 1
+    attachment = detail.attachments[0]
+    assert isinstance(attachment, EmailAttachment)
+    assert attachment.filename == "invoice.pdf"
+    assert attachment.content_type == "application/pdf"
+    assert attachment.size_bytes == 2048
+    assert attachment.sha256 is None
+    assert attachment.part_index == 0
+    again = EmailDetail.from_dict(detail.to_dict())
+    assert [a.to_dict() for a in again.attachments] == [part]

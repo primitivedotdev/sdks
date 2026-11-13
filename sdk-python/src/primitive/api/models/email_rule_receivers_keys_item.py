@@ -27,10 +27,13 @@ class EmailRuleReceiversKeysItem:
         Attributes:
             owner (EmailRuleReceiversKeysItemOwner):
             count (int):
+            reads_in_full (int | Unset): On a rule over your mail: how many of these keys also list one of your own
+                mailboxes, or its domain, so they read your mail there beyond what this rule matches.
      """
 
     owner: EmailRuleReceiversKeysItemOwner
     count: int
+    reads_in_full: int | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -43,6 +46,8 @@ class EmailRuleReceiversKeysItem:
 
         count = self.count
 
+        reads_in_full = self.reads_in_full
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -50,6 +55,8 @@ class EmailRuleReceiversKeysItem:
             "owner": owner,
             "count": count,
         })
+        if reads_in_full is not UNSET:
+            field_dict["reads_in_full"] = reads_in_full
 
         return field_dict
 
@@ -66,9 +73,12 @@ class EmailRuleReceiversKeysItem:
 
         count = d.pop("count")
 
+        reads_in_full = d.pop("reads_in_full", UNSET)
+
         email_rule_receivers_keys_item = cls(
             owner=owner,
             count=count,
+            reads_in_full=reads_in_full,
         )
 
 

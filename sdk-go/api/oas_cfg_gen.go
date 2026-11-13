@@ -42,6 +42,7 @@ var regexMap = map[string]ogenregex.Regexp{
 	"^[^\\s@]+@[^\\s@]+$":                                ogenregex.MustCompile("^[^\\s@]+@[^\\s@]+$"),
 	"^[^\\s@]+\\.[^\\s@]+$":                              ogenregex.MustCompile("^[^\\s@]+\\.[^\\s@]+$"),
 	"^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029]*$": ogenregex.MustCompile("^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029]*$"),
+	"^[^\\u0000-\\u001f\\u007f]*$":                       ogenregex.MustCompile("^[^\\u0000-\\u001f\\u007f]*$"),
 	"^[^\\u0000]*$":                                      ogenregex.MustCompile("^[^\\u0000]*$"),
 	"^[^\\x00-\\x1F\\x7F]+$":                             ogenregex.MustCompile("^[^\\x00-\\x1F\\x7F]+$"),
 	"^[a-f0-9]{32}$":                                     ogenregex.MustCompile("^[a-f0-9]{32}$"),

@@ -96,11 +96,12 @@ def sync_detailed(
 
      Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
     (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer
-    lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read
-    nothing through it (keys, other_keys; left out when they could not be read). The author or a reader
-    of all the organization's mail may delete it; while it is shared, only the author or someone who
-    manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token).
+    lists the shares it ended (ended_shares), says whom with (share_notice), and lists the unrevoked
+    keys that still list it, which now read nothing through it (keys, other_keys; left out when they
+    could not be read). The author or a reader of all the organization's mail may delete it; while it is
+    shared, only the author or someone who manages members from the dashboard. Needs mail:read, the
+    email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
+    token).
 
     Args:
         id (UUID):
@@ -135,11 +136,12 @@ def sync(
 
      Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
     (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer
-    lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read
-    nothing through it (keys, other_keys; left out when they could not be read). The author or a reader
-    of all the organization's mail may delete it; while it is shared, only the author or someone who
-    manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token).
+    lists the shares it ended (ended_shares), says whom with (share_notice), and lists the unrevoked
+    keys that still list it, which now read nothing through it (keys, other_keys; left out when they
+    could not be read). The author or a reader of all the organization's mail may delete it; while it is
+    shared, only the author or someone who manages members from the dashboard. Needs mail:read, the
+    email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
+    token).
 
     Args:
         id (UUID):
@@ -169,11 +171,12 @@ async def asyncio_detailed(
 
      Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
     (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer
-    lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read
-    nothing through it (keys, other_keys; left out when they could not be read). The author or a reader
-    of all the organization's mail may delete it; while it is shared, only the author or someone who
-    manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token).
+    lists the shares it ended (ended_shares), says whom with (share_notice), and lists the unrevoked
+    keys that still list it, which now read nothing through it (keys, other_keys; left out when they
+    could not be read). The author or a reader of all the organization's mail may delete it; while it is
+    shared, only the author or someone who manages members from the dashboard. Needs mail:read, the
+    email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
+    token).
 
     Args:
         id (UUID):
@@ -208,11 +211,12 @@ async def asyncio(
 
      Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
     (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer
-    lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read
-    nothing through it (keys, other_keys; left out when they could not be read). The author or a reader
-    of all the organization's mail may delete it; while it is shared, only the author or someone who
-    manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token).
+    lists the shares it ended (ended_shares), says whom with (share_notice), and lists the unrevoked
+    keys that still list it, which now read nothing through it (keys, other_keys; left out when they
+    could not be read). The author or a reader of all the organization's mail may delete it; while it is
+    shared, only the author or someone who manages members from the dashboard. Needs mail:read, the
+    email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
+    token).
 
     Args:
         id (UUID):

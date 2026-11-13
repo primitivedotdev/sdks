@@ -42,6 +42,9 @@ class EmailRuleCoveringMe:
             covers (EmailRuleCoverage):
             current_version (int | None):
             receivers (EmailRuleReceivers | None): Null when it could not be read in time; try again.
+            receivers_once_active (EmailRuleReceivers | None): For a grant rule in draft or observe: who would receive what
+                it matches once it is turned active. None of them receives anything yet. Null for any other rule, and when it
+                could not be read in time.
             created_at (datetime.datetime):
      """
 
@@ -54,6 +57,7 @@ class EmailRuleCoveringMe:
     covers: EmailRuleCoverage
     current_version: int | None
     receivers: EmailRuleReceivers | None
+    receivers_once_active: EmailRuleReceivers | None
     created_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -88,6 +92,12 @@ class EmailRuleCoveringMe:
         else:
             receivers = self.receivers
 
+        receivers_once_active: dict[str, Any] | None
+        if isinstance(self.receivers_once_active, EmailRuleReceivers):
+            receivers_once_active = self.receivers_once_active.to_dict()
+        else:
+            receivers_once_active = self.receivers_once_active
+
         created_at = self.created_at.isoformat()
 
 
@@ -103,6 +113,7 @@ class EmailRuleCoveringMe:
             "covers": covers,
             "current_version": current_version,
             "receivers": receivers,
+            "receivers_once_active": receivers_once_active,
             "created_at": created_at,
         })
 
@@ -171,6 +182,24 @@ class EmailRuleCoveringMe:
         receivers = _parse_receivers(d.pop("receivers"))
 
 
+        def _parse_receivers_once_active(data: object) -> EmailRuleReceivers | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                receivers_once_active_type_1 = EmailRuleReceivers.from_dict(data)
+
+
+
+                return receivers_once_active_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleReceivers | None, data)
+
+        receivers_once_active = _parse_receivers_once_active(d.pop("receivers_once_active"))
+
+
         created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
@@ -186,6 +215,7 @@ class EmailRuleCoveringMe:
             covers=covers,
             current_version=current_version,
             receivers=receivers,
+            receivers_once_active=receivers_once_active,
             created_at=created_at,
         )
 

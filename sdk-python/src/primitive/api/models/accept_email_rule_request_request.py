@@ -35,8 +35,8 @@ class AcceptEmailRuleRequestRequest:
                 tree.
             assumptions (list[str] | Unset): The compile response's assumptions. Stored as sent.
             warnings (list[str] | Unset): The compile response's warnings. Stored as sent, then any server note they lack on
-                an address or domain the description names that the rule does not test (on a rule request, every compiler note
-                on the rule).
+                an address or domain the description names that the rule does not test, or on a grant rule that tests only who
+                an email was sent to (on a rule request, every compiler note on the rule).
             compiled_by (str | Unset): Who produced the tree (not verified): the compile response's compiled_by, or member
                 (the default) for a tree you wrote or edited.
             breadth (EmailRuleBreadth | None | Unset): Ignored (the compile answer's breadth).

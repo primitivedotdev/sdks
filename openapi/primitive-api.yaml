@@ -2808,7 +2808,12 @@ paths:
           in: query
           schema:
             type: boolean
-          description: When true, include only outbound DNS records. Verified domains default to outbound-only; pending claims default to all required records.
+          description: When true, include only outbound DNS records. Cannot be combined with inbound_only=true. By default, include all records.
+        - name: inbound_only
+          in: query
+          schema:
+            type: boolean
+          description: When true, include only inbound MX and ownership TXT records. Cannot be combined with outbound_only=true.
       responses:
         "200":
           description: BIND-format zone file
@@ -22978,7 +22983,7 @@ paths:
           description: created (the default), asked or concerning.
           schema:
             default: created
-            description: "created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote; kind may then name only email_rule_request and email_rule_objection. concerning: what other members did that concerns your own mail: a rule that started covering one of your mailboxes, or saved a new version while covering it (email_rule_coverage, the only kind it takes). asked and concerning are for a person's own view only."
+            description: "created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote; kind may then name only email_rule_request and email_rule_objection. concerning: what other members did that concerns your own mail: an active rule that started covering one of your mailboxes, or saved a new version while covering it (email_rule_coverage, the only kind it takes). A rule in draft or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and concerning are for a person's own view only."
             type: string
             enum:
               - created
@@ -23198,7 +23203,7 @@ paths:
     post:
       operationId: compileEmailRule
       summary: Compile a rule description
-      description: Turns a plain-English description of which received emails to match into a rule tree over the column contract, with an explanation of what it matches, the assumptions made, and warnings for what the columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only after the conditions match; they read the subject, the new text and attachment file names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how much of your recent classified mail its conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+      description: Turns a plain-English description of which received emails to match into a rule tree over the column contract, with an explanation of what it matches, the assumptions made, and warnings for what the columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only after the conditions match; they read the subject, the new text and attachment file names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how much of the recent classified mail in evaluation_scope (by default your own mailboxes) its conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -23264,7 +23269,13 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: "email_rule_author_unresolvable: with evaluation_scope selected, you cannot act as a rule's author right now (details.reason left, revoked, suspended, membership_ended or no_mail_read)."
           content:
             application/json:
               schema:
@@ -23566,7 +23577,7 @@ paths:
     post:
       operationId: testEmailRuleOnSample
       summary: Test a rule against a made-up email
-      description: Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text, attachment types; optionally automated, from a mailing list, and a spam score), classified and decided as received mail would be. A rule reading a spam score you gave none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+      description: Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text, attachment types and file names; optionally automated, from a mailing list, and a spam score), classified and decided as received mail would be. A rule reading a spam score you gave none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -24155,7 +24166,7 @@ paths:
     delete:
       operationId: deleteEmailRule
       summary: Delete a rule
-      description: Deletes a rule with its versions, its decisions and the access it granted. A share of it ends (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out when they could not be read). The author or a reader of all the organization's mail may delete it; while it is shared, only the author or someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+      description: Deletes a rule with its versions, its decisions and the access it granted. A share of it ends (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer lists the shares it ended (ended_shares), says whom with (share_notice), and lists the unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out when they could not be read). The author or a reader of all the organization's mail may delete it; while it is shared, only the author or someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -26826,7 +26837,7 @@ paths:
     get:
       operationId: listEmailRuleObjections
       summary: List objections
-      description: Objections you made, objections to rules you wrote, or every objection you can see, newest first. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+      description: Objections you made and objections to rules you wrote (by default), only one of the two, or every objection you can see, newest first. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
       tags:
         - Email Rule Oversight
       security:
@@ -26835,12 +26846,13 @@ paths:
         - name: box
           in: query
           required: false
-          description: "outgoing (the default): objections you made. incoming: objections to rules you wrote. all: every objection you can see."
+          description: "mine (the default): objections you made and objections to rules you wrote, each saying which (is_objector, is_author). outgoing: only those you made. incoming: only those to rules you wrote. all: every objection you can see."
           schema:
-            default: outgoing
-            description: "outgoing: objections you made; incoming: objections to rules you wrote; all: every objection you can see (owners and admins see the organization's)."
+            default: mine
+            description: "mine: objections you made and objections to rules you wrote (is_objector or is_author says which); outgoing: only those you made; incoming: only those to rules you wrote; each in your current membership. all: every objection you can see (owners and admins see the organization's)."
             type: string
             enum:
+              - mine
               - outgoing
               - incoming
               - all
@@ -27744,6 +27756,251 @@ paths:
                   message: Rate limit exceeded
       x-primitive-permission:
         - domains:manage
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it."
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+  /mail-imports/google/messages:
+    post:
+      operationId: importGoogleMailMessage
+      summary: Import one historical Google Workspace message
+      description: Requires the organization email_import entitlement, granted by staff. Only the configured current owner, using a full personal session or verified first-party CLI, may import into the configured primary mailbox. Primitive verifies the transient provider token and fetches RAW content itself. No raw uploads or client provenance are accepted. Sent, draft, spam and trash messages are skipped. Historical mail appears in normal history without live delivery effects. An indeterminate response requires retrying the same provider ID. User provider credentials are never stored or queued.
+      tags:
+        - Emails
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportGoogleMailMessageRequest"
+      responses:
+        "200":
+          description: Import one historical Google Workspace message
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ImportGoogleMailMessageResult"
+          headers:
+            ratelimit-limit:
+              $ref: "#/components/headers/ratelimit-limit"
+            ratelimit-remaining:
+              $ref: "#/components/headers/ratelimit-remaining"
+            ratelimit-reset:
+              $ref: "#/components/headers/ratelimit-reset"
+            ratelimit-policy:
+              $ref: "#/components/headers/ratelimit-policy"
+        "400":
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: validation_error
+                  message: Invalid domain format
+        "401":
+          description: "mail_import_provider_auth: reauthorize the provider."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: "feature_disabled: the organization lacks email_import; or mail_import_forbidden: identity or current access differs."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: "mail_import_cap_exceeded or mail_import_storage_limit: the fixed pilot budget is exhausted."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Mail import input, content, storage or publication fence could not be accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+            ratelimit-limit:
+              $ref: "#/components/headers/ratelimit-limit-429"
+            ratelimit-remaining:
+              $ref: "#/components/headers/ratelimit-remaining-429"
+            ratelimit-reset:
+              $ref: "#/components/headers/ratelimit-reset"
+            ratelimit-policy:
+              $ref: "#/components/headers/ratelimit-policy-429"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: rate_limit_exceeded
+                  message: Rate limit exceeded
+        "502":
+          description: Provider acquisition failed or exceeded its deadline.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: mail_import_disabled or mail_import_unavailable; retry the same ID after resolving the cause.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      parameters:
+        - in: header
+          name: X-Primitive-Google-Access-Token
+          required: true
+          description: Transient provider user access token. Send only in this redacted header, never in a URL or JSON body. Uses the dedicated configured desktop client and readonly/identity scopes.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 8192
+            writeOnly: true
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it."
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+      x-primitive-permission:
+        - mail:read
+  /mail-imports/google/reconcile:
+    post:
+      operationId: reconcileGoogleMailImport
+      summary: Reconcile scoped historical import attempts
+      description: The same configured owner may recover expired attempts after the email_import entitlement is revoked. Recovery does not require that entitlement. Selects only server-owned manifests for the configured mailbox/account/policy. No provider token, object keys, prefixes or email IDs are accepted. Unsettled uploads remain unresolved and charged; this operation does not promise automatic cleanup after a process dies.
+      tags:
+        - Emails
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReconcileGoogleMailImportRequest"
+      responses:
+        "200":
+          description: Reconcile scoped historical import attempts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ReconcileGoogleMailImportResult"
+          headers:
+            ratelimit-limit:
+              $ref: "#/components/headers/ratelimit-limit"
+            ratelimit-remaining:
+              $ref: "#/components/headers/ratelimit-remaining"
+            ratelimit-reset:
+              $ref: "#/components/headers/ratelimit-reset"
+            ratelimit-policy:
+              $ref: "#/components/headers/ratelimit-policy"
+        "400":
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: validation_error
+                  message: Invalid domain format
+        "401":
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: unauthorized
+                  message: Invalid or missing API key
+          headers:
+            ratelimit-limit:
+              $ref: "#/components/headers/ratelimit-limit-unauthenticated"
+            ratelimit-remaining:
+              $ref: "#/components/headers/ratelimit-remaining-unauthenticated"
+            ratelimit-reset:
+              $ref: "#/components/headers/ratelimit-reset-unauthenticated"
+            ratelimit-policy:
+              $ref: "#/components/headers/ratelimit-policy-unauthenticated"
+        "403":
+          description: "mail_import_forbidden: current owner access is required."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+            ratelimit-limit:
+              $ref: "#/components/headers/ratelimit-limit-429"
+            ratelimit-remaining:
+              $ref: "#/components/headers/ratelimit-remaining-429"
+            ratelimit-reset:
+              $ref: "#/components/headers/ratelimit-reset"
+            ratelimit-policy:
+              $ref: "#/components/headers/ratelimit-policy-429"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: rate_limit_exceeded
+                  message: Rate limit exceeded
+        "503":
+          description: "mail_import_disabled: no valid policy is configured; or mail_import_unavailable."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      x-primitive-permission:
+        - mail:read
       parameters:
         - name: Idempotency-Key
           in: header
@@ -42467,6 +42724,22 @@ components:
                 - latest_message_mismatch
                 - latest_message_thread_unresolved
                 - load_test_recipient_not_allowed
+                - mail_import_cap_exceeded
+                - mail_import_content_mismatch
+                - mail_import_deadline
+                - mail_import_disabled
+                - mail_import_fenced
+                - mail_import_forbidden
+                - mail_import_invalid_input
+                - mail_import_invalid_provider_response
+                - mail_import_out_of_window
+                - mail_import_policy_mismatch
+                - mail_import_provider_auth
+                - mail_import_provider_unavailable
+                - mail_import_storage_failed
+                - mail_import_storage_limit
+                - mail_import_too_large
+                - mail_import_unavailable
                 - mail_relay_unavailable
                 - mail_routing_conflict
                 - mail_topic_edit_conflict
@@ -45475,6 +45748,11 @@ components:
                   type: string
                   format: date-time
                   description: When the signal arrived.
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmailAttachment"
+          description: Attachment metadata (file name, type, size), the same items in the same order as `parsed.attachments`. Kept for a credential that reads headers only, where `parsed` is null. Empty when the email has none, its content is withheld (read `status` and `rejection_reason`), or it is not parsed yet or its parse failed (read `parse_status`). No bytes; download a part with `/emails/{id}/attachments/{part_index}`.
         imported:
           type:
             - object
@@ -45531,6 +45809,7 @@ components:
         - from_verified
         - from_header_email
         - from_name
+        - attachments
         - imported
         - snippet
     EmailDetailReply:
@@ -52851,7 +53130,7 @@ components:
                   - "null"
               state:
                 type: string
-                description: "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule began covering your mailbox), new_version, or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed."
+                description: "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed."
               created_at:
                 type: string
                 format: date-time
@@ -52860,7 +53139,7 @@ components:
                   - string
                   - "null"
                 format: date-time
-                description: When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null otherwise.
+                description: When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null otherwise, as on every coverage notice.
               owned_now:
                 type: string
                 enum:
@@ -52887,6 +53166,10 @@ components:
                   - kind
                   - id
                   - name
+              rule_id:
+                description: "For email_rule_coverage, always: the rule it is about, since names need not be unique (for pending, the same as id). GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or as it last decided on your mail; otherwise it answers not_found."
+                type: string
+                format: uuid
             required:
               - kind
               - id
@@ -53100,7 +53383,7 @@ components:
         checked:
           type: integer
           minimum: 0
-          description: "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+          description: "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in the scope counted (evaluation_scope as sent; by default your own mailboxes, for a grant rule those you may share), the ones you can still read."
         matched:
           type: integer
           minimum: 0
@@ -53108,6 +53391,27 @@ components:
       required:
         - checked
         - matched
+    EmailRuleScopeSelection:
+      type: object
+      properties:
+        addresses:
+          maxItems: 100
+          type: array
+          items:
+            type: string
+            minLength: 3
+            maxLength: 320
+            pattern: ^[^\s@]+@[^\s@]+$
+        domains:
+          maxItems: 50
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 253
+            pattern: ^[^\s@]+\.[^\s@]+$
+      additionalProperties: false
+      description: "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
     CompileEmailRuleRequest:
       type: object
       properties:
@@ -53125,6 +53429,15 @@ components:
         include_sql:
           description: Also return the SQL the rule renders to. Off by default.
           type: boolean
+        evaluation_scope:
+          description: "The scope breadth is counted over, as a test of the tree runs it: send the one you will save the rule with. Nothing is saved. own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
+          type: string
+          enum:
+            - author
+            - own_mailboxes
+            - selected
+        scope_selection:
+          $ref: "#/components/schemas/EmailRuleScopeSelection"
       required:
         - english
       additionalProperties: false
@@ -53156,7 +53469,7 @@ components:
             - grant
             - do_not_share
         breadth:
-          description: "How many of your recent emails its conditions hold for, counted over your own mailboxes whatever scope you save it with, warning or not. Null when not counted in full: a rule with questions, headers-only access, no test of it possible as you, or a count that failed or ran out of time. Writes ignore it, so a compile answer (without include_sql) can be sent back unchanged."
+          description: "How many recent emails its conditions hold for, warning or not, counted over evaluation_scope as sent (by default your own mailboxes, whatever scope you save it with). Null when not counted in full: a rule with questions, headers-only access, no test of it possible as you, a count that failed or ran out of time, or, with no scope sent, a rule that holds only for mail to To or Cc addresses outside your own mailboxes (a warning says so). Writes ignore it, so a compile answer (without include_sql) can be sent back unchanged."
           anyOf:
             - $ref: "#/components/schemas/EmailRuleBreadth"
             - type: "null"
@@ -53324,27 +53637,6 @@ components:
         - vocabulary
         - when
       additionalProperties: false
-    EmailRuleScopeSelection:
-      type: object
-      properties:
-        addresses:
-          maxItems: 100
-          type: array
-          items:
-            type: string
-            minLength: 3
-            maxLength: 320
-            pattern: ^[^\s@]+@[^\s@]+$
-        domains:
-          maxItems: 50
-          type: array
-          items:
-            type: string
-            minLength: 1
-            maxLength: 253
-            pattern: ^[^\s@]+\.[^\s@]+$
-      additionalProperties: false
-      description: "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
     EmailRuleExpectationSampleInput:
       type: object
       properties:
@@ -53423,6 +53715,14 @@ components:
             minLength: 1
             maxLength: 255
             pattern: ^[^\u0000]*$
+        attachment_names:
+          maxItems: 10
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+            pattern: ^[^\u0000-\u001f\u007f]*$
         automated:
           type: boolean
         from_mailing_list:
@@ -53725,6 +54025,10 @@ components:
               type: integer
               minimum: 0
               description: "Emails decided on their conditions: matched, near_miss and no_match, less any missing a fact the rule reads."
+            conditions_held:
+              description: Of decided, how many its conditions alone held for. Compile's breadth and conditions_breadth count this over recent mail in the scope sent to it, by default your own; here it is counted over the emails this test decided.
+              type: integer
+              minimum: 0
             conditions:
               type: array
               items:
@@ -53778,7 +54082,7 @@ components:
               type: array
               items:
                 type: string
-              description: What to look at first, such as what stopped every email when nothing matched.
+              description: What to look at first, such as what stopped every email when nothing matched. On a test of the recent window, a grant rule whose conditions held for more than 20% of at least 20 emails checked (at least 90% if it has no questions), or for every one of fewer, gets a warning saying so, before those about what it decided.
           required:
             - decided
             - conditions
@@ -53910,6 +54214,10 @@ components:
               type: array
               items:
                 type: string
+            attachment_names:
+              type: array
+              items:
+                type: string
             automated:
               type: boolean
             from_mailing_list:
@@ -53921,6 +54229,7 @@ components:
             - subject
             - text
             - attachment_types
+            - attachment_names
             - automated
             - from_mailing_list
           description: A made-up email, as test-sample takes it.
@@ -54140,6 +54449,15 @@ components:
                 type: string
                 minLength: 1
                 maxLength: 255
+            attachment_names:
+              description: File names of those attachments, which the classifier and the questions read. With attachment_types, the same number, paired in order.
+              maxItems: 20
+              type: array
+              items:
+                type: string
+                minLength: 1
+                maxLength: 255
+                pattern: ^[^\u0000-\u001f\u007f]*$
             automated:
               description: Whether the email was sent automatically, as its headers would show. Defaults to false.
               type: boolean
@@ -54345,6 +54663,13 @@ components:
         is_author:
           type: boolean
           description: Whether you are its author, in your current membership. Only its author edits it.
+        pending_objections:
+          description: "To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0."
+          type: integer
+          minimum: 0
+        objection_notice:
+          description: "With pending_objections above 0: that members asked you to turn it off, and how to answer."
+          type: string
         created_at:
           type: string
           format: date-time
@@ -54444,6 +54769,9 @@ components:
             - shares_ended
         notice:
           description: "After a write that saved a version of an active rule keys or webhooks read without checking it first: what it changes, and how to have the next one checked."
+          type: string
+        share_notice:
+          description: "After a write that ended the rule's share: that it did, given even when affects is not, with whom it was with and the version they accepted when those can be read."
           type: string
       required:
         - id
@@ -54643,7 +54971,7 @@ components:
             minLength: 1
             maxLength: 1000
         warnings:
-          description: The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).
+          description: The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).
           maxItems: 10
           type: array
           items:
@@ -54725,6 +55053,13 @@ components:
         is_author:
           type: boolean
           description: Whether you are its author, in your current membership. Only its author edits it.
+        pending_objections:
+          description: "To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0."
+          type: integer
+          minimum: 0
+        objection_notice:
+          description: "With pending_objections above 0: that members asked you to turn it off, and how to answer."
+          type: string
         created_at:
           type: string
           format: date-time
@@ -54812,6 +55147,13 @@ components:
         is_author:
           type: boolean
           description: Whether you are its author, in your current membership. Only its author edits it.
+        pending_objections:
+          description: "To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0."
+          type: integer
+          minimum: 0
+        objection_notice:
+          description: "With pending_objections above 0: that members asked you to turn it off, and how to answer."
+          type: string
         created_at:
           type: string
           format: date-time
@@ -54894,7 +55236,7 @@ components:
             minLength: 1
             maxLength: 1000
         warnings:
-          description: The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).
+          description: The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).
           maxItems: 10
           type: array
           items:
@@ -55018,6 +55360,9 @@ components:
         other_keys:
           description: How many more keys, not revoked, list the rule that you may not read. They are not named.
           type: integer
+        share_notice:
+          description: "When the delete ended a share: that it did, with whom it was with and the version they accepted when those can be read."
+          type: string
       required:
         - deleted
     EmailRuleWithheldBy:
@@ -55170,6 +55515,10 @@ components:
               count:
                 type: integer
                 exclusiveMinimum: 0
+              reads_in_full:
+                description: "On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches."
+                type: integer
+                minimum: 0
             required:
               - owner
               - count
@@ -55211,7 +55560,7 @@ components:
                 type: integer
                 exclusiveMinimum: 0
               hosts:
-                description: Distinct sites they deliver to (a host's registrable domain, or a tunnel, preview or function service alone), sorted, at most 10; "unknown host" (last) for any that cannot be named.
+                description: Distinct sites they deliver to (the domain a host is registered under, an app's own name on a known app platform, or a function URL service in its region), sorted, at most 10; "unknown host" (last) for any that cannot be named.
                 type: array
                 items:
                   type: string
@@ -55258,7 +55607,7 @@ components:
         - keys
         - webhooks
         - shares
-      description: Who receives what the rule shares now, by person and count; empty unless it is an active grant rule.
+      description: Who receives what the rule shares, by person and count. As receivers, empty unless it is an active grant rule.
     ListEmailRuleResultsResult:
       type: object
       properties:
@@ -55684,7 +56033,7 @@ components:
             minLength: 1
             maxLength: 1000
         warnings:
-          description: The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).
+          description: The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).
           maxItems: 10
           type: array
           items:
@@ -56105,6 +56454,13 @@ components:
         is_author:
           type: boolean
           description: Whether you are its author, in your current membership. Only its author edits it.
+        pending_objections:
+          description: "To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0."
+          type: integer
+          minimum: 0
+        objection_notice:
+          description: "With pending_objections above 0: that members asked you to turn it off, and how to answer."
+          type: string
         created_at:
           type: string
           format: date-time
@@ -56313,7 +56669,7 @@ components:
             minLength: 1
             maxLength: 1000
         warnings:
-          description: The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test (on a rule request, every compiler note on the rule).
+          description: The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).
           maxItems: 10
           type: array
           items:
@@ -56782,6 +57138,11 @@ components:
           anyOf:
             - $ref: "#/components/schemas/EmailRuleReceivers"
             - type: "null"
+        receivers_once_active:
+          description: "For a grant rule in draft or observe: who would receive what it matches once it is turned active. None of them receives anything yet. Null for any other rule, and when it could not be read in time."
+          anyOf:
+            - $ref: "#/components/schemas/EmailRuleReceivers"
+            - type: "null"
         created_at:
           type: string
           format: date-time
@@ -56795,6 +57156,7 @@ components:
         - covers
         - current_version
         - receivers
+        - receivers_once_active
         - created_at
     EmailRuleCoverage:
       type: object
@@ -56864,6 +57226,11 @@ components:
           anyOf:
             - $ref: "#/components/schemas/EmailRuleReceivers"
             - type: "null"
+        receivers_once_active:
+          description: As on the list; also null when covers_now is false.
+          anyOf:
+            - $ref: "#/components/schemas/EmailRuleReceivers"
+            - type: "null"
         created_at:
           type: string
           format: date-time
@@ -56888,6 +57255,7 @@ components:
         - covers
         - current_version
         - receivers
+        - receivers_once_active
         - created_at
         - covers_now
         - current
@@ -57031,8 +57399,10 @@ components:
           $ref: "#/components/schemas/EmailRuleObjectionPerson"
         is_objector:
           type: boolean
+          description: Whether you made it, in your current membership.
         is_author:
           type: boolean
+          description: Whether it is to a rule you wrote, in your current membership.
         message:
           description: Why the objector objects; null when none was given, or once withdrawn.
           type:
@@ -57252,6 +57622,72 @@ components:
         - subdomain
         - domain
         - outbound_ready
+    ImportGoogleMailMessageRequest:
+      type: object
+      properties:
+        message_id:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{1,128}$
+      required:
+        - message_id
+      additionalProperties: false
+    ImportGoogleMailMessageResult:
+      anyOf:
+        - type: object
+          properties:
+            status:
+              type: string
+              enum:
+                - imported
+                - already_present
+            email_id:
+              type: string
+              format: uuid
+              pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          required:
+            - status
+            - email_id
+        - type: object
+          properties:
+            status:
+              type: string
+              enum:
+                - suppressed
+                - in_progress
+                - indeterminate
+          required:
+            - status
+        - type: object
+          properties:
+            status:
+              type: string
+              const: skipped
+            reason:
+              type: string
+              enum:
+                - excluded_label
+                - out_of_window
+                - too_large
+                - provider_missing
+          required:
+            - status
+            - reason
+    ReconcileGoogleMailImportRequest:
+      type: object
+      properties: {}
+      additionalProperties: false
+    ReconcileGoogleMailImportResult:
+      type: object
+      properties:
+        cleaned:
+          type: integer
+          minimum: 0
+        unresolved:
+          type: integer
+          minimum: 0
+      required:
+        - cleaned
+        - unresolved
     ThreadMute:
       type: object
       required:
@@ -61954,6 +62390,27 @@ components:
               - address
               - reason
               - description
+            additionalProperties: {}
+        rules_added:
+          description: "Each rule (or share) the edit put on a key that reads mail, with granted_emails, how many emails it has already shared, which the key can now read while it is active: counted up to 10,000, with more: true past that; null when not counted."
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              granted_emails:
+                type:
+                  - integer
+                  - "null"
+                minimum: 0
+                maximum: 9007199254740991
+              more:
+                type: boolean
+                const: true
+            required:
+              - id
+              - granted_emails
             additionalProperties: {}
         grant_unguarded:
           description: Present, as true, when the grant was changed without expected_grant_ref, so the change was not checked against changes made since the key was read. Send grant.ref from GET /v1/keys/{id} as expected_grant_ref to have such a change refused instead (409 conflict, details.reason grant_changed).

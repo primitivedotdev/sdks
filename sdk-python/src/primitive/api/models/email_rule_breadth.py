@@ -22,8 +22,9 @@ T = TypeVar("T", bound="EmailRuleBreadth")
 class EmailRuleBreadth:
     """ 
         Attributes:
-            checked (int): Classified emails the conditions were decided for: of the newest 200 from the last 30 days in
-                your own mailboxes (for a grant rule, those you may share), the ones you can still read.
+            checked (int): Classified emails the conditions were decided for: of the newest 200 from the last 30 days in the
+                scope counted (evaluation_scope as sent; by default your own mailboxes, for a grant rule those you may share),
+                the ones you can still read.
             matched (int): Of those, how many they hold for (for a do-not-share rule, one they cannot decide counts).
      """
 

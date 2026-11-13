@@ -138,6 +138,7 @@ function fixture() {
     automated_reasons: [],
     webhook_attempt_count: 0,
     imported: null,
+    attachments: [],
     body_text: `Reply once with ${challenge.marker}`,
     body_html: null,
     parsed: { status: "complete", attachments: [] },

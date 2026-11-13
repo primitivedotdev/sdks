@@ -32,13 +32,20 @@ class TestEmailRuleResultSummary:
                 English, and how many decided emails it held on, failed on, and (except in an any rule) was the only failure on.
             questions (list[TestEmailRuleResultSummaryQuestionsItem]): Each question's answers on the emails whose
                 conditions held.
-            warnings (list[str]): What to look at first, such as what stopped every email when nothing matched.
+            warnings (list[str]): What to look at first, such as what stopped every email when nothing matched. On a test of
+                the recent window, a grant rule whose conditions held for more than 20% of at least 20 emails checked (at least
+                90% if it has no questions), or for every one of fewer, gets a warning saying so, before those about what it
+                decided.
+            conditions_held (int | Unset): Of decided, how many its conditions alone held for. Compile's breadth and
+                conditions_breadth count this over recent mail in the scope sent to it, by default your own; here it is counted
+                over the emails this test decided.
      """
 
     decided: int
     conditions: list[TestEmailRuleResultSummaryConditionsItem]
     questions: list[TestEmailRuleResultSummaryQuestionsItem]
     warnings: list[str]
+    conditions_held: int | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -68,6 +75,8 @@ class TestEmailRuleResultSummary:
 
 
 
+        conditions_held = self.conditions_held
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -77,6 +86,8 @@ class TestEmailRuleResultSummary:
             "questions": questions,
             "warnings": warnings,
         })
+        if conditions_held is not UNSET:
+            field_dict["conditions_held"] = conditions_held
 
         return field_dict
 
@@ -112,11 +123,14 @@ class TestEmailRuleResultSummary:
         warnings = cast(list[str], d.pop("warnings"))
 
 
+        conditions_held = d.pop("conditions_held", UNSET)
+
         test_email_rule_result_summary = cls(
             decided=decided,
             conditions=conditions,
             questions=questions,
             warnings=warnings,
+            conditions_held=conditions_held,
         )
 
 

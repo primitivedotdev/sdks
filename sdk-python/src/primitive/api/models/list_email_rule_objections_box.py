@@ -3,6 +3,7 @@ from enum import StrEnum
 class ListEmailRuleObjectionsBox(StrEnum):
     ALL = "all"
     INCOMING = "incoming"
+    MINE = "mine"
     OUTGOING = "outgoing"
 
     def __str__(self) -> str:

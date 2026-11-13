@@ -33,6 +33,29 @@ describe("domains zone-file command", () => {
     ).toBe(
       "https://api.example.test/v1/domains/33333333-3333-4333-8333-333333333333/zone-file?outbound_only=true",
     );
+
+    expect(
+      zoneFileUrl(
+        "https://api.example.test/v1",
+        "33333333-3333-4333-8333-333333333333",
+        false,
+        true,
+      ),
+    ).toBe(
+      "https://api.example.test/v1/domains/33333333-3333-4333-8333-333333333333/zone-file?inbound_only=true",
+    );
+  });
+
+  it("takes --inbound-only or --outbound-only, not both", () => {
+    const flags = DomainsZoneFileCommand.flags;
+    expect(flags["inbound-only"]).toMatchObject({
+      type: "boolean",
+      exclusive: ["outbound-only"],
+    });
+    expect(flags["outbound-only"]).toMatchObject({
+      type: "boolean",
+      exclusive: ["inbound-only"],
+    });
   });
 
   it("parses Content-Disposition filenames", () => {

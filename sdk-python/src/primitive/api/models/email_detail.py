@@ -21,6 +21,7 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.email_attachment import EmailAttachment
   from ..models.email_auth import EmailAuth
   from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
   from ..models.email_detail_collaboration import EmailDetailCollaboration
@@ -188,6 +189,10 @@ class EmailDetail:
                 decoded in their declared charset and folded lines are joined (e.g. `Dana Rúiz` for `=?UTF-8?Q?Dana_R=C3=BAiz?=
                 <dana@example.com>`). Null when the header carries no display name. For display only: identify the sender by
                 `from_email`, never by this name, which the sender chooses freely.
+            attachments (list[EmailAttachment]): Attachment metadata (file name, type, size), the same items in the same
+                order as `parsed.attachments`. Kept for a credential that reads headers only, where `parsed` is null. Empty when
+                the email has none, its content is withheld (read `status` and `rejection_reason`), or it is not parsed yet or
+                its parse failed (read `parse_status`). No bytes; download a part with `/emails/{id}/attachments/{part_index}`.
             imported (EmailDetailImportedType0 | None): Historical acquisition; never sender or SMTP delivery proof. Null
                 for live mail. Excluded from live tails and deltas.
             snippet (None | str): A plain-text preview of `body_text` (never `body_html`), computed once when the message is
@@ -351,6 +356,7 @@ class EmailDetail:
     from_verified: bool
     from_header_email: None | str
     from_name: None | str
+    attachments: list[EmailAttachment]
     imported: EmailDetailImportedType0 | None
     snippet: None | str
     message_id: None | str | Unset = UNSET
@@ -399,6 +405,7 @@ class EmailDetail:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_attachment import EmailAttachment # noqa: PLC0415
         from ..models.email_auth import EmailAuth # noqa: PLC0415
         from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0 # noqa: PLC0415
         from ..models.email_detail_collaboration import EmailDetailCollaboration # noqa: PLC0415
@@ -472,6 +479,13 @@ class EmailDetail:
 
         from_name: None | str
         from_name = self.from_name
+
+        attachments = []
+        for attachments_item_data in self.attachments:
+            attachments_item = attachments_item_data.to_dict()
+            attachments.append(attachments_item)
+
+
 
         imported: dict[str, Any] | None
         if isinstance(self.imported, EmailDetailImportedType0):
@@ -766,6 +780,7 @@ class EmailDetail:
             "from_verified": from_verified,
             "from_header_email": from_header_email,
             "from_name": from_name,
+            "attachments": attachments,
             "imported": imported,
             "snippet": snippet,
         })
@@ -854,6 +869,7 @@ class EmailDetail:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_attachment import EmailAttachment # noqa: PLC0415
         from ..models.email_auth import EmailAuth # noqa: PLC0415
         from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0 # noqa: PLC0415
         from ..models.email_detail_collaboration import EmailDetailCollaboration # noqa: PLC0415
@@ -981,6 +997,16 @@ class EmailDetail:
             return cast(None | str, data)
 
         from_name = _parse_from_name(d.pop("from_name"))
+
+
+        attachments = []
+        _attachments = d.pop("attachments")
+        for attachments_item_data in (_attachments):
+            attachments_item = EmailAttachment.from_dict(attachments_item_data)
+
+
+
+            attachments.append(attachments_item)
 
 
         def _parse_imported(data: object) -> EmailDetailImportedType0 | None:
@@ -1600,6 +1626,7 @@ class EmailDetail:
             from_verified=from_verified,
             from_header_email=from_header_email,
             from_name=from_name,
+            attachments=attachments,
             imported=imported,
             snippet=snippet,
             message_id=message_id,

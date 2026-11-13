@@ -522,7 +522,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
 
 #### New operations
 
-177 operations, by area:
+179 operations, by area:
 
 - Account: `getOwnGrant`, `getSendFrom` (the addresses a credential may
   send from, and the one a send that names no From should use).
@@ -565,7 +565,13 @@ date-time is kept as null and sorts last. A sync stops with an error after
   writes, carry their `evaluation_scope` and `scope_selection`, and
   `listEmailRuleScopeOptions` says with `may_name_unlisted` whether you may
   name an inbox its list does not show.
-- Emails: `getEmailReadable`.
+- Emails: `getEmailReadable`; `importGoogleMailMessage`, which imports one
+  historical Google Workspace message into the organization's configured
+  mailbox, fetched by the API itself with a transient provider token sent
+  only in the `X-Primitive-Google-Access-Token` header; and
+  `reconcileGoogleMailImport`, which recovers import attempts that expired.
+  Both are for the configured owner only, and importing needs the
+  organization's `email_import` entitlement.
 - Endpoints: `getEndpoint`, `getEndpointSigningSecret`,
   `rotateEndpointSigningSecret`.
 - Functions: `lookupFunction`, `getOrgFunctionUsage`,
@@ -730,6 +736,57 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - A rule's `receivers` webhooks carry `hosts`, the distinct sites they
   deliver to (at most 10), and `hosts_not_listed`.
 - New error codes: `chunk_size_mismatch` and `invalid_manifest`.
+- `getEmail` answers `attachments` at the top level: each attachment's
+  metadata (file name, type, size), in the order of `parsed.attachments`,
+  and kept for a credential that reads headers only, where `parsed` is null.
+  It is required on `EmailDetail`, so the Python and Go clients expect it.
+- A made-up email takes `attachment_names`, its attachments' file names,
+  paired with `attachment_types` by position (the same number of each when
+  both list files): in `testEmailRuleOnSample`, in the expectation samples
+  rule writes and tests take and rule reads return, and in
+  `generateLookAlikes`' look-alikes, where it is required.
+- `updateKey` answers `rules_added` when an edit puts rules on a key that
+  reads mail: each rule's `id` and `granted_emails`, how many emails it has
+  already shared, which the key can now read (counted up to 10,000, with
+  `more: true` past that; null when not counted).
+- `testEmailRule`'s `summary` carries `conditions_held`: of the emails
+  decided, how many its conditions alone held for.
+- `compileEmailRule` takes `evaluation_scope` and `scope_selection`, as a
+  test does, and counts `breadth` and `conditions_breadth` over that scope
+  (by default your own mailboxes). Nothing is saved. With `selected` it can
+  answer `409` `email_rule_author_unresolvable`. With no scope sent, a rule
+  that holds only for mail to addresses outside your own mailboxes has
+  `breadth` null, and a warning says so.
+- `listEmailRulesCoveringMe` and `getEmailRuleCoveringMe` carry
+  `receivers_once_active`, required and nullable: for a grant rule in draft
+  or observe, who would receive what it matches once it is turned active.
+  In a rule's `receivers`, each `keys` entry over your mail carries
+  `reads_in_full`, how many of those keys also list one of your own
+  mailboxes or its domain.
+- `listActivityObjects` coverage notices (`email_rule_coverage`) carry
+  `rule_id`, the rule each is about (for a `pending` row, the same as `id`).
+- `createEmailRule` and `updateEmailRule` (`EmailRuleWritten`) and
+  `deleteEmailRule` carry `share_notice` after a write that ended the
+  rule's share: that it did, with whom and the version they accepted, when
+  those can be read.
+- `listEmailRuleObjections` takes `box` `mine`, now the default: objections
+  you made and objections to rules you wrote. Each objection's
+  `is_objector` and `is_author` say which side you are on.
+- A rule's author, on the dashboard or the CLI, reads `pending_objections`
+  on it (from `listEmailRules`, `getEmailRule` and rule writes), with
+  `objection_notice` while some wait for their answer. A write's answer
+  leaves the count out when it could not be read in time.
+- `downloadDomainZoneFile` takes `inbound_only`: only the inbound MX and
+  ownership TXT records, not with `outbound_only`. Without either, the file
+  has every record.
+- New error codes for mail import: `mail_import_cap_exceeded`,
+  `mail_import_content_mismatch`, `mail_import_deadline`,
+  `mail_import_disabled`, `mail_import_fenced`, `mail_import_forbidden`,
+  `mail_import_invalid_input`, `mail_import_invalid_provider_response`,
+  `mail_import_out_of_window`, `mail_import_policy_mismatch`,
+  `mail_import_provider_auth`, `mail_import_provider_unavailable`,
+  `mail_import_storage_failed`, `mail_import_storage_limit`,
+  `mail_import_too_large` and `mail_import_unavailable`.
 - For a caller who cannot read the webhook, a delivery's `response_body`
   is null, its `last_error` gives the status and a note without quoting
   the webhook's answer, and its `last_error_code` is `handler_4xx` or

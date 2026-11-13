@@ -34,12 +34,15 @@ class DeleteEmailRuleResult:
                 when the keys could not be read.
             other_keys (int | Unset): How many more keys, not revoked, list the rule that you may not read. They are not
                 named.
+            share_notice (str | Unset): When the delete ended a share: that it did, with whom it was with and the version
+                they accepted when those can be read.
      """
 
     deleted: bool
     ended_shares: list[UUID] | Unset = UNSET
     keys: list[DeleteEmailRuleResultKeysItem] | Unset = UNSET
     other_keys: int | Unset = UNSET
+    share_notice: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -70,6 +73,8 @@ class DeleteEmailRuleResult:
 
         other_keys = self.other_keys
 
+        share_notice = self.share_notice
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -82,6 +87,8 @@ class DeleteEmailRuleResult:
             field_dict["keys"] = keys
         if other_keys is not UNSET:
             field_dict["other_keys"] = other_keys
+        if share_notice is not UNSET:
+            field_dict["share_notice"] = share_notice
 
         return field_dict
 
@@ -119,11 +126,14 @@ class DeleteEmailRuleResult:
 
         other_keys = d.pop("other_keys", UNSET)
 
+        share_notice = d.pop("share_notice", UNSET)
+
         delete_email_rule_result = cls(
             deleted=deleted,
             ended_shares=ended_shares,
             keys=keys,
             other_keys=other_keys,
+            share_notice=share_notice,
         )
 
 

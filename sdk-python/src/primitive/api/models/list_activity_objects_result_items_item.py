@@ -10,6 +10,7 @@ from ..types import UNSET, Unset
 
 from ..models.list_activity_objects_result_items_item_owned_now import ListActivityObjectsResultItemsItemOwnedNow
 from typing import cast
+from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
@@ -39,18 +40,22 @@ class ListActivityObjectsResultItemsItem:
                 disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating
                 sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed,
                 connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn
-                (rule requests and objections), and for a coverage notice what it told: started (a rule began covering your
-                mailbox), new_version, or baseline (it already covered you when notices began). pending: a rule started covering
-                your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice
-                is recorded without a new one); its id is then the rule's, and created_at when the rule last changed.
+                (rule requests and objections), and for a coverage notice what it told: started (a rule was made or turned
+                active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version,
+                or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the
+                notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without
+                a new one); its id is then the rule's, and created_at when the rule last changed.
             created_at (datetime.datetime):
             ended_at (datetime.datetime | None): When it was deleted, replaced or revoked, when an API key expired, when a
                 repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null
-                otherwise.
+                otherwise, as on every coverage notice.
             owned_now (ListActivityObjectsResultItemsItemOwnedNow): you: it is still yours: never transferred, or
                 transferred back to you. someone_else: it was transferred and another person holds it now, or, with
                 relation=asked or concerning, another member made it.
             created_through (ListActivityObjectsResultItemsItemCreatedThrough):
+            rule_id (UUID | Unset): For email_rule_coverage, always: the rule it is about, since names need not be unique
+                (for pending, the same as id). GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or
+                as it last decided on your mail; otherwise it answers not_found.
      """
 
     kind: str
@@ -61,6 +66,7 @@ class ListActivityObjectsResultItemsItem:
     ended_at: datetime.datetime | None
     owned_now: ListActivityObjectsResultItemsItemOwnedNow
     created_through: ListActivityObjectsResultItemsItemCreatedThrough
+    rule_id: UUID | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -90,6 +96,10 @@ class ListActivityObjectsResultItemsItem:
 
         created_through = self.created_through.to_dict()
 
+        rule_id: str | Unset = UNSET
+        if not isinstance(self.rule_id, Unset):
+            rule_id = str(self.rule_id)
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -103,6 +113,8 @@ class ListActivityObjectsResultItemsItem:
             "owned_now": owned_now,
             "created_through": created_through,
         })
+        if rule_id is not UNSET:
+            field_dict["rule_id"] = rule_id
 
         return field_dict
 
@@ -159,6 +171,16 @@ class ListActivityObjectsResultItemsItem:
 
 
 
+        _rule_id = d.pop("rule_id", UNSET)
+        rule_id: UUID | Unset
+        if isinstance(_rule_id,  Unset):
+            rule_id = UNSET
+        else:
+            rule_id = UUID(_rule_id)
+
+
+
+
         list_activity_objects_result_items_item = cls(
             kind=kind,
             id=id,
@@ -168,6 +190,7 @@ class ListActivityObjectsResultItemsItem:
             ended_at=ended_at,
             owned_now=owned_now,
             created_through=created_through,
+            rule_id=rule_id,
         )
 
 

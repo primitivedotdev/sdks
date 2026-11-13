@@ -289,10 +289,11 @@ type Handler interface {
 	// what the columns cannot express. Where the columns fall short it adds up to five yes/no questions,
 	// asked only after the conditions match; they read the subject, the new text and attachment file
 	// names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts,
-	// read only, how much of your recent classified mail its conditions match; for a grant rule with
-	// questions, conditions_breadth counts its conditions alone. include_sql returns the SQL it renders
-	// to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a
-	// member's own full-access credential (no API key, agent key or narrowed token).
+	// read only, how much of the recent classified mail in evaluation_scope (by default your own
+	// mailboxes) its conditions match; for a grant rule with questions, conditions_breadth counts its
+	// conditions alone. include_sql returns the SQL it renders to. kind do_not_share compiles for recall.
+	//  Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+	// agent key or narrowed token).
 	//
 	// POST /email-rules/compile
 	CompileEmailRule(ctx context.Context, req *CompileEmailRuleRequest, params CompileEmailRuleParams) (CompileEmailRuleRes, error)
@@ -736,11 +737,12 @@ type Handler interface {
 	//
 	// Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
 	// (end_reason rule_deleted), and the member who shared can still list what it handed over. The
-	// answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which
-	// now read nothing through it (keys, other_keys; left out when they could not be read). The author
-	// or a reader of all the organization's mail may delete it; while it is shared, only the author or
-	// someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a
-	// member's own full-access credential (no API key, agent key or narrowed token).
+	// answer lists the shares it ended (ended_shares), says whom with (share_notice), and lists the
+	// unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out
+	// when they could not be read). The author or a reader of all the organization's mail may delete it;
+	// while it is shared, only the author or someone who manages members from the dashboard. Needs
+	// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+	// key or narrowed token).
 	//
 	// DELETE /email-rules/{id}
 	DeleteEmailRule(ctx context.Context, params DeleteEmailRuleParams) (DeleteEmailRuleRes, error)
@@ -1812,6 +1814,18 @@ type Handler interface {
 	//
 	// GET /account/webhook-secret
 	GetWebhookSecret(ctx context.Context) (GetWebhookSecretRes, error)
+	// ImportGoogleMailMessage implements importGoogleMailMessage operation.
+	//
+	// Requires the organization email_import entitlement, granted by staff. Only the configured current
+	// owner, using a full personal session or verified first-party CLI, may import into the configured
+	// primary mailbox. Primitive verifies the transient provider token and fetches RAW content itself.
+	// No raw uploads or client provenance are accepted. Sent, draft, spam and trash messages are skipped.
+	//  Historical mail appears in normal history without live delivery effects. An indeterminate
+	// response requires retrying the same provider ID. User provider credentials are never stored or
+	// queued.
+	//
+	// POST /mail-imports/google/messages
+	ImportGoogleMailMessage(ctx context.Context, req *ImportGoogleMailMessageRequest, params ImportGoogleMailMessageParams) (ImportGoogleMailMessageRes, error)
 	// InstallTemplate implements installTemplate operation.
 	//
 	// Start a one-shot deploy of an approved deploy-mode Function template. The response returns an
@@ -2120,12 +2134,13 @@ type Handler interface {
 	ListEmailRuleDecisionsOnMyMail(ctx context.Context, params ListEmailRuleDecisionsOnMyMailParams) (ListEmailRuleDecisionsOnMyMailRes, error)
 	// ListEmailRuleObjections implements listEmailRuleObjections operation.
 	//
-	// Objections you made, objections to rules you wrote, or every objection you can see, newest first.
-	// An objection is seen by the member who made it, the rule's author and the organization's owners
-	// and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines
-	// it, or the member who made it withdraws it, which clears its message. It never changes after that.
-	// Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
-	// agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+	// Objections you made and objections to rules you wrote (by default), only one of the two, or every
+	// objection you can see, newest first. An objection is seen by the member who made it, the rule's
+	// author and the organization's owners and admins. It stays pending until the rule's author accepts
+	// it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its
+	// message. It never changes after that. Needs mail:read, the email rules feature, and a member's own
+	// full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+	// session or the Primitive CLI.
 	//
 	// GET /email-rule-objections
 	ListEmailRuleObjections(ctx context.Context, params ListEmailRuleObjectionsParams) (ListEmailRuleObjectionsRes, error)
@@ -2832,6 +2847,16 @@ type Handler interface {
 	//
 	// POST /functions/{id}/runtime-key/reaffirm
 	ReaffirmFunctionRuntimeKey(ctx context.Context, req OptReaffirmFunctionRuntimeKeyRequest, params ReaffirmFunctionRuntimeKeyParams) (ReaffirmFunctionRuntimeKeyRes, error)
+	// ReconcileGoogleMailImport implements reconcileGoogleMailImport operation.
+	//
+	// The same configured owner may recover expired attempts after the email_import entitlement is
+	// revoked. Recovery does not require that entitlement. Selects only server-owned manifests for the
+	// configured mailbox/account/policy. No provider token, object keys, prefixes or email IDs are
+	// accepted. Unsettled uploads remain unresolved and charged; this operation does not promise
+	// automatic cleanup after a process dies.
+	//
+	// POST /mail-imports/google/reconcile
+	ReconcileGoogleMailImport(ctx context.Context, req *ReconcileGoogleMailImportRequest, params ReconcileGoogleMailImportParams) (ReconcileGoogleMailImportRes, error)
 	// RedeemCreditCode implements redeemCreditCode operation.
 	//
 	// Redeem a credit code for the authenticated organization. The credit is added to the organization
@@ -3499,11 +3524,11 @@ type Handler interface {
 	// TestEmailRuleOnSample implements testEmailRuleOnSample operation.
 	//
 	// Reports what a rule would decide for an email you describe (sender, recipients, subject, plain
-	// text, attachment types; optionally automated, from a mailing list, and a spam score), classified
-	// and decided as received mail would be. A rule reading a spam score you gave none for decides on
-	// none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The
-	// answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's
-	// own full-access credential (no API key, agent key or narrowed token).
+	// text, attachment types and file names; optionally automated, from a mailing list, and a spam
+	// score), classified and decided as received mail would be. A rule reading a spam score you gave
+	// none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule
+	// by rule_id. The answer includes what the classifier read. Needs mail:read, the email rules feature,
+	//  and a member's own full-access credential (no API key, agent key or narrowed token).
 	//
 	// POST /email-rules/test-sample
 	TestEmailRuleOnSample(ctx context.Context, req *TestEmailRuleOnSampleRequest, params TestEmailRuleOnSampleParams) (TestEmailRuleOnSampleRes, error)

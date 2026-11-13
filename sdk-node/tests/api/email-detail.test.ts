@@ -17,6 +17,7 @@ const SAMPLE: EmailDetail = {
   recipient: "support@example.com",
   subject: "Hello",
   imported: null,
+  attachments: [],
   body_text: "Hi there",
   body_html: "<p>Hi there</p>",
   status: "completed",
@@ -243,5 +244,23 @@ describe("EmailDetail type contract", () => {
       verification: "provider_fetched",
       at: "2026-05-01T12:30:00.000Z",
     });
+  });
+
+  it("types attachments as a list, empty when the email has none", () => {
+    expect(SAMPLE.attachments).toEqual([]);
+    const withPart: EmailDetail = {
+      ...SAMPLE,
+      attachments: [
+        {
+          filename: "invoice.pdf",
+          content_type: "application/pdf",
+          size_bytes: 2048,
+          sha256: null,
+          part_index: 0,
+        },
+      ],
+    };
+    const parsed = JSON.parse(JSON.stringify(withPart)) as EmailDetail;
+    expect(parsed.attachments).toEqual(withPart.attachments);
   });
 });

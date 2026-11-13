@@ -137,6 +137,7 @@ from .cli_user_login_poll_result import CliUserLoginPollResult
 from .cli_user_login_poll_result_auth_method import CliUserLoginPollResultAuthMethod
 from .cli_user_login_poll_result_token_type import CliUserLoginPollResultTokenType
 from .compile_email_rule_request import CompileEmailRuleRequest
+from .compile_email_rule_request_evaluation_scope import CompileEmailRuleRequestEvaluationScope
 from .compile_email_rule_request_kind import CompileEmailRuleRequestKind
 from .compile_email_rule_response_200 import CompileEmailRuleResponse200
 from .compile_email_rule_result import CompileEmailRuleResult
@@ -355,6 +356,7 @@ from .credentials_update_key_input_grant_type_1_preset import CredentialsUpdateK
 from .credentials_update_key_input_grant_type_1_resources import CredentialsUpdateKeyInputGrantType1Resources
 from .credentials_update_key_result import CredentialsUpdateKeyResult
 from .credentials_update_key_result_address_warnings_item import CredentialsUpdateKeyResultAddressWarningsItem
+from .credentials_update_key_result_rules_added_item import CredentialsUpdateKeyResultRulesAddedItem
 from .credentials_update_key_result_warnings_item import CredentialsUpdateKeyResultWarningsItem
 from .credit_balance import CreditBalance
 from .credit_balance_budget_type_0 import CreditBalanceBudgetType0
@@ -882,6 +884,11 @@ from .get_wake_schedule_response_200 import GetWakeScheduleResponse200
 from .get_webhook_delivery_stats_response_200 import GetWebhookDeliveryStatsResponse200
 from .get_webhook_delivery_stats_result import GetWebhookDeliveryStatsResult
 from .get_webhook_secret_response_200 import GetWebhookSecretResponse200
+from .import_google_mail_message_request import ImportGoogleMailMessageRequest
+from .import_google_mail_message_response_200 import ImportGoogleMailMessageResponse200
+from .import_google_mail_message_result import ImportGoogleMailMessageResult
+from .import_google_mail_message_result_reason import ImportGoogleMailMessageResultReason
+from .import_google_mail_message_result_status import ImportGoogleMailMessageResultStatus
 from .inbox_status import InboxStatus
 from .inbox_status_domain import InboxStatusDomain
 from .inbox_status_domain_status import InboxStatusDomainStatus
@@ -1365,6 +1372,9 @@ from .reaffirm_function_runtime_key_result_suspended_by_type_2_type_1 import Rea
 from .reaffirm_function_runtime_key_result_suspended_by_type_3_type_1 import ReaffirmFunctionRuntimeKeyResultSuspendedByType3Type1
 from .recipient_route import RecipientRoute
 from .recipient_route_match_type import RecipientRouteMatchType
+from .reconcile_google_mail_import_request import ReconcileGoogleMailImportRequest
+from .reconcile_google_mail_import_response_200 import ReconcileGoogleMailImportResponse200
+from .reconcile_google_mail_import_result import ReconcileGoogleMailImportResult
 from .redeem_credit_code_input import RedeemCreditCodeInput
 from .redeem_credit_code_response_200 import RedeemCreditCodeResponse200
 from .redeploy_function_response_200 import RedeployFunctionResponse200
@@ -1995,6 +2005,7 @@ __all__ = (
     "CliUserLoginPollResultAuthMethod",
     "CliUserLoginPollResultTokenType",
     "CompileEmailRuleRequest",
+    "CompileEmailRuleRequestEvaluationScope",
     "CompileEmailRuleRequestKind",
     "CompileEmailRuleResponse200",
     "CompileEmailRuleResult",
@@ -2213,6 +2224,7 @@ __all__ = (
     "CredentialsUpdateKeyInputGrantType1Resources",
     "CredentialsUpdateKeyResult",
     "CredentialsUpdateKeyResultAddressWarningsItem",
+    "CredentialsUpdateKeyResultRulesAddedItem",
     "CredentialsUpdateKeyResultWarningsItem",
     "CreditBalance",
     "CreditBalanceBudgetType0",
@@ -2740,6 +2752,11 @@ __all__ = (
     "GetWebhookDeliveryStatsResponse200",
     "GetWebhookDeliveryStatsResult",
     "GetWebhookSecretResponse200",
+    "ImportGoogleMailMessageRequest",
+    "ImportGoogleMailMessageResponse200",
+    "ImportGoogleMailMessageResult",
+    "ImportGoogleMailMessageResultReason",
+    "ImportGoogleMailMessageResultStatus",
     "InboxStatus",
     "InboxStatusDomain",
     "InboxStatusDomainStatus",
@@ -3223,6 +3240,9 @@ __all__ = (
     "ReaffirmFunctionRuntimeKeyResultSuspendedByType3Type1",
     "RecipientRoute",
     "RecipientRouteMatchType",
+    "ReconcileGoogleMailImportRequest",
+    "ReconcileGoogleMailImportResponse200",
+    "ReconcileGoogleMailImportResult",
     "RedeemCreditCodeInput",
     "RedeemCreditCodeResponse200",
     "RedeployFunctionResponse200",

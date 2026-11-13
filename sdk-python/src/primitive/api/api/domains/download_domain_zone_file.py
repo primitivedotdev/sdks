@@ -21,6 +21,7 @@ def _get_kwargs(
     id: UUID,
     *,
     outbound_only: bool | Unset = UNSET,
+    inbound_only: bool | Unset = UNSET,
 
 ) -> dict[str, Any]:
 
@@ -30,6 +31,8 @@ def _get_kwargs(
     params: dict[str, Any] = {}
 
     params["outbound_only"] = outbound_only
+
+    params["inbound_only"] = inbound_only
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -104,6 +107,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     outbound_only: bool | Unset = UNSET,
+    inbound_only: bool | Unset = UNSET,
 
 ) -> Response[ErrorResponse | File]:
     """ Download domain DNS zone file
@@ -115,6 +119,7 @@ def sync_detailed(
     Args:
         id (UUID):
         outbound_only (bool | Unset):
+        inbound_only (bool | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -128,6 +133,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         id=id,
 outbound_only=outbound_only,
+inbound_only=inbound_only,
 
     )
 
@@ -142,6 +148,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     outbound_only: bool | Unset = UNSET,
+    inbound_only: bool | Unset = UNSET,
 
 ) -> ErrorResponse | File | None:
     """ Download domain DNS zone file
@@ -153,6 +160,7 @@ def sync(
     Args:
         id (UUID):
         outbound_only (bool | Unset):
+        inbound_only (bool | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -167,6 +175,7 @@ def sync(
         id=id,
 client=client,
 outbound_only=outbound_only,
+inbound_only=inbound_only,
 
     ).parsed
 
@@ -175,6 +184,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     outbound_only: bool | Unset = UNSET,
+    inbound_only: bool | Unset = UNSET,
 
 ) -> Response[ErrorResponse | File]:
     """ Download domain DNS zone file
@@ -186,6 +196,7 @@ async def asyncio_detailed(
     Args:
         id (UUID):
         outbound_only (bool | Unset):
+        inbound_only (bool | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -199,6 +210,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         id=id,
 outbound_only=outbound_only,
+inbound_only=inbound_only,
 
     )
 
@@ -213,6 +225,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     outbound_only: bool | Unset = UNSET,
+    inbound_only: bool | Unset = UNSET,
 
 ) -> ErrorResponse | File | None:
     """ Download domain DNS zone file
@@ -224,6 +237,7 @@ async def asyncio(
     Args:
         id (UUID):
         outbound_only (bool | Unset):
+        inbound_only (bool | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -238,5 +252,6 @@ async def asyncio(
         id=id,
 client=client,
 outbound_only=outbound_only,
+inbound_only=inbound_only,
 
     )).parsed

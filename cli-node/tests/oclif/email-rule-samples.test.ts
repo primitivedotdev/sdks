@@ -152,6 +152,53 @@ describe("samplesFromJson", () => {
     ]);
   });
 
+  it("keeps attachment_names, as look-alikes now carry them, paired with the types", () => {
+    const named = {
+      ...email("a"),
+      attachment_types: ["application/pdf"],
+      attachment_names: ["statement.pdf"],
+    };
+    expect(
+      samplesFromJson([{ expected: "no_match", email: named }], "f"),
+    ).toEqual([{ expected: "no_match", email: named }]);
+    // Names alone are kept too: the API pairs by position only when both list files.
+    const namesOnly = { ...email("b"), attachment_names: ["notes.txt"] };
+    expect(
+      samplesFromJson([{ expected: "match", email: namesOnly }], "f"),
+    ).toEqual([{ expected: "match", email: namesOnly }]);
+    expect(() =>
+      samplesFromJson(
+        [
+          {
+            expected: "match",
+            email: {
+              ...email("c"),
+              attachment_types: ["application/pdf", "image/png"],
+              attachment_names: ["statement.pdf"],
+            },
+          },
+        ],
+        "f",
+      ),
+    ).toThrow(
+      "f, sample 1: email attachment_names pairs with attachment_types by position, so give the same number of each.",
+    );
+    expect(() =>
+      samplesFromJson(
+        [
+          {
+            expected: "match",
+            email: {
+              ...email("d"),
+              attachment_names: ["x"].concat(Array(10).fill("y")),
+            },
+          },
+        ],
+        "f",
+      ),
+    ).toThrow("email attachment_names must be a list of at most 10 strings");
+  });
+
   it("takes a generate-look-alikes answer, bare or as --json printed it", () => {
     const expected = lookAlikeSamples(THREE);
     expect(expected).toHaveLength(3);

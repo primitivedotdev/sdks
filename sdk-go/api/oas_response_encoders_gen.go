@@ -7367,6 +7367,19 @@ func encodeCompileEmailRuleResponse(response CompileEmailRuleRes, w http.Respons
 
 		return nil
 
+	case *CompileEmailRuleConflict:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(409)
+		span.SetStatus(codes.Error, http.StatusText(409))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
 	case *CompileEmailRuleUnprocessableEntity:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(422)
@@ -39592,6 +39605,225 @@ func encodeGetWebhookSecretResponse(response GetWebhookSecretRes, w http.Respons
 	}
 }
 
+func encodeImportGoogleMailMessageResponse(response ImportGoogleMailMessageRes, w http.ResponseWriter, span trace.Span) error {
+	switch response := response.(type) {
+	case *ImportGoogleMailMessageOK:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(200)
+		span.SetStatus(codes.Ok, http.StatusText(200))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *ImportGoogleMailMessageBadRequest:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(400)
+		span.SetStatus(codes.Error, http.StatusText(400))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *ImportGoogleMailMessageUnauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(401)
+		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *ImportGoogleMailMessageForbidden:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(403)
+		span.SetStatus(codes.Error, http.StatusText(403))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *ImportGoogleMailMessageConflict:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(409)
+		span.SetStatus(codes.Error, http.StatusText(409))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *ImportGoogleMailMessageUnprocessableEntity:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(422)
+		span.SetStatus(codes.Error, http.StatusText(422))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *ErrorResponseHeaders:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Access-Control-Expose-Headers", "Idempotent-Replayed,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset,Retry-After")
+		// Encoding response headers.
+		{
+			h := uri.NewHeaderEncoder(w.Header())
+			// Encode "Idempotent-Replayed" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Idempotent-Replayed",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.IdempotentReplayed.Get(); ok {
+						return e.EncodeValue(conv.StringToString(string(val)))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Idempotent-Replayed header")
+				}
+			}
+			// Encode "Ratelimit-Limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Ratelimit-Limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Ratelimit-Limit header")
+				}
+			}
+			// Encode "Ratelimit-Policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Ratelimit-Policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Ratelimit-Policy header")
+				}
+			}
+			// Encode "Ratelimit-Remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Ratelimit-Remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Ratelimit-Remaining header")
+				}
+			}
+			// Encode "Ratelimit-Reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Ratelimit-Reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Ratelimit-Reset header")
+				}
+			}
+			// Encode "Retry-After" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Retry-After",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RetryAfter.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+		}
+		w.WriteHeader(429)
+		span.SetStatus(codes.Error, http.StatusText(429))
+
+		e := new(jx.Encoder)
+		response.Response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *ImportGoogleMailMessageBadGateway:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(502)
+		span.SetStatus(codes.Error, http.StatusText(502))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *ImportGoogleMailMessageServiceUnavailable:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(503)
+		span.SetStatus(codes.Error, http.StatusText(503))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	default:
+		return errors.Errorf("unexpected response type: %T", response)
+	}
+}
+
 func encodeInstallTemplateResponse(response InstallTemplateRes, w http.ResponseWriter, span trace.Span) error {
 	switch response := response.(type) {
 	case *InstallTemplateCreated:
@@ -62989,6 +63221,281 @@ func encodeReaffirmFunctionRuntimeKeyResponse(response ReaffirmFunctionRuntimeKe
 
 		e := new(jx.Encoder)
 		response.Response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	default:
+		return errors.Errorf("unexpected response type: %T", response)
+	}
+}
+
+func encodeReconcileGoogleMailImportResponse(response ReconcileGoogleMailImportRes, w http.ResponseWriter, span trace.Span) error {
+	switch response := response.(type) {
+	case *ReconcileGoogleMailImportOK:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(200)
+		span.SetStatus(codes.Ok, http.StatusText(200))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *ReconcileGoogleMailImportBadRequest:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(400)
+		span.SetStatus(codes.Error, http.StatusText(400))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *ReconcileGoogleMailImportUnauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Access-Control-Expose-Headers", "Idempotent-Replayed,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset,Retry-After")
+		// Encoding response headers.
+		{
+			h := uri.NewHeaderEncoder(w.Header())
+			// Encode "Idempotent-Replayed" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Idempotent-Replayed",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.IdempotentReplayed.Get(); ok {
+						return e.EncodeValue(conv.StringToString(string(val)))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Idempotent-Replayed header")
+				}
+			}
+			// Encode "Ratelimit-Limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Ratelimit-Limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Ratelimit-Limit header")
+				}
+			}
+			// Encode "Ratelimit-Policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Ratelimit-Policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Ratelimit-Policy header")
+				}
+			}
+			// Encode "Ratelimit-Remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Ratelimit-Remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Ratelimit-Remaining header")
+				}
+			}
+			// Encode "Ratelimit-Reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Ratelimit-Reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Ratelimit-Reset header")
+				}
+			}
+			// Encode "Retry-After" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Retry-After",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RetryAfter.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+		}
+		w.WriteHeader(401)
+		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *ReconcileGoogleMailImportForbidden:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(403)
+		span.SetStatus(codes.Error, http.StatusText(403))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *ReconcileGoogleMailImportTooManyRequests:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Access-Control-Expose-Headers", "Idempotent-Replayed,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset,Retry-After")
+		// Encoding response headers.
+		{
+			h := uri.NewHeaderEncoder(w.Header())
+			// Encode "Idempotent-Replayed" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Idempotent-Replayed",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.IdempotentReplayed.Get(); ok {
+						return e.EncodeValue(conv.StringToString(string(val)))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Idempotent-Replayed header")
+				}
+			}
+			// Encode "Ratelimit-Limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Ratelimit-Limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Ratelimit-Limit header")
+				}
+			}
+			// Encode "Ratelimit-Policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Ratelimit-Policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Ratelimit-Policy header")
+				}
+			}
+			// Encode "Ratelimit-Remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Ratelimit-Remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Ratelimit-Remaining header")
+				}
+			}
+			// Encode "Ratelimit-Reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Ratelimit-Reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Ratelimit-Reset header")
+				}
+			}
+			// Encode "Retry-After" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Retry-After",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RetryAfter.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+		}
+		w.WriteHeader(429)
+		span.SetStatus(codes.Error, http.StatusText(429))
+
+		e := new(jx.Encoder)
+		response.Response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *ReconcileGoogleMailImportServiceUnavailable:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(503)
+		span.SetStatus(codes.Error, http.StatusText(503))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
 		if _, err := e.WriteTo(w); err != nil {
 			return errors.Wrap(err, "write")
 		}

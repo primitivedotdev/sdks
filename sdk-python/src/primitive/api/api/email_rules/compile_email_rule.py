@@ -75,6 +75,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_403
 
+    if response.status_code == 409:
+        response_409 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_409
+
     if response.status_code == 422:
         response_422 = ErrorResponse.from_dict(response.json())
 
@@ -125,10 +132,11 @@ def sync_detailed(
     columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
     after the conditions match; they read the subject, the new text and attachment file names, never
     attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
-    much of your recent classified mail its conditions match; for a grant rule with questions,
-    conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind
-    do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-
-    access credential (no API key, agent key or narrowed token).
+    much of the recent classified mail in evaluation_scope (by default your own mailboxes) its
+    conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone.
+    include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -169,10 +177,11 @@ def sync(
     columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
     after the conditions match; they read the subject, the new text and attachment file names, never
     attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
-    much of your recent classified mail its conditions match; for a grant rule with questions,
-    conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind
-    do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-
-    access credential (no API key, agent key or narrowed token).
+    much of the recent classified mail in evaluation_scope (by default your own mailboxes) its
+    conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone.
+    include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -208,10 +217,11 @@ async def asyncio_detailed(
     columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
     after the conditions match; they read the subject, the new text and attachment file names, never
     attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
-    much of your recent classified mail its conditions match; for a grant rule with questions,
-    conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind
-    do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-
-    access credential (no API key, agent key or narrowed token).
+    much of the recent classified mail in evaluation_scope (by default your own mailboxes) its
+    conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone.
+    include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -252,10 +262,11 @@ async def asyncio(
     columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
     after the conditions match; they read the subject, the new text and attachment file names, never
     attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
-    much of your recent classified mail its conditions match; for a grant rule with questions,
-    conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind
-    do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-
-    access credential (no API key, agent key or narrowed token).
+    much of the recent classified mail in evaluation_scope (by default your own mailboxes) its
+    conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone.
+    include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):

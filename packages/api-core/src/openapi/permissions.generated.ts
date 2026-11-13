@@ -512,6 +512,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   "getWebhookSecret": [
     "webhook_secret:read"
   ],
+  "importGoogleMailMessage": [
+    "mail:read"
+  ],
   "installTemplate": [
     "templates:install",
     "functions:deploy"
@@ -749,6 +752,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   ],
   "reaffirmFunctionRuntimeKey": [
     "functions:deploy"
+  ],
+  "reconcileGoogleMailImport": [
+    "mail:read"
   ],
   "redeemCreditCode": [
     "credits:redeem"
