@@ -52,7 +52,7 @@ export const PRIMITIVE_TEAM_AUTHOR: FunctionTemplateAuthor = {
 // version (see RELEASE.md), so update this alongside every major
 // bump; scaffolded projects then use the SDK version this CLI release
 // was tested against.
-const SDK_VERSION_RANGE = "^3.0.0-preview.13";
+const SDK_VERSION_RANGE = "^3.0.0-preview.14";
 
 // The CLI version range that ships in the scaffolded devDependencies.
 // Kept as its own constant because primitive and @primitivedotdev/sdk
@@ -63,7 +63,7 @@ const SDK_VERSION_RANGE = "^3.0.0-preview.13";
 // resolves at least v1.2.3, so the user does not silently downgrade
 // the bin under themselves. The lockstep test in functions-init.test.ts
 // enforces that invariant.
-const CLI_VERSION_RANGE = "^3.0.0-preview.13";
+const CLI_VERSION_RANGE = "^3.0.0-preview.14";
 
 // esbuild version range. Pinned to the latest stable major used
 // elsewhere in the Primitive codebase for bundling edge-style
