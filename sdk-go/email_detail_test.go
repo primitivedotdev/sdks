@@ -306,3 +306,48 @@ func TestEmailDetailUnmarshalsRequiredNullableFromName(t *testing.T) {
 		t.Errorf("from_name: got (%q, %v), want Dana R\u00faiz", name, ok)
 	}
 }
+
+func TestEmailDetailImportedRoundTrips(t *testing.T) {
+	const anchor = `"imported": null,`
+	if !strings.Contains(emailDetailSampleJSON, anchor) {
+		t.Fatalf("sample JSON no longer contains %q", anchor)
+	}
+	imported := strings.Replace(emailDetailSampleJSON, anchor, `"imported": {"from": "google_workspace", "method": "primitive_direct", "verification": "provider_fetched", "at": "2026-05-01T12:30:00Z"},`, 1)
+
+	var live primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(emailDetailSampleJSON), &live); err != nil {
+		t.Fatalf("unmarshal live mail: %v", err)
+	}
+	if _, ok := live.Imported.Get(); ok || !live.Imported.Null {
+		t.Errorf("live mail imported: got %+v, want null", live.Imported)
+	}
+
+	var detail primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(imported), &detail); err != nil {
+		t.Fatalf("unmarshal imported mail: %v", err)
+	}
+	got, ok := detail.Imported.Get()
+	if !ok {
+		t.Fatalf("imported: got %+v, want a value", detail.Imported)
+	}
+	want := time.Date(2026, 5, 1, 12, 30, 0, 0, time.UTC)
+	if got.From != primitiveapi.EmailDetailImportedFromGoogleWorkspace ||
+		got.Method != primitiveapi.EmailDetailImportedMethodPrimitiveDirect ||
+		got.Verification != primitiveapi.EmailDetailImportedVerificationProviderFetched ||
+		!got.At.Equal(want) {
+		t.Errorf("imported: got %+v", got)
+	}
+
+	encoded, err := json.Marshal(&detail)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var again primitiveapi.EmailDetail
+	if err := json.Unmarshal(encoded, &again); err != nil {
+		t.Fatalf("unmarshal re-encoded: %v", err)
+	}
+	if back, ok := again.Imported.Get(); !ok || back.From != got.From || back.Method != got.Method ||
+		back.Verification != got.Verification || !back.At.Equal(got.At) {
+		t.Errorf("imported after round trip: got (%+v, %v), want %+v", back, ok, got)
+	}
+}
