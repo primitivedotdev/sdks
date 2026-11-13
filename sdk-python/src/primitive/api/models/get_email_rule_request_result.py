@@ -67,8 +67,9 @@ class GetEmailRuleRequestResult:
             edited_on_accept (bool | None | Unset): Once accepted: whether the rule was changed first, as on the share. Null
                 until then, or when unreadable.
             notice (None | str | Unset): For the member asked, while pending: what the rule actually does
-                (server_explanation), Primitive's warnings, then what accepting would share. For the member who asked, once
-                accepted with changes: that the request is not what is shared. Else null.
+                (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one
+                email (rule-results). For the member who asked, once accepted with changes: that the request is not what is
+                shared. Else null.
      """
 
     id: UUID

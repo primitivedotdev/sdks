@@ -42,7 +42,9 @@ class ListEmailRuleResultsResultRulesItem:
                 ListEmailRuleResultsResultRulesItemNotRunReasonType2Type1 |
                 ListEmailRuleResultsResultRulesItemNotRunReasonType3Type1 | None): What is known about a rule with no result on
                 this email. draft: the rule is a draft now. created_after_email: the rule was created after the email arrived.
-                Null when it has a result, or when nothing is known.
+                outside_scope: the mailbox this email is in is outside what its scope names (its author's own mailboxes, its
+                selection, or all its author reads now), so it does not decide on it. Null when it has a result, or when nothing
+                is known (it may not have decided yet).
             kind (ListEmailRuleResultsResultRulesItemKind | Unset): grant: the rule shares what it matches. do_not_share:
                 the rule blocks sharing of what it matches. While it is active, no rule shares an email it has matched from then
                 on; anything shared before, including while it was in observe, stays shared.

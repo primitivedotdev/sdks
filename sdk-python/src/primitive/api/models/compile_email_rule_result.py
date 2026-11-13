@@ -14,6 +14,7 @@ from typing import cast
 if TYPE_CHECKING:
   from ..models.compile_email_rule_result_sql import CompileEmailRuleResultSql
   from ..models.email_rule_breadth import EmailRuleBreadth
+  from ..models.email_rule_scope_used import EmailRuleScopeUsed
   from ..models.email_rule_tree import EmailRuleTree
 
 
@@ -52,6 +53,7 @@ class CompileEmailRuleResult:
             conditions_breadth (EmailRuleBreadth | None | Unset): For a grant rule with questions, breadth counted on its
                 conditions alone: the emails its questions are asked about. Null for any other rule, or when not counted in full
                 (as breadth).
+            breadth_scope (EmailRuleScopeUsed | Unset):
             sql (CompileEmailRuleResultSql | Unset): Present only when include_sql was true.
      """
 
@@ -63,6 +65,7 @@ class CompileEmailRuleResult:
     kind: CompileEmailRuleResultKind | Unset = UNSET
     breadth: EmailRuleBreadth | None | Unset = UNSET
     conditions_breadth: EmailRuleBreadth | None | Unset = UNSET
+    breadth_scope: EmailRuleScopeUsed | Unset = UNSET
     sql: CompileEmailRuleResultSql | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -73,6 +76,7 @@ class CompileEmailRuleResult:
     def to_dict(self) -> dict[str, Any]:
         from ..models.compile_email_rule_result_sql import CompileEmailRuleResultSql # noqa: PLC0415
         from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
+        from ..models.email_rule_scope_used import EmailRuleScopeUsed # noqa: PLC0415
         from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
         tree = self.tree.to_dict()
 
@@ -109,6 +113,10 @@ class CompileEmailRuleResult:
         else:
             conditions_breadth = self.conditions_breadth
 
+        breadth_scope: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.breadth_scope, Unset):
+            breadth_scope = self.breadth_scope.to_dict()
+
         sql: dict[str, Any] | Unset = UNSET
         if not isinstance(self.sql, Unset):
             sql = self.sql.to_dict()
@@ -129,6 +137,8 @@ class CompileEmailRuleResult:
             field_dict["breadth"] = breadth
         if conditions_breadth is not UNSET:
             field_dict["conditions_breadth"] = conditions_breadth
+        if breadth_scope is not UNSET:
+            field_dict["breadth_scope"] = breadth_scope
         if sql is not UNSET:
             field_dict["sql"] = sql
 
@@ -140,6 +150,7 @@ class CompileEmailRuleResult:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.compile_email_rule_result_sql import CompileEmailRuleResultSql # noqa: PLC0415
         from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
+        from ..models.email_rule_scope_used import EmailRuleScopeUsed # noqa: PLC0415
         from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
         d = dict(src_dict)
         tree = EmailRuleTree.from_dict(d.pop("tree"))
@@ -207,6 +218,16 @@ class CompileEmailRuleResult:
         conditions_breadth = _parse_conditions_breadth(d.pop("conditions_breadth", UNSET))
 
 
+        _breadth_scope = d.pop("breadth_scope", UNSET)
+        breadth_scope: EmailRuleScopeUsed | Unset
+        if isinstance(_breadth_scope,  Unset):
+            breadth_scope = UNSET
+        else:
+            breadth_scope = EmailRuleScopeUsed.from_dict(_breadth_scope)
+
+
+
+
         _sql = d.pop("sql", UNSET)
         sql: CompileEmailRuleResultSql | Unset
         if isinstance(_sql,  Unset):
@@ -226,6 +247,7 @@ class CompileEmailRuleResult:
             kind=kind,
             breadth=breadth,
             conditions_breadth=conditions_breadth,
+            breadth_scope=breadth_scope,
             sql=sql,
         )
 

@@ -26,8 +26,9 @@ class CreateEmailRuleObjectionRequest:
         Attributes:
             rule_id (UUID): A rule that covers one of your own mailboxes now (GET /email-rules/covering-me), written by
                 another member.
-            message (None | str | Unset): Why you object, up to 500 characters; null or absent for none. The rule's author
-                and the organization's owners and admins see it while it stands; withdrawing clears it.
+            message (None | str | Unset): Why you object and what you ask, up to 500 characters: to turn the rule off, to
+                narrow it, or to explain who receives what it matches. Null or absent for none. The rule's author and the
+                organization's owners and admins see it while it stands; withdrawing clears it.
      """
 
     rule_id: UUID

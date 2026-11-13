@@ -110,10 +110,13 @@ class SendMailInput:
                 Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-
                 Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe
                 sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the
-                unsubscribe. Every recipient of the message gets the same `url`, so send one message per recipient when the URL
-                identifies who to unsubscribe. The `headers` map refuses both header names, so this field is the only way to set
-                them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-
-                Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send.
+                unsubscribe. Every recipient of a message would get the same `url`, so another recipient could unsubscribe
+                whoever it identifies: a send with `unsubscribe` must have exactly one recipient, one entry across `to`, `cc`
+                and `bcc` (an address given twice counts twice), and a send to more is refused with a `validation_error`. Send
+                one message per recipient, for example with `POST /v1/send-mail/batch`. The `headers` map refuses both header
+                names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers`
+                may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a
+                repeating send.
             headers (SendMailInputHeaders | Unset): Extra headers, as `{ "Name": "value" }`, at most 25. A name is one of
                 `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-
                 Ref`, `X-Primitive-Function-Hop`, or a custom `X-` name of letters, digits and hyphens that is not credential-

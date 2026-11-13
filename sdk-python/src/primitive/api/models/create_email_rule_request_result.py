@@ -67,12 +67,16 @@ class CreateEmailRuleRequestResult:
             edited_on_accept (bool | None | Unset): Once accepted: whether the rule was changed first, as on the share. Null
                 until then, or when unreadable.
             notice (None | str | Unset): For the member asked, while pending: what the rule actually does
-                (server_explanation), Primitive's warnings, then what accepting would share. For the member who asked, once
-                accepted with changes: that the request is not what is shared. Else null.
+                (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one
+                email (rule-results). For the member who asked, once accepted with changes: that the request is not what is
+                shared. Else null.
             target_can_accept (bool | None | Unset): Whether the member asked can accept it now under their role. Null
                 unless you can list members and their roles (members:read), or when it could not be read.
             target_warning (None | str | Unset): Why the member asked cannot accept it yet, naming the permission their role
                 lacks. The request is still sent. Null when they can, or when target_can_accept is null.
+            existing (bool | Unset): Present, as true, when the create carried an Idempotency-Key and you already had a
+                pending request to this member asking exactly this (name, english, tree, explanation and message, naming the
+                member the same way): that request is returned (200), and no second one is made or sent.
      """
 
     id: UUID
@@ -103,6 +107,7 @@ class CreateEmailRuleRequestResult:
     notice: None | str | Unset = UNSET
     target_can_accept: bool | None | Unset = UNSET
     target_warning: None | str | Unset = UNSET
+    existing: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -218,6 +223,8 @@ class CreateEmailRuleRequestResult:
         else:
             target_warning = self.target_warning
 
+        existing = self.existing
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -259,6 +266,8 @@ class CreateEmailRuleRequestResult:
             field_dict["target_can_accept"] = target_can_accept
         if target_warning is not UNSET:
             field_dict["target_warning"] = target_warning
+        if existing is not UNSET:
+            field_dict["existing"] = existing
 
         return field_dict
 
@@ -460,6 +469,8 @@ class CreateEmailRuleRequestResult:
         target_warning = _parse_target_warning(d.pop("target_warning", UNSET))
 
 
+        existing = d.pop("existing", UNSET)
+
         create_email_rule_request_result = cls(
             id=id,
             status=status,
@@ -489,6 +500,7 @@ class CreateEmailRuleRequestResult:
             notice=notice,
             target_can_accept=target_can_accept,
             target_warning=target_warning,
+            existing=existing,
         )
 
 

@@ -1050,8 +1050,8 @@ export function writtenEmailRuleReport(
   if (reach) lines.push(reach);
   // That the write ended the rule's share, and with whom; then, for a version
   // saved on an active rule keys or webhooks read without a check, what it
-  // changes.
-  for (const note of [rule.share_notice, rule.notice]) {
+  // changes; and, on a grant rule's create, that do-not-share rules run first.
+  for (const note of [rule.share_notice, rule.notice, rule.do_not_share_note]) {
     const line = noteLine(note);
     if (line) lines.push(line);
   }
@@ -1470,6 +1470,61 @@ function undecidedSamplesMayStay(count: number, reason: string): boolean {
   );
 }
 
+// test-email-rule-on-sample
+
+/**
+ * The stderr report of test-email-rule-on-sample with --with-protection:
+ * whether a match would be shared, and the do-not-share rules that would
+ * keep it from being shared. Nothing without protection in the answer.
+ */
+export function testSampleProtectionReport(data: unknown): OperationReport {
+  if (!isRecord(data) || !isRecord(data.protection)) return { lines: [] };
+  const protection = data.protection;
+  const mailbox =
+    typeof protection.mailbox === "string" && protection.mailbox
+      ? ` over ${protection.mailbox}`
+      : "";
+  if (protection.outcome === "not_matched")
+    return {
+      lines: [
+        `Protection${mailbox}: the rule did not match, so nothing would be shared and no do-not-share rule was judged.`,
+      ],
+    };
+  if (protection.outcome === "shared")
+    return {
+      lines: [
+        `Protection${mailbox}: a match would be shared; no do-not-share rule keeps it back.`,
+      ],
+    };
+  if (protection.outcome !== "withheld") return { lines: [] };
+  const withheld = (
+    Array.isArray(protection.withheld_by) ? protection.withheld_by : []
+  ).filter(isRecord);
+  const named = withheld.map(
+    (rule) =>
+      `${typeof rule.name === "string" ? rule.name : "a rule"} (${rule.id}, ${rule.reason === "undecided" ? "undecided" : "matched"})`,
+  );
+  const hidden =
+    typeof protection.withheld_by_hidden === "number" &&
+    protection.withheld_by_hidden > 0
+      ? protection.withheld_by_hidden
+      : 0;
+  const by = [
+    ...named,
+    ...(hidden > 0
+      ? [plural(hidden, "rule you cannot see", "rules you cannot see")]
+      : []),
+  ];
+  const undecided = withheld.some((rule) => rule.reason === "undecided")
+    ? " An undecided one holds it back until it is decided."
+    : "";
+  return {
+    lines: [
+      `Protection${mailbox}: a match would be withheld${by.length > 0 ? ` by ${by.join(", ")}` : ""}.${undecided}`,
+    ],
+  };
+}
+
 // compile-email-rule
 
 /** Where compile counted breadth, by the evaluation_scope it was sent. */
@@ -1492,15 +1547,22 @@ export function compileEmailRuleReport(
     )
     .map((warning) => `Warning: ${warning.trim()}`);
   const breadth = data.breadth;
-  // Counted over the evaluation_scope sent, by default your own mailboxes.
+  // Counted over the evaluation_scope sent, by default your own mailboxes,
+  // as the answer's breadth_scope says when the server sends it.
   const sent =
     isRecord(request?.body) && typeof request.body.evaluation_scope === "string"
       ? request.body.evaluation_scope
       : undefined;
+  const counted =
+    isRecord(data.breadth_scope) &&
+    typeof data.breadth_scope.evaluation_scope === "string"
+      ? data.breadth_scope.evaluation_scope
+      : sent;
   const where =
-    sent === undefined
+    sent === undefined && (counted === undefined || counted === "own_mailboxes")
       ? "in your own mailboxes, the default; pass --evaluation-scope to count over the scope you will save it with"
-      : (BREADTH_SCOPE[sent] ?? `in evaluation_scope ${sent}`);
+      : (BREADTH_SCOPE[counted ?? "own_mailboxes"] ??
+        `in evaluation_scope ${counted}`);
   if (
     isRecord(breadth) &&
     typeof breadth.checked === "number" &&
@@ -1728,6 +1790,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
     flags: scopeSelectionFlags(),
     bodyFields: scopeSelectionBodyFields,
     bodyProperties: ["scope_selection"],
+    report: testSampleProtectionReport,
   },
   acceptEmailRuleRequest: {
     flags: {

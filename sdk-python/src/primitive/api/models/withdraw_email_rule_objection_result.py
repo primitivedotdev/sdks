@@ -37,8 +37,10 @@ class WithdrawEmailRuleObjectionResult:
             author (EmailRuleObjectionPerson):
             is_objector (bool): Whether you made it, in your current membership.
             is_author (bool): Whether it is to a rule you wrote, in your current membership.
-            message (None | str): Why the objector objects; null when none was given, or once withdrawn.
-            decline_reason (None | str):
+            message (None | str): Why they object and what they ask (to turn the rule off, narrow it, or explain who
+                receives it); null when none was given, or once withdrawn.
+            decline_reason (None | str): The author's answer when declining, which the objector sees; null when none was
+                given.
             created_at (datetime.datetime):
             decided_at (datetime.datetime | None):
             decided_by_user_id (None | UUID):

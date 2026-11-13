@@ -3779,3 +3779,167 @@ describe("--scope-address and --scope-domain", () => {
     expect(calls).toEqual([]);
   });
 });
+
+describe("email-rules test-email-rule-on-sample --with-protection", () => {
+  const sample = {
+    rule_id: RULE,
+    email: {
+      from: { address: "billing@clinic.example" },
+      to: ["me@acme.example"],
+      text: "Your statement is ready.",
+    },
+  };
+  const answerWith = (protection?: unknown) =>
+    answer({
+      rule: { id: RULE, version: 3, vocabulary: "v1" },
+      outcome: "matched",
+      ...(protection ? { protection } : {}),
+    });
+
+  it("sends with_protection as true or false, the way other boolean flags take it", async () => {
+    for (const [args, value] of [
+      [["--with-protection"], true],
+      [["--with-protection", "true"], true],
+      [["--with-protection", "false"], false],
+      [["--no-with-protection"], false],
+    ] as const) {
+      answerWith();
+      calls = [];
+      const result = await run("email-rules:test-email-rule-on-sample", [
+        "--raw-body",
+        JSON.stringify(sample),
+        ...args,
+      ]);
+      expect(result.exitCode, `${args.join(" ")}: ${result.stderr}`).toBe(0);
+      expect(calls[0]?.body, args.join(" ")).toEqual({
+        ...sample,
+        with_protection: value,
+      });
+    }
+  });
+
+  it("says whether a match would be shared, and what would keep it back", async () => {
+    answerWith({
+      mailbox: "me@acme.example",
+      outcome: "withheld",
+      withheld_by: [
+        { id: A, name: "Never share medical mail", reason: "matched" },
+        { id: RULE, name: "Hold billing", reason: "undecided" },
+      ],
+      withheld_by_hidden: 2,
+    });
+    const withheld = await run("email-rules:test-email-rule-on-sample", [
+      "--raw-body",
+      JSON.stringify(sample),
+      "--with-protection",
+    ]);
+    expect(stderrLines(withheld)).toEqual([
+      `Protection over me@acme.example: a match would be withheld by Never share medical mail (${A}, matched), Hold billing (${RULE}, undecided), 2 rules you cannot see. An undecided one holds it back until it is decided.`,
+    ]);
+    answerWith({
+      mailbox: "me@acme.example",
+      outcome: "shared",
+      withheld_by: [],
+      withheld_by_hidden: 0,
+    });
+    const shared = await run("email-rules:test-email-rule-on-sample", [
+      "--raw-body",
+      JSON.stringify(sample),
+      "--with-protection",
+    ]);
+    expect(stderrLines(shared)).toEqual([
+      "Protection over me@acme.example: a match would be shared; no do-not-share rule keeps it back.",
+    ]);
+    answerWith({
+      mailbox: "me@acme.example",
+      outcome: "not_matched",
+      withheld_by: [],
+      withheld_by_hidden: 0,
+    });
+    const notMatched = await run("email-rules:test-email-rule-on-sample", [
+      "--raw-body",
+      JSON.stringify(sample),
+      "--with-protection",
+      "--json",
+    ]);
+    expect(notMatched.stderr).toBe("");
+    // Without with_protection the answer has none, and nothing is said.
+    answerWith();
+    const plain = await run("email-rules:test-email-rule-on-sample", [
+      "--raw-body",
+      JSON.stringify(sample),
+    ]);
+    expect(stderrLines(plain)).toEqual([]);
+  });
+
+  it("names the scope compile counted over from the answer, and prints a grant rule's do-not-share note on create", async () => {
+    answer({
+      tree: { version: 1, vocabulary: "v1", when: { all: [] } },
+      explanation: "Invoices.",
+      assumptions: [],
+      warnings: [],
+      breadth: { checked: 40, matched: 6 },
+      breadth_scope: { evaluation_scope: "author", scope_selection: null },
+    });
+    const compiled = await run("email-rules:compile-email-rule", [
+      "--english",
+      "invoices",
+      "--evaluation-scope",
+      "author",
+    ]);
+    expect(stderrLines(compiled)).toEqual([
+      "Breadth: its conditions hold for 6 of 40 recent emails checked in all the mail you can read.",
+    ]);
+    // The answer's scope wins over what the request sent, or left out.
+    for (const [args, counted, where] of [
+      [[], "author", "in all the mail you can read"],
+      [
+        ["--evaluation-scope", "own_mailboxes"],
+        "selected",
+        "in the inboxes and domains the selected scope names",
+      ],
+    ] as const) {
+      answer({
+        tree: { version: 1, vocabulary: "v1", when: { all: [] } },
+        explanation: "Invoices.",
+        assumptions: [],
+        warnings: [],
+        breadth: { checked: 40, matched: 6 },
+        breadth_scope: { evaluation_scope: counted, scope_selection: null },
+      });
+      const followed = await run("email-rules:compile-email-rule", [
+        "--english",
+        "invoices",
+        ...args,
+      ]);
+      expect(stderrLines(followed), counted).toEqual([
+        `Breadth: its conditions hold for 6 of 40 recent emails checked ${where}.`,
+      ]);
+    }
+    const note =
+      "Active do-not-share rules reaching an email run first: one that matches it keeps it from being shared through this rule.";
+    answer({
+      id: RULE,
+      name: "Invoices",
+      state: "observe",
+      kind: "grant",
+      current_version: 1,
+      author_user_id: "00000000-0000-4000-8000-0000000000f1",
+      is_author: true,
+      created_at: "2026-11-01T00:00:00Z",
+      updated_at: "2026-11-10T00:00:00Z",
+      current: null,
+      do_not_share_note: note,
+    });
+    const created = await run("email-rules:create-email-rule", [
+      "--raw-body",
+      JSON.stringify({
+        tree: { version: 1, vocabulary: "v1", when: { all: [] } },
+        name: "Invoices",
+        english: "invoices",
+      }),
+    ]);
+    expect(created.exitCode, created.stderr).toBe(0);
+    expect(stderrLines(created)).toContain(note);
+  });
+});

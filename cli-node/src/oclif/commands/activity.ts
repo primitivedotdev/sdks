@@ -366,7 +366,8 @@ export function formatConcerningRows(
   const rows = items.map((item) => [
     item.state,
     minute(item.created_at),
-    item.name ?? "(unnamed)",
+    // The rule's name then; marked once the rule has been deleted.
+    `${item.name ?? "(unnamed)"}${item.rule_now === "deleted" ? " (deleted)" : ""}`,
     item.created_through.name ?? item.created_through.id ?? "",
     // An older server sends no rule_id; a pending row's id is the rule's.
     item.rule_id ?? (item.state === "pending" ? item.id : ""),

@@ -52,6 +52,9 @@ class GetEmailRuleCoveringMeResult:
                 decided on mail at your own mailbox before.
             current (EmailRuleCoveringMeVersion | None): Its current version: what it asks of each email. When covers_now is
                 false, the newest version that decided on your mail instead.
+            do_not_share_note (str | Unset): On a grant rule: that the active do-not-share rules over an email run first,
+                keeping from it what they match and holding back what they cannot decide, which is decided again for up to a day
+                and shared only if none of them then matches it.
             note (str | Unset): Present when covers_now is false: what is withheld, and why.
      """
 
@@ -68,6 +71,7 @@ class GetEmailRuleCoveringMeResult:
     created_at: datetime.datetime
     covers_now: bool
     current: EmailRuleCoveringMeVersion | None
+    do_not_share_note: str | Unset = UNSET
     note: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -124,6 +128,8 @@ class GetEmailRuleCoveringMeResult:
         else:
             current = self.current
 
+        do_not_share_note = self.do_not_share_note
+
         note = self.note
 
 
@@ -144,6 +150,8 @@ class GetEmailRuleCoveringMeResult:
             "covers_now": covers_now,
             "current": current,
         })
+        if do_not_share_note is not UNSET:
+            field_dict["do_not_share_note"] = do_not_share_note
         if note is not UNSET:
             field_dict["note"] = note
 
@@ -275,6 +283,8 @@ class GetEmailRuleCoveringMeResult:
         current = _parse_current(d.pop("current"))
 
 
+        do_not_share_note = d.pop("do_not_share_note", UNSET)
+
         note = d.pop("note", UNSET)
 
         get_email_rule_covering_me_result = cls(
@@ -291,6 +301,7 @@ class GetEmailRuleCoveringMeResult:
             created_at=created_at,
             covers_now=covers_now,
             current=current,
+            do_not_share_note=do_not_share_note,
             note=note,
         )
 

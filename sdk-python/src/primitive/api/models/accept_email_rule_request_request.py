@@ -14,6 +14,7 @@ from typing import cast
 if TYPE_CHECKING:
   from ..models.email_rule_breadth import EmailRuleBreadth
   from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput
+  from ..models.email_rule_scope_used import EmailRuleScopeUsed
   from ..models.email_rule_tree_input import EmailRuleTreeInput
 
 
@@ -41,6 +42,7 @@ class AcceptEmailRuleRequestRequest:
                 (the default) for a tree you wrote or edited.
             breadth (EmailRuleBreadth | None | Unset): Ignored (the compile answer's breadth).
             conditions_breadth (EmailRuleBreadth | None | Unset): Ignored.
+            breadth_scope (EmailRuleScopeUsed | Unset):
             kind (AcceptEmailRuleRequestRequestKind | Unset): Only grant.
             expectation_samples (list[EmailRuleExpectationSampleInput] | Unset): Made-up emails the rule must match or not,
                 such as look-alikes it must never match, kept on the rule this accept writes.
@@ -55,6 +57,7 @@ class AcceptEmailRuleRequestRequest:
     compiled_by: str | Unset = UNSET
     breadth: EmailRuleBreadth | None | Unset = UNSET
     conditions_breadth: EmailRuleBreadth | None | Unset = UNSET
+    breadth_scope: EmailRuleScopeUsed | Unset = UNSET
     kind: AcceptEmailRuleRequestRequestKind | Unset = UNSET
     expectation_samples: list[EmailRuleExpectationSampleInput] | Unset = UNSET
 
@@ -65,6 +68,7 @@ class AcceptEmailRuleRequestRequest:
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
         from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
+        from ..models.email_rule_scope_used import EmailRuleScopeUsed # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         name = self.name
 
@@ -106,6 +110,10 @@ class AcceptEmailRuleRequestRequest:
         else:
             conditions_breadth = self.conditions_breadth
 
+        breadth_scope: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.breadth_scope, Unset):
+            breadth_scope = self.breadth_scope.to_dict()
+
         kind: str | Unset = UNSET
         if not isinstance(self.kind, Unset):
             kind = self.kind.value
@@ -143,6 +151,8 @@ class AcceptEmailRuleRequestRequest:
             field_dict["breadth"] = breadth
         if conditions_breadth is not UNSET:
             field_dict["conditions_breadth"] = conditions_breadth
+        if breadth_scope is not UNSET:
+            field_dict["breadth_scope"] = breadth_scope
         if kind is not UNSET:
             field_dict["kind"] = kind
         if expectation_samples is not UNSET:
@@ -156,6 +166,7 @@ class AcceptEmailRuleRequestRequest:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
         from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
+        from ..models.email_rule_scope_used import EmailRuleScopeUsed # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         d = dict(src_dict)
         name = d.pop("name", UNSET)
@@ -222,6 +233,16 @@ class AcceptEmailRuleRequestRequest:
         conditions_breadth = _parse_conditions_breadth(d.pop("conditions_breadth", UNSET))
 
 
+        _breadth_scope = d.pop("breadth_scope", UNSET)
+        breadth_scope: EmailRuleScopeUsed | Unset
+        if isinstance(_breadth_scope,  Unset):
+            breadth_scope = UNSET
+        else:
+            breadth_scope = EmailRuleScopeUsed.from_dict(_breadth_scope)
+
+
+
+
         _kind = d.pop("kind", UNSET)
         kind: AcceptEmailRuleRequestRequestKind | Unset
         if isinstance(_kind,  Unset):
@@ -254,6 +275,7 @@ class AcceptEmailRuleRequestRequest:
             compiled_by=compiled_by,
             breadth=breadth,
             conditions_breadth=conditions_breadth,
+            breadth_scope=breadth_scope,
             kind=kind,
             expectation_samples=expectation_samples,
         )

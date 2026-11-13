@@ -433,6 +433,32 @@ describe("activity concerning command", () => {
     expect(COMMANDS["activity:concerning"]).toBeDefined();
   });
 
+  it("marks a notice whose rule has since been deleted", () => {
+    const out = formatConcerningRows([
+      item({
+        kind: "email_rule_coverage",
+        name: "Vendor invoices",
+        state: "started",
+        rule_id: "3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f",
+        rule_now: "deleted",
+        owned_now: "someone_else",
+        created_through: { kind: "member", id: "u-3", name: "Sam Rivera" },
+      }),
+      item({
+        kind: "email_rule_coverage",
+        name: "Other rule",
+        state: "started",
+        owned_now: "someone_else",
+        created_through: { kind: "member", id: "u-3", name: "Sam Rivera" },
+      }),
+    ]);
+    expect(out).toMatch(
+      /^started\s+.*Vendor invoices \(deleted\)\s+Sam Rivera/m,
+    );
+    expect(out).toMatch(/^started\s+.*Other rule\s+Sam Rivera/m);
+    expect(out).not.toMatch(/Other rule \(deleted\)/);
+  });
+
   it("says in its help that notices can lag, promising no cadence, and which id is the rule's", () => {
     const help = ActivityConcerningCommand.description;
     expect(help).toContain("Notices can lag.");

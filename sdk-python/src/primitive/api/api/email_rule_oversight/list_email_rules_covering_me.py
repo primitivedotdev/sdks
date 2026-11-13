@@ -118,9 +118,12 @@ def sync_detailed(
     organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares
     they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope
     names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a
-    cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+    cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. For
+    what happened to one email of yours, every rule's decision on it and, for another member's rule
+    covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules
+    list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
+    dashboard session or the Primitive CLI.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -168,9 +171,12 @@ def sync(
     organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares
     they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope
     names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a
-    cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+    cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. For
+    what happened to one email of yours, every rule's decision on it and, for another member's rule
+    covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules
+    list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
+    dashboard session or the Primitive CLI.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -213,9 +219,12 @@ async def asyncio_detailed(
     organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares
     they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope
     names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a
-    cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+    cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. For
+    what happened to one email of yours, every rule's decision on it and, for another member's rule
+    covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules
+    list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
+    dashboard session or the Primitive CLI.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -263,9 +272,12 @@ async def asyncio(
     organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares
     they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope
     names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a
-    cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+    cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. For
+    what happened to one email of yours, every rule's decision on it and, for another member's rule
+    covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules
+    list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
+    dashboard session or the Primitive CLI.
 
     Args:
         limit (int | Unset):  Default: 50.

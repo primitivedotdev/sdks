@@ -469,15 +469,18 @@ func (UnimplementedHandler) CreateEmailRule(ctx context.Context, req *CreateEmai
 
 // CreateEmailRuleObjection implements createEmailRuleObjection operation.
 //
-// Asks the author of a rule that covers one of your own mailboxes now to turn it off. Only a rule
-// that covers you now: one you see only because it once decided on your mail cannot be objected to.
-// An objection is seen by the member who made it, the rule's author and the organization's owners
-// and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines
-// it, or the member who made it withdraws it, which clears its message. It never changes after that.
-// You may have one pending objection per rule and 50 in all, and object to the same rule again only
-// 10 minutes after you last did, whatever became of it. Needs mail:read, the email rules feature,
-// and a member's own full-access credential (no API key, agent key or narrowed token). Only on your
-// own dashboard session or the Primitive CLI.
+// Objects to a rule that covers one of your own mailboxes now: say in the message what you ask its
+// author, to turn it off, narrow it, or explain who receives what it matches. The author answers by
+// accepting, which turns it off, or by declining, optionally with a reason you see; the rule keeps
+// running unless they accept. Only a rule that covers you now: one you see only because it once
+// decided on your mail cannot be objected to. An objection is seen by the member who made it, the
+// rule's author and the organization's owners and admins. It stays pending until the rule's author
+// accepts it, turning the rule off, or declines it (optionally with a reason the objector sees), or
+// the member who made it withdraws it, which clears its message. It never changes after that. You
+// may have one pending objection per rule and 50 in all, and object to the same rule again only 10
+// minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a
+// member's own full-access credential (no API key, agent key or narrowed token). Only on your own
+// dashboard session or the Primitive CLI.
 //
 // POST /email-rule-objections
 func (UnimplementedHandler) CreateEmailRuleObjection(ctx context.Context, req *CreateEmailRuleObjectionRequest, params CreateEmailRuleObjectionParams) (r CreateEmailRuleObjectionRes, _ error) {
@@ -490,11 +493,13 @@ func (UnimplementedHandler) CreateEmailRuleObjection(ctx context.Context, req *C
 // a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified
 // work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated
 // or shared until they accept, and they may change the rule first. A message (up to 500 characters,
-// fixed once sent) tells them why you ask. At most 5 pending requests to one member and 50 in all.
-// With members:read the answer says whether they can accept it under their role (target_can_accept,
-// target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, the
-// email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
-// token).
+// fixed once sent) tells them why you ask. With an Idempotency-Key, asking again for exactly what a
+// pending request of yours to the same member asks (name, english, tree, explanation and message,
+// naming them the same way) returns that request with existing: true (200), so a retry never asks
+// them twice. At most 5 pending requests to one member and 50 in all. With members:read the answer
+// says whether they can accept it under their role (target_can_accept, target_warning); POST
+// /v1/email-rule-requests/target-check checks first. Needs mail:read, the email rules feature, and a
+// member's own full-access credential (no API key, agent key or narrowed token).
 //
 // POST /email-rule-requests
 func (UnimplementedHandler) CreateEmailRuleRequest(ctx context.Context, req *CreateEmailRuleRequestRequest, params CreateEmailRuleRequestParams) (r CreateEmailRuleRequestRes, _ error) {
@@ -805,9 +810,11 @@ func (UnimplementedHandler) DecideSuspension(ctx context.Context, req *DecideSus
 
 // DeclineEmailRuleObjection implements declineEmailRuleObjection operation.
 //
-// Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is.
-// Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
-// agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+// Declines a pending objection to a rule you wrote, optionally saying why (reason), which the member
+// who objected sees; the rule stays as it is. When its message asks you to narrow the rule or
+// explain who receives it, the reason is your answer; narrow it with a new version as well if you
+// agree. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
+// key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 //
 // POST /email-rule-objections/{id}/decline
 func (UnimplementedHandler) DeclineEmailRuleObjection(ctx context.Context, req OptDeclineEmailRuleObjectionRequest, params DeclineEmailRuleObjectionParams) (r DeclineEmailRuleObjectionRes, _ error) {
@@ -1674,9 +1681,12 @@ func (UnimplementedHandler) GetEmailRule(ctx context.Context, params GetEmailRul
 // covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and
 // shares, the member each belongs to (or the organization), and the sites the webhooks deliver to.
 // You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond
-// the site), the other inboxes and domains its scope names, or its saved expectations. Needs
-// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
-// key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+// the site), the other inboxes and domains its scope names, or its saved expectations. For what
+// happened to one email of yours, every rule's decision on it and, for another member's rule
+// covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules
+// list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
+// member's own full-access credential (no API key, agent key or narrowed token). Only on your own
+// dashboard session or the Primitive CLI.
 //
 // GET /email-rules/covering-me/{id}
 func (UnimplementedHandler) GetEmailRuleCoveringMe(ctx context.Context, params GetEmailRuleCoveringMeParams) (r GetEmailRuleCoveringMeRes, _ error) {
@@ -1687,10 +1697,11 @@ func (UnimplementedHandler) GetEmailRuleCoveringMe(ctx context.Context, params G
 //
 // One objection you can see. An objection is seen by the member who made it, the rule's author and
 // the organization's owners and admins. It stays pending until the rule's author accepts it, turning
-// the rule off, or declines it, or the member who made it withdraws it, which clears its message. It
-// never changes after that. Needs mail:read, the email rules feature, and a member's own full-access
-// credential (no API key, agent key or narrowed token). Only on your own dashboard session or the
-// Primitive CLI.
+// the rule off, or declines it (optionally with a reason the objector sees), or the member who made
+// it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email
+// rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+//
+//	Only on your own dashboard session or the Primitive CLI.
 //
 // GET /email-rule-objections/{id}
 func (UnimplementedHandler) GetEmailRuleObjection(ctx context.Context, params GetEmailRuleObjectionParams) (r GetEmailRuleObjectionRes, _ error) {
@@ -2728,10 +2739,10 @@ func (UnimplementedHandler) ListEmailRuleDecisionsOnMyMail(ctx context.Context, 
 // Objections you made and objections to rules you wrote (by default), only one of the two, or every
 // objection you can see, newest first. An objection is seen by the member who made it, the rule's
 // author and the organization's owners and admins. It stays pending until the rule's author accepts
-// it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its
-// message. It never changes after that. Needs mail:read, the email rules feature, and a member's own
-// full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
-// session or the Primitive CLI.
+// it, turning the rule off, or declines it (optionally with a reason the objector sees), or the
+// member who made it withdraws it, which clears its message. It never changes after that. Needs
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 //
 // GET /email-rule-objections
 func (UnimplementedHandler) ListEmailRuleObjections(ctx context.Context, params ListEmailRuleObjectionsParams) (r ListEmailRuleObjectionsRes, _ error) {
@@ -2872,8 +2883,12 @@ func (UnimplementedHandler) ListEmailRules(ctx context.Context, params ListEmail
 // shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains
 // its scope names, or its saved expectations. A page can hold fewer rules than limit, or none, and
 // still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor
-// is null. Needs mail:read, the email rules feature, and a member's own full-access credential (no
-// API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+// is null. For what happened to one email of yours, every rule's decision on it and, for another
+// member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results
+// (primitive email-rules list-email-rule-results --email-id <email-id>). Needs mail:read, the email
+// rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+//
+//	Only on your own dashboard session or the Primitive CLI.
 //
 // GET /email-rules/covering-me
 func (UnimplementedHandler) ListEmailRulesCoveringMe(ctx context.Context, params ListEmailRulesCoveringMeParams) (r ListEmailRulesCoveringMeRes, _ error) {
@@ -4032,23 +4047,26 @@ func (UnimplementedHandler) RotateEndpointSigningSecret(ctx context.Context, par
 // RotateKey implements rotateKey operation.
 //
 // Mint a successor with a new id and the same name, grant, expiry and conditions, and return its
-// secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when
-// overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0
-// (which is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key
-// stops. Revoking the successor during the overlap also revokes the old key when you may revoke that
-// one too; the revoke's predecessors_left counts any left working. Rotating does not extend a key:
-// the successor keeps the old expiry unless expires_at gives it a new one. That needs keys:manage
-// (403 forbidden otherwise), is held to the credential policy (400 when past its maximum lifetime,
-// with the latest expiry it allows now in the message), and someone limited to their own keys can
-// only keep or bring it forward (403 grant_forbidden, details.reason own_key_tighten_only); the old
-// key then never outlives the new one. The person rotating must cover the key's access (403
-// grant_forbidden, details.reason target_not_covered), and a key an owner holds is rotated by an
-// owner only (403 forbidden, details.reason owner_key_rotation), since rotating hands over the new
-// secret. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the
-// same rules) unless the organization's credential policy sets cli_writes_require_approval; the
-// Primitive app's token is refused, even with one. Needs the organization's credential features to
-// be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the
-// feature. Contact Primitive to turn them on.
+// secret once, with its name and grant so you can see they carried over. The old key keeps working
+// for overlap_seconds, then stops: 24 hours when overlap_seconds is omitted, at most 7 days, never
+// past its own expires_at, and at once with 0 (which is how to rotate a key whose secret leaked).
+// previous_key_expires_at says when the old key stops. Revoking the successor during the overlap
+// also revokes the old key when you may revoke that one too; the revoke's predecessors_left counts
+// any left working. Rotating does not extend a key: the successor keeps the old expiry unless
+// expires_at gives it a new one. That needs keys:manage (403 forbidden otherwise), is held to the
+// credential policy (400 when past its maximum lifetime, with the latest expiry it allows now in the
+// message), and someone limited to their own keys can only keep or bring it forward (403
+// grant_forbidden, details.reason own_key_tighten_only); the old key then never outlives the new one.
+//
+//	The person rotating must cover the key's access (403 grant_forbidden, details.reason
+//
+// target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden, details.
+// reason owner_key_rotation), since rotating hands over the new secret. The person's own Primitive
+// CLI login needs no step-up (it acts as the person, held to the same rules) unless the
+// organization's credential policy sets cli_writes_require_approval; the Primitive app's token is
+// refused, even with one. Needs the organization's credential features to be enabled; while they are
+// not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive
+// to turn them on.
 // Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the
 // organization's credential policy sets cli_writes_require_approval), or the person's own OAuth
 // token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one
@@ -4490,16 +4508,15 @@ func (UnimplementedHandler) SuspendFunctionRuntimeKey(ctx context.Context, req *
 //
 //	no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and
 //
-// question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its
-// author). It reads only mail its author can read and its scope covers. A rule you see only because
-// it covers your own mailboxes runs as you, over only those, from the dashboard or the Primitive CLI.
-//
-//	Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any
-//
-// expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing
-// is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs
-// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
-// key or narrowed token).
+// question decided. Test an unsaved tree, a saved rule by rule_id (its current version, as its
+// author), or a pending rule request by request_id (its rule as asked, as you, over your own
+// mailboxes). It reads only mail its author can read and its scope covers. A rule you see only
+// because it covers your own mailboxes runs as you, over only those, from the dashboard or the
+// Primitive CLI. Without email_ids it tests the newest emails, at most 200 and none older than 30
+// days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless
+// classify_missing is false. It records no decision and grants nothing, and stops at about 90
+// seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no
+// API key, agent key or narrowed token).
 //
 // POST /email-rules/test
 func (UnimplementedHandler) TestEmailRule(ctx context.Context, req *TestEmailRuleRequest, params TestEmailRuleParams) (r TestEmailRuleRes, _ error) {
@@ -4511,10 +4528,10 @@ func (UnimplementedHandler) TestEmailRule(ctx context.Context, req *TestEmailRul
 // Reports what a rule would decide for an email you describe (sender, recipients, subject, plain
 // text, attachment types and file names; optionally automated, from a mailing list, and a spam
 // score), classified and decided as received mail would be. A rule reading a spam score you gave
-// none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule
-// by rule_id. The answer includes what the classifier read. Needs mail:read, the email rules feature,
-//
-//	and a member's own full-access credential (no API key, agent key or narrowed token).
+// none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree, a saved rule by
+// rule_id, or a pending rule request by request_id (its rule as asked, as you). The answer includes
+// what the classifier read. Needs mail:read, the email rules feature, and a member's own full-access
+// credential (no API key, agent key or narrowed token).
 //
 // POST /email-rules/test-sample
 func (UnimplementedHandler) TestEmailRuleOnSample(ctx context.Context, req *TestEmailRuleOnSampleRequest, params TestEmailRuleOnSampleParams) (r TestEmailRuleOnSampleRes, _ error) {

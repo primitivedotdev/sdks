@@ -815,6 +815,35 @@ date-time is kept as null and sorts last. A sync stops with an error after
   some mail would be created now, and `org_reach_available`, whether the
   credential policy lets a new key reach every mailbox.
 - New error codes: `always_sent` and `required_by_organization`.
+- `getEmail` answers `rule_deliveries`, for the owner of the mailbox the
+  email is at, on their own dashboard session or the CLI: each rule over
+  their mail that queued a webhook delivery of it, with how many webhooks it
+  was `delivered` to, is `pending` or `failed` for, or was `not_sent` to,
+  and the hosts. Null for everyone else, and when it could not be read in
+  time.
+- `testEmailRuleOnSample` takes `with_protection` (at most 20 an hour per
+  member): a grant rule that matches is also judged against the active
+  do-not-share rules over the first recipient's mailbox, and the answer's
+  `protection` says whether a match would be `shared`, `withheld` (with the
+  rules that would keep it back) or `not_matched`. It can answer `503`
+  `service_unavailable` when those rules or the limit could not be read.
+- `testEmailRule` and `testEmailRuleOnSample` take `request_id`, a pending
+  rule request you can see, tested as you over your own mailboxes.
+- `compileEmailRule` answers `breadth_scope` (`EmailRuleScopeUsed`), the
+  scope its breadth was counted over; rule writes accept it and ignore it.
+  `testEmailRule`'s `window` carries `scope`, the scope the test ran with,
+  and `oldest_at` and `newest_at`, the span of the emails tested.
+- A rule result's `not_run_reason` can be `outside_scope`: the email's
+  mailbox is outside what the rule's scope names.
+- `createEmailRuleRequest` with an `Idempotency-Key` answers `200` with
+  `existing: true` and the pending request it matched, instead of making a
+  second one, when you already asked that member exactly this.
+- `rotateKey` answers the successor's `name`, its `grant` (the rotated
+  key's, carried over unchanged) and `rotated_from`.
+- A grant rule's create answer and the covering view carry
+  `do_not_share_note`: that active do-not-share rules run first.
+- A coverage notice carries `rule_now` `deleted` once its rule has been
+  deleted.
 - `listActivityObjects` coverage notices (`email_rule_coverage`) carry
   `rule_id`, the rule each is about (for a `pending` row, the same as `id`).
   A notice's `started` means a rule was made or turned active over your
@@ -1756,6 +1785,13 @@ parsers.
   author. `delete-email-rule` prints `share_notice` in place of its count of
   ended shares, and `test-email-rule` says how many decided emails the
   conditions held on together (`summary.conditions_held`).
+- `email-rules test-email-rule-on-sample` takes `--with-protection`, as
+  true or false like the CLI's other boolean flags, and without `--json`
+  says whether a match would be shared and which do-not-share rules would
+  withhold it. `compile-email-rule`'s breadth line names the scope the
+  answer says it was counted over, `create-email-rule` prints a grant
+  rule's `do_not_share_note`, and `activity concerning` marks a notice
+  whose rule has been deleted.
 - Samples files (`--expectation-samples-file`, `--add-expectation-samples-file`,
   `--expect-samples-file`) take `attachment_names`, as look-alikes now carry
   them, and refuse a sample whose names and types differ in number when both

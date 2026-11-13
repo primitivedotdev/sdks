@@ -283,7 +283,7 @@ tags:
     description: Rules a member writes in plain English to pick out received mail. The organization needs the email rules feature, and the caller must be a member (their own session, or an OAuth or CLI token that is not narrowed) with mail:read.
     x-openapi-spec: https://api.primitive.dev/v1/openapi/tags/email-rules
   - name: Email Rule Oversight
-    description: "The email rules that reach your own mailboxes, whoever wrote them, read-only, and your objections to them: asking a rule's author to turn it off. The organization needs the email rules feature, and the caller must be a member with mail:read on their own dashboard session or the Primitive CLI, not narrowed."
+    description: "The email rules that reach your own mailboxes, whoever wrote them, read-only, and your objections to them: asking a rule's author to turn it off, narrow it or explain it. The organization needs the email rules feature, and the caller must be a member with mail:read on their own dashboard session or the Primitive CLI, not narrowed."
     x-openapi-spec: https://api.primitive.dev/v1/openapi/tags/email-rule-oversight
   - name: Changes
     description: One replayable long-poll of what changed (ids and kinds) across mail, sent mail, read state, the agent directory and access, so a client can keep its snapshots current without polling every list.
@@ -23334,7 +23334,7 @@ paths:
     post:
       operationId: testEmailRule
       summary: Test a rule against received mail
-      description: Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its author). It reads only mail its author can read and its scope covers. A rule you see only because it covers your own mailboxes runs as you, over only those, from the dashboard or the Primitive CLI. Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+      description: Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree, a saved rule by rule_id (its current version, as its author), or a pending rule request by request_id (its rule as asked, as you, over your own mailboxes). It reads only mail its author can read and its scope covers. A rule you see only because it covers your own mailboxes runs as you, over only those, from the dashboard or the Primitive CLI. Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -23369,7 +23369,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy"
         "400":
-          description: "validation_error: give exactly one of tree and rule_id, at most 200 email_ids (with the expected emails), 1 to 100 expected emails none in both lists (or only expect.samples, up to 20), and a tree that is valid for the column contract. evaluation_scope, scope_selection and kind go only with tree. A saved rule whose current version no longer renders answers details.reason version_not_renderable; email_ids that with its saved expectations name over 200 emails, too_many_emails."
+          description: "validation_error: give exactly one of tree, rule_id and request_id, at most 200 email_ids (with the expected emails), 1 to 100 expected emails none in both lists (or only expect.samples, up to 20), and a tree that is valid for the column contract. evaluation_scope, scope_selection and kind go only with tree. A saved rule's current version or a request's rule that no longer renders answers details.reason version_not_renderable; email_ids that with its saved expectations name over 200 emails, too_many_emails."
           content:
             application/json:
               schema:
@@ -23401,13 +23401,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: "not_found: rule_id names no rule you can see or that covers your mailboxes (details.reason rule_not_found)."
+          description: "not_found: rule_id names no rule you can see or that covers your mailboxes (details.reason rule_not_found), or request_id no rule request you can see (request_not_found)."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: "email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree or a rule covering you, the caller). details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox."
+          description: "email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, a request or a rule covering you, the caller). details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox. email_rule_request_not_pending: request_id names a request already decided."
           content:
             application/json:
               schema:
@@ -23580,7 +23580,7 @@ paths:
     post:
       operationId: testEmailRuleOnSample
       summary: Test a rule against a made-up email
-      description: Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text, attachment types and file names; optionally automated, from a mailing list, and a spam score), classified and decided as received mail would be. A rule reading a spam score you gave none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+      description: Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text, attachment types and file names; optionally automated, from a mailing list, and a spam score), classified and decided as received mail would be. A rule reading a spam score you gave none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree, a saved rule by rule_id, or a pending rule request by request_id (its rule as asked, as you). The answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
       tags:
         - Email Rules
       security:
@@ -23615,7 +23615,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy"
         "400":
-          description: "validation_error: give exactly one of tree and rule_id (evaluation_scope, scope_selection and kind only with tree), an email with a sender, 1 to 50 To addresses (and up to 50 Cc), and a text body, and a tree that is valid for the column contract and within the size limits for a saved rule. A saved rule whose current version no longer renders answers details.reason version_not_renderable."
+          description: "validation_error: give exactly one of tree, rule_id and request_id (evaluation_scope, scope_selection and kind only with tree), an email with a sender, 1 to 50 To addresses (and up to 50 Cc), and a text body, and a tree that is valid for the column contract and within the size limits for a saved rule. A saved rule's current version or a request's rule that no longer renders answers details.reason version_not_renderable. With with_protection: not_a_grant_rule, or protection_mailbox_outside_rule when the rule does not run over the first recipient."
           content:
             application/json:
               schema:
@@ -23641,19 +23641,19 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read. forbidden with details.reason covering_view_only: you read this rule only in the covering view, since it decided on your mail before and covers none of your mailboxes now (details.covering_view)."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read. forbidden with details.reason covering_view_only: you read this rule only in the covering view, since it decided on your mail before and covers none of your mailboxes now (details.covering_view). grant_forbidden protection_mailbox_not_read: with_protection at a mailbox you do not read in full."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: "not_found: rule_id names no rule you can see or that covers your mailboxes (details.reason rule_not_found)."
+          description: "not_found: rule_id names no rule you can see or that covers your mailboxes (details.reason rule_not_found), or request_id no rule request you can see (request_not_found)."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: "email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree or a rule covering you, you), so it would decide nothing for real. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox."
+          description: "email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, a request or a rule covering you, you), so it would decide nothing for real. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox. email_rule_request_not_pending: request_id names a request already decided."
           content:
             application/json:
               schema:
@@ -23682,6 +23682,12 @@ paths:
                 error:
                   code: rate_limit_exceeded
                   message: Rate limit exceeded
+        "503":
+          description: "service_unavailable: with_protection could not read the do-not-share rules in time (protection_unavailable), or its limit could not be checked (protection_limit_unavailable)."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
       x-primitive-permission:
         - mail:read
       parameters:
@@ -24861,7 +24867,7 @@ paths:
     post:
       operationId: createEmailRuleRequest
       summary: Ask a member for a rule
-      description: Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated or shared until they accept, and they may change the rule first. A message (up to 500 characters, fixed once sent) tells them why you ask. At most 5 pending requests to one member and 50 in all. With members:read the answer says whether they can accept it under their role (target_can_accept, target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+      description: "Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated or shared until they accept, and they may change the rule first. A message (up to 500 characters, fixed once sent) tells them why you ask. With an Idempotency-Key, asking again for exactly what a pending request of yours to the same member asks (name, english, tree, explanation and message, naming them the same way) returns that request with existing: true (200), so a retry never asks them twice. At most 5 pending requests to one member and 50 in all. With members:read the answer says whether they can accept it under their role (target_can_accept, target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
       tags:
         - Email Rules
       security:
@@ -24873,6 +24879,28 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateEmailRuleRequestRequest"
       responses:
+        "200":
+          description: "The pending request this create matched (existing: true): no second one was made."
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required:
+                      - data
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/CreateEmailRuleRequestResult"
+          headers:
+            ratelimit-limit:
+              $ref: "#/components/headers/ratelimit-limit"
+            ratelimit-remaining:
+              $ref: "#/components/headers/ratelimit-remaining"
+            ratelimit-reset:
+              $ref: "#/components/headers/ratelimit-reset"
+            ratelimit-policy:
+              $ref: "#/components/headers/ratelimit-policy"
         "201":
           description: Ask a member for a rule
           content:
@@ -24960,17 +24988,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-      x-primitive-permission:
-        - mail:read
       parameters:
         - name: Idempotency-Key
           in: header
           required: false
-          description: "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it."
+          description: "Optional. With a key, a create identical to a pending request of yours to the same member (name, english, tree, explanation and message, naming the member the same way) returns that request with existing: true (200) instead of making a second one. The key itself is not stored, so any key does this, and a create without one is never matched to an existing request. A key that is empty, longer than 255 characters or not printable ASCII is refused with 400 `validation_error`; a valid one is echoed in the Idempotency-Key response header."
           schema:
             type: string
             minLength: 1
             maxLength: 255
+      x-primitive-permission:
+        - mail:read
     get:
       operationId: listEmailRuleRequests
       summary: List rule requests
@@ -26377,7 +26405,7 @@ paths:
     get:
       operationId: listEmailRulesCoveringMe
       summary: List the rules over your mail
-      description: "Every email rule that covers one of your own mailboxes now, yours included, newest first, in any state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your member mailbox, or a personal agent's address): one whose author reads all your mail (author scope, for an author who reads the organization's mail or holds an access entry for your mailbox), or one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers you. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI."
+      description: "Every email rule that covers one of your own mailboxes now, yours included, newest first, in any state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your member mailbox, or a personal agent's address): one whose author reads all your mail (author scope, for an author who reads the organization's mail or holds an access entry for your mailbox), or one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers you. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. For what happened to one email of yours, every rule's decision on it and, for another member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI."
       tags:
         - Email Rule Oversight
       security:
@@ -26487,7 +26515,7 @@ paths:
     get:
       operationId: getEmailRuleCoveringMe
       summary: Get a rule over your mail
-      description: "One rule that covers one of your own mailboxes, read-only, with its current version; or one that no longer does but decided on mail at your own mailbox (covers_now false), shown as the version that last decided on your mail, without its current name. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI."
+      description: "One rule that covers one of your own mailboxes, read-only, with its current version; or one that no longer does but decided on mail at your own mailbox (covers_now false), shown as the version that last decided on your mail, without its current name. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. For what happened to one email of yours, every rule's decision on it and, for another member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI."
       tags:
         - Email Rule Oversight
       security:
@@ -26550,7 +26578,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: "not_found: no rule with this id covers your mailboxes or decided on your mail."
+          description: "not_found: no rule with this id covers your mailboxes or decided on your mail; details.reason rule_deleted (with details.rule_name) for one deleted after you were told it covered you."
           content:
             application/json:
               schema:
@@ -26683,7 +26711,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: "not_found: no rule with this id covers your mailboxes or decided on your mail."
+          description: "not_found: no rule with this id covers your mailboxes or decided on your mail; details.reason rule_deleted (with details.rule_name) for one deleted after you were told it covered you."
           content:
             application/json:
               schema:
@@ -26813,7 +26841,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: "not_found: no rule with this id covers your mailboxes or decided on your mail."
+          description: "not_found: no rule with this id covers your mailboxes or decided on your mail; details.reason rule_deleted (with details.rule_name) for one deleted after you were told it covered you."
           content:
             application/json:
               schema:
@@ -26848,7 +26876,7 @@ paths:
     post:
       operationId: createEmailRuleObjection
       summary: Object to a rule over your mail
-      description: "Asks the author of a rule that covers one of your own mailboxes now to turn it off. Only a rule that covers you now: one you see only because it once decided on your mail cannot be objected to. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. You may have one pending objection per rule and 50 in all, and object to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI."
+      description: "Objects to a rule that covers one of your own mailboxes now: say in the message what you ask its author, to turn it off, narrow it, or explain who receives what it matches. The author answers by accepting, which turns it off, or by declining, optionally with a reason you see; the rule keeps running unless they accept. Only a rule that covers you now: one you see only because it once decided on your mail cannot be objected to. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it (optionally with a reason the objector sees), or the member who made it withdraws it, which clears its message. It never changes after that. You may have one pending objection per rule and 50 in all, and object to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI."
       tags:
         - Email Rule Oversight
       security:
@@ -26970,7 +26998,7 @@ paths:
     get:
       operationId: listEmailRuleObjections
       summary: List objections
-      description: Objections you made and objections to rules you wrote (by default), only one of the two, or every objection you can see, newest first. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+      description: Objections you made and objections to rules you wrote (by default), only one of the two, or every objection you can see, newest first. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it (optionally with a reason the objector sees), or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
       tags:
         - Email Rule Oversight
       security:
@@ -27104,7 +27132,7 @@ paths:
     get:
       operationId: getEmailRuleObjection
       summary: Get an objection
-      description: One objection you can see. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+      description: One objection you can see. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it (optionally with a reason the objector sees), or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
       tags:
         - Email Rule Oversight
       security:
@@ -27314,7 +27342,7 @@ paths:
     post:
       operationId: declineEmailRuleObjection
       summary: Decline an objection to your rule
-      description: Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+      description: Declines a pending objection to a rule you wrote, optionally saying why (reason), which the member who objected sees; the rule stays as it is. When its message asks you to narrow the rule or explain who receives it, the reason is your answer; narrow it with a new version as well if you agree. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
       tags:
         - Email Rule Oversight
       security:
@@ -36637,7 +36665,7 @@ paths:
       security:
         - BearerAuth: []
       description: |-
-        Mint a successor with a new id and the same name, grant, expiry and conditions, and return its secret once. The old key keeps working for overlap_seconds, then stops: 24 hours when overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0 (which is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key stops. Revoking the successor during the overlap also revokes the old key when you may revoke that one too; the revoke's predecessors_left counts any left working. Rotating does not extend a key: the successor keeps the old expiry unless expires_at gives it a new one. That needs keys:manage (403 forbidden otherwise), is held to the credential policy (400 when past its maximum lifetime, with the latest expiry it allows now in the message), and someone limited to their own keys can only keep or bring it forward (403 grant_forbidden, details.reason own_key_tighten_only); the old key then never outlives the new one. The person rotating must cover the key's access (403 grant_forbidden, details.reason target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the organization's credential policy sets cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
+        Mint a successor with a new id and the same name, grant, expiry and conditions, and return its secret once, with its name and grant so you can see they carried over. The old key keeps working for overlap_seconds, then stops: 24 hours when overlap_seconds is omitted, at most 7 days, never past its own expires_at, and at once with 0 (which is how to rotate a key whose secret leaked). previous_key_expires_at says when the old key stops. Revoking the successor during the overlap also revokes the old key when you may revoke that one too; the revoke's predecessors_left counts any left working. Rotating does not extend a key: the successor keeps the old expiry unless expires_at gives it a new one. That needs keys:manage (403 forbidden otherwise), is held to the credential policy (400 when past its maximum lifetime, with the latest expiry it allows now in the message), and someone limited to their own keys can only keep or bring it forward (403 grant_forbidden, details.reason own_key_tighten_only); the old key then never outlives the new one. The person rotating must cover the key's access (403 grant_forbidden, details.reason target_not_covered), and a key an owner holds is rotated by an owner only (403 forbidden, details.reason owner_key_rotation), since rotating hands over the new secret. The person's own Primitive CLI login needs no step-up (it acts as the person, held to the same rules) unless the organization's credential policy sets cli_writes_require_approval; the Primitive app's token is refused, even with one. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.
 
         Person only: a dashboard session, the person's own Primitive CLI login with no step-up (unless the organization's credential policy sets cli_writes_require_approval), or the person's own OAuth token with a step-up token for purpose `keys.create` in the Primitive-Step-Up header. Without one any other OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role, or the client, could not do it anyway). The person's role must hold keys:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.
       x-primitive-person-only:
@@ -45216,8 +45244,10 @@ components:
             - "null"
         webhook_status:
           $ref: "#/components/schemas/EmailWebhookStatus"
+          description: The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its delivery state. `pending` with 0 attempts can also mean no route webhook took it.
         webhook_attempt_count:
           type: integer
+          description: The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its attempts.
         thread_id:
           type:
             - string
@@ -45835,26 +45865,32 @@ components:
             - "null"
         webhook_status:
           $ref: "#/components/schemas/EmailWebhookStatus"
+          description: The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its delivery state. `pending` with 0 attempts can also mean no route webhook took it.
         webhook_attempt_count:
           type: integer
+          description: The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its attempts.
         webhook_last_attempt_at:
           type:
             - string
             - "null"
           format: date-time
+          description: The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its last attempt.
         webhook_last_status_code:
           type:
             - integer
             - "null"
+          description: The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. What it last answered.
         webhook_last_error:
           type:
             - string
             - "null"
+          description: The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its last error.
         webhook_fired_at:
           type:
             - string
             - "null"
           format: date-time
+          description: The email's own routed delivery only (where routing sent it); a rule's deliveries never change this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. When it was delivered.
         smtp_helo:
           type:
             - string
@@ -46280,6 +46316,69 @@ components:
                   type:
                     - string
                     - "null"
+        rule_deliveries:
+          type:
+            - object
+            - "null"
+          description: Where Email Rules delivered this email by webhook, for the owner of the mailbox it is at, on their own dashboard session or the Primitive CLI. Null for everyone else, and when it could not be read in time. A key reading it through a rule is not a delivery.
+          required:
+            - rules
+            - hidden
+            - complete
+          properties:
+            rules:
+              type: array
+              description: Each rule over your mail that queued a webhook delivery of this email, newest rule first.
+              items:
+                type: object
+                required:
+                  - rule_id
+                  - name
+                  - delivered
+                  - pending
+                  - failed
+                  - not_sent
+                  - hosts
+                  - hosts_not_listed
+                properties:
+                  rule_id:
+                    type: string
+                    format: uuid
+                    description: The rule. A webhook sent it through several rules counts under one.
+                  name:
+                    type: string
+                  delivered:
+                    type: integer
+                    minimum: 0
+                    description: Webhooks it was delivered to.
+                  pending:
+                    type: integer
+                    minimum: 0
+                    description: Webhooks still owed it.
+                  failed:
+                    type: integer
+                    minimum: 0
+                    description: Webhooks whose attempts gave up.
+                  not_sent:
+                    type: integer
+                    minimum: 0
+                    description: Webhooks it was not sent to after all.
+                  hosts:
+                    type: array
+                    items:
+                      type: string
+                    description: The sites it was delivered to at the time, named as the covering view names sites; they may differ from the rule's current receivers there.
+                  hosts_not_listed:
+                    type: integer
+                    minimum: 0
+                    description: Sites past the listed ones.
+            hidden:
+              type: integer
+              minimum: 0
+              description: "Rules that queued a delivery of it that are not listed: they do not cover your mailboxes now, or are past the 50 one answer judges."
+            complete:
+              type: boolean
+              description: "False when a delivery may be missing: the email is older than 14 days, or it has more deliveries or rules than one answer reads."
         from_name:
           type:
             - string
@@ -47354,7 +47453,7 @@ components:
           additionalProperties: false
           required:
             - url
-          description: "One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the unsubscribe. Every recipient of the message gets the same `url`, so send one message per recipient when the URL identifies who to unsubscribe. The `headers` map refuses both header names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send."
+          description: "One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the unsubscribe. Every recipient of a message would get the same `url`, so another recipient could unsubscribe whoever it identifies: a send with `unsubscribe` must have exactly one recipient, one entry across `to`, `cc` and `bcc` (an address given twice counts twice), and a send to more is refused with a `validation_error`. Send one message per recipient, for example with `POST /v1/send-mail/batch`. The `headers` map refuses both header names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send."
           properties:
             url:
               type: string
@@ -48673,7 +48772,7 @@ components:
           additionalProperties: false
           required:
             - url
-          description: "One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the unsubscribe. Every recipient of the message gets the same `url`, so send one message per recipient when the URL identifies who to unsubscribe. The `headers` map refuses both header names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send."
+          description: "One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the unsubscribe. Every recipient of a message would get the same `url`, so another recipient could unsubscribe whoever it identifies: a reply with `unsubscribe` must go to the one address it answers, and one with `reply_all` that adds a cc is refused with a `validation_error`. The `headers` map refuses both header names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send."
           properties:
             url:
               type: string
@@ -53836,7 +53935,7 @@ components:
                   - string
                   - "null"
                 format: date-time
-                description: When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null otherwise, as on every coverage notice.
+                description: When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null otherwise, as on every coverage notice (rule_now marks one whose rule was deleted).
               owned_now:
                 type: string
                 enum:
@@ -53864,9 +53963,14 @@ components:
                   - id
                   - name
               rule_id:
-                description: "For email_rule_coverage, always: the rule it is about, since names need not be unique (for pending, the same as id). GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or as it last decided on your mail; otherwise it answers not_found."
+                description: "For email_rule_coverage, always: the rule it is about, since names need not be unique (for pending, the same as id). GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or as it last decided on your mail; otherwise it answers not_found, with details.reason rule_deleted once a rule you were told of is deleted."
                 type: string
                 format: uuid
+              rule_now:
+                description: "For email_rule_coverage: deleted once the rule it is about has been deleted. Left out while it exists, or when that could not be checked."
+                type: string
+                enum:
+                  - deleted
               receivers_change:
                 description: "For a receivers_changed notice: who received the rule's matches before and after, in totals. They can be equal when only an owner or a webhook site changed; covering-me shows them by owner. A rotated key counts once here while the old one still works; covering-me counts both."
                 type: object
@@ -53958,7 +54062,7 @@ components:
             - string
             - "null"
           format: date-time
-          description: "With relation=concerning only: about when the notices last looked at your organization; null if never or unread. Coverage since may have no notice yet."
+          description: "With relation=concerning only: about when the notices last looked at your organization; null if never or unread. Coverage since may have no notice yet. They look only while one of its rules could cover someone, so this stops moving while none could."
         pending_complete:
           description: "With relation=concerning, on the first page only: whether the check for rules that started covering you without their start notice (state pending, listed ahead of the notices and beyond limit) was finished. false: some may be missing. Absent where there is nothing to check."
           type: boolean
@@ -54137,6 +54241,40 @@ components:
       required:
         - checked
         - matched
+    EmailRuleScopeUsed:
+      type: object
+      properties:
+        evaluation_scope:
+          type: string
+          enum:
+            - author
+            - own_mailboxes
+            - selected
+          description: author, own_mailboxes or selected, as a rule's evaluation_scope.
+        scope_selection:
+          type:
+            - object
+            - "null"
+          properties:
+            addresses:
+              maxItems: 100
+              type: array
+              items:
+                type: string
+                maxLength: 320
+            domains:
+              maxItems: 50
+              type: array
+              items:
+                type: string
+                maxLength: 253
+          required:
+            - addresses
+            - domains
+          description: What a selected scope names; null for any other.
+      required:
+        - evaluation_scope
+        - scope_selection
     EmailRuleScopeSelection:
       type: object
       properties:
@@ -54224,6 +54362,9 @@ components:
           anyOf:
             - $ref: "#/components/schemas/EmailRuleBreadth"
             - type: "null"
+        breadth_scope:
+          description: "The scope breadth and conditions_breadth are counted over: evaluation_scope as sent, by default own_mailboxes. Not the saved rule's scope, which a write sets with evaluation_scope; writes ignore this, as they ignore breadth."
+          $ref: "#/components/schemas/EmailRuleScopeUsed"
         sql:
           description: Present only when include_sql was true.
           type: object
@@ -54486,7 +54627,7 @@ components:
       type: object
       properties:
         tree:
-          description: An unsaved rule tree, as POST /email-rules/compile returned it or written by hand. Give tree or rule_id, not both.
+          description: An unsaved rule tree, as POST /email-rules/compile returned it or written by hand. Give one of tree, rule_id and request_id.
           $ref: "#/components/schemas/EmailRuleTreeInput"
         evaluation_scope:
           type: string
@@ -54501,8 +54642,12 @@ components:
           description: A saved rule you can see. Its current version is tested, with its author's access; one you see only because it covers your mailboxes, with yours, over only those (dashboard or Primitive CLI only).
           type: string
           format: uuid
+        request_id:
+          description: "A pending rule request you can see: its rule as asked, tested as you over your own mailboxes (what accepting would share, for the member asked). Give one of tree, rule_id and request_id."
+          type: string
+          format: uuid
         kind:
-          description: "For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. A saved rule uses its own."
+          description: "For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. A saved rule or a request uses its own."
           type: string
           enum:
             - grant
@@ -54564,6 +54709,21 @@ components:
               type: integer
               minimum: 0
               description: "The most emails the recent window holds: 200, less one place per expected email."
+            scope:
+              description: "The scope the test ran with: a saved rule's as stored, over its author's mail (GET /email-rules/{id}/scope: what it reaches now), or a tree's as sent, over yours (by default own_mailboxes). A rule covering you, tested as you: own_mailboxes, your mailboxes it covers."
+              $ref: "#/components/schemas/EmailRuleScopeUsed"
+            oldest_at:
+              type:
+                - string
+                - "null"
+              format: date-time
+              description: "When the oldest email tested arrived, expected ones included; null when none was. The window is the newest 200 the scope reaches, so a narrower scope reaches further back: compare counts only over the same scope and span."
+            newest_at:
+              type:
+                - string
+                - "null"
+              format: date-time
+              description: When the newest email tested arrived; null when none was.
           required:
             - mode
             - since
@@ -55026,7 +55186,7 @@ components:
       type: object
       properties:
         tree:
-          description: An unsaved rule tree, as POST /email-rules/compile returned it or written by hand. Give tree or rule_id, not both.
+          description: An unsaved rule tree, as POST /email-rules/compile returned it or written by hand. Give one of tree, rule_id and request_id.
           $ref: "#/components/schemas/EmailRuleTreeInput"
         english:
           description: What the tree is meant to match; without it, the tree is described in words.
@@ -55051,7 +55211,7 @@ components:
           type: string
           format: uuid
         kind:
-          description: "For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. A saved rule uses its own."
+          description: "For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. A saved rule or a request uses its own."
           type: string
           enum:
             - grant
@@ -55123,7 +55283,7 @@ components:
       type: object
       properties:
         tree:
-          description: An unsaved rule tree, as POST /email-rules/compile returned it or written by hand. Give tree or rule_id, not both.
+          description: An unsaved rule tree, as POST /email-rules/compile returned it or written by hand. Give one of tree, rule_id and request_id.
           $ref: "#/components/schemas/EmailRuleTreeInput"
         evaluation_scope:
           type: string
@@ -55138,8 +55298,12 @@ components:
           description: A saved rule you can see, or one that covers your mailboxes (as you; dashboard or Primitive CLI only). Its current version is tested.
           type: string
           format: uuid
+        request_id:
+          description: "A pending rule request you can see: its rule as asked, tested as you over your own mailboxes (what accepting would share, for the member asked). Give one of tree, rule_id and request_id."
+          type: string
+          format: uuid
         kind:
-          description: "For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. A saved rule uses its own."
+          description: "For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. A saved rule or a request uses its own."
           type: string
           enum:
             - grant
@@ -55221,6 +55385,9 @@ components:
             - text
           additionalProperties: false
           description: A made-up received email. Nothing about it is stored.
+        with_protection:
+          description: With true, a grant rule that matches is also judged against the active do-not-share rules over the first recipient's mailbox, which you must read in full and the rule must run over; see protection. Limited to 20 an hour per member.
+          type: boolean
       required:
         - email
       additionalProperties: false
@@ -55348,6 +55515,49 @@ components:
               - value
               - confidence
           description: "What the classifier read from the email, by fact: its value and confidence."
+        protection:
+          description: "With with_protection: whether a match would be shared. Nothing is stored."
+          type: object
+          properties:
+            mailbox:
+              type: string
+              description: "The mailbox judged: the first recipient."
+            outcome:
+              type: string
+              enum:
+                - shared
+                - withheld
+                - not_matched
+              description: "not_matched: the rule did not match, so nothing would be shared and no do-not-share rule was judged."
+            withheld_by:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  reason:
+                    type: string
+                    enum:
+                      - matched
+                      - undecided
+                required:
+                  - id
+                  - name
+                  - reason
+              description: "Do-not-share rules you can see that would keep it from being shared. undecided: left undecided as real mail would leave it, or not reached by this test (past 50 rules, 10 rules' questions, or the time limit); it is held back either way."
+            withheld_by_hidden:
+              type: integer
+              minimum: 0
+              description: Rules you cannot see that would.
+          required:
+            - mailbox
+            - outcome
+            - withheld_by
+            - withheld_by_hidden
       required:
         - rule
         - received_at
@@ -55414,7 +55624,7 @@ components:
           type: integer
           minimum: 0
         objection_notice:
-          description: "With pending_objections above 0: that members asked you to turn it off, and how to answer."
+          description: "With pending_objections above 0: that members objected (each message says what they ask: to turn it off, narrow it or explain it), and how to answer."
           type: string
         created_at:
           type: string
@@ -55432,6 +55642,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/EmailRuleScopeWarning"
+        do_not_share_note:
+          description: "On a grant rule's create answer: that active do-not-share rules reaching an email run first: one that matches it keeps it from being shared through this rule, and one that cannot decide it holds it back while it is decided again for up to a day; it is shared through this rule only if none of them then matches it."
+          type: string
         expectations:
           description: "Its saved expectations, each list by email id, as stored: on every create, and on an update that set or removed them."
           type: object
@@ -55756,6 +55969,9 @@ components:
           anyOf:
             - $ref: "#/components/schemas/EmailRuleBreadth"
             - type: "null"
+        breadth_scope:
+          description: "Ignored (the compile answer's breadth_scope): set a rule's scope with evaluation_scope."
+          $ref: "#/components/schemas/EmailRuleScopeUsed"
       required:
         - name
         - english
@@ -55821,7 +56037,7 @@ components:
           type: integer
           minimum: 0
         objection_notice:
-          description: "With pending_objections above 0: that members asked you to turn it off, and how to answer."
+          description: "With pending_objections above 0: that members objected (each message says what they ask: to turn it off, narrow it or explain it), and how to answer."
           type: string
         created_at:
           type: string
@@ -55915,7 +56131,7 @@ components:
           type: integer
           minimum: 0
         objection_notice:
-          description: "With pending_objections above 0: that members asked you to turn it off, and how to answer."
+          description: "With pending_objections above 0: that members objected (each message says what they ask: to turn it off, narrow it or explain it), and how to answer."
           type: string
         created_at:
           type: string
@@ -56021,6 +56237,9 @@ components:
           anyOf:
             - $ref: "#/components/schemas/EmailRuleBreadth"
             - type: "null"
+        breadth_scope:
+          description: "Ignored (the compile answer's breadth_scope): set a rule's scope with evaluation_scope."
+          $ref: "#/components/schemas/EmailRuleScopeUsed"
         kind:
           description: Must be the rule's own (400 kind_mismatch).
           type: string
@@ -56529,8 +56748,9 @@ components:
                 enum:
                   - draft
                   - created_after_email
+                  - outside_scope
                   - null
-                description: "What is known about a rule with no result on this email. draft: the rule is a draft now. created_after_email: the rule was created after the email arrived. Null when it has a result, or when nothing is known."
+                description: "What is known about a rule with no result on this email. draft: the rule is a draft now. created_after_email: the rule was created after the email arrived. outside_scope: the mailbox this email is in is outside what its scope names (its author's own mailboxes, its selection, or all its author reads now), so it does not decide on it. Null when it has a result, or when nothing is known (it may not have decided yet)."
               author_left:
                 description: "On a do-not-share rule whose author is no longer a member of the organization: it blocks nothing now, whatever it decided. Absent otherwise."
                 type: boolean
@@ -56830,6 +57050,9 @@ components:
           anyOf:
             - $ref: "#/components/schemas/EmailRuleBreadth"
             - type: "null"
+        breadth_scope:
+          description: "Ignored (the compile answer's breadth_scope): set a rule's scope with evaluation_scope."
+          $ref: "#/components/schemas/EmailRuleScopeUsed"
         kind:
           description: Only grant.
           type: string
@@ -56937,7 +57160,7 @@ components:
             - boolean
             - "null"
         notice:
-          description: "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, then what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null."
+          description: "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results). For the member who asked, once accepted with changes: that the request is not what is shared. Else null."
           type:
             - string
             - "null"
@@ -56951,6 +57174,10 @@ components:
           type:
             - string
             - "null"
+        existing:
+          description: "Present, as true, when the create carried an Idempotency-Key and you already had a pending request to this member asking exactly this (name, english, tree, explanation and message, naming the member the same way): that request is returned (200), and no second one is made or sent."
+          type: boolean
+          const: true
       required:
         - id
         - status
@@ -57123,7 +57350,7 @@ components:
             - boolean
             - "null"
         notice:
-          description: "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, then what accepting would share. For the member who asked, once accepted with changes: that the request is not what is shared. Else null."
+          description: "For the member asked, while pending: what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results). For the member who asked, once accepted with changes: that the request is not what is shared. Else null."
           type:
             - string
             - "null"
@@ -57234,7 +57461,7 @@ components:
           type: integer
           minimum: 0
         objection_notice:
-          description: "With pending_objections above 0: that members asked you to turn it off, and how to answer."
+          description: "With pending_objections above 0: that members objected (each message says what they ask: to turn it off, narrow it or explain it), and how to answer."
           type: string
         created_at:
           type: string
@@ -57466,6 +57693,9 @@ components:
           anyOf:
             - $ref: "#/components/schemas/EmailRuleBreadth"
             - type: "null"
+        breadth_scope:
+          description: "Ignored (the compile answer's breadth_scope): set a rule's scope with evaluation_scope."
+          $ref: "#/components/schemas/EmailRuleScopeUsed"
         kind:
           description: Only grant.
           type: string
@@ -57488,7 +57718,7 @@ components:
         share:
           $ref: "#/components/schemas/EmailRuleShare"
         notice:
-          description: What is now shared, in words. When you changed the rule and it can now match mail the request left out by who it was sent to (such as mail where an address is only copied), that comes first.
+          description: What is now shared, in words. When you changed the rule and it can now match mail the request left out by who it was sent to (such as mail where an address is only copied), that comes first; when you changed its english, tree or explanation (edited_on_accept; a new name alone is no change), that rule.current is what you agreed to and request what was asked.
           type: string
       required:
         - request
@@ -57895,6 +58125,9 @@ components:
             - grant
             - do_not_share
           description: "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches."
+        do_not_share_note:
+          description: "On a grant rule: that the active do-not-share rules over an email run first, keeping from it what they match and holding back what they cannot decide, which is decided again for up to a day and shared only if none of them then matches it."
+          type: string
         author:
           description: Who wrote it.
           $ref: "#/components/schemas/EmailRuleCoveringAuthor"
@@ -57979,6 +58212,9 @@ components:
             - grant
             - do_not_share
           description: "grant: what it matches can be shared. do_not_share: it blocks sharing what it matches."
+        do_not_share_note:
+          description: "On a grant rule: that the active do-not-share rules over an email run first, keeping from it what they match and holding back what they cannot decide, which is decided again for up to a day and shared only if none of them then matches it."
+          type: string
         author:
           description: Who wrote it.
           $ref: "#/components/schemas/EmailRuleCoveringAuthor"
@@ -58183,11 +58419,12 @@ components:
           type: boolean
           description: Whether it is to a rule you wrote, in your current membership.
         message:
-          description: Why the objector objects; null when none was given, or once withdrawn.
+          description: Why they object and what they ask (to turn the rule off, narrow it, or explain who receives it); null when none was given, or once withdrawn.
           type:
             - string
             - "null"
         decline_reason:
+          description: The author's answer when declining, which the objector sees; null when none was given.
           type:
             - string
             - "null"
@@ -58249,7 +58486,7 @@ components:
             - "null"
           minLength: 1
           maxLength: 500
-          description: Why you object, up to 500 characters; null or absent for none. The rule's author and the organization's owners and admins see it while it stands; withdrawing clears it.
+          description: "Why you object and what you ask, up to 500 characters: to turn the rule off, to narrow it, or to explain who receives what it matches. Null or absent for none. The rule's author and the organization's owners and admins see it while it stands; withdrawing clears it."
       required:
         - rule_id
       additionalProperties: false
@@ -58272,7 +58509,7 @@ components:
             - "null"
           minLength: 1
           maxLength: 500
-          description: Why you are declining, up to 500 characters; null or absent for none. The member who objected sees it.
+          description: "Why you are declining, up to 500 characters; null or absent for none. The member who objected sees it: it is how to answer one that asks you to narrow the rule or explain who receives it."
       additionalProperties: false
     DeclineEmailRuleObjectionResult:
       $ref: "#/components/schemas/EmailRuleObjection"
@@ -63101,6 +63338,41 @@ components:
           format: date-time
           pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
         previous_key_id:
+          type: string
+        name:
+          description: "The successor's name: the rotated key's, which it keeps."
+          type:
+            - string
+            - "null"
+        grant:
+          description: "The grant the successor holds, as a create answers it: the rotated key's own, carried over unchanged (rules, addresses and domains included)."
+          type: object
+          properties:
+            template:
+              type:
+                - string
+                - "null"
+            credential_grant_id:
+              type:
+                - string
+                - "null"
+            permissions:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+            mail_scope: {}
+            resources: {}
+          required:
+            - template
+            - credential_grant_id
+            - permissions
+            - mail_scope
+            - resources
+          additionalProperties: {}
+        rotated_from:
+          description: "The rotated key: previous_key_id, under the name GET /v1/keys/{id} gives it."
           type: string
         previous_key_expires_at:
           type: string

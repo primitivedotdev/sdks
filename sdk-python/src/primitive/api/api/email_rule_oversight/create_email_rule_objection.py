@@ -127,15 +127,18 @@ def sync_detailed(
 ) -> Response[CreateEmailRuleObjectionResponse200 | ErrorResponse]:
     """ Object to a rule over your mail
 
-     Asks the author of a rule that covers one of your own mailboxes now to turn it off. Only a rule that
-    covers you now: one you see only because it once decided on your mail cannot be objected to. An
-    objection is seen by the member who made it, the rule's author and the organization's owners and
-    admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
-    or the member who made it withdraws it, which clears its message. It never changes after that. You
-    may have one pending objection per rule and 50 in all, and object to the same rule again only 10
-    minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
-    dashboard session or the Primitive CLI.
+     Objects to a rule that covers one of your own mailboxes now: say in the message what you ask its
+    author, to turn it off, narrow it, or explain who receives what it matches. The author answers by
+    accepting, which turns it off, or by declining, optionally with a reason you see; the rule keeps
+    running unless they accept. Only a rule that covers you now: one you see only because it once
+    decided on your mail cannot be objected to. An objection is seen by the member who made it, the
+    rule's author and the organization's owners and admins. It stays pending until the rule's author
+    accepts it, turning the rule off, or declines it (optionally with a reason the objector sees), or
+    the member who made it withdraws it, which clears its message. It never changes after that. You may
+    have one pending objection per rule and 50 in all, and object to the same rule again only 10 minutes
+    after you last did, whatever became of it. Needs mail:read, the email rules feature, and a member's
+    own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+    session or the Primitive CLI.
 
     Args:
         idempotency_key (str | Unset):
@@ -171,15 +174,18 @@ def sync(
 ) -> CreateEmailRuleObjectionResponse200 | ErrorResponse | None:
     """ Object to a rule over your mail
 
-     Asks the author of a rule that covers one of your own mailboxes now to turn it off. Only a rule that
-    covers you now: one you see only because it once decided on your mail cannot be objected to. An
-    objection is seen by the member who made it, the rule's author and the organization's owners and
-    admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
-    or the member who made it withdraws it, which clears its message. It never changes after that. You
-    may have one pending objection per rule and 50 in all, and object to the same rule again only 10
-    minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
-    dashboard session or the Primitive CLI.
+     Objects to a rule that covers one of your own mailboxes now: say in the message what you ask its
+    author, to turn it off, narrow it, or explain who receives what it matches. The author answers by
+    accepting, which turns it off, or by declining, optionally with a reason you see; the rule keeps
+    running unless they accept. Only a rule that covers you now: one you see only because it once
+    decided on your mail cannot be objected to. An objection is seen by the member who made it, the
+    rule's author and the organization's owners and admins. It stays pending until the rule's author
+    accepts it, turning the rule off, or declines it (optionally with a reason the objector sees), or
+    the member who made it withdraws it, which clears its message. It never changes after that. You may
+    have one pending objection per rule and 50 in all, and object to the same rule again only 10 minutes
+    after you last did, whatever became of it. Needs mail:read, the email rules feature, and a member's
+    own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+    session or the Primitive CLI.
 
     Args:
         idempotency_key (str | Unset):
@@ -210,15 +216,18 @@ async def asyncio_detailed(
 ) -> Response[CreateEmailRuleObjectionResponse200 | ErrorResponse]:
     """ Object to a rule over your mail
 
-     Asks the author of a rule that covers one of your own mailboxes now to turn it off. Only a rule that
-    covers you now: one you see only because it once decided on your mail cannot be objected to. An
-    objection is seen by the member who made it, the rule's author and the organization's owners and
-    admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
-    or the member who made it withdraws it, which clears its message. It never changes after that. You
-    may have one pending objection per rule and 50 in all, and object to the same rule again only 10
-    minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
-    dashboard session or the Primitive CLI.
+     Objects to a rule that covers one of your own mailboxes now: say in the message what you ask its
+    author, to turn it off, narrow it, or explain who receives what it matches. The author answers by
+    accepting, which turns it off, or by declining, optionally with a reason you see; the rule keeps
+    running unless they accept. Only a rule that covers you now: one you see only because it once
+    decided on your mail cannot be objected to. An objection is seen by the member who made it, the
+    rule's author and the organization's owners and admins. It stays pending until the rule's author
+    accepts it, turning the rule off, or declines it (optionally with a reason the objector sees), or
+    the member who made it withdraws it, which clears its message. It never changes after that. You may
+    have one pending objection per rule and 50 in all, and object to the same rule again only 10 minutes
+    after you last did, whatever became of it. Needs mail:read, the email rules feature, and a member's
+    own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+    session or the Primitive CLI.
 
     Args:
         idempotency_key (str | Unset):
@@ -254,15 +263,18 @@ async def asyncio(
 ) -> CreateEmailRuleObjectionResponse200 | ErrorResponse | None:
     """ Object to a rule over your mail
 
-     Asks the author of a rule that covers one of your own mailboxes now to turn it off. Only a rule that
-    covers you now: one you see only because it once decided on your mail cannot be objected to. An
-    objection is seen by the member who made it, the rule's author and the organization's owners and
-    admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
-    or the member who made it withdraws it, which clears its message. It never changes after that. You
-    may have one pending objection per rule and 50 in all, and object to the same rule again only 10
-    minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
-    dashboard session or the Primitive CLI.
+     Objects to a rule that covers one of your own mailboxes now: say in the message what you ask its
+    author, to turn it off, narrow it, or explain who receives what it matches. The author answers by
+    accepting, which turns it off, or by declining, optionally with a reason you see; the rule keeps
+    running unless they accept. Only a rule that covers you now: one you see only because it once
+    decided on your mail cannot be objected to. An objection is seen by the member who made it, the
+    rule's author and the organization's owners and admins. It stays pending until the rule's author
+    accepts it, turning the rule off, or declines it (optionally with a reason the objector sees), or
+    the member who made it withdraws it, which clears its message. It never changes after that. You may
+    have one pending objection per rule and 50 in all, and object to the same rule again only 10 minutes
+    after you last did, whatever became of it. Needs mail:read, the email rules feature, and a member's
+    own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+    session or the Primitive CLI.
 
     Args:
         idempotency_key (str | Unset):

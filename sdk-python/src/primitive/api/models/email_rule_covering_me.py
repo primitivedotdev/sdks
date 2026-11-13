@@ -47,6 +47,9 @@ class EmailRuleCoveringMe:
                 it matches once it is turned active. None of them receives anything yet. Null for any other rule, and as
                 receivers is null.
             created_at (datetime.datetime):
+            do_not_share_note (str | Unset): On a grant rule: that the active do-not-share rules over an email run first,
+                keeping from it what they match and holding back what they cannot decide, which is decided again for up to a day
+                and shared only if none of them then matches it.
      """
 
     id: UUID
@@ -60,6 +63,7 @@ class EmailRuleCoveringMe:
     receivers: EmailRuleReceivers | None
     receivers_once_active: EmailRuleReceivers | None
     created_at: datetime.datetime
+    do_not_share_note: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -101,6 +105,8 @@ class EmailRuleCoveringMe:
 
         created_at = self.created_at.isoformat()
 
+        do_not_share_note = self.do_not_share_note
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -117,6 +123,8 @@ class EmailRuleCoveringMe:
             "receivers_once_active": receivers_once_active,
             "created_at": created_at,
         })
+        if do_not_share_note is not UNSET:
+            field_dict["do_not_share_note"] = do_not_share_note
 
         return field_dict
 
@@ -206,6 +214,8 @@ class EmailRuleCoveringMe:
 
 
 
+        do_not_share_note = d.pop("do_not_share_note", UNSET)
+
         email_rule_covering_me = cls(
             id=id,
             name=name,
@@ -218,6 +228,7 @@ class EmailRuleCoveringMe:
             receivers=receivers,
             receivers_once_active=receivers_once_active,
             created_at=created_at,
+            do_not_share_note=do_not_share_note,
         )
 
 
