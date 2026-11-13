@@ -15,6 +15,7 @@ if TYPE_CHECKING:
   from ..models.compile_email_rule_result_sql import CompileEmailRuleResultSql
   from ..models.email_rule_breadth import EmailRuleBreadth
   from ..models.email_rule_scope_used import EmailRuleScopeUsed
+  from ..models.email_rule_scope_warning import EmailRuleScopeWarning
   from ..models.email_rule_tree import EmailRuleTree
 
 
@@ -54,6 +55,9 @@ class CompileEmailRuleResult:
                 conditions alone: the emails its questions are asked about. Null for any other rule, or when not counted in full
                 (as breadth).
             breadth_scope (EmailRuleScopeUsed | Unset):
+            scope_warnings (list[EmailRuleScopeWarning] | Unset): Names in the scope_selection sent that match nothing this
+                organization receives mail at (a typo, or an inbox not yet in use), as a test or write would warn of them.
+                Present only when there are some; writes ignore it.
             sql (CompileEmailRuleResultSql | Unset): Present only when include_sql was true.
      """
 
@@ -66,6 +70,7 @@ class CompileEmailRuleResult:
     breadth: EmailRuleBreadth | None | Unset = UNSET
     conditions_breadth: EmailRuleBreadth | None | Unset = UNSET
     breadth_scope: EmailRuleScopeUsed | Unset = UNSET
+    scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
     sql: CompileEmailRuleResultSql | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -77,6 +82,7 @@ class CompileEmailRuleResult:
         from ..models.compile_email_rule_result_sql import CompileEmailRuleResultSql # noqa: PLC0415
         from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
         from ..models.email_rule_scope_used import EmailRuleScopeUsed # noqa: PLC0415
+        from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
         tree = self.tree.to_dict()
 
@@ -117,6 +123,15 @@ class CompileEmailRuleResult:
         if not isinstance(self.breadth_scope, Unset):
             breadth_scope = self.breadth_scope.to_dict()
 
+        scope_warnings: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.scope_warnings, Unset):
+            scope_warnings = []
+            for scope_warnings_item_data in self.scope_warnings:
+                scope_warnings_item = scope_warnings_item_data.to_dict()
+                scope_warnings.append(scope_warnings_item)
+
+
+
         sql: dict[str, Any] | Unset = UNSET
         if not isinstance(self.sql, Unset):
             sql = self.sql.to_dict()
@@ -139,6 +154,8 @@ class CompileEmailRuleResult:
             field_dict["conditions_breadth"] = conditions_breadth
         if breadth_scope is not UNSET:
             field_dict["breadth_scope"] = breadth_scope
+        if scope_warnings is not UNSET:
+            field_dict["scope_warnings"] = scope_warnings
         if sql is not UNSET:
             field_dict["sql"] = sql
 
@@ -151,6 +168,7 @@ class CompileEmailRuleResult:
         from ..models.compile_email_rule_result_sql import CompileEmailRuleResultSql # noqa: PLC0415
         from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
         from ..models.email_rule_scope_used import EmailRuleScopeUsed # noqa: PLC0415
+        from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
         d = dict(src_dict)
         tree = EmailRuleTree.from_dict(d.pop("tree"))
@@ -228,6 +246,18 @@ class CompileEmailRuleResult:
 
 
 
+        _scope_warnings = d.pop("scope_warnings", UNSET)
+        scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
+        if _scope_warnings is not UNSET:
+            scope_warnings = []
+            for scope_warnings_item_data in _scope_warnings:
+                scope_warnings_item = EmailRuleScopeWarning.from_dict(scope_warnings_item_data)
+
+
+
+                scope_warnings.append(scope_warnings_item)
+
+
         _sql = d.pop("sql", UNSET)
         sql: CompileEmailRuleResultSql | Unset
         if isinstance(_sql,  Unset):
@@ -248,6 +278,7 @@ class CompileEmailRuleResult:
             breadth=breadth,
             conditions_breadth=conditions_breadth,
             breadth_scope=breadth_scope,
+            scope_warnings=scope_warnings,
             sql=sql,
         )
 

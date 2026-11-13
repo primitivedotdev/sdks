@@ -24,7 +24,10 @@ T = TypeVar("T", bound="EmailDetailSharedThroughType0")
 
 @_attrs_define
 class EmailDetailSharedThroughType0:
-    """ The rule share a reader has this email through, when that is their only way to it. Null for everyone else.
+    """ Only for a reader who has this email through a colleague's share of their mail, when that share is their only way to
+    it: the share and who gave it. Null for everyone else, including on your own mail when a rule or share of yours gave
+    it to someone: rule_deliveries counts the webhooks rules delivered it to, and GET /v1/email-rule-shares/{id}/emails
+    lists what a share you gave has given.
 
         Attributes:
             share_id (UUID): The share.

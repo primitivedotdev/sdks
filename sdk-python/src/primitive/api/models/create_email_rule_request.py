@@ -19,6 +19,7 @@ if TYPE_CHECKING:
   from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput
   from ..models.email_rule_scope_selection import EmailRuleScopeSelection
   from ..models.email_rule_scope_used import EmailRuleScopeUsed
+  from ..models.email_rule_scope_warning import EmailRuleScopeWarning
   from ..models.email_rule_tree_input import EmailRuleTreeInput
 
 
@@ -61,6 +62,7 @@ class CreateEmailRuleRequest:
             breadth (EmailRuleBreadth | None | Unset): Ignored (the compile answer's breadth).
             conditions_breadth (EmailRuleBreadth | None | Unset): Ignored.
             breadth_scope (EmailRuleScopeUsed | Unset):
+            scope_warnings (list[EmailRuleScopeWarning] | Unset): Ignored (the compile answer's scope_warnings).
      """
 
     name: str
@@ -79,6 +81,7 @@ class CreateEmailRuleRequest:
     breadth: EmailRuleBreadth | None | Unset = UNSET
     conditions_breadth: EmailRuleBreadth | None | Unset = UNSET
     breadth_scope: EmailRuleScopeUsed | Unset = UNSET
+    scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
 
 
 
@@ -90,6 +93,7 @@ class CreateEmailRuleRequest:
         from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
         from ..models.email_rule_scope_used import EmailRuleScopeUsed # noqa: PLC0415
+        from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         name = self.name
 
@@ -165,6 +169,15 @@ class CreateEmailRuleRequest:
         if not isinstance(self.breadth_scope, Unset):
             breadth_scope = self.breadth_scope.to_dict()
 
+        scope_warnings: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.scope_warnings, Unset):
+            scope_warnings = []
+            for scope_warnings_item_data in self.scope_warnings:
+                scope_warnings_item = scope_warnings_item_data.to_dict()
+                scope_warnings.append(scope_warnings_item)
+
+
+
 
         field_dict: dict[str, Any] = {}
 
@@ -199,6 +212,8 @@ class CreateEmailRuleRequest:
             field_dict["conditions_breadth"] = conditions_breadth
         if breadth_scope is not UNSET:
             field_dict["breadth_scope"] = breadth_scope
+        if scope_warnings is not UNSET:
+            field_dict["scope_warnings"] = scope_warnings
 
         return field_dict
 
@@ -211,6 +226,7 @@ class CreateEmailRuleRequest:
         from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
         from ..models.email_rule_scope_used import EmailRuleScopeUsed # noqa: PLC0415
+        from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         d = dict(src_dict)
         name = d.pop("name")
@@ -344,6 +360,18 @@ class CreateEmailRuleRequest:
 
 
 
+        _scope_warnings = d.pop("scope_warnings", UNSET)
+        scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
+        if _scope_warnings is not UNSET:
+            scope_warnings = []
+            for scope_warnings_item_data in _scope_warnings:
+                scope_warnings_item = EmailRuleScopeWarning.from_dict(scope_warnings_item_data)
+
+
+
+                scope_warnings.append(scope_warnings_item)
+
+
         create_email_rule_request = cls(
             name=name,
             english=english,
@@ -361,6 +389,7 @@ class CreateEmailRuleRequest:
             breadth=breadth,
             conditions_breadth=conditions_breadth,
             breadth_scope=breadth_scope,
+            scope_warnings=scope_warnings,
         )
 
         return create_email_rule_request

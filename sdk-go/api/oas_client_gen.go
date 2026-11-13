@@ -1372,7 +1372,11 @@ type Invoker interface {
 	// the site), the other inboxes and domains its scope names, or its saved expectations. For what
 	// happened to one email of yours, every rule's decision on it and, for another member's rule
 	// covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules
-	// list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
+	// list-email-rule-results --email-id <email-id>). Whether a rule delivered the email by webhook is
+	// not in the rule results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive
+	// emails get <email-id> --json) counts each rule's webhook deliveries; on another member's mail, GET
+	// /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id
+	// <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a
 	// member's own full-access credential (no API key, agent key or narrowed token). Only on your own
 	// dashboard session or the Primitive CLI.
 	//
@@ -2215,7 +2219,11 @@ type Invoker interface {
 	// fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first;
 	// not_listed counts the rest. Another member's rule that decided on your own mail is listed
 	// read_only (dashboard and CLI only), with who receives what it shares (receivers) while it covers
-	// you; hidden counts deciding rules you cannot see. Needs mail:read, the email rules feature, and a
+	// you; hidden counts deciding rules you cannot see. Whether a rule delivered the email by webhook is
+	// not in the rule results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive
+	// emails get <email-id> --json) counts each rule's webhook deliveries; on another member's mail, GET
+	// /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id
+	// <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a
 	// member's own full-access credential (no API key, agent key or narrowed token).
 	//
 	// GET /emails/{id}/rule-results
@@ -2290,22 +2298,29 @@ type Invoker interface {
 	//
 	// Every email rule that covers one of your own mailboxes now, yours included, newest first, in any
 	// state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your
-	// member mailbox, or a personal agent's address): one whose author reads all your mail (author scope,
-	//  for an author who reads the organization's mail or holds an access entry for your mailbox), or
-	// one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never
-	// covers you. You see its name, wording, current tree, state, kind and author, and which of your own
-	// mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses
-	// (a condition on who an email is from or to). While it covers you, you also see who receives what
-	// it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the
-	// organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or
-	// shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains
-	// its scope names, or its saved expectations. A page can hold fewer rules than limit, or none, and
-	// still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor
-	// is null. For what happened to one email of yours, every rule's decision on it and, for another
-	// member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results
-	// (primitive email-rules list-email-rule-results --email-id <email-id>). Needs mail:read, the email
-	// rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
-	//  Only on your own dashboard session or the Primitive CLI.
+	// member mailbox, or a personal agent's address), and covers.via says how: author_reach, it runs
+	// over everything its author can read, which includes your mail (an author who reads the
+	// organization's mail or holds an access entry for your mailbox); selected, it names your mailbox or
+	// its domain; own_mailboxes, it is your own rule over your own mail. Another member's own_mailboxes
+	// rule never covers you. You see its name, wording, current tree, state, kind and author, and which
+	// of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name
+	// other addresses (a condition on who an email is from or to). While it covers you, you also see who
+	// receives what it matches (receivers): how many API keys, webhooks and shares, the member each
+	// belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys,
+	//  webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes
+	// and domains its scope names, or its saved expectations. Each listed rule carries its current
+	// version's english and explanation; its tree is on GET /v1/email-rules/covering-me/{id}. A page can
+	// hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number
+	// of rules): keep reading until meta.cursor is null. For what happened to one email of yours, every
+	// rule's decision on it and, for another member's rule covering you, who receives what it shares:
+	// GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id
+	// <email-id>). Whether a rule delivered the email by webhook is not in the rule results: on your own
+	// mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id> --json) counts each
+	// rule's webhook deliveries; on another member's mail, GET
+	// /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id
+	// <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a
+	// member's own full-access credential (no API key, agent key or narrowed token). Only on your own
+	// dashboard session or the Primitive CLI.
 	//
 	// GET /email-rules/covering-me
 	ListEmailRulesCoveringMe(ctx context.Context, params ListEmailRulesCoveringMeParams) (ListEmailRulesCoveringMeRes, error)
@@ -18693,7 +18708,11 @@ func (c *Client) sendGetEmailRule(ctx context.Context, params GetEmailRuleParams
 // the site), the other inboxes and domains its scope names, or its saved expectations. For what
 // happened to one email of yours, every rule's decision on it and, for another member's rule
 // covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules
-// list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
+// list-email-rule-results --email-id <email-id>). Whether a rule delivered the email by webhook is
+// not in the rule results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive
+// emails get <email-id> --json) counts each rule's webhook deliveries; on another member's mail, GET
+// /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id
+// <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a
 // member's own full-access credential (no API key, agent key or narrowed token). Only on your own
 // dashboard session or the Primitive CLI.
 //
@@ -29366,7 +29385,11 @@ func (c *Client) sendListEmailRuleRequests(ctx context.Context, params ListEmail
 // fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first;
 // not_listed counts the rest. Another member's rule that decided on your own mail is listed
 // read_only (dashboard and CLI only), with who receives what it shares (receivers) while it covers
-// you; hidden counts deciding rules you cannot see. Needs mail:read, the email rules feature, and a
+// you; hidden counts deciding rules you cannot see. Whether a rule delivered the email by webhook is
+// not in the rule results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive
+// emails get <email-id> --json) counts each rule's webhook deliveries; on another member's mail, GET
+// /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id
+// <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a
 // member's own full-access credential (no API key, agent key or narrowed token).
 //
 // GET /emails/{id}/rule-results
@@ -30522,25 +30545,31 @@ func (c *Client) sendListEmailRules(ctx context.Context, params ListEmailRulesPa
 //
 // Every email rule that covers one of your own mailboxes now, yours included, newest first, in any
 // state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your
-// member mailbox, or a personal agent's address): one whose author reads all your mail (author scope,
+// member mailbox, or a personal agent's address), and covers.via says how: author_reach, it runs
+// over everything its author can read, which includes your mail (an author who reads the
+// organization's mail or holds an access entry for your mailbox); selected, it names your mailbox or
+// its domain; own_mailboxes, it is your own rule over your own mail. Another member's own_mailboxes
+// rule never covers you. You see its name, wording, current tree, state, kind and author, and which
+// of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name
+// other addresses (a condition on who an email is from or to). While it covers you, you also see who
+// receives what it matches (receivers): how many API keys, webhooks and shares, the member each
+// belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys,
 //
-//	for an author who reads the organization's mail or holds an access entry for your mailbox), or
+//	webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes
 //
-// one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never
-// covers you. You see its name, wording, current tree, state, kind and author, and which of your own
-// mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses
-// (a condition on who an email is from or to). While it covers you, you also see who receives what
-// it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the
-// organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or
-// shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains
-// its scope names, or its saved expectations. A page can hold fewer rules than limit, or none, and
-// still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor
-// is null. For what happened to one email of yours, every rule's decision on it and, for another
-// member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results
-// (primitive email-rules list-email-rule-results --email-id <email-id>). Needs mail:read, the email
-// rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
-//
-//	Only on your own dashboard session or the Primitive CLI.
+// and domains its scope names, or its saved expectations. Each listed rule carries its current
+// version's english and explanation; its tree is on GET /v1/email-rules/covering-me/{id}. A page can
+// hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number
+// of rules): keep reading until meta.cursor is null. For what happened to one email of yours, every
+// rule's decision on it and, for another member's rule covering you, who receives what it shares:
+// GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id
+// <email-id>). Whether a rule delivered the email by webhook is not in the rule results: on your own
+// mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id> --json) counts each
+// rule's webhook deliveries; on another member's mail, GET
+// /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id
+// <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a
+// member's own full-access credential (no API key, agent key or narrowed token). Only on your own
+// dashboard session or the Primitive CLI.
 //
 // GET /email-rules/covering-me
 func (c *Client) ListEmailRulesCoveringMe(ctx context.Context, params ListEmailRulesCoveringMeParams) (ListEmailRulesCoveringMeRes, error) {

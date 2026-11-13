@@ -82,9 +82,10 @@ class CreateEmailRuleResult:
                 made before the save, which passed.
             restored_from (CreateEmailRuleResultRestoredFrom | Unset): When this write saved an earlier version again
                 (restore_version): which, and that the scope is not part of a version.
-            affects (CreateEmailRuleResultAffects | Unset): After an update that saved a version: API keys listing the rule
-                and the webhooks they own. shares_ended is always 0: a new version keeps the rule's share (share_notice says
-                so). The rule keeps its state. Absent if not read.
+            affects (CreateEmailRuleResultAffects | Unset): After an update that saved a version, or turned a grant rule
+                active: API keys listing the rule and the webhooks they own, which read and receive what a grant rule grants
+                from now on. shares_ended is always 0: a new version keeps the rule's share (share_notice says so). Saving a
+                version does not by itself change the rule's state. Absent after any other write, and if not read.
             notice (str | Unset): After a write that saved a version of an active rule keys, webhooks or a share read
                 without checking it first: what it changes, and how to have the next one checked.
             share_notice (str | Unset): After a write that saved a version of a rule with a live share: that the share goes

@@ -105,9 +105,13 @@ def sync_detailed(
     site), the other inboxes and domains its scope names, or its saved expectations. For what happened
     to one email of yours, every rule's decision on it and, for another member's rule covering you, who
     receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-
-    results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-
-    access credential (no API key, agent key or narrowed token). Only on your own dashboard session or
-    the Primitive CLI.
+    results --email-id <email-id>). Whether a rule delivered the email by webhook is not in the rule
+    results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id>
+    --json) counts each rule's webhook deliveries; on another member's mail, GET
+    /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id <email-
+    id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
+    or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -151,9 +155,13 @@ def sync(
     site), the other inboxes and domains its scope names, or its saved expectations. For what happened
     to one email of yours, every rule's decision on it and, for another member's rule covering you, who
     receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-
-    results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-
-    access credential (no API key, agent key or narrowed token). Only on your own dashboard session or
-    the Primitive CLI.
+    results --email-id <email-id>). Whether a rule delivered the email by webhook is not in the rule
+    results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id>
+    --json) counts each rule's webhook deliveries; on another member's mail, GET
+    /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id <email-
+    id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
+    or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -192,9 +200,13 @@ async def asyncio_detailed(
     site), the other inboxes and domains its scope names, or its saved expectations. For what happened
     to one email of yours, every rule's decision on it and, for another member's rule covering you, who
     receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-
-    results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-
-    access credential (no API key, agent key or narrowed token). Only on your own dashboard session or
-    the Primitive CLI.
+    results --email-id <email-id>). Whether a rule delivered the email by webhook is not in the rule
+    results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id>
+    --json) counts each rule's webhook deliveries; on another member's mail, GET
+    /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id <email-
+    id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
+    or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -238,9 +250,13 @@ async def asyncio(
     site), the other inboxes and domains its scope names, or its saved expectations. For what happened
     to one email of yours, every rule's decision on it and, for another member's rule covering you, who
     receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-
-    results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-
-    access credential (no API key, agent key or narrowed token). Only on your own dashboard session or
-    the Primitive CLI.
+    results --email-id <email-id>). Whether a rule delivered the email by webhook is not in the rule
+    results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id>
+    --json) counts each rule's webhook deliveries; on another member's mail, GET
+    /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id <email-
+    id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
+    or the Primitive CLI.
 
     Args:
         id (UUID):

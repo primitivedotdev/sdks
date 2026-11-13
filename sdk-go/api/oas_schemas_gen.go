@@ -129,6 +129,8 @@ type AcceptEmailRuleRequestRequest struct {
 	ConditionsBreadth OptNilEmailRuleBreadth `json:"conditions_breadth"`
 	// Ignored (the compile answer's breadth_scope): set a rule's scope with evaluation_scope.
 	BreadthScope OptEmailRuleScopeUsed `json:"breadth_scope"`
+	// Ignored (the compile answer's scope_warnings).
+	ScopeWarnings []EmailRuleScopeWarning `json:"scope_warnings"`
 	// Only grant.
 	Kind OptAcceptEmailRuleRequestRequestKind `json:"kind"`
 	// Made-up emails the rule must match or not, such as look-alikes it must never match, kept on the
@@ -184,6 +186,11 @@ func (s *AcceptEmailRuleRequestRequest) GetConditionsBreadth() OptNilEmailRuleBr
 // GetBreadthScope returns the value of BreadthScope.
 func (s *AcceptEmailRuleRequestRequest) GetBreadthScope() OptEmailRuleScopeUsed {
 	return s.BreadthScope
+}
+
+// GetScopeWarnings returns the value of ScopeWarnings.
+func (s *AcceptEmailRuleRequestRequest) GetScopeWarnings() []EmailRuleScopeWarning {
+	return s.ScopeWarnings
 }
 
 // GetKind returns the value of Kind.
@@ -246,6 +253,11 @@ func (s *AcceptEmailRuleRequestRequest) SetBreadthScope(val OptEmailRuleScopeUse
 	s.BreadthScope = val
 }
 
+// SetScopeWarnings sets the value of ScopeWarnings.
+func (s *AcceptEmailRuleRequestRequest) SetScopeWarnings(val []EmailRuleScopeWarning) {
+	s.ScopeWarnings = val
+}
+
 // SetKind sets the value of Kind.
 func (s *AcceptEmailRuleRequestRequest) SetKind(val OptAcceptEmailRuleRequestRequestKind) {
 	s.Kind = val
@@ -293,19 +305,19 @@ func (s *AcceptEmailRuleRequestRequestKind) UnmarshalText(data []byte) error {
 
 // Ref: #/components/schemas/AcceptEmailRuleRequestResult
 type AcceptEmailRuleRequestResult struct {
-	Request EmailRuleRequest     `json:"request"`
-	Rule    EmailRuleWithVersion `json:"rule"`
-	Share   EmailRuleShare       `json:"share"`
 	// What is now shared, in words. When you changed the rule and it can now match mail the request left
 	// out by who it was sent to (such as mail where an address is only copied), that comes first; when
 	// you changed its english, tree or explanation (edited_on_accept; a new name alone is no change),
 	// that rule.current is what you agreed to and request what was asked.
-	Notice OptString `json:"notice"`
+	Notice  OptString            `json:"notice"`
+	Rule    EmailRuleWithVersion `json:"rule"`
+	Share   EmailRuleShare       `json:"share"`
+	Request EmailRuleRequest     `json:"request"`
 }
 
-// GetRequest returns the value of Request.
-func (s *AcceptEmailRuleRequestResult) GetRequest() EmailRuleRequest {
-	return s.Request
+// GetNotice returns the value of Notice.
+func (s *AcceptEmailRuleRequestResult) GetNotice() OptString {
+	return s.Notice
 }
 
 // GetRule returns the value of Rule.
@@ -318,14 +330,14 @@ func (s *AcceptEmailRuleRequestResult) GetShare() EmailRuleShare {
 	return s.Share
 }
 
-// GetNotice returns the value of Notice.
-func (s *AcceptEmailRuleRequestResult) GetNotice() OptString {
-	return s.Notice
+// GetRequest returns the value of Request.
+func (s *AcceptEmailRuleRequestResult) GetRequest() EmailRuleRequest {
+	return s.Request
 }
 
-// SetRequest sets the value of Request.
-func (s *AcceptEmailRuleRequestResult) SetRequest(val EmailRuleRequest) {
-	s.Request = val
+// SetNotice sets the value of Notice.
+func (s *AcceptEmailRuleRequestResult) SetNotice(val OptString) {
+	s.Notice = val
 }
 
 // SetRule sets the value of Rule.
@@ -338,9 +350,9 @@ func (s *AcceptEmailRuleRequestResult) SetShare(val EmailRuleShare) {
 	s.Share = val
 }
 
-// SetNotice sets the value of Notice.
-func (s *AcceptEmailRuleRequestResult) SetNotice(val OptString) {
-	s.Notice = val
+// SetRequest sets the value of Request.
+func (s *AcceptEmailRuleRequestResult) SetRequest(val EmailRuleRequest) {
+	s.Request = val
 }
 
 type AcceptEmailRuleRequestServiceUnavailable ErrorResponse
@@ -5142,12 +5154,16 @@ type ChangeInboundMessage struct {
 	CreatedAt    time.Time     `json:"created_at"`
 	ReceivedAt   time.Time     `json:"received_at"`
 	RawSizeBytes OptNilInt     `json:"raw_size_bytes"`
-	// The email's own routed delivery only (where routing sent it); a rule's deliveries never change
-	// this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its delivery state.
-	//  `pending` with 0 attempts can also mean no route webhook took it.
+	// Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On
+	// mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST
+	// /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on
+	// GET /emails/{id}, for the mailbox's owner. Its delivery state. `pending` with 0 attempts can also
+	// mean no route webhook took it, and then it changes only if the email is sent again.
 	WebhookStatus OptNilEmailWebhookStatus `json:"webhook_status"`
-	// The email's own routed delivery only (where routing sent it); a rule's deliveries never change
-	// this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its attempts.
+	// Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On
+	// mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST
+	// /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on
+	// GET /emails/{id}, for the mailbox's owner. Its attempts.
 	WebhookAttemptCount int `json:"webhook_attempt_count"`
 	// Conversation thread this message belongs to. Fetch
 	// `/threads/{thread_id}` for the full ordered thread. NULL on
@@ -10304,6 +10320,10 @@ type CompileEmailRuleResult struct {
 	// own_mailboxes. Not the saved rule's scope, which a write sets with evaluation_scope; writes ignore
 	// this, as they ignore breadth.
 	BreadthScope OptEmailRuleScopeUsed `json:"breadth_scope"`
+	// Names in the scope_selection sent that match nothing this organization receives mail at (a typo,
+	// or an inbox not yet in use), as a test or write would warn of them. Present only when there are
+	// some; writes ignore it.
+	ScopeWarnings []EmailRuleScopeWarning `json:"scope_warnings"`
 	// Present only when include_sql was true.
 	SQL OptCompileEmailRuleResultSQL `json:"sql"`
 }
@@ -10351,6 +10371,11 @@ func (s *CompileEmailRuleResult) GetConditionsBreadth() OptNilEmailRuleBreadth {
 // GetBreadthScope returns the value of BreadthScope.
 func (s *CompileEmailRuleResult) GetBreadthScope() OptEmailRuleScopeUsed {
 	return s.BreadthScope
+}
+
+// GetScopeWarnings returns the value of ScopeWarnings.
+func (s *CompileEmailRuleResult) GetScopeWarnings() []EmailRuleScopeWarning {
+	return s.ScopeWarnings
 }
 
 // GetSQL returns the value of SQL.
@@ -10401,6 +10426,11 @@ func (s *CompileEmailRuleResult) SetConditionsBreadth(val OptNilEmailRuleBreadth
 // SetBreadthScope sets the value of BreadthScope.
 func (s *CompileEmailRuleResult) SetBreadthScope(val OptEmailRuleScopeUsed) {
 	s.BreadthScope = val
+}
+
+// SetScopeWarnings sets the value of ScopeWarnings.
+func (s *CompileEmailRuleResult) SetScopeWarnings(val []EmailRuleScopeWarning) {
+	s.ScopeWarnings = val
 }
 
 // SetSQL sets the value of SQL.
@@ -13350,6 +13380,8 @@ type CreateEmailRuleRequest struct {
 	ConditionsBreadth OptNilEmailRuleBreadth `json:"conditions_breadth"`
 	// Ignored (the compile answer's breadth_scope): set a rule's scope with evaluation_scope.
 	BreadthScope OptEmailRuleScopeUsed `json:"breadth_scope"`
+	// Ignored (the compile answer's scope_warnings).
+	ScopeWarnings []EmailRuleScopeWarning `json:"scope_warnings"`
 }
 
 // GetName returns the value of Name.
@@ -13432,6 +13464,11 @@ func (s *CreateEmailRuleRequest) GetBreadthScope() OptEmailRuleScopeUsed {
 	return s.BreadthScope
 }
 
+// GetScopeWarnings returns the value of ScopeWarnings.
+func (s *CreateEmailRuleRequest) GetScopeWarnings() []EmailRuleScopeWarning {
+	return s.ScopeWarnings
+}
+
 // SetName sets the value of Name.
 func (s *CreateEmailRuleRequest) SetName(val string) {
 	s.Name = val
@@ -13510,6 +13547,11 @@ func (s *CreateEmailRuleRequest) SetConditionsBreadth(val OptNilEmailRuleBreadth
 // SetBreadthScope sets the value of BreadthScope.
 func (s *CreateEmailRuleRequest) SetBreadthScope(val OptEmailRuleScopeUsed) {
 	s.BreadthScope = val
+}
+
+// SetScopeWarnings sets the value of ScopeWarnings.
+func (s *CreateEmailRuleRequest) SetScopeWarnings(val []EmailRuleScopeWarning) {
+	s.ScopeWarnings = val
 }
 
 type CreateEmailRuleRequestBadRequest ErrorResponse
@@ -13740,6 +13782,8 @@ type CreateEmailRuleRequestRequest struct {
 	ConditionsBreadth OptNilEmailRuleBreadth `json:"conditions_breadth"`
 	// Ignored (the compile answer's breadth_scope): set a rule's scope with evaluation_scope.
 	BreadthScope OptEmailRuleScopeUsed `json:"breadth_scope"`
+	// Ignored (the compile answer's scope_warnings).
+	ScopeWarnings []EmailRuleScopeWarning `json:"scope_warnings"`
 	// Only grant.
 	Kind OptCreateEmailRuleRequestRequestKind `json:"kind"`
 }
@@ -13807,6 +13851,11 @@ func (s *CreateEmailRuleRequestRequest) GetConditionsBreadth() OptNilEmailRuleBr
 // GetBreadthScope returns the value of BreadthScope.
 func (s *CreateEmailRuleRequestRequest) GetBreadthScope() OptEmailRuleScopeUsed {
 	return s.BreadthScope
+}
+
+// GetScopeWarnings returns the value of ScopeWarnings.
+func (s *CreateEmailRuleRequestRequest) GetScopeWarnings() []EmailRuleScopeWarning {
+	return s.ScopeWarnings
 }
 
 // GetKind returns the value of Kind.
@@ -13879,6 +13928,11 @@ func (s *CreateEmailRuleRequestRequest) SetBreadthScope(val OptEmailRuleScopeUse
 	s.BreadthScope = val
 }
 
+// SetScopeWarnings sets the value of ScopeWarnings.
+func (s *CreateEmailRuleRequestRequest) SetScopeWarnings(val []EmailRuleScopeWarning) {
+	s.ScopeWarnings = val
+}
+
 // SetKind sets the value of Kind.
 func (s *CreateEmailRuleRequestRequest) SetKind(val OptCreateEmailRuleRequestRequestKind) {
 	s.Kind = val
@@ -13936,9 +13990,9 @@ type CreateEmailRuleRequestResult struct {
 	// words of the member who asked or of a model. Null when the tree no longer reads as one.
 	ServerExplanation OptNilString `json:"server_explanation"`
 	// Primitive's own notes on the rule as asked, worked out from its tree and description each time the
-	// request is read, and to the member asked while pending, how to test it on look-alikes. Unlike
-	// warnings, never written by the member who asked, though a note can quote their words or tree
-	// values.
+	// request is read, and to the member asked while pending, how to test it on look-alikes and that
+	// counts the asker quotes came from their own mail. Unlike warnings, never written by the member who
+	// asked, though a note can quote their words or tree values.
 	ServerNotes []string `json:"server_notes"`
 	CompiledBy  string   `json:"compiled_by"`
 	Vocabulary  string   `json:"vocabulary"`
@@ -13962,10 +14016,10 @@ type CreateEmailRuleRequestResult struct {
 	// Once accepted: whether the rule was changed first, as on the share. Null until then, or when
 	// unreadable.
 	EditedOnAccept OptNilBool `json:"edited_on_accept"`
-	// For the member asked, while pending: what the rule actually does (server_explanation), Primitive's
-	// warnings, what accepting would share, then where to see what becomes of one email (rule-results).
-	// For the member who asked, once accepted with changes: that the request is not what is shared. Else
-	// null.
+	// For the member asked, while pending: who asked (as proposer names them), what the rule actually
+	// does (server_explanation), Primitive's warnings, what accepting would share, then where to see
+	// what becomes of one email (rule-results and rule_deliveries). For the member who asked, once
+	// accepted with changes: that the request is not what is shared. Else null.
 	Notice OptNilString `json:"notice"`
 	// Whether the member asked can accept it now under their role. Null unless you can list members and
 	// their roles (members:read), or when it could not be read.
@@ -31931,26 +31985,36 @@ type EmailDetail struct {
 	CreatedAt       time.Time     `json:"created_at"`
 	ReceivedAt      time.Time     `json:"received_at"`
 	RejectionReason OptNilString  `json:"rejection_reason"`
-	// The email's own routed delivery only (where routing sent it); a rule's deliveries never change
-	// this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its delivery state.
-	//  `pending` with 0 attempts can also mean no route webhook took it.
+	// Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On
+	// mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST
+	// /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on
+	// GET /emails/{id}, for the mailbox's owner. Its delivery state. `pending` with 0 attempts can also
+	// mean no route webhook took it, and then it changes only if the email is sent again.
 	WebhookStatus OptNilEmailWebhookStatus `json:"webhook_status"`
-	// The email's own routed delivery only (where routing sent it); a rule's deliveries never change
-	// this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its attempts.
+	// Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On
+	// mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST
+	// /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on
+	// GET /emails/{id}, for the mailbox's owner. Its attempts.
 	WebhookAttemptCount int `json:"webhook_attempt_count"`
-	// The email's own routed delivery only (where routing sent it); a rule's deliveries never change
-	// this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its last attempt.
+	// Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On
+	// mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST
+	// /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on
+	// GET /emails/{id}, for the mailbox's owner. Its last attempt.
 	WebhookLastAttemptAt OptNilDateTime `json:"webhook_last_attempt_at"`
-	// The email's own routed delivery only (where routing sent it); a rule's deliveries never change
-	// this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. What it last
-	// answered.
+	// Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On
+	// mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST
+	// /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on
+	// GET /emails/{id}, for the mailbox's owner. What it last answered.
 	WebhookLastStatusCode OptNilInt `json:"webhook_last_status_code"`
-	// The email's own routed delivery only (where routing sent it); a rule's deliveries never change
-	// this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its last error.
+	// Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On
+	// mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST
+	// /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on
+	// GET /emails/{id}, for the mailbox's owner. Its last error.
 	WebhookLastError OptNilString `json:"webhook_last_error"`
-	// The email's own routed delivery only (where routing sent it); a rule's deliveries never change
-	// this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. When it was
-	// delivered.
+	// Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On
+	// mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST
+	// /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on
+	// GET /emails/{id}, for the mailbox's owner. When it was delivered.
 	WebhookFiredAt OptNilDateTime `json:"webhook_fired_at"`
 	SMTPHelo       OptNilString   `json:"smtp_helo"`
 	// SMTP envelope MAIL FROM (return-path), as accepted by the
@@ -32144,12 +32208,16 @@ type EmailDetail struct {
 	// shown. May be null: this field carries message content, which is withheld when the content is not
 	// available to your credential.
 	Understanding OptNilEmailDetailUnderstanding `json:"understanding"`
-	// The rule share a reader has this email through, when that is their only way to it. Null for
-	// everyone else.
+	// Only for a reader who has this email through a colleague's share of their mail, when that share is
+	// their only way to it: the share and who gave it. Null for everyone else, including on your own
+	// mail when a rule or share of yours gave it to someone: rule_deliveries counts the webhooks rules
+	// delivered it to, and GET /v1/email-rule-shares/{id}/emails lists what a share you gave has given.
 	SharedThrough OptNilEmailDetailSharedThrough `json:"shared_through"`
 	// Where Email Rules delivered this email by webhook, for the owner of the mailbox it is at, on their
-	// own dashboard session or the Primitive CLI. Null for everyone else, and when it could not be read
-	// in time. A key reading it through a rule is not a delivery.
+	// own dashboard session or the Primitive CLI. Null for everyone else, including on another member's
+	// mail even for an organization owner or admin (GET /v1/webhooks/deliveries?email_id=<email-id>
+	// lists its deliveries, a rule's included), and when it could not be read in time. A key reading it
+	// through a rule is not a delivery.
 	RuleDeliveries OptNilEmailDetailRuleDeliveries `json:"rule_deliveries"`
 	// Display name from the `From:` header, decoded for display: RFC 2047 encoded words are decoded in
 	// their declared charset and folded lines are joined (e.g. `Dana Rúiz` for
@@ -33780,8 +33848,10 @@ func (s *EmailDetailReply) SetQueueID(val OptNilString) {
 }
 
 // Where Email Rules delivered this email by webhook, for the owner of the mailbox it is at, on their
-// own dashboard session or the Primitive CLI. Null for everyone else, and when it could not be read
-// in time. A key reading it through a rule is not a delivery.
+// own dashboard session or the Primitive CLI. Null for everyone else, including on another member's
+// mail even for an organization owner or admin (GET /v1/webhooks/deliveries?email_id=<email-id>
+// lists its deliveries, a rule's included), and when it could not be read in time. A key reading it
+// through a rule is not a delivery.
 type EmailDetailRuleDeliveries struct {
 	// Each rule over your mail that queued a webhook delivery of this email, newest rule first.
 	Rules []EmailDetailRuleDeliveriesRulesItem `json:"rules"`
@@ -33958,8 +34028,10 @@ func (s *EmailDetailSenderMember) SetName(val NilString) {
 	s.Name = val
 }
 
-// The rule share a reader has this email through, when that is their only way to it. Null for
-// everyone else.
+// Only for a reader who has this email through a colleague's share of their mail, when that share is
+// their only way to it: the share and who gave it. Null for everyone else, including on your own
+// mail when a rule or share of yours gave it to someone: rule_deliveries counts the webhooks rules
+// delivered it to, and GET /v1/email-rule-shares/{id}/emails lists what a share you gave has given.
 type EmailDetailSharedThrough struct {
 	// The share.
 	ShareID uuid.UUID `json:"share_id"`
@@ -36682,6 +36754,12 @@ type EmailRuleCoveringMe struct {
 	// None of them receives anything yet. Null for any other rule, and as receivers is null.
 	ReceiversOnceActive NilEmailRuleReceivers `json:"receivers_once_active"`
 	CreatedAt           time.Time             `json:"created_at"`
+	// What its author asked for, in their words, at its current version. Null when it has no version,
+	// was deleted after the page was read, or the words could not be read in time; GET
+	// /v1/email-rules/covering-me/{id} shows them with its tree.
+	English OptNilString `json:"english"`
+	// What its current version matches, as compiled. Null as english is.
+	Explanation OptNilString `json:"explanation"`
 }
 
 // GetID returns the value of ID.
@@ -36744,6 +36822,16 @@ func (s *EmailRuleCoveringMe) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
+// GetEnglish returns the value of English.
+func (s *EmailRuleCoveringMe) GetEnglish() OptNilString {
+	return s.English
+}
+
+// GetExplanation returns the value of Explanation.
+func (s *EmailRuleCoveringMe) GetExplanation() OptNilString {
+	return s.Explanation
+}
+
 // SetID sets the value of ID.
 func (s *EmailRuleCoveringMe) SetID(val uuid.UUID) {
 	s.ID = val
@@ -36802,6 +36890,16 @@ func (s *EmailRuleCoveringMe) SetReceiversOnceActive(val NilEmailRuleReceivers) 
 // SetCreatedAt sets the value of CreatedAt.
 func (s *EmailRuleCoveringMe) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
+}
+
+// SetEnglish sets the value of English.
+func (s *EmailRuleCoveringMe) SetEnglish(val OptNilString) {
+	s.English = val
+}
+
+// SetExplanation sets the value of Explanation.
+func (s *EmailRuleCoveringMe) SetExplanation(val OptNilString) {
+	s.Explanation = val
 }
 
 // Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
@@ -38904,7 +39002,8 @@ type EmailRuleReceiversKeysItem struct {
 	Owner EmailRuleReceiversKeysItemOwner `json:"owner"`
 	Count int                             `json:"count"`
 	// On a rule over your mail: how many of these keys also list one of your own mailboxes, or its
-	// domain, so they read your mail there beyond what this rule matches.
+	// domain, so they read your mail there beyond what this rule matches. It counts what they can read,
+	// not whether any has read an email.
 	ReadsInFull OptInt `json:"reads_in_full"`
 	// When the newest of these was made, to the minute: a key, a webhook or the share, or the rule (the
 	// share, for what reaches it only through the share) if that was later. Not when a key was given
@@ -39306,9 +39405,9 @@ type EmailRuleRequest struct {
 	// words of the member who asked or of a model. Null when the tree no longer reads as one.
 	ServerExplanation OptNilString `json:"server_explanation"`
 	// Primitive's own notes on the rule as asked, worked out from its tree and description each time the
-	// request is read, and to the member asked while pending, how to test it on look-alikes. Unlike
-	// warnings, never written by the member who asked, though a note can quote their words or tree
-	// values.
+	// request is read, and to the member asked while pending, how to test it on look-alikes and that
+	// counts the asker quotes came from their own mail. Unlike warnings, never written by the member who
+	// asked, though a note can quote their words or tree values.
 	ServerNotes []string `json:"server_notes"`
 	CompiledBy  string   `json:"compiled_by"`
 	Vocabulary  string   `json:"vocabulary"`
@@ -39332,10 +39431,10 @@ type EmailRuleRequest struct {
 	// Once accepted: whether the rule was changed first, as on the share. Null until then, or when
 	// unreadable.
 	EditedOnAccept OptNilBool `json:"edited_on_accept"`
-	// For the member asked, while pending: what the rule actually does (server_explanation), Primitive's
-	// warnings, what accepting would share, then where to see what becomes of one email (rule-results).
-	// For the member who asked, once accepted with changes: that the request is not what is shared. Else
-	// null.
+	// For the member asked, while pending: who asked (as proposer names them), what the rule actually
+	// does (server_explanation), Primitive's warnings, what accepting would share, then where to see
+	// what becomes of one email (rule-results and rule_deliveries). For the member who asked, once
+	// accepted with changes: that the request is not what is shared. Else null.
 	Notice OptNilString `json:"notice"`
 }
 
@@ -39798,6 +39897,32 @@ func (s *EmailRuleRequestTarget) SetEmail(val NilString) {
 // SetActive sets the value of Active.
 func (s *EmailRuleRequestTarget) SetActive(val bool) {
 	s.Active = val
+}
+
+// Ref: #/components/schemas/EmailRuleSampleDetail
+type EmailRuleSampleDetail struct {
+	Index int       `json:"index"`
+	Label NilString `json:"label"`
+}
+
+// GetIndex returns the value of Index.
+func (s *EmailRuleSampleDetail) GetIndex() int {
+	return s.Index
+}
+
+// GetLabel returns the value of Label.
+func (s *EmailRuleSampleDetail) GetLabel() NilString {
+	return s.Label
+}
+
+// SetIndex sets the value of Index.
+func (s *EmailRuleSampleDetail) SetIndex(val int) {
+	s.Index = val
+}
+
+// SetLabel sets the value of Label.
+func (s *EmailRuleSampleDetail) SetLabel(val NilString) {
+	s.Label = val
 }
 
 // Ref: #/components/schemas/EmailRuleSampleJudgment
@@ -41935,9 +42060,10 @@ type EmailRuleWritten struct {
 	// When this write saved an earlier version again (restore_version): which, and that the scope is not
 	// part of a version.
 	RestoredFrom OptEmailRuleWrittenRestoredFrom `json:"restored_from"`
-	// After an update that saved a version: API keys listing the rule and the webhooks they own.
-	// shares_ended is always 0: a new version keeps the rule's share (share_notice says so). The rule
-	// keeps its state. Absent if not read.
+	// After an update that saved a version, or turned a grant rule active: API keys listing the rule and
+	// the webhooks they own, which read and receive what a grant rule grants from now on. shares_ended
+	// is always 0: a new version keeps the rule's share (share_notice says so). Saving a version does
+	// not by itself change the rule's state. Absent after any other write, and if not read.
 	Affects OptEmailRuleWrittenAffects `json:"affects"`
 	// After a write that saved a version of an active rule keys, webhooks or a share read without
 	// checking it first: what it changes, and how to have the next one checked.
@@ -42208,9 +42334,10 @@ func (s *EmailRuleWritten) SetShareNotice(val OptString) {
 	s.ShareNotice = val
 }
 
-// After an update that saved a version: API keys listing the rule and the webhooks they own.
-// shares_ended is always 0: a new version keeps the rule's share (share_notice says so). The rule
-// keeps its state. Absent if not read.
+// After an update that saved a version, or turned a grant rule active: API keys listing the rule and
+// the webhooks they own, which read and receive what a grant rule grants from now on. shares_ended
+// is always 0: a new version keeps the rule's share (share_notice says so). Saving a version does
+// not by itself change the rule's state. Absent after any other write, and if not read.
 type EmailRuleWrittenAffects struct {
 	Keys        int `json:"keys"`
 	Endpoints   int `json:"endpoints"`
@@ -42344,9 +42471,14 @@ type EmailRuleWrittenExpectationsCheck struct {
 	// Made-up emails that failed, by index in the set judged (saved oldest first, then added; or as
 	// sent).
 	FailedSamples []int `json:"failed_samples"`
-	// Made-up emails not decided, by index. Only a write sent with if_expectations_pass that saves a
-	// version or activates the rule judges them.
+	// Made-up emails not decided, by index. Only a write that saves a version or activates the rule,
+	// sent with if_expectations_pass or judged by default, judges them.
 	UndecidedSamples []int `json:"undecided_samples"`
+	// Failed_samples with each one's label, from a write that judged them before saving
+	// (if_expectations_pass, or by default).
+	FailedSampleDetails []EmailRuleSampleDetail `json:"failed_sample_details"`
+	// Undecided_samples with each one's label, as failed_sample_details.
+	UndecidedSampleDetails []EmailRuleSampleDetail `json:"undecided_sample_details"`
 	// On an update that saved a version that did not pass, or a do_not_share rule created active: that
 	// it was saved anyway, is current, and whether it is live.
 	Note OptString `json:"note"`
@@ -42387,6 +42519,16 @@ func (s *EmailRuleWrittenExpectationsCheck) GetUndecidedSamples() []int {
 	return s.UndecidedSamples
 }
 
+// GetFailedSampleDetails returns the value of FailedSampleDetails.
+func (s *EmailRuleWrittenExpectationsCheck) GetFailedSampleDetails() []EmailRuleSampleDetail {
+	return s.FailedSampleDetails
+}
+
+// GetUndecidedSampleDetails returns the value of UndecidedSampleDetails.
+func (s *EmailRuleWrittenExpectationsCheck) GetUndecidedSampleDetails() []EmailRuleSampleDetail {
+	return s.UndecidedSampleDetails
+}
+
 // GetNote returns the value of Note.
 func (s *EmailRuleWrittenExpectationsCheck) GetNote() OptString {
 	return s.Note
@@ -42425,6 +42567,16 @@ func (s *EmailRuleWrittenExpectationsCheck) SetFailedSamples(val []int) {
 // SetUndecidedSamples sets the value of UndecidedSamples.
 func (s *EmailRuleWrittenExpectationsCheck) SetUndecidedSamples(val []int) {
 	s.UndecidedSamples = val
+}
+
+// SetFailedSampleDetails sets the value of FailedSampleDetails.
+func (s *EmailRuleWrittenExpectationsCheck) SetFailedSampleDetails(val []EmailRuleSampleDetail) {
+	s.FailedSampleDetails = val
+}
+
+// SetUndecidedSampleDetails sets the value of UndecidedSampleDetails.
+func (s *EmailRuleWrittenExpectationsCheck) SetUndecidedSampleDetails(val []EmailRuleSampleDetail) {
+	s.UndecidedSampleDetails = val
 }
 
 // SetNote sets the value of Note.
@@ -42879,12 +43031,16 @@ type EmailSearchResult struct {
 	CreatedAt    time.Time     `json:"created_at"`
 	ReceivedAt   time.Time     `json:"received_at"`
 	RawSizeBytes OptNilInt     `json:"raw_size_bytes"`
-	// The email's own routed delivery only (where routing sent it); a rule's deliveries never change
-	// this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its delivery state.
-	//  `pending` with 0 attempts can also mean no route webhook took it.
+	// Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On
+	// mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST
+	// /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on
+	// GET /emails/{id}, for the mailbox's owner. Its delivery state. `pending` with 0 attempts can also
+	// mean no route webhook took it, and then it changes only if the email is sent again.
 	WebhookStatus OptNilEmailWebhookStatus `json:"webhook_status"`
-	// The email's own routed delivery only (where routing sent it); a rule's deliveries never change
-	// this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its attempts.
+	// Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On
+	// mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST
+	// /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on
+	// GET /emails/{id}, for the mailbox's owner. Its attempts.
 	WebhookAttemptCount int `json:"webhook_attempt_count"`
 	// Merged property.
 	ThreadID        NilUUID               `json:"thread_id"`
@@ -44544,12 +44700,16 @@ type EmailSummary struct {
 	CreatedAt    time.Time     `json:"created_at"`
 	ReceivedAt   time.Time     `json:"received_at"`
 	RawSizeBytes OptNilInt     `json:"raw_size_bytes"`
-	// The email's own routed delivery only (where routing sent it); a rule's deliveries never change
-	// this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its delivery state.
-	//  `pending` with 0 attempts can also mean no route webhook took it.
+	// Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On
+	// mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST
+	// /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on
+	// GET /emails/{id}, for the mailbox's owner. Its delivery state. `pending` with 0 attempts can also
+	// mean no route webhook took it, and then it changes only if the email is sent again.
 	WebhookStatus OptNilEmailWebhookStatus `json:"webhook_status"`
-	// The email's own routed delivery only (where routing sent it); a rule's deliveries never change
-	// this, and are in `rule_deliveries` on GET /emails/{id} for the mailbox's owner. Its attempts.
+	// Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On
+	// mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST
+	// /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on
+	// GET /emails/{id}, for the mailbox's owner. Its attempts.
 	WebhookAttemptCount int `json:"webhook_attempt_count"`
 	// Conversation thread this message belongs to. Fetch
 	// `/threads/{thread_id}` for the full ordered thread. NULL on
@@ -137009,6 +137169,10 @@ type TestEmailRuleResultResultsItem struct {
 	// received_at, from_address and subject, so absent for not_found.
 	Recipient OptString    `json:"recipient"`
 	Subject   OptNilString `json:"subject"`
+	// On matched and near_miss: the file names the email lists, in order, at most 10 (the names its
+	// questions are given; never what is in the files). Parts with no name are left out; absent when
+	// there are none.
+	AttachmentNames []string `json:"attachment_names"`
 	// How each top-level part of the rule decided. Present for matched, near_miss and no_match.
 	Parts []TestEmailRuleResultResultsItemPartsItem `json:"parts"`
 	// Facts the rule reads that this email's classification left out, so the rule did not match.
@@ -137063,6 +137227,11 @@ func (s *TestEmailRuleResultResultsItem) GetRecipient() OptString {
 // GetSubject returns the value of Subject.
 func (s *TestEmailRuleResultResultsItem) GetSubject() OptNilString {
 	return s.Subject
+}
+
+// GetAttachmentNames returns the value of AttachmentNames.
+func (s *TestEmailRuleResultResultsItem) GetAttachmentNames() []string {
+	return s.AttachmentNames
 }
 
 // GetParts returns the value of Parts.
@@ -137128,6 +137297,11 @@ func (s *TestEmailRuleResultResultsItem) SetRecipient(val OptString) {
 // SetSubject sets the value of Subject.
 func (s *TestEmailRuleResultResultsItem) SetSubject(val OptNilString) {
 	s.Subject = val
+}
+
+// SetAttachmentNames sets the value of AttachmentNames.
+func (s *TestEmailRuleResultResultsItem) SetAttachmentNames(val []string) {
+	s.AttachmentNames = val
 }
 
 // SetParts sets the value of Parts.
@@ -141144,6 +141318,8 @@ type UpdateEmailRuleRequest struct {
 	ConditionsBreadth OptNilEmailRuleBreadth `json:"conditions_breadth"`
 	// Ignored (the compile answer's breadth_scope): set a rule's scope with evaluation_scope.
 	BreadthScope OptEmailRuleScopeUsed `json:"breadth_scope"`
+	// Ignored (the compile answer's scope_warnings).
+	ScopeWarnings []EmailRuleScopeWarning `json:"scope_warnings"`
 	// Must be the rule's own (400 kind_mismatch).
 	Kind OptUpdateEmailRuleRequestKind `json:"kind"`
 	// Own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own
@@ -141234,6 +141410,11 @@ func (s *UpdateEmailRuleRequest) GetConditionsBreadth() OptNilEmailRuleBreadth {
 // GetBreadthScope returns the value of BreadthScope.
 func (s *UpdateEmailRuleRequest) GetBreadthScope() OptEmailRuleScopeUsed {
 	return s.BreadthScope
+}
+
+// GetScopeWarnings returns the value of ScopeWarnings.
+func (s *UpdateEmailRuleRequest) GetScopeWarnings() []EmailRuleScopeWarning {
+	return s.ScopeWarnings
 }
 
 // GetKind returns the value of Kind.
@@ -141339,6 +141520,11 @@ func (s *UpdateEmailRuleRequest) SetConditionsBreadth(val OptNilEmailRuleBreadth
 // SetBreadthScope sets the value of BreadthScope.
 func (s *UpdateEmailRuleRequest) SetBreadthScope(val OptEmailRuleScopeUsed) {
 	s.BreadthScope = val
+}
+
+// SetScopeWarnings sets the value of ScopeWarnings.
+func (s *UpdateEmailRuleRequest) SetScopeWarnings(val []EmailRuleScopeWarning) {
+	s.ScopeWarnings = val
 }
 
 // SetKind sets the value of Kind.

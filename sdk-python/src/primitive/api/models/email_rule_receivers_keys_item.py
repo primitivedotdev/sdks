@@ -29,7 +29,8 @@ class EmailRuleReceiversKeysItem:
             owner (EmailRuleReceiversKeysItemOwner):
             count (int):
             reads_in_full (int | Unset): On a rule over your mail: how many of these keys also list one of your own
-                mailboxes, or its domain, so they read your mail there beyond what this rule matches.
+                mailboxes, or its domain, so they read your mail there beyond what this rule matches. It counts what they can
+                read, not whether any has read an email.
             newest_at (datetime.datetime | Unset): When the newest of these was made, to the minute: a key, a webhook or the
                 share, or the rule (the share, for what reaches it only through the share) if that was later. Not when a key was
                 given access to this rule, or anything turned back on; a rotated key shows as newly made, and one key on two
