@@ -4,7 +4,7 @@ import { JSON_OUTPUT_FLAG } from "../json-output.js";
 // `primitive version` prints the line `primitive --version` prints (oclif's
 // user agent: name/version platform-arch node-version), or with --json the
 // same facts as fields. It reads only the running CLI and Node, so it needs
-// no login and makes no request.
+// no login and does not call the API.
 
 export type VersionInfo = {
   version: string;
@@ -29,7 +29,7 @@ export function versionInfo(config: {
 
 class VersionCommand extends Command {
   static description =
-    "Print the CLI's version, with the platform, architecture and Node version it runs on: the same line `primitive --version` prints. With --json, print them as fields. Needs no login and makes no request.";
+    "Print the CLI's version, with the platform, architecture and Node version it runs on: the same line `primitive --version` prints. With --json, print them as fields. Needs no login and does not call the API.";
 
   static summary = "Print the CLI version";
 

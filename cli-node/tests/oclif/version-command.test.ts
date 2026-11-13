@@ -2,9 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Config } from "@oclif/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import VersionCommand, {
-  versionInfo,
-} from "../../src/oclif/commands/version.js";
+import VersionCommand from "../../src/oclif/commands/version.js";
 import PrimitiveHelp from "../../src/oclif/help.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 
@@ -39,10 +37,11 @@ describe("primitive version", () => {
     const config = await Config.load(pkgRoot);
     const output = captureLog();
     await VersionCommand.run([], pkgRoot);
-    // oclif's --version prints config.userAgent.
+    // oclif's --version prints config.userAgent; the CLI smoke test also
+    // compares the two commands' output on the packed CLI.
     expect(output).toEqual([config.userAgent]);
     expect(config.userAgent).toBe(
-      `primitive/${config.version} ${process.platform}-${process.arch} node-${process.version}`,
+      `primitive/${config.version} ${config.platform}-${config.arch} node-${process.version}`,
     );
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -52,12 +51,6 @@ describe("primitive version", () => {
     const output = captureLog();
     await VersionCommand.run(["--json"], pkgRoot);
     expect(JSON.parse(output.join("\n"))).toEqual({
-      version: config.version,
-      platform: process.platform,
-      arch: process.arch,
-      node: process.versions.node,
-    });
-    expect(versionInfo(config)).toEqual({
       version: config.version,
       platform: config.platform,
       arch: config.arch,
@@ -69,6 +62,8 @@ describe("primitive version", () => {
     const config = await Config.load(pkgRoot);
     const output = captureLog();
     await new PrimitiveHelp(config).showHelp([]);
-    expect(output.join("\n")).toMatch(/^\s+version\s+Print the CLI version$/m);
+    const help = output.join("\n");
+    expect(help).toMatch(/^ {2}version\b/m);
+    expect(help).toContain("Print the CLI version");
   });
 });

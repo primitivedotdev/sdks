@@ -103,6 +103,7 @@ cli-smoke-only:
 	export PRIMITIVE_SKIP_NEW_VERSION_CHECK=1 && \
 	bin="$$smoke_dir/node_modules/.bin/primitive" && \
 	"$$bin" --version | grep -qF -- "primitive/$$cli_version " && \
+	test "$$("$$bin" version)" = "$$("$$bin" --version)" && \
 	node "$$smoke_runner" "$$bin" && \
 	"$$bin" inbox next --help-full | grep -q -- "NOT A WORK QUEUE" && \
 	"$$bin" emails latest --help | grep -q -- "--awaiting" && \

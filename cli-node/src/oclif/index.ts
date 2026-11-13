@@ -705,7 +705,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   // Billing lives in the dashboard; this opens the page.
   billing: BillingCommand,
   // `version` prints what `--version` prints, or its facts with --json, with
-  // no login and no request.
+  // no login and no API call.
   version: VersionCommand,
   // `machine doctor` checks and repairs the per-machine setup that lets
   // coding sessions register and receive mail (hooks, instructions, skills).
