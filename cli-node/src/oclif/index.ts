@@ -178,6 +178,7 @@ import {
   ThreadsMutedCommand,
   ThreadsUnmuteCommand,
 } from "./commands/threads-mute.js";
+import VersionCommand from "./commands/version.js";
 import WaitCommand from "./commands/wait.js";
 import WakeAuthorizationsCreateCommand from "./commands/wake-authorizations-create.js";
 import WakeAuthorizationsDeleteCommand from "./commands/wake-authorizations-delete.js";
@@ -703,6 +704,9 @@ export const COMMANDS: Record<string, typeof Command> = {
   doctor: DoctorCommand,
   // Billing lives in the dashboard; this opens the page.
   billing: BillingCommand,
+  // `version` prints what `--version` prints, or its facts with --json, with
+  // no login and no request.
+  version: VersionCommand,
   // `machine doctor` checks and repairs the per-machine setup that lets
   // coding sessions register and receive mail (hooks, instructions, skills).
   "machine:doctor": MachineDoctorCommand,
