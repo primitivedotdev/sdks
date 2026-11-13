@@ -1,4 +1,6 @@
-import { resolve } from "node:path";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import {
   operationManifest,
   PrimitiveApiClient,
@@ -334,6 +336,43 @@ describe("the endpoint commands' URLs", () => {
       "--show-url",
     ]);
     expect(`${shown.stdout}${shown.stderr}`).toContain(SECRET_URL);
+  });
+
+  it("judges the URL the request would send: --url over the body's, and a --body-file", async () => {
+    // A real --url over a placeholder in the body is sent, not refused.
+    const calls = fixture({
+      body: { success: true, data: endpointRow("https://real.test/hook") },
+    });
+    const sent = await run("createEndpoint", [
+      "--raw-body",
+      JSON.stringify({ url: SHOWN_URL }),
+      "--url",
+      "https://real.test/hook",
+    ]);
+    expect(sent.error).toBeNull();
+    expect(calls[0]?.body).toEqual({ url: "https://real.test/hook" });
+
+    // A placeholder --url over a real body URL, or one in a --body-file, is refused unread.
+    const dir = mkdtempSync(join(tmpdir(), "endpoint-url-"));
+    try {
+      const file = join(dir, "body.json");
+      writeFileSync(file, JSON.stringify({ url: SHOWN_URL }));
+      for (const argv of [
+        ["--raw-body", JSON.stringify({ url: SECRET_URL }), "--url", SHOWN_URL],
+        ["--body-file", file],
+      ]) {
+        const none = fixture();
+        auth.create.mockClear();
+        const refused = await run("createEndpoint", argv);
+        expect(none).toHaveLength(0);
+        expect(auth.create).not.toHaveBeenCalled();
+        expect(
+          (refused.error as { oclif?: { exit?: number } }).oclif?.exit,
+        ).toBe(2);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("create and update refuse a URL as these commands print it before reading a credential, sending nothing", async () => {

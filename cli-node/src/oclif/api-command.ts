@@ -1863,8 +1863,9 @@ export function createOperationCommand(
           }
         }
 
-        // A URL as these commands print it, query hidden, is never sent in
-        // place of the real one.
+        // A backstop for the check before authenticating: a URL as these
+        // commands print it, query hidden, is never sent in place of the
+        // real one.
         if (ENDPOINT_URL_WRITE_OPERATIONS.has(operation.sdkName)) {
           const refusal = hiddenQueryUrlRefusal(body);
           if (refusal) throw new Errors.CLIError(refusal, { exit: 2 });
