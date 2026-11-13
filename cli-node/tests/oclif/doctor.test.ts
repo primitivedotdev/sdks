@@ -623,8 +623,7 @@ describe("checkAskedOfYou", () => {
     });
     expect(await checkAskedOfYou(client({ data: page([]) }).api, NOW)).toEqual({
       status: "ok",
-      message:
-        "nothing waiting for you; coverage notices can take a few minutes to appear",
+      message: "nothing waiting for you; coverage notices can lag",
     });
   });
 

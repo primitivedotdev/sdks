@@ -1461,7 +1461,8 @@ parsers.
   `RULE ID` column is each notice's `rule_id`, which
   `email-rule-oversight get-email-rule-covering-me` and
   `create-email-rule-objection --rule-id` take, and its help and empty
-  listing say only that notices can lag, naming no interval.
+  listing, like `primitive doctor`'s "Asked of you" row, say only that
+  notices can lag, naming no interval.
 - When the API lists no address and no domain a credential can send from,
   send's error no longer suggests `--from`, which cannot help then.
 - `primitive activity created` lists what you created, newest first, with
