@@ -2120,6 +2120,21 @@ describe("email-rules accept-email-rule-request --expectation-samples-file", () 
     expect(objected.exitCode).toBe(2);
     expect(objected.stderr).toContain("message is 612 characters");
     expect(calls).toEqual([]);
+    // A single-code-point emoji counts once, so 300 of them are within 500, and the refusal counts code points.
+    expect(
+      overLongBodyField(
+        { properties: { reason: { maxLength: 500 } } },
+        { reason: "\u{1F600}".repeat(300) },
+      ),
+    ).toBeUndefined();
+    expect(
+      overLongBodyField(
+        { properties: { reason: { maxLength: 500 } } },
+        { reason: "\u{1F600}".repeat(501) },
+      ),
+    ).toBe(
+      "reason is 501 characters; the API takes at most 500. Nothing was sent.",
+    );
     // Text over no limit, and values that are not text, are left to the API.
     expect(
       overLongBodyField(

@@ -1519,10 +1519,10 @@ export const OPERATION_HINTS: Record<string, string> = {
 
 /**
  * A top-level text field of `body` longer than the spec's maxLength for it,
- * said as a refusal, or undefined. Counted as the server counts it, after
- * trimming the ends (a field the server does not trim is only ever let
- * through here, never refused for its spaces), so a message over the limit
- * is refused before it is sent rather than by the API after typing it.
+ * said as a refusal, or undefined. Counted after trimming the ends, by code
+ * point, which is never more than the API counts, so nothing the API would
+ * take is refused here; a message over the limit is refused before it is
+ * sent rather than by the API after typing it.
  */
 export function overLongBodyField(
   schema: unknown,
@@ -1537,7 +1537,8 @@ export function overLongBodyField(
   for (const [field, value] of Object.entries(body)) {
     const max = properties[field]?.maxLength;
     if (typeof value !== "string" || typeof max !== "number") continue;
-    const length = value.trim().length;
+    // By code point, as the API counts these fields: never more than the API counts, so nothing it takes is refused.
+    const length = Array.from(value.trim()).length;
     if (length > max)
       return `${field} is ${length} characters; the API takes at most ${max}. Nothing was sent.`;
   }
