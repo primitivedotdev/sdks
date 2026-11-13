@@ -1185,6 +1185,11 @@ parsers.
 
 #### CLI
 
+- `primitive version` prints the line `primitive --version` prints (the
+  CLI's name and version, platform and architecture, and Node version).
+  With `--json` it prints `version`, `platform`, `arch` and `node` (Node's
+  version without its leading `v`). It needs no login and does not call
+  the API, and it is listed in the root help.
 - `email-rules create-email-rule`, `update-email-rule`, `test-email-rule`,
   `test-email-rule-on-sample` and `generate-look-alikes` take
   `--scope-address` and `--scope-domain`, so a selected scope no longer
