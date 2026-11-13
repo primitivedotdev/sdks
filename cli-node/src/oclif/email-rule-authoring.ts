@@ -52,6 +52,7 @@ import type {
   OperationExtension,
   OperationReport,
 } from "./operation-extension.js";
+import { sanitizeForTerminal } from "./terminal-text.js";
 
 const EMAIL_ID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
@@ -567,7 +568,10 @@ function sampleNamer(request?: {
     sent && typeof request?.flags?.[EXPECT_SAMPLES_FILE_FLAG] === "string";
   return ({ index, label }) => {
     const n = fromFile ? sentSampleNumber(index, request?.flags) : index + 1;
-    const name = sent ? `sample ${n}` : `saved sample ${n}`;
+    // A saved one also by the index from 0 the API names it by, as rule writes name it.
+    if (!sent)
+      return `saved sample ${n} (index ${index}${label ? `, "${label}"` : ""})`;
+    const name = `sample ${n}`;
     return label ? `${name} ("${label}")` : name;
   };
 }
@@ -696,7 +700,85 @@ function notMatchedLine(result: TestResult): string[] {
       : "";
     lines.push(`    questions${source}: ${answers.map(answerText).join("; ")}`);
   }
-  return lines;
+  return [...lines, ...attachmentsLine(result)];
+}
+
+/** Marks that reorder text on screen, so "inv\u202egpj.exe" could show as "invexe.jpg". */
+const BIDI_CONTROLS = /[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
+/** The longest a sender's subject or file name is shown in a report line. */
+const SHOWN_TEXT_MAX = 100;
+
+/**
+ * Text a sender wrote (a subject, an address, a file name), as a report
+ * line shows it: no terminal control sequences or reordering marks, on one
+ * line, cut at SHOWN_TEXT_MAX.
+ */
+function shownText(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const line = sanitizeForTerminal(value)
+    .replace(BIDI_CONTROLS, "")
+    .replaceAll(/\s+/g, " ")
+    .trim();
+  return line.length > SHOWN_TEXT_MAX
+    ? `${line.slice(0, SHOWN_TEXT_MAX - 3)}...`
+    : line;
+}
+
+/**
+ * The file names a matched or near-miss result lists (attachment_names), on
+ * one line under it: the names its questions are given, shown as shownText
+ * shows a sender's text.
+ */
+function attachmentsLine(result: TestResult): string[] {
+  const names = (result as { attachment_names?: unknown }).attachment_names;
+  if (!Array.isArray(names)) return [];
+  const shown = names.map(shownText).filter(Boolean);
+  return shown.length > 0 ? [`    attachments: ${shown.join(", ")}`] : [];
+}
+
+/**
+ * The matched emails, each with who sent it, its subject and its attachments'
+ * file names, so a match can be judged without opening it; cut as the not
+ * matched list is.
+ */
+function matchedLines(
+  results: readonly TestResult[],
+  expectations: TestEmailRuleResult["expectations"],
+): string[] {
+  // An email an expectation failed or left undecided on comes first, as in
+  // the not matched list, so the cut never drops it.
+  const flagged = new Set(
+    (expectations?.results ?? [])
+      .filter((result) => result.status !== "passed")
+      .map((result) => result.email_id),
+  );
+  const matched = results
+    .filter((result) => result.outcome === "matched")
+    .map((result, position) => ({ result, position }))
+    .sort(
+      (a, b) =>
+        Number(flagged.has(b.result.email_id)) -
+          Number(flagged.has(a.result.email_id)) || a.position - b.position,
+    )
+    .map(({ result }) => result);
+  if (matched.length === 0) return [];
+  const shown = matched.slice(0, NOT_MATCHED_LIST_LIMIT);
+  const header =
+    shown.length < matched.length
+      ? `Matched (${shown.length} of ${matched.length} shown; the JSON has every result):`
+      : `Matched (${matched.length}):`;
+  return [
+    header,
+    ...shown.flatMap((result) => {
+      const from = shownText(result.from_address);
+      const subject = shownText(result.subject);
+      const about = [from, subject ? `"${subject}"` : ""].filter(Boolean);
+      return [
+        `  ${result.email_id}${about.length > 0 ? ` ${about.join(" ")}` : ""}`,
+        ...attachmentsLine(result),
+      ];
+    }),
+  ];
 }
 
 function notMatchedLines(
@@ -857,6 +939,7 @@ export function testEmailRuleReport(
     ...conditionLines(summary),
     ...questionLines(summary, results),
     ...expectationsLines(result.expectations, results, name),
+    ...matchedLines(results, result.expectations),
     ...notMatchedLines(results, result.expectations),
   ];
   return {
@@ -875,19 +958,48 @@ function indexList(value: unknown): number[] {
 }
 
 /**
+ * The labels a write's check gives the made-up emails it names, by index
+ * (failed_sample_details and undecided_sample_details), from a server that
+ * sends them.
+ */
+export function sampleDetailLabels(check: unknown): Map<number, string | null> {
+  const labels = new Map<number, string | null>();
+  if (!isRecord(check)) return labels;
+  for (const key of ["failed_sample_details", "undecided_sample_details"]) {
+    const details = check[key];
+    if (!Array.isArray(details)) continue;
+    for (const detail of details)
+      if (
+        isRecord(detail) &&
+        typeof detail.index === "number" &&
+        Number.isInteger(detail.index) &&
+        detail.index >= 0
+      )
+        labels.set(
+          detail.index,
+          typeof detail.label === "string" ? detail.label : null,
+        );
+  }
+  return labels;
+}
+
+/**
  * How a rule write names a made-up email its check gives by index, from 0 in
  * the set judged: those this write sends in place of the rule's
  * (expectation_samples), or the rule's saved ones oldest first and then
  * those it adds (add_expectation_samples). One this write sent is "sample
  * N", its number in the samples file --pick took it from (or its place in
- * what was sent); any other is "saved sample N", its place among the rule's.
- * With its label when known. `saved` is the answer's expectation_samples,
- * every one the rule keeps after the write, when it has them.
+ * what was sent); any other is "saved sample N (index i)", its place among
+ * the rule's and the index the API names it by. With its label when known,
+ * from the samples or from `labels` (sampleDetailLabels). `saved` is the
+ * answer's expectation_samples, every one the rule keeps after the write,
+ * when it has them.
  */
 export function writtenSampleNamer(
   body: unknown,
   flags: Record<string, unknown> | undefined,
   saved?: unknown,
+  labels: ReadonlyMap<number, string | null> = new Map(),
 ): (index: number) => string {
   const sent =
     isRecord(body) && Array.isArray(body.expectation_samples)
@@ -902,6 +1014,17 @@ export function writtenSampleNamer(
     isRecord(sample) && typeof sample.label === "string" && sample.label
       ? `${name} ("${sample.label}")`
       : name;
+  // A sample this write did not send: numbered from 1 among the rule's, with
+  // the index from 0 the API names it by, and its label from the rule's
+  // samples or the check's details.
+  const indexed = (name: string, index: number) => {
+    const sample = kept?.[index];
+    const label =
+      isRecord(sample) && typeof sample.label === "string" && sample.label
+        ? sample.label
+        : labels.get(index);
+    return `${name} (index ${index}${label ? `, "${label}"` : ""})`;
+  };
   return (index) => {
     if (sent)
       return labelled(`sample ${sentSampleNumber(index, flags)}`, sent[index]);
@@ -909,14 +1032,14 @@ export function writtenSampleNamer(
       // Where the added ones start, known only from the rule's samples after
       // the write; a refused write answers without them.
       const start = kept ? kept.length - added.length : null;
-      if (start === null) return `made-up email ${index + 1}`;
+      if (start === null) return indexed(`made-up email ${index + 1}`, index);
       if (index >= start)
         return labelled(
           `sample ${sentSampleNumber(index - start, flags)}`,
           added[index - start],
         );
     }
-    return labelled(`saved sample ${index + 1}`, kept?.[index]);
+    return indexed(`saved sample ${index + 1}`, index);
   };
 }
 
@@ -1088,19 +1211,36 @@ function restoredLine(
 }
 
 /**
- * Who an update that saved a version reaches, as its answer counts them: the
- * keys listing the rule, the webhooks those keys own, and the shares the
- * write ended.
+ * Who an update that saved a version, or turned a grant rule active, reaches,
+ * as its answer counts them: the keys listing the rule, the webhooks those
+ * keys own, and the shares the write ended (always 0 now).
  */
-export function affectsLine(affects: unknown): string | undefined {
+export function affectsLine(
+  affects: unknown,
+  write: {
+    /** The write sent state active and nothing that saves a version (a tree or a restored one). */
+    activatedOnly?: boolean;
+    /** The state the write sent, if any, and the rule's state after it. */
+    stateSent?: unknown;
+    state?: unknown;
+  } = {},
+): string | undefined {
   if (!isRecord(affects)) return undefined;
   const count = (value: unknown) =>
     typeof value === "number" && Number.isFinite(value) ? value : undefined;
   const keys = count(affects.keys);
   const endpoints = count(affects.endpoints);
   const shares = count(affects.shares_ended);
+  const reach = `${plural(keys ?? 0, "API key", "API keys")} listing the rule and ${plural(endpoints ?? 0, "webhook", "webhooks")} those keys own`;
+  // Sent only for a saved version or a rule turned active, so with no
+  // version to save it is the activation (a restated scope saves none).
+  if (write.activatedOnly && keys !== undefined && endpoints !== undefined)
+    return `Now active: it reaches ${reach}.`;
   if (keys === undefined || endpoints === undefined || shares === undefined)
     return undefined;
+  // A write that also sent a state may have changed it: say what it is now.
+  if (write.stateSent !== undefined && typeof write.state === "string")
+    return `This version reaches ${reach}; it ended ${plural(shares, "share", "shares")}. The rule is now ${write.state}.`;
   return `This version reaches ${plural(keys, "API key", "API keys")} listing the rule and ${plural(endpoints, "webhook", "webhooks")} those keys own; it ended ${plural(shares, "share", "shares")}. The rule keeps its state.`;
 }
 
@@ -1153,7 +1293,22 @@ export function writtenEmailRuleReport(
   }
   const restored = restoredLine(rule.restored_from, rule.current_version);
   if (restored) lines.push(restored);
-  const reach = affectsLine(rule.affects);
+  // A write that turned the rule active saves no version unless it sent a
+  // tree or a restored one, or changed the scope: affects then counts what
+  // the activation reaches. A do-not-share rule reaches no key.
+  const body = isRecord(request.body) ? request.body : {};
+  const activatedOnly =
+    body.state === "active" &&
+    body.tree === undefined &&
+    body.restore_version === undefined;
+  const reach =
+    (rule as { kind?: unknown }).kind === "do_not_share" && activatedOnly
+      ? undefined
+      : affectsLine(rule.affects, {
+          activatedOnly,
+          stateSent: body.state,
+          state: rule.state,
+        });
   if (reach) lines.push(reach);
   // That the write ended the rule's share, and with whom; then, for a version
   // saved on an active rule keys or webhooks read without a check, what it
@@ -1167,6 +1322,7 @@ export function writtenEmailRuleReport(
     request.body,
     request.flags,
     (rule as Record<string, unknown>).expectation_samples,
+    sampleDetailLabels(rule.expectations_check),
   );
   const checked = expectationsCheckLine(rule.expectations_check, ruleId, name);
   if (checked) lines.push(checked);
@@ -1431,7 +1587,12 @@ export function updateEmailRuleErrorHint(
       : {};
     const failed = Array.isArray(check.failed) ? check.failed : [];
     const undecided = Array.isArray(check.undecided) ? check.undecided : [];
-    const name = writtenSampleNamer(body, flags);
+    const name = writtenSampleNamer(
+      body,
+      flags,
+      undefined,
+      sampleDetailLabels(check),
+    );
     const failedAll = [...failed, ...indexList(check.failed_samples).map(name)];
     const undecidedSamples = indexList(check.undecided_samples);
     const undecidedAll = [...undecided, ...undecidedSamples.map(name)];
@@ -1647,12 +1808,16 @@ export function compileEmailRuleReport(
   request?: { body?: unknown },
 ): OperationReport {
   if (!isRecord(data)) return { lines: [] };
-  const lines = (Array.isArray(data.warnings) ? data.warnings : [])
-    .filter(
-      (warning): warning is string =>
-        typeof warning === "string" && warning.trim() !== "",
-    )
-    .map((warning) => `Warning: ${warning.trim()}`);
+  const lines = [
+    // Names in the scope sent that no mail reaches, first: a typo there makes the rest moot.
+    ...scopeWarningLines(data.scope_warnings),
+    ...(Array.isArray(data.warnings) ? data.warnings : [])
+      .filter(
+        (warning): warning is string =>
+          typeof warning === "string" && warning.trim() !== "",
+      )
+      .map((warning) => `Warning: ${warning.trim()}`),
+  ];
   const breadth = data.breadth;
   // Counted over the evaluation_scope sent, by default your own mailboxes,
   // as the answer's breadth_scope says when the server sends it.
