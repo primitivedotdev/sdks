@@ -99,25 +99,27 @@ export function deliveryAttemptLines(data: unknown): string[] {
 /**
  * What an endpoint's DELIVERING column says, from `delivery` and never from
  * `enabled`: an endpoint can be on and still be sent nothing (its owner's key
- * revoked, say). `-` for an endpoint that is not a webhook (a Function or
- * pull endpoint), which has no delivery; `unknown` for a webhook when it
- * could not be checked just now, or the server does not say.
+ * revoked, say). A delivery the answer gives is read for any kind. Without
+ * one, a webhook (or an endpoint of no stated kind) shows `unknown`, since it
+ * could not be checked just now or the server does not say, and any other
+ * kind (a Function or pull endpoint, which has no delivery) shows `-`.
  */
 export function deliveringCell(endpoint: Record<string, unknown>): string {
-  const webhook = endpoint.kind === undefined || endpoint.kind === "http";
-  if (!webhook) return "-";
   const delivery = endpoint.delivery;
-  if (!isRecord(delivery) || typeof delivery.delivering !== "boolean")
-    return "unknown";
-  if (delivery.delivering) return "yes";
-  const codes = Array.isArray(delivery.reasons)
-    ? delivery.reasons.flatMap((reason) =>
-        isRecord(reason) && typeof reason.code === "string" && reason.code
-          ? [oneLine(reason.code)]
-          : [],
-      )
-    : [];
-  return codes.length > 0 ? `no (${codes.join(", ")})` : "no";
+  if (isRecord(delivery) && typeof delivery.delivering === "boolean") {
+    if (delivery.delivering) return "yes";
+    const codes = Array.isArray(delivery.reasons)
+      ? delivery.reasons.flatMap((reason) =>
+          isRecord(reason) && typeof reason.code === "string" && reason.code
+            ? [oneLine(reason.code)]
+            : [],
+        )
+      : [];
+    return codes.length > 0 ? `no (${codes.join(", ")})` : "no";
+  }
+  return endpoint.kind === undefined || endpoint.kind === "http"
+    ? "unknown"
+    : "-";
 }
 
 /**

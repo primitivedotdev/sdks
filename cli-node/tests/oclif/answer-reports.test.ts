@@ -337,8 +337,15 @@ describe("endpoints list DELIVERING", () => {
     // Not checked just now, or a server that does not say.
     expect(deliveringCell(endpoint({ delivery: null }))).toBe("unknown");
     expect(deliveringCell(endpoint({}))).toBe("unknown");
+    // An endpoint of no stated kind is read as a webhook.
+    expect(deliveringCell(endpoint({ kind: undefined }))).toBe("unknown");
     // A Function or pull endpoint has no delivery.
     expect(deliveringCell(endpoint({ kind: "function", url: null }))).toBe("-");
+    expect(deliveringCell(endpoint({ kind: "pull", url: null }))).toBe("-");
+    // A delivery given is read whatever the kind.
+    expect(deliveringCell(endpoint({ kind: "pull", delivery: revoked }))).toBe(
+      "no (acting_owner_revoked)",
+    );
   });
 
   it("tables each endpoint's ENABLED and DELIVERING, and nothing for an empty list", () => {
@@ -350,7 +357,12 @@ describe("endpoints list DELIVERING", () => {
         url: null,
       }),
     ]);
-    expect(lines[0]).toMatch(/^ID\s+KIND\s+ENABLED\s+DELIVERING\s+NAME$/);
+    expect(lines[0]).toBe(
+      `ID${" ".repeat(36)}KIND      ENABLED  DELIVERING                 NAME`,
+    );
+    expect(lines[1]).toBe(
+      `${ENDPOINT}  http      yes      no (acting_owner_revoked)  invoices`,
+    );
     expect(lines[1]).toMatch(
       new RegExp(
         `^${ENDPOINT}\\s+http\\s+yes\\s+no \\(acting_owner_revoked\\)\\s+invoices$`,
@@ -373,6 +385,14 @@ describe("endpoints list DELIVERING", () => {
     expect(listed.exitCode).toBeUndefined();
     expect(listed.stderr).toMatch(/ENABLED\s+DELIVERING/);
     expect(listed.stderr).toContain("no (acting_owner_revoked)");
+    useServer(page);
+    const enveloped = await run(COMMANDS["endpoints:list-endpoints"] as never, [
+      "--envelope",
+    ]);
+    expect(enveloped.stderr).toMatch(/ENABLED\s+DELIVERING/);
+    expect(JSON.parse(enveloped.stdout).data).toEqual([
+      endpoint({ delivery: revoked }),
+    ]);
     useServer(page);
     const json = await run(COMMANDS["endpoints:list-endpoints"] as never, [
       "--json",

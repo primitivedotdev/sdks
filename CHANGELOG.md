@@ -1373,7 +1373,7 @@ parsers.
   with each endpoint's ENABLED and DELIVERING. DELIVERING is read from
   `delivery.delivering`, not from `enabled`, so an enabled webhook that is
   sent nothing (its owner's key revoked, say) reads `no`, with the reason
-  codes in brackets. A Function or pull endpoint shows `-`, and a webhook
+  codes in parentheses. A Function or pull endpoint shows `-`, and a webhook
   whose delivery could not be checked shows `unknown`. `--json` output is
   unchanged.
 - `email-rule-oversight create-email-rule-objection --help` says the
