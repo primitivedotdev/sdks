@@ -3179,7 +3179,7 @@ describe("email-rules update-email-rule: the server's write guards", () => {
     expect(stderrLines(older).join("\n")).not.toMatch(/reaches/);
   });
 
-  it("says what a rule now reaches when a write only turned it active", async () => {
+  it("says what a rule now reaches when a write turned it active, with or without a scope", async () => {
     answer({
       ...written,
       state: "active",
@@ -3193,6 +3193,41 @@ describe("email-rules update-email-rule: the server's write guards", () => {
     expect(result.exitCode).toBe(0);
     expect(stderrLines(result)).toContain(
       "Now active: it reaches 1 API key listing the rule and 0 webhooks those keys own.",
+    );
+    // With a scope sent too, which saves a version when it changed it: what it reaches now, over that scope.
+    const scoped = await run("email-rules:update-email-rule", [
+      RULE,
+      "--state",
+      "active",
+      "--evaluation-scope",
+      "author",
+    ]);
+    expect(scoped.exitCode).toBe(0);
+    expect(stderrLines(scoped)).toContain(
+      "Now active, over the scope this write sent: it reaches 1 API key listing the rule and 0 webhooks those keys own.",
+    );
+    // A do-not-share rule turned on reaches no key: no line, unless a scope was sent.
+    answer({
+      ...written,
+      kind: "do_not_share",
+      state: "active",
+      affects: { keys: 0, endpoints: 0, shares_ended: 0 },
+    });
+    const blocking = await run("email-rules:update-email-rule", [
+      RULE,
+      "--state",
+      "active",
+    ]);
+    expect(stderrLines(blocking).join("\n")).not.toMatch(/reaches/);
+    const blockingScoped = await run("email-rules:update-email-rule", [
+      RULE,
+      "--state",
+      "active",
+      "--evaluation-scope",
+      "author",
+    ]);
+    expect(stderrLines(blockingScoped)).toContain(
+      "Now active, over the scope this write sent: it reaches 0 API keys listing the rule and 0 webhooks those keys own.",
     );
   });
 });

@@ -1218,8 +1218,10 @@ function restoredLine(
 export function affectsLine(
   affects: unknown,
   write: {
-    /** The write sent state active and nothing that saves a version (a tree or a restored one). */
+    /** The write sent state active and no tree or restored version. */
     activatedOnly?: boolean;
+    /** It also sent a scope, which saves a version when it differs from the rule's. */
+    scopeSent?: boolean;
     /** The state the write sent, if any, and the rule's state after it. */
     stateSent?: unknown;
     state?: unknown;
@@ -1232,10 +1234,12 @@ export function affectsLine(
   const endpoints = count(affects.endpoints);
   const shares = count(affects.shares_ended);
   const reach = `${plural(keys ?? 0, "API key", "API keys")} listing the rule and ${plural(endpoints ?? 0, "webhook", "webhooks")} those keys own`;
-  // Sent only for a saved version or a rule turned active, so with no
-  // version to save it is the activation (a restated scope saves none).
+  // Sent only for a saved version or a rule turned active. With no tree or
+  // restored version it is the activation, and with a scope sent, the scope
+  // too (a changed scope saves a version that copies the current words and
+  // tree): what it reaches now either way.
   if (write.activatedOnly && keys !== undefined && endpoints !== undefined)
-    return `Now active: it reaches ${reach}.`;
+    return `Now active${write.scopeSent ? ", over the scope this write sent" : ""}: it reaches ${reach}.`;
   if (keys === undefined || endpoints === undefined || shares === undefined)
     return undefined;
   // A write that also sent a state may have changed it: say what it is now.
@@ -1294,18 +1298,24 @@ export function writtenEmailRuleReport(
   const restored = restoredLine(rule.restored_from, rule.current_version);
   if (restored) lines.push(restored);
   // A write that turned the rule active saves no version unless it sent a
-  // tree or a restored one, or changed the scope: affects then counts what
-  // the activation reaches. A do-not-share rule reaches no key.
+  // tree or a restored one, or changed the scope: affects counts what it
+  // reaches now either way. A do-not-share rule turned on reaches no key, so
+  // its line is left out, unless a scope was sent, which may have saved a
+  // version, said as a tree saved on one is.
   const body = isRecord(request.body) ? request.body : {};
   const activatedOnly =
     body.state === "active" &&
     body.tree === undefined &&
     body.restore_version === undefined;
+  const scopeSent = body.evaluation_scope !== undefined;
   const reach =
-    (rule as { kind?: unknown }).kind === "do_not_share" && activatedOnly
+    (rule as { kind?: unknown }).kind === "do_not_share" &&
+    activatedOnly &&
+    !scopeSent
       ? undefined
       : affectsLine(rule.affects, {
           activatedOnly,
+          scopeSent,
           stateSent: body.state,
           state: rule.state,
         });
