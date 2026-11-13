@@ -237,6 +237,59 @@ describe("keys helpers", () => {
     expect(detail).not.toContain("Revoked:");
   });
 
+  it("shows the notes the server gives on a key's grant, in the detail and as a count in the list", () => {
+    const note =
+      "This key also lists email rules, but it reads every email at desk@example.com, not only what the rules granted.";
+    const noted = keyRow(
+      {
+        template: null,
+        permissions: ["mail:read"],
+        mail_scope: {
+          addresses: ["desk@example.com"],
+          domains: [],
+          rules: [RULE_ID],
+        },
+      },
+      {
+        address_warnings: [
+          {
+            address: "desk@example.com",
+            reason: "whole_mailbox",
+            description: note,
+          },
+        ],
+      },
+    );
+    expect(formatKeyDetail(noted).endsWith(`\nNotes:\n  ${note}`)).toBe(true);
+    expect(
+      formatKeyRows([noted]).endsWith(`[1 note: primitive keys get ${KEY_ID}]`),
+    ).toBe(true);
+    // A note on more than one line stays inside the block.
+    const twoLines = {
+      ...noted,
+      address_warnings: [
+        { address: "", reason: "x", description: "first\nsecond" },
+      ],
+    };
+    expect(
+      formatKeyDetail(twoLines).endsWith("\nNotes:\n  first\n  second"),
+    ).toBe(true);
+    // A key with none, a server that sends none, or anything that is not a list of notes, shows nothing.
+    const plain = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: "org",
+    });
+    const malformed: unknown[] = [[], null, "x", [null, 5, { reason: "x" }]];
+    for (const key of [
+      plain,
+      ...malformed.map((value) => ({ ...plain, address_warnings: value })),
+    ]) {
+      expect(formatKeyDetail(key)).not.toContain("Notes:");
+      expect(formatKeyRows([key])).not.toContain("note");
+    }
+  });
+
   it("says when the key read is a revoked key", () => {
     const grant = {
       template: null,
@@ -1748,6 +1801,81 @@ describe("keys commands", () => {
     expect(printed).toEqual({ ...after, changed: ["name"], warnings: [] });
     expect(printed.grant.mail_scope).toEqual(after.grant.mail_scope);
     expect(printed).not.toHaveProperty("key");
+  });
+
+  it("update --json keeps the key's own notes when no grant was written, and the update's when one was", async () => {
+    const after = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: "org",
+    });
+    const standing = [
+      {
+        address: "",
+        reason: "no_send_address",
+        description: "It cannot send.",
+      },
+    ];
+    const written = [
+      {
+        address: "a@example.com",
+        reason: "member_address",
+        description: "A member's mailbox.",
+      },
+    ];
+    const answer = (
+      changed: string[],
+      notes: unknown,
+      read: Record<string, unknown>,
+    ) =>
+      useServer((request) =>
+        request.method === "GET"
+          ? Response.json({ success: true, data: read })
+          : Response.json({
+              success: true,
+              data: {
+                id: KEY_ID,
+                changed,
+                warnings: [],
+                address_warnings: notes,
+              },
+            }),
+      );
+    answer(["name"], [], { ...after, address_warnings: standing });
+    const renamed = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--name",
+      after.name,
+      "--json",
+    ]);
+    expect(JSON.parse(renamed.stdout).address_warnings).toEqual(standing);
+    // A server that gives no notes on a read leaves the update's.
+    answer(["name"], [], after);
+    const older = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--name",
+      after.name,
+      "--json",
+    ]);
+    expect(JSON.parse(older.stdout).address_warnings).toEqual([]);
+    // Anything but a list on the read is not taken.
+    answer(["name"], [], { ...after, address_warnings: null });
+    const malformed = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--name",
+      after.name,
+      "--json",
+    ]);
+    expect(JSON.parse(malformed.stdout).address_warnings).toEqual([]);
+    // A grant change answers every note on the grant it wrote.
+    answer(["grant"], written, { ...after, address_warnings: standing });
+    const regranted = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add",
+      "mail:send",
+      "--json",
+    ]);
+    expect(JSON.parse(regranted.stdout).address_warnings).toEqual(written);
   });
 
   it("update --json adds the held-request notice when the grant changed, and key_error when the read-back fails", async () => {

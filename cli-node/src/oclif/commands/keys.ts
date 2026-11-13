@@ -238,6 +238,20 @@ export function describePermissions(grant: KeyGrantView): string {
   return permissions.length > 0 ? permissions.join(", ") : "none";
 }
 
+/**
+ * The notes the server gives on a key's grant on every read (address_warnings),
+ * such as an address it reads in full beside its email rules. Read loosely:
+ * an older server sends none.
+ */
+export function keyNotes(key: KeyView): string[] {
+  const notes = (key as { address_warnings?: unknown }).address_warnings;
+  if (!Array.isArray(notes)) return [];
+  return notes.flatMap((note: unknown) => {
+    const description = (note as { description?: unknown } | null)?.description;
+    return typeof description === "string" ? [description] : [];
+  });
+}
+
 export function formatKeyRows(
   rows: readonly KeyView[],
   options: { includeRevoked?: boolean } = {},
@@ -256,7 +270,12 @@ export function formatKeyRows(
         row.status === "revoked"
           ? ` [revoked${row.revoked_at ? ` ${row.revoked_at}` : ""}]`
           : "";
-      return `${row.id}  ${row.key_prefix}  ${row.name ?? "(unnamed)"}  ${describePermissions(row.grant)}  mail: ${describeMailScope(row.grant)}  expires ${row.expires_at ?? "never"}  last used ${row.last_used_at ?? "never"}${suspended}${revoked}`;
+      const count = keyNotes(row).length;
+      const notes =
+        count > 0
+          ? ` [${count} ${count === 1 ? "note" : "notes"}: primitive keys get ${row.id}]`
+          : "";
+      return `${row.id}  ${row.key_prefix}  ${row.name ?? "(unnamed)"}  ${describePermissions(row.grant)}  mail: ${describeMailScope(row.grant)}  expires ${row.expires_at ?? "never"}  last used ${row.last_used_at ?? "never"}${suspended}${revoked}${notes}`;
     })
     .join("\n");
 }
@@ -286,6 +305,11 @@ export function formatKeyDetail(key: KeyView): string {
     for (const permission of key.grant.permissions ?? []) {
       lines.push(`  ${permission}`);
     }
+  }
+  const notes = keyNotes(key);
+  if (notes.length > 0) {
+    lines.push("Notes:");
+    for (const note of notes) lines.push(`  ${note.replace(/\r?\n/g, "\n  ")}`);
   }
   return lines.join("\n");
 }
@@ -1239,12 +1263,21 @@ export class KeysUpdateCommand extends Command {
             getKey({ client: auth.apiClient.client, path: { id: args.id } }),
           )
         : null;
+    // The key's own notes as read back, read loosely: an older server sends none.
+    const standingNotes = after?.ok
+      ? (after.data as { address_warnings?: unknown }).address_warnings
+      : undefined;
     if (flags.json) {
       this.log(
         JSON.stringify(
           {
             ...(after?.ok ? after.data : {}),
             ...result.data,
+            // A change that wrote no grant answers no notes on it; the key's
+            // standing notes are the ones read back, as keys get prints them.
+            ...(!grantChanged && Array.isArray(standingNotes)
+              ? { address_warnings: standingNotes }
+              : {}),
             ...(grantChanged ? { notice: HELD_REQUEST_NOTICE } : {}),
             ...(grantChanged && rulesRemoved.length > 0
               ? { rules_removed: rulesRemoved }
