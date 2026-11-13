@@ -16,30 +16,107 @@ the same OpenAPI spec. See `RELEASE.md`.
 OpenAPI document the API serves, and every client is regenerated from it. Most
 of the changes below follow from that document.
 
-Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.15` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.15`), and `3.0.0rc15` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.14` (`3.0.0rc14`), which added email notification settings in the SDKs, `receivers_changed` coverage notices with their totals, webhook URL query strings hidden in endpoint output and activity read retries, `3.0.0-preview.13` (`3.0.0rc13`), which added email detail attachments, attachment names on made-up emails, compile scope, rule share and objection notices, objection box `mine` and the mail import operations, `3.0.0-preview.12` (`3.0.0rc12`), which added imported mail, pending coverage rows, endpoint and key warnings and the default check of writes to rules that keys or webhooks read, `3.0.0-preview.11` (`3.0.0rc11`), which added server notes on rule requests, rule receivers, `activity concerning` and the rule objection webhook events, `3.0.0-preview.10` (`3.0.0rc10`), which added email rule objections, the email rule scope flags and true or false on boolean flags, `3.0.0-preview.9` (`3.0.0rc9`), which added email rule oversight and look-alikes that carry `expected`, and changed what `hidden` counts on rule results, `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
+Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.16` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.16`), and `3.0.0rc16` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.15` (`3.0.0rc15`), which added `rule_deliveries` on email reads, protection on sample tests, tests of a pending rule request, the test window's scope and compile's breadth scope, `existing` on an idempotent rule request, the successor's details on key rotation, `outside_scope` as a reason a rule did not run, `do_not_share_note` on grant rules and `rule_now` on coverage notices, `3.0.0-preview.14` (`3.0.0rc14`), which added email notification settings in the SDKs, `receivers_changed` coverage notices with their totals, webhook URL query strings hidden in endpoint output and activity read retries, `3.0.0-preview.13` (`3.0.0rc13`), which added email detail attachments, attachment names on made-up emails, compile scope, rule share and objection notices, objection box `mine` and the mail import operations, `3.0.0-preview.12` (`3.0.0rc12`), which added imported mail, pending coverage rows, endpoint and key warnings and the default check of writes to rules that keys or webhooks read, `3.0.0-preview.11` (`3.0.0rc11`), which added server notes on rule requests, rule receivers, `activity concerning` and the rule objection webhook events, `3.0.0-preview.10` (`3.0.0rc10`), which added email rule objections, the email rule scope flags and true or false on boolean flags, `3.0.0-preview.9` (`3.0.0rc9`), which added email rule oversight and look-alikes that carry `expected`, and changed what `hidden` counts on rule results, `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
 
-What `3.0.0-preview.15` (`3.0.0rc15`) changes from `3.0.0-preview.14`:
+What `3.0.0-preview.16` (`3.0.0rc16`) changes from `3.0.0-preview.15`:
 
-- The spec follows the API's current release. `getEmail` answers
-  `rule_deliveries` for the owner of the mailbox: where Email Rules
-  delivered the email by webhook, per rule, with delivered, pending, failed
-  and not-sent counts.
-- `testEmailRuleOnSample` takes `with_protection` and answers `protection`,
-  whether a grant rule's match would be shared or withheld by do-not-share
-  rules. `email-rules test-email-rule-on-sample --with-protection` (true or
-  false) sends it, and without `--json` the command says which.
-- `testEmailRule` and `testEmailRuleOnSample` take `request_id`, testing a
-  pending rule request as you. `testEmailRule`'s `window` carries its
-  `scope`, `oldest_at` and `newest_at`, and `compileEmailRule` answers
-  `breadth_scope`, which `compile-email-rule`'s breadth line now names.
-- A rule result's `not_run_reason` can be `outside_scope`.
-- `createEmailRuleRequest` with an `Idempotency-Key` answers the pending
-  request it matched (`200`, `existing: true`) instead of making another.
-- `rotateKey` answers the successor's `name`, `grant` and `rotated_from`.
-- A grant rule's create answer and the covering view carry
-  `do_not_share_note`, which `create-email-rule` prints.
-- A coverage notice carries `rule_now` `deleted` once its rule is deleted,
-  and `activity concerning` marks such a notice.
+- Every answer field the spec adds is optional, so the clients read an
+  answer that leaves it out.
+- A new version of a shared rule keeps its share: what the version matches
+  is shared from the next email on. `updateEmailRule`'s
+  `affects.shares_ended` is always 0, and its `share_notice` says the share
+  goes on under the new version, and with whom. A write that saves a
+  version or changes the scope of an active rule that a share reads, and
+  that has expectations, is checked by default, as one keys or webhooks
+  read is, and a write that removes such a rule's expectations is refused
+  with `400 no_expectations`. Only the rule's author, on the dashboard or
+  the CLI, saves a new version of a shared rule: an app or agent acting for
+  them gets `403 forbidden` (`details.reason` `first_party_required`).
+- `testEmailRule` results carry `attachment_names` on matched emails and
+  near misses: the file names the email lists, at most 10.
+- `compileEmailRule` answers `scope_warnings`, names in the
+  `scope_selection` sent that match nothing the organization receives mail
+  at. The writes that take a compile answer back (`createEmailRule`,
+  `updateEmailRule`, `createEmailRuleRequest` and `acceptEmailRuleRequest`)
+  ignore it. A scope warning's `name` is at most 320 characters and its
+  `message` 1000, and a `scope_warnings` list holds at most 150.
+- A judged rule write's `expectations_check` carries
+  `failed_sample_details` and `undecided_sample_details`, each made-up
+  email's `index` with its `label`, and `undecided_samples` says a write
+  checked by default judges them too.
+- `updateEmailRule` also answers `affects` when a write turns a grant rule
+  active.
+- `listEmailRulesCoveringMe` items carry `english` and `explanation`, of
+  the rule's current version, and its description says what `covers.via`
+  means.
+- `acceptEmailRuleRequest`'s answer lists its fields in the order the API
+  sends them (`notice`, `rule`, `share`, `request`). In Python the model's
+  required arguments are now `rule`, `share`, `request` in that order, and
+  the Go struct's fields move; code that names its fields is unaffected.
+- The descriptions say where a rule's webhook deliveries of an email are
+  (`rule_deliveries` on `getEmail` for your own mail, `listDeliveries` with
+  `email_id` for another member's), and say more about `shared_through`,
+  the `webhook_*` fields, `reads_in_full`, a pending rule request's `notice`
+  and `server_notes`.
+- `primitive activity concerning` lists `stopped` coverage notices, a rule
+  that no longer covers your mailboxes, with why in the CHANGE column (rule
+  deleted, turned off, or no longer reaches your mailboxes), read from the
+  notice's `stop_reason`; the spec does not list that state or field.
+  `primitive doctor` counts them among recent coverage notices. Without
+  `--json`, the first page of `activity concerning` also counts the rules
+  in observe that other members wrote over your mail, and a `baseline:`
+  line explains a baseline notice.
+- `primitive activity asked`'s help points to
+  `primitive activity created --kind email_rule_request,email_rule_objection`
+  for the requests and objections you made, and the `activity` topic names
+  `activity asked`, `concerning` and `created`, and `primitive doctor`. The
+  `emails` topic and `emails list` point to `emails latest --limit 100` for
+  one line per email, and the objection decline tip says to decline with a
+  reason when you narrow the rule rather than turn it off.
+- `email-rules test-email-rule` without `--json` opens with the mail it
+  tested ("Tested N emails received ... to ..."), from the answer's
+  `window`, and lists the matched emails, at most 25, each with its sender,
+  subject and, from `attachment_names`, its file names; a near miss gets
+  the file names too. It takes `--same-emails-as <file>`, an answer saved
+  with `--json`, and tests the emails that answer tested, so two trees are
+  compared over the same mail. A file with no results or no emails, or one
+  naming over 200 emails, counting the expected ones the test sends, is
+  refused (exit 2) and nothing is sent.
+- `email-rules compile-email-rule` prints `scope_warnings` before the
+  compile's own warnings.
+- `email-rules update-email-rule --state active` with no tree or restored
+  version says what a grant rule now reaches ("Now active: it reaches ..."),
+  from `affects`. A write that saves a version and sends a state ends its
+  reach line with the state the rule is in now, and the line names ended
+  shares only when the answer counts some. A default check's refusal hint
+  counts the members a share is with among the rule's readers.
+- Rule writes and `test-email-rule` name a saved made-up email by its
+  number, the index the API uses and, when known, its label
+  (`saved sample 2 (index 1, "<label>")`); a samples file's messages name
+  `sample 2 (index 1)`.
+- `email-rules accept-email-rule-request` without `--json` prints the
+  answer's notice, then the rule as it was agreed: its name, id, version,
+  state and English.
+- A generated API command refuses (exit 2), sending nothing, a top-level
+  text field longer than the API's `maxLength` for it, counted after
+  trimming its ends.
+- The help of `--body-file` on `create-email-rule`, `update-email-rule`,
+  `create-email-rule-request` and `accept-email-rule-request` says it takes
+  the `compile-email-rule --json` answer unchanged, and which flags to add
+  beside it. `create-email-rule --fail-on-expectations` says that on a new
+  rule with questions, an expectation on an email whose conditions hold
+  stays undecided (exit 3) until `test-email-rule --rule-id` asks them.
+  Short `--help` says under the summary when the full description says more
+  (`--help-full`).
+- `primitive send`, `reply` and `chat` put the API's own message in the
+  summary line of a send the API refused, right after the status, on one
+  line and cut at 300 characters, and print that line before the error
+  itself; `--json` carries the same text as `outcome_message`.
+- `endpoints get`, `list`, `create` and `update` print a webhook URL as
+  stored again, in every output mode, as before `3.0.0-preview.14`:
+  `--show-url`, `url_query_hidden` and the stderr note are gone (a command
+  passed `--show-url` now stops on an unknown flag), and `create` and
+  `update` send any URL as given.
 
 ### Breaking changes
 
@@ -49,7 +126,7 @@ What `3.0.0-preview.15` (`3.0.0rc15`) changes from `3.0.0-preview.14`:
   CLI moves from 1.75.0.
 - The Go module path is `github.com/primitivedotdev/sdks/sdk-go/v3`. Update
   imports from `.../sdk-go/v2` and `.../sdk-go/v2/api`.
-- `primitive functions init` scaffolds projects on `^3.0.0-preview.15` of both
+- `primitive functions init` scaffolds projects on `^3.0.0-preview.16` of both
   `@primitivedotdev/sdk` and `primitive`.
 
 #### Removed code
