@@ -54,15 +54,16 @@ describe("the objection commands' help", () => {
     }
   });
 
-  it("says the decline reason can answer a request to narrow or explain the rule", () => {
+  it("says to decline with a reason when narrowing the rule, and that the reason can explain a receiver", () => {
     const hint = OPERATION_HINTS.declineEmailRuleObjection;
     const decline = command(
       "email-rule-oversight:decline-email-rule-objection",
     );
     expect(decline.description).toContain(hint);
     expect(hint).toContain(
-      "the reason can answer that: say what you changed, or what the receiver is for",
+      "If you narrow the rule instead of turning it off, decline with a reason saying what you changed: accepting turns the rule off, and the member sees the reason on the objection.",
     );
+    expect(hint).toContain("the reason can say what the receiver is for");
     expect(decline.flags).toHaveProperty("reason");
     expect(hint).toContain(
       `--reason (up to ${maxLength("declineEmailRuleObjection", "reason")} characters)`,

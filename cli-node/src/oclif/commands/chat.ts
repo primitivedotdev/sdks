@@ -87,6 +87,7 @@ import {
   priorRepliesThatWentOut,
   SEND_OUTCOME_HELP,
   type SendOutcome,
+  sendErrorMessage,
   sendIdentityFields,
   sendOutcomeExitCode,
   sentHistoryWindowStart,
@@ -1017,6 +1018,10 @@ export function buildChatSendFailureEnvelope(params: {
             params.noun,
             params.outcome,
             params.httpStatus,
+            // An API refusal's own words; a failure before any answer keeps the plain line.
+            params.httpStatus === undefined
+              ? undefined
+              : sendErrorMessage(params.error),
           )),
     ...sendIdentityFields({ idempotencyKey: params.idempotencyKey, sent }),
     sent,
@@ -2616,11 +2621,6 @@ class ChatCommand extends Command {
         ? `${params.noun} already sent earlier.`
         : `${params.noun} send failed.`,
     );
-    writeErrorWithHints(errorPayload);
-    surfaceUnauthorizedHint({
-      ...params.authFailureContext,
-      payload: errorPayload,
-    });
     const envelope = buildChatSendFailureEnvelope({
       error: errorPayload,
       httpStatus,
@@ -2634,12 +2634,18 @@ class ChatCommand extends Command {
       priorReplies: this.chatProgress.priorReplies,
       sentHistorySince: params.sentAtIso,
     });
+    // The line that names the problem comes first, then the error itself.
     if (outcome === "already_sent") {
       process.stderr.write(`${chatNoticeText(envelope.outcome_message)}\n`);
       if (!params.json) this.log(envelope.outcome_message);
     } else {
       process.stderr.write(`${chatFailureText(envelope.outcome_message)}\n`);
     }
+    writeErrorWithHints(errorPayload);
+    surfaceUnauthorizedHint({
+      ...params.authFailureContext,
+      payload: errorPayload,
+    });
     if (params.json) {
       this.log(JSON.stringify(envelope, null, 2));
     }

@@ -190,7 +190,7 @@ describe("samplesFromJson", () => {
         "f",
       ),
     ).toThrow(
-      "f, sample 1: email attachment_names pairs with attachment_types by position, so give the same number of each.",
+      "f, sample 1 (index 0): email attachment_names pairs with attachment_types by position, so give the same number of each.",
     );
     expect(() =>
       samplesFromJson(
@@ -223,13 +223,15 @@ describe("samplesFromJson", () => {
     );
     expect(() =>
       samplesFromJson([{ expected: "maybe", email: email("x") }], "--f a.json"),
-    ).toThrow('--f a.json, sample 1: expected must be "match" or "no_match".');
+    ).toThrow(
+      '--f a.json, sample 1 (index 0): expected must be "match" or "no_match".',
+    );
     expect(() =>
       samplesFromJson(
         [{ expected: "match", email: email("x") }, { expected: "match" }],
         "--f a.json",
       ),
-    ).toThrow("--f a.json, sample 2: email must be an object");
+    ).toThrow("--f a.json, sample 2 (index 1): email must be an object");
     expect(() =>
       samplesFromJson(
         [{ expected: "match", email: email("x"), label: 3 }],
@@ -241,7 +243,7 @@ describe("samplesFromJson", () => {
         [{ expected: "match", email: email("x"), label: "  " }],
         "f",
       ),
-    ).toThrow("f, sample 1: label is blank");
+    ).toThrow("f, sample 1 (index 0): label is blank");
     expect(() =>
       samplesFromJson(
         [{ expected: "match", email: email("x"), label: "x".repeat(201) }],
@@ -252,7 +254,7 @@ describe("samplesFromJson", () => {
     const refused = (email: Record<string, unknown>) => () =>
       samplesFromJson([{ expected: "no_match", email }], "f");
     expect(refused({ to: ["a@b.example"], text: "t" })).toThrow(
-      "f, sample 1: email needs from.address.",
+      "f, sample 1 (index 0): email needs from.address.",
     );
     expect(refused({ ...email("x"), text: "t".repeat(4_001) })).toThrow(
       "email text must be 1 to 4000 characters",
@@ -305,7 +307,7 @@ describe("samples with fields this CLI does not know", () => {
       { expected: "match", email: withNew("three") },
     ]);
     expect(said).toEqual([
-      `--expect-samples-file ${path} has fields this CLI does not know, which it does not refuse but leaves for the API to judge (if the API refuses one, take it out): sample field "lable" (sample 1), email field "reply_to" (samples 1, 3).\n`,
+      `--expect-samples-file ${path} has fields this CLI does not know, which it does not refuse but leaves for the API to judge (if the API refuses one, take it out): sample field "lable" (sample 1 (index 0)), email field "reply_to" (samples 1 (index 0), 3 (index 2)).\n`,
     ]);
     // Only what --pick sends is named, by its number in the file.
     said.length = 0;
@@ -313,7 +315,7 @@ describe("samples with fields this CLI does not know", () => {
       expectSamples({ "expect-samples-file": path, pick: "2,3" }),
     ).toHaveLength(2);
     expect(said).toEqual([
-      `--expect-samples-file ${path} has fields this CLI does not know, which it does not refuse but leaves for the API to judge (if the API refuses one, take it out): email field "reply_to" (sample 3).\n`,
+      `--expect-samples-file ${path} has fields this CLI does not know, which it does not refuse but leaves for the API to judge (if the API refuses one, take it out): email field "reply_to" (sample 3 (index 2)).\n`,
     ]);
     said.length = 0;
     expectSamples({ "expect-samples-file": path, pick: "2" });

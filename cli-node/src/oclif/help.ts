@@ -154,8 +154,16 @@ function formatShortHelp(
   const examples = (command.examples ?? [])
     .flatMap((example) => exampleCommands(example, bin))
     .slice(0, EXAMPLE_LIMIT);
+  // When the description goes on past its first sentence, the pointer to the full help is said under the summary,
+  // where it is read, rather than as a closing line.
+  const described = (command.description ?? "").replaceAll(/\s+/g, " ").trim();
+  const more =
+    summary !== "" &&
+    described.length > firstSentence(command.description ?? "").length;
+  const fullHelp = `${bin} ${command.id} ${FULL_HELP_FLAG}`;
   return [
     ...(summary ? [summary] : []),
+    ...(more ? [`Summary only. Full description: \`${fullHelp}\`.`] : []),
     ...section("USAGE", [usageLine(command, bin)]),
     ...section(
       "FLAGS",
@@ -168,8 +176,7 @@ function formatShortHelp(
       ),
     ),
     ...section("EXAMPLES", examples),
-    "",
-    `Full help: ${bin} ${command.id} ${FULL_HELP_FLAG}`,
+    ...(more ? [] : ["", `Full help: ${fullHelp}`]),
   ].join("\n");
 }
 

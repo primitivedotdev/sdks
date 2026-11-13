@@ -2,6 +2,7 @@ import { Command, Flags } from "@oclif/core";
 import {
   type ListActivityObjectsResult,
   listActivityObjects,
+  listEmailRulesCoveringMe,
 } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
@@ -327,18 +328,35 @@ export function receiversChangeText(item: ActivityItem): string | null {
     : "same totals, an owner or webhook site changed";
 }
 
+const STOP_REASONS: ReadonlyMap<string, string> = new Map([
+  ["deleted", "rule deleted"],
+  ["turned_off", "turned off"],
+  ["no_longer_covers", "no longer reaches your mailboxes"],
+]);
+
+/**
+ * Why a stopped notice says the rule stopped covering you, from its
+ * stop_reason. Null for any other notice, and for one whose reason is
+ * missing or unknown (an older server).
+ */
+export function stoppedText(item: ActivityItem): string | null {
+  if (item.state !== "stopped") return null;
+  const reason = (item as { stop_reason?: unknown }).stop_reason;
+  return typeof reason === "string" ? (STOP_REASONS.get(reason) ?? null) : null;
+}
+
 /** Where to see what covers you now, whatever the notices have caught up with. */
 const COVERING_NOW = `\`primitive email-rule-oversight list-email-rules-covering-me\` shows what covers you now.`;
 
 /**
  * One line per coverage notice: what it told (started, new_version,
- * receivers_changed, or baseline for a rule that already covered you when
- * notices began), when, the rule's name then, and its author; and, first,
+ * receivers_changed, stopped, or baseline for a rule that already covered you
+ * when notices began), when, the rule's name then, and its author; and, first,
  * each rule that covers you now whose notice is not written yet (pending,
  * dated when the rule last changed), then the rule's id (rule_id; a pending
  * row's own id is the rule's), never the notice's own id, which no command
- * takes; and, when any row is a receivers_changed notice with its totals,
- * what changed in them (CHANGE).
+ * takes; and, when any row is a receivers_changed notice with its totals or
+ * a stopped notice with its reason, what changed (CHANGE).
  * `complete` says the listing is the whole of it (from the first page to the
  * last, nothing withheld). Even then an empty one is no promise that nothing
  * covers you: notices can lag, so it
@@ -373,7 +391,9 @@ export function formatConcerningRows(
     item.rule_id ?? (item.state === "pending" ? item.id : ""),
   ]);
   // Last, so it widens no other column, and only when a row has one.
-  const changes = items.map((item) => receiversChangeText(item));
+  const changes = items.map(
+    (item) => receiversChangeText(item) ?? stoppedText(item),
+  );
   const withChange = changes.some((change) => change !== null);
   if (withChange)
     for (const [i, row] of rows.entries()) row.push(changes[i] ?? "");
@@ -401,6 +421,12 @@ export function formatConcerningRows(
         `pending: the rule covers you now and its notice is not written yet. ${COVERING_NOW}`,
       ]
     : [];
+  const baseline = items.some((item) => item.state === "baseline")
+    ? [
+        "",
+        "baseline: the rule already covered you when these notices began, so its start was never told as news.",
+      ]
+    : [];
   const receivers = items.some((item) => item.state === "receivers_changed")
     ? [
         "",
@@ -411,12 +437,74 @@ export function formatConcerningRows(
     line(header),
     ...rows.map(line),
     ...pending,
+    ...baseline,
     ...receivers,
     // The pending line already says where to see what covers you now.
     ...(unfinished
       ? ["", pending.length > 0 ? unfinished : `${unfinished} ${COVERING_NOW}`]
       : []),
   ].join("\n");
+}
+
+/**
+ * Rules in observe that another member wrote over your mail, counted from the
+ * first page of the rules over your mail (which a member can already list),
+ * since `activity concerning` tells only of rules turned active: `count`, with
+ * `more` when that page had a cursor; "refused" when this credential may not
+ * list them (nothing is said then); or null when the list could not be read
+ * for another reason.
+ */
+export type ObservingRules =
+  | { count: number; more: boolean }
+  | "refused"
+  | null;
+
+async function observingRules(
+  client: Awaited<
+    ReturnType<typeof createAuthenticatedCliApiClient>
+  >["apiClient"]["client"],
+): Promise<ObservingRules> {
+  try {
+    const result = await listEmailRulesCoveringMe({
+      client,
+      query: { limit: 100 },
+    });
+    const page = result.data as
+      | {
+          data?: Array<{ state?: unknown; is_author?: unknown }>;
+          meta?: { cursor?: unknown };
+        }
+      | undefined;
+    const status = result.response?.status;
+    if (status === 401 || status === 403) return "refused";
+    if (result.error !== undefined || !Array.isArray(page?.data)) return null;
+    return {
+      count: page.data.filter(
+        (rule) => rule.state === "observe" && rule.is_author === false,
+      ).length,
+      more: typeof page.meta?.cursor === "string",
+    };
+  } catch {
+    return null;
+  }
+}
+
+const OBSERVE_SAYS =
+  "a rule in observe records a decision on every email it reads and shares or blocks nothing until it is turned active, which is listed here as started. `primitive email-rule-oversight list-email-rules-covering-me` lists them.";
+
+/** The footer under `activity concerning` for rules in observe over your mail, or null with none to tell of. */
+export function formatObservingFooter(
+  observing: ObservingRules,
+): string | null {
+  if (observing === "refused") return null;
+  if (observing === null)
+    return `Rules in observe can also cover your mail: ${OBSERVE_SAYS}`;
+  if (observing.count === 0)
+    return observing.more
+      ? `Rules in observe can also cover your mail: ${OBSERVE_SAYS}`
+      : null;
+  const counted = `${observing.more ? "At least " : ""}${observing.count} ${observing.count === 1 ? "rule" : "rules"} in observe also ${observing.count === 1 ? "covers" : "cover"} your mail`;
+  return `${counted}: ${OBSERVE_SAYS}`;
 }
 
 /** What was left out, and why: no counts, only the kinds and what would show them. */
@@ -571,6 +659,18 @@ async function runActivityList(
         ? formatConcerningRows(items, complete, asOf, pendingComplete)
         : formatActivityRows(covers, items),
   );
+  // On the first page only, and only for a credential that has coverage notices at all (a key, an app or an agent
+  // gets email_rule_coverage in withheld, and cannot read the rules over a member's mail either).
+  if (
+    relation === "concerning" &&
+    !flags.cursor &&
+    !withheld.some((w) => w.kind === "email_rule_coverage")
+  ) {
+    const observing = formatObservingFooter(
+      await observingRules(auth.apiClient.client),
+    );
+    if (observing) command.log(`\n${observing}`);
+  }
   const notShown = formatWithheld(withheld);
   if (notShown) command.log(`\n${notShown}`);
   if (cursor)
@@ -633,7 +733,9 @@ export class ActivityAskedCommand extends Command {
   static description =
     `List what other members asked of you, newest first, open or answered: rule requests made to you for an email rule over your own mail, and objections to rules you wrote, each with its kind, where it stands and who asked.
 
-  Signed in with \`primitive login\`, you see what was asked of you under your current membership. A key, an app or an agent is asked nothing. Read a request (email_rule_request) with \`primitive email-rules get-email-rule-request --id <id>\`, and an objection (email_rule_objection) with \`primitive email-rule-oversight get-email-rule-objection --id <id>\`, then accept or decline it.`;
+  Signed in with \`primitive login\`, you see what was asked of you under your current membership. A key, an app or an agent is asked nothing. Read a request (email_rule_request) with \`primitive email-rules get-email-rule-request --id <id>\`, and an objection (email_rule_objection) with \`primitive email-rule-oversight get-email-rule-objection --id <id>\`, then accept or decline it.
+
+  Requests and objections you made are not here: \`primitive activity created --kind email_rule_request,email_rule_objection\` lists them with where each stands (pending, accepted, declined or withdrawn; with --json, ended_at says when it was decided).`;
 
   static summary = "List what other members asked of you";
 
@@ -675,13 +777,14 @@ export class ActivityAskedCommand extends Command {
 
 export class ActivityConcerningCommand extends Command {
   static description =
-    `List what other members did that concerns your own mail, newest first: each time another member's rule started covering your mailboxes, that is, it was made or turned active over them or an active rule came to reach you, once per rule, not per mailbox (started), saved a new version while covering it (new_version), or changed who receives its matches: its keys, webhooks or share (receivers_changed, with the totals before and after in the table, and under receivers_change with --json, at most once every 15 minutes for a rule), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline. A rule in draft or observe grants and blocks nothing and gets no notice while it stays there, though \`primitive email-rule-oversight list-email-rules-covering-me\` lists it; turning it active is what is listed, and a rule that covers you again within an hour of its last started or baseline notice gets no new one, though a version it saved meanwhile is listed as new_version, and a change in who receives its matches as receivers_changed. A rule that stops covering you and a rename are not listed.
+    `List what other members did that concerns your own mail, newest first: each time another member's rule started covering your mailboxes, that is, it was made or turned active over them or an active rule came to reach you, once per rule, not per mailbox (started), saved a new version while covering it (new_version), or changed who receives its matches: its keys, webhooks or share (receivers_changed, with the totals before and after in the table, and under receivers_change with --json, at most once every 15 minutes for a rule), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline. A rule in draft or observe grants and blocks nothing and gets no notice while it stays there, though \`primitive email-rule-oversight list-email-rules-covering-me\` lists it; turning it active is what is listed, and a rule that covers you again within an hour of its last started or baseline notice gets no new one unless you were told it stopped since, though a version it saved meanwhile is listed as new_version, and a change in who receives its matches as receivers_changed. A rule that stops covering you is listed as stopped, with why (rule deleted, turned off, or no longer reaching your mailboxes; stop_reason with --json), about 5 minutes after the notices find it stopped, so one turned off and on again meanwhile is listed neither stopped nor started again. A rename is not listed.
 
   Notices can lag. Until a start is written, a rule that now covers you is listed first as pending, dated when the rule last changed, and with --json its id is the rule's. When the check for such rules did not finish, the listing says so and --json carries pending_complete: false; run it again in a moment.
 
   Signed in with \`primitive login\`, you see the notices about your own mail under your current membership. A key, an app or an agent has none. The rules that cover you now, with their ids, are listed by \`primitive email-rule-oversight list-email-rules-covering-me\`; ask a rule's author to turn it off with \`primitive email-rule-oversight create-email-rule-objection --rule-id <rule-id>\`. The table's RULE ID, and rule_id with --json, is the rule's id, which \`primitive email-rule-oversight get-email-rule-covering-me <rule-id>\` and create-email-rule-objection --rule-id take; with --json each notice's own id is the notice's, not the rule's.`;
 
-  static summary = "List rules that started covering your mail or changed";
+  static summary =
+    "List rules that started covering your mail, changed or stopped";
 
   static examples = [
     "<%= config.bin %> activity concerning",
