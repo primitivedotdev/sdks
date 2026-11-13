@@ -10,6 +10,10 @@ import {
   surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "../api-command.js";
+import {
+  pauseForTransientFailure,
+  transientFailure,
+} from "../transient-retry.js";
 
 // What you created, or what other members asked of you (relation=asked), read
 // from GET /activity/objects. A key, an app or an agent sees what it created
@@ -42,11 +46,56 @@ export type WithheldKind = Page["withheld"][number];
 
 type SdkResult = { data?: unknown; error?: unknown; response?: Response };
 
+/** How long a read of the feed keeps retrying a transient failure. */
+export const ACTIVITY_RETRY_MS = 15_000;
+/** The most times one page is asked for. */
+export const ACTIVITY_ATTEMPTS = 4;
+
+/** The error printed when Primitive could not be reached at all. */
+export const NETWORK_ERROR = {
+  code: "network_error",
+  message: "Could not reach Primitive (network error). Try again in a moment.",
+};
+
+/**
+ * One page read, retried as the CLI's waits retry a read: a rate limit, a
+ * 502, 503 or 504, or a network error is tried again with backoff, up to
+ * ACTIVITY_ATTEMPTS times within ACTIVITY_RETRY_MS. A read that throws is
+ * taken as the network error it is.
+ */
+async function readWithRetry(
+  read: () => Promise<SdkResult>,
+): Promise<SdkResult> {
+  const deadline = Date.now() + ACTIVITY_RETRY_MS;
+  for (let attempt = 0; ; attempt += 1) {
+    let result: SdkResult;
+    try {
+      result = await read();
+    } catch (error) {
+      result = { error };
+    }
+    const failure = transientFailure(result);
+    if (
+      !failure ||
+      attempt + 1 >= ACTIVITY_ATTEMPTS ||
+      !(await pauseForTransientFailure(failure, attempt, { deadline }))
+    )
+      return result;
+  }
+}
+
 async function call(
-  request: Promise<SdkResult>,
+  read: () => Promise<SdkResult>,
 ): Promise<{ ok: true; data: Page } | { ok: false; payload: unknown }> {
   try {
-    const result = await request;
+    const result = await readWithRetry(read);
+    // No answer at all: Primitive was not reached. Say so in words, not as
+    // the transport's own code.
+    if (
+      result.response === undefined &&
+      transientFailure(result)?.reason === "network"
+    )
+      return { ok: false, payload: NETWORK_ERROR };
     if (result.error !== undefined || !result.response?.ok) {
       return {
         ok: false,
@@ -387,7 +436,7 @@ async function runActivityList(
   let pendingComplete: boolean | undefined;
   let cursor = flags.cursor;
   for (let page = 0; page < (flags.all ? ALL_PAGES_LIMIT : 1); page += 1) {
-    const result = await call(
+    const result = await call(() =>
       listActivityObjects({
         client: auth.apiClient.client,
         query: {

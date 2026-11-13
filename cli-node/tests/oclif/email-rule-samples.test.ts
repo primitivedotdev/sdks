@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   expectSamples,
   lookAlikeSample,
@@ -248,12 +248,6 @@ describe("samplesFromJson", () => {
         "f",
       ),
     ).toThrow("label is longer than 200 characters");
-    expect(() =>
-      samplesFromJson(
-        [{ expected: "match", email: email("x"), lable: "x" }],
-        "f",
-      ),
-    ).toThrow('f, sample 1: "lable" is not a sample field');
     // The email itself, checked against what the API keeps.
     const refused = (email: Record<string, unknown>) => () =>
       samplesFromJson([{ expected: "no_match", email }], "f");
@@ -266,7 +260,6 @@ describe("samplesFromJson", () => {
     expect(refused({ ...email("x"), to: [] })).toThrow(
       "email to must be a list of 1 to 10 strings",
     );
-    expect(refused({ ...email("x"), bcc: [] })).toThrow('email takes no "bcc"');
     expect(refused({ ...email("x"), automated: "no" })).toThrow(
       "email automated must be true or false",
     );
@@ -276,6 +269,51 @@ describe("samplesFromJson", () => {
       "--x a.json is a generate-look-alikes answer with no look-alikes in it.",
     );
     expect(samplesFromJson([], "f")).toEqual([]);
+  });
+});
+
+describe("samples with fields this CLI does not know", () => {
+  it("notes them on stderr and passes them on for the API to judge, instead of refusing", () => {
+    const said: string[] = [];
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      said.push(String(chunk));
+      return true;
+    });
+    try {
+      const withNew = { ...email("x"), reply_to: ["r@b.example"] };
+      expect(
+        samplesFromJson(
+          [{ expected: "match", email: withNew, lable: "x" }],
+          "f",
+        ),
+      ).toEqual([{ lable: "x", expected: "match", email: withNew }]);
+      expect(said.join("")).toContain(
+        'f, sample 1: email field "reply_to" is not a field this CLI knows',
+      );
+      expect(said.join("")).toContain(
+        'f, sample 1: sample field "lable" is not a field this CLI knows (it knows expected, label, email). Sent as is, for the API to judge; if the API refuses it, take it out.',
+      );
+      // A look-alikes answer whose emails carry a field added later is not refused either.
+      said.length = 0;
+      expect(
+        samplesFromJson(
+          answer([{ kind: "medical", why: "w", email: withNew }]),
+          "--x a.json",
+        ),
+      ).toHaveLength(1);
+      expect(said.join("")).toContain('"reply_to"');
+      // Known fields say nothing; a saved sample's id and time are still left out.
+      said.length = 0;
+      expect(
+        samplesFromJson(
+          [{ expected: "match", email: email("x"), id: "s1", created_at: "t" }],
+          "f",
+        ),
+      ).toEqual([{ expected: "match", email: email("x") }]);
+      expect(said).toEqual([]);
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 });
 

@@ -7,8 +7,17 @@ vi.mock("../../src/oclif/api-client.js", async (original) => ({
   ...(await original<typeof import("../../src/oclif/api-client.js")>()),
   createAuthenticatedCliApiClient: auth.create,
 }));
+// A retry's backoff is not waited out in tests.
+const sleeps = vi.hoisted(() => ({ sleep: vi.fn(async () => {}) }));
+vi.mock("../../src/oclif/commands/emails-poll.js", async (original) => ({
+  ...(await original<
+    typeof import("../../src/oclif/commands/emails-poll.js")
+  >()),
+  sleep: sleeps.sleep,
+}));
 
 import {
+  ACTIVITY_ATTEMPTS,
   ActivityAskedCommand,
   ActivityConcerningCommand,
   ActivityCreatedCommand,
@@ -723,5 +732,106 @@ describe("activity concerning command", () => {
     useApi([answer()]);
     await ActivityConcerningCommand.run(["--json"], { root });
     expect(JSON.parse(lines.join("\n"))).not.toHaveProperty("pending_complete");
+  });
+});
+
+describe("activity reads that fail on the way", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    auth.create.mockReset();
+    process.exitCode = undefined;
+  });
+
+  /** Answers attempt n with what reply(n) gives, or throws what it throws. */
+  function useFetch(reply: (n: number) => Response) {
+    let attempts = 0;
+    auth.create.mockResolvedValue({
+      apiClient: new PrimitiveApiClient({
+        apiKey: "test-key",
+        apiBaseUrl: "https://api.example.test/v1",
+        fetch: vi.fn<typeof globalThis.fetch>(async () => {
+          attempts += 1;
+          return reply(attempts);
+        }),
+      }),
+      auth: {},
+      baseUrlOverridden: false,
+    });
+    return () => attempts;
+  }
+
+  const connectTimeout = () =>
+    Object.assign(new TypeError("fetch failed"), {
+      cause: { code: "UND_ERR_CONNECT_TIMEOUT" },
+    });
+  const ok = () =>
+    new Response(JSON.stringify(page([item()], null).body), {
+      headers: { "content-type": "application/json" },
+    });
+
+  function captureStderr(): string[] {
+    const chunks: string[] = [];
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      chunks.push(String(chunk));
+      return true;
+    });
+    return chunks;
+  }
+
+  it("retries a network error, saying so, and then prints the feed", async () => {
+    const attempts = useFetch((n) => {
+      if (n === 1) throw connectTimeout();
+      return ok();
+    });
+    const lines = captureLog();
+    const stderr = captureStderr();
+    await ActivityCreatedCommand.run([], { root });
+    expect(attempts()).toBe(2);
+    expect(process.exitCode).toBeUndefined();
+    expect(stderr.join("")).toContain("primitive: network error; retrying in");
+    expect(lines.join("\n")).toContain("invoices hook");
+  });
+
+  it("retries an unavailable API, and not a refusal", async () => {
+    let attempts = useFetch((n) =>
+      n === 1
+        ? new Response(JSON.stringify({ success: false }), { status: 503 })
+        : ok(),
+    );
+    captureLog();
+    captureStderr();
+    await ActivityCreatedCommand.run([], { root });
+    expect(attempts()).toBe(2);
+    expect(process.exitCode).toBeUndefined();
+
+    attempts = useFetch(
+      () =>
+        new Response(
+          JSON.stringify({
+            success: false,
+            error: { code: "forbidden", message: "No." },
+          }),
+          { status: 403, headers: { "content-type": "application/json" } },
+        ),
+    );
+    await ActivityCreatedCommand.run([], { root });
+    expect(attempts()).toBe(1);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("words a network error that does not clear, without the transport's code", async () => {
+    const attempts = useFetch(() => {
+      throw connectTimeout();
+    });
+    captureLog();
+    const stderr = captureStderr();
+    await ActivityConcerningCommand.run([], { root });
+    expect(attempts()).toBe(ACTIVITY_ATTEMPTS);
+    expect(process.exitCode).toBe(1);
+    const said = stderr.join("");
+    expect(said).toContain(
+      "Could not reach Primitive (network error). Try again in a moment.",
+    );
+    expect(said).not.toContain("UND_ERR_CONNECT_TIMEOUT");
   });
 });

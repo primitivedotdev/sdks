@@ -1376,6 +1376,21 @@ parsers.
   codes in parentheses. A Function or pull endpoint shows `-`, and a webhook
   whose delivery could not be checked shows `unknown`. `--json` output is
   unchanged.
+- `primitive activity created`, `asked` and `concerning` retry a rate
+  limit, an unavailable API (502, 503 or 504) or a network error with
+  backoff, up to four tries within about 15 seconds, saying so on stderr,
+  as the CLI's waits do. When Primitive cannot be reached at all the error
+  reads "Could not reach Primitive (network error). Try again in a moment."
+  instead of the transport's own code.
+- `primitive machine doctor` compares a preview build of the CLI with npm's
+  `preview` dist-tag, whole version and all, and warns when a newer preview
+  is out (`npm install -g primitive@preview`) or when the release it
+  previews is out (`primitive@latest`). Before, any preview read as current.
+- A samples file (`--expectation-samples-file`, `--add-expectation-samples-file`,
+  `--expect-samples-file`) whose samples or emails carry a field this CLI
+  does not know is no longer refused: the CLI names the field on stderr and
+  sends it as is, so the API, which validates samples itself, decides. A
+  field the API adds later then does not break an older CLI.
 - `email-rule-oversight create-email-rule-objection --help` says the
   message can ask the rule's author to narrow the rule or explain where its
   matches go, and that the author accepts (turning the rule off) or

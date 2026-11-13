@@ -160,19 +160,39 @@ const SAMPLE_SUBJECT_MAX = 998;
 const SAMPLE_LIST_MAX = 10;
 
 /**
+ * Say on stderr that a sample carries fields this CLI does not know, which
+ * are sent as they are: the API validates samples itself, so a field it
+ * added after this CLI was built is not refused here.
+ */
+function noteUnknownFields(
+  at: string,
+  what: string,
+  unknown: readonly string[],
+  known: readonly string[],
+): void {
+  if (unknown.length === 0) return;
+  const named = unknown.map((key) => `"${key}"`).join(", ");
+  process.stderr.write(
+    `${at}: ${what} ${named} ${unknown.length === 1 ? "is not a field" : "are not fields"} this CLI knows (it knows ${known.join(", ")}). Sent as is, for the API to judge; if the API refuses it, take it out.\n`,
+  );
+}
+
+/**
  * Refuse, naming the sample and the field, a made-up email the API would
- * refuse to keep: the fields it takes and their bounds. The API checks the
- * rest (address forms, a NUL).
+ * refuse to keep: the bounds of the fields it takes. A field this CLI does
+ * not know is noted and passed on. The API checks the rest (address forms,
+ * a NUL).
  */
 function checkSampleEmail(email: Record<string, unknown>, at: string): void {
   const fail = (what: string) => {
     throw usageError(`${at}: email ${what}.`);
   };
-  const unknown = Object.keys(email).find((key) => !SAMPLE_EMAIL_KEYS.has(key));
-  if (unknown !== undefined)
-    fail(
-      `takes no "${unknown}" (it takes ${[...SAMPLE_EMAIL_KEYS].join(", ")})`,
-    );
+  noteUnknownFields(
+    at,
+    "email field",
+    Object.keys(email).filter((key) => !SAMPLE_EMAIL_KEYS.has(key)),
+    [...SAMPLE_EMAIL_KEYS],
+  );
   if (!isRecord(email.from) || typeof email.from.address !== "string")
     fail("needs from.address");
   const list = (key: string, min: number) => {
@@ -266,11 +286,12 @@ export function samplesFromJson(
   return data.map((item, index) => {
     const at = `${source}, sample ${index + 1}`;
     if (!isRecord(item)) throw usageError(`${at} is not an object.`);
-    const unknown = Object.keys(item).find((key) => !SAMPLE_KEYS.has(key));
-    if (unknown !== undefined)
-      throw usageError(
-        `${at}: "${unknown}" is not a sample field; a sample takes expected, label and email.`,
-      );
+    const unknown = Object.keys(item).filter((key) => !SAMPLE_KEYS.has(key));
+    noteUnknownFields(at, "sample field", unknown, [
+      "expected",
+      "label",
+      "email",
+    ]);
     if (item.expected !== "match" && item.expected !== "no_match")
       throw usageError(`${at}: expected must be "match" or "no_match".`);
     if (!isRecord(item.email))
@@ -292,6 +313,7 @@ export function samplesFromJson(
         );
     }
     return {
+      ...Object.fromEntries(unknown.map((key) => [key, item[key]])),
       expected: item.expected,
       ...(label !== undefined ? { label } : {}),
       email: item.email,

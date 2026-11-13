@@ -33,8 +33,10 @@ import {
 import { hookLauncherWarningPath } from "../../src/oclif/hook-launcher.js";
 import { acquireListenLock } from "../../src/oclif/listen-state.js";
 import {
+  compareReleaseVersions,
   type DoctorCheckId,
   type DoctorReport,
+  isPrerelease,
   type MachineDoctorOptions,
   managedInstructions,
   runMachineDoctor,
@@ -722,6 +724,87 @@ describe("primitive machine doctor", () => {
       await runMachineDoctor({ ...options, latestVersion: async () => null }),
     );
     expect(offline["cli.version"].status).toBe("skip");
+  });
+
+  it("orders versions as semver does, prereleases included", () => {
+    expect(compareReleaseVersions("3.0.0-preview.12", "3.0.0-preview.13")).toBe(
+      -1,
+    );
+    expect(compareReleaseVersions("3.0.0-preview.9", "3.0.0-preview.12")).toBe(
+      -1,
+    );
+    expect(compareReleaseVersions("3.0.0-preview.13", "3.0.0")).toBe(-1);
+    expect(compareReleaseVersions("3.0.0", "3.0.0-preview.13")).toBe(1);
+    expect(compareReleaseVersions("3.0.0-preview.13", "1.75.0")).toBe(1);
+    expect(compareReleaseVersions("3.0.0-preview.13", "3.0.0-preview.13")).toBe(
+      0,
+    );
+    expect(compareReleaseVersions("3.0.0-alpha", "3.0.0-alpha.1")).toBe(-1);
+    expect(compareReleaseVersions("3.0.0-1", "3.0.0-alpha")).toBe(-1);
+    expect(compareReleaseVersions("v1.2.3", "1.2.3")).toBe(0);
+    expect(compareReleaseVersions("next", "1.2.3")).toBeNull();
+    expect(isPrerelease("3.0.0-preview.12")).toBe(true);
+    expect(isPrerelease("1.75.0")).toBe(false);
+  });
+
+  it("compares a preview build with the newest preview, not only the latest release", async () => {
+    const { options } = machine();
+    const preview = (
+      cliVersion: string,
+      newest: string | null,
+      latest = "1.75.0",
+    ) =>
+      runMachineDoctor({
+        ...options,
+        cliVersion,
+        latestVersion: async () => latest,
+        previewVersion: async () => newest,
+      }).then((report) => byId(report)["cli.version"]);
+    expect(await preview("3.0.0-preview.12", "3.0.0-preview.13")).toMatchObject(
+      {
+        status: "warn",
+        action: "update_cli",
+        detail: expect.stringContaining(
+          "3.0.0-preview.12 is older than the newest preview 3.0.0-preview.13. Install it with `npm install -g primitive@preview`.",
+        ),
+      },
+    );
+    expect(await preview("3.0.0-preview.13", "3.0.0-preview.13")).toMatchObject(
+      { status: "ok", detail: "3.0.0-preview.13 is the newest preview." },
+    );
+    // Once the release is out, a preview of it is behind.
+    expect(
+      await preview("3.0.0-preview.13", "3.0.0-preview.13", "3.0.0"),
+    ).toMatchObject({
+      status: "warn",
+      detail: expect.stringContaining(
+        "older than the latest release 3.0.0. Install it with `npm install -g primitive@latest`.",
+      ),
+    });
+    expect(await preview("3.0.0-preview.13", null)).toMatchObject({
+      status: "ok",
+      detail: expect.stringContaining(
+        "the newest preview could not be checked",
+      ),
+    });
+    // A release build is still compared with the latest release only.
+    let asked = false;
+    const released = byId(
+      await runMachineDoctor({
+        ...options,
+        cliVersion: "1.75.0",
+        latestVersion: async () => "1.75.0",
+        previewVersion: async () => {
+          asked = true;
+          return "3.0.0-preview.13";
+        },
+      }),
+    )["cli.version"];
+    expect(released).toMatchObject({
+      status: "ok",
+      detail: "1.75.0 is current.",
+    });
+    expect(asked).toBe(false);
   });
 
   it("on Windows refuses to point hooks at a package-runner cache", async () => {
