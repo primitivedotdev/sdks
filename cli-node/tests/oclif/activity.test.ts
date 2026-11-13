@@ -457,6 +457,23 @@ describe("activity concerning command", () => {
     );
     expect(out).toMatch(/^started\s+.*Other rule\s+Sam Rivera/m);
     expect(out).not.toMatch(/Other rule \(deleted\)/);
+    // No baseline row, so no baseline footer.
+    expect(out).not.toContain("baseline:");
+  });
+
+  it("says under the table what a baseline notice is, when one is listed", () => {
+    const out = formatConcerningRows([
+      item({
+        kind: "email_rule_coverage",
+        name: "Vendor invoices",
+        state: "baseline",
+        owned_now: "someone_else",
+        created_through: { kind: "member", id: "u-3", name: "Sam Rivera" },
+      }),
+    ]);
+    expect(out).toContain(
+      "\n\nbaseline: the rule already covered you when these notices began, so its start was never told as news.",
+    );
   });
 
   it("says in its help that notices can lag, promising no cadence, and which id is the rule's", () => {
@@ -651,10 +668,128 @@ describe("activity concerning command", () => {
       },
     );
     await ActivityConcerningCommand.run([], { root });
-    expect(urls).toHaveLength(1);
+    // The notices, then the rules over your mail, for the observe footer.
+    expect(urls.map((url) => url.pathname)).toEqual([
+      "/v1/activity/objects",
+      "/v1/email-rules/covering-me",
+    ]);
     expect(lines.join("\n")).toContain(
       `Nothing recorded for you as of 2026-11-12 23:50 UTC. ${now}`,
     );
+  });
+
+  it("says under the listing how many rules in observe another member wrote over your mail", async () => {
+    const rule = (state: string, is_author = false) => ({
+      id: "r",
+      state,
+      is_author,
+    });
+    const covering = (data: unknown[], cursor: string | null) => ({
+      body: { success: true, data, meta: { cursor } },
+    });
+    const lines: string[] = [];
+    vi.spyOn(ActivityConcerningCommand.prototype, "log").mockImplementation(
+      (message?: string) => {
+        lines.push(message ?? "");
+      },
+    );
+    const says =
+      "a rule in observe records a decision on every email it reads and shares or blocks nothing until it is turned active, which is listed here as started. `primitive email-rule-oversight list-email-rules-covering-me` lists them.";
+    // Your own rules, and rules turned active, are not counted.
+    const urls = useApi([
+      page([], null),
+      covering(
+        [
+          rule("observe"),
+          rule("observe"),
+          rule("observe", true),
+          rule("active"),
+        ],
+        null,
+      ),
+    ]);
+    await ActivityConcerningCommand.run([], { root });
+    expect(Object.fromEntries(urls[1]?.searchParams ?? [])).toEqual({
+      limit: "100",
+    });
+    expect(lines.at(-1)).toBe(
+      `\n2 rules in observe also cover your mail: ${says}`,
+    );
+    // A page with a cursor counts at least that many.
+    lines.length = 0;
+    useApi([page([], null), covering([rule("observe")], "next")]);
+    await ActivityConcerningCommand.run([], { root });
+    expect(lines.at(-1)).toBe(
+      `\nAt least 1 rule in observe also covers your mail: ${says}`,
+    );
+    // None: nothing is said.
+    lines.length = 0;
+    useApi([page([], null), covering([rule("active")], null)]);
+    await ActivityConcerningCommand.run([], { root });
+    expect(lines.join("\n")).not.toContain("in observe");
+    // A list this credential may not read says nothing; one that fails otherwise, the sentence without a count.
+    lines.length = 0;
+    useApi([
+      page([], null),
+      {
+        status: 403,
+        body: { success: false, error: { code: "forbidden", message: "no" } },
+      },
+    ]);
+    await ActivityConcerningCommand.run([], { root });
+    expect(lines.join("\n")).not.toContain("in observe");
+    lines.length = 0;
+    useApi([
+      page([], null),
+      {
+        status: 500,
+        body: { success: false, error: { code: "internal", message: "down" } },
+      },
+    ]);
+    await ActivityConcerningCommand.run([], { root });
+    expect(lines.at(-1)).toBe(
+      `\nRules in observe can also cover your mail: ${says}`,
+    );
+    // A fetch that throws is the same, and changes no exit code.
+    lines.length = 0;
+    process.exitCode = undefined;
+    useApi((n) => {
+      if (n === 1) return page([], null);
+      throw new Error("socket hang up");
+    });
+    await ActivityConcerningCommand.run([], { root });
+    expect(lines.at(-1)).toBe(
+      `\nRules in observe can also cover your mail: ${says}`,
+    );
+    expect(process.exitCode).toBeUndefined();
+    // A key, an app or an agent has no coverage notices: the list is not read.
+    lines.length = 0;
+    const keyed = useApi([
+      {
+        body: {
+          success: true,
+          data: {
+            covers: "this key",
+            items: [],
+            withheld: [{ kind: "email_rule_coverage", reason: "credential" }],
+            next_cursor: null,
+          },
+        },
+      },
+    ]);
+    await ActivityConcerningCommand.run([], { root });
+    expect(keyed).toHaveLength(1);
+    expect(lines.join("\n")).not.toContain("in observe");
+    // A later page is not told again.
+    lines.length = 0;
+    const later = useApi([page([], null)]);
+    await ActivityConcerningCommand.run(["--cursor", "next-page"], { root });
+    expect(later).toHaveLength(1);
+    // Not with --json, which keeps its document.
+    lines.length = 0;
+    const json = useApi([page([], null)]);
+    await ActivityConcerningCommand.run(["--json"], { root });
+    expect(json).toHaveLength(1);
   });
 
   it("lists a rule that covers you before its notice is written as pending, and keeps as_of in --json", async () => {
@@ -751,7 +886,10 @@ describe("activity concerning command", () => {
     });
     // Unfinished is never read as a complete, empty listing.
     lines.length = 0;
-    useApi([answer(false)]);
+    useApi([
+      answer(false),
+      { body: { success: true, data: [], meta: { cursor: null } } },
+    ]);
     await ActivityConcerningCommand.run([], { root });
     expect(lines.join("\n")).toBe(`${unfinished} ${covering}`);
     // An answer without it keeps the document as it was.

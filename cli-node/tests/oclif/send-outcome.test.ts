@@ -6,14 +6,53 @@ import {
   followUpCommandPrefix,
   followUpInvocation,
   formatPriorRepliesWarning,
+  formatSendFailureSummary,
   formatSendRecordFailureSummary,
   priorRepliesThatWentOut,
   SEND_OUTCOME_EXIT_CODES,
   SEND_OUTCOME_HELP,
+  sendErrorMessage,
   sendFailureOutcome,
   sentHistoryWindowStart,
   successfulSendOutcome,
 } from "../../src/oclif/send-outcome.js";
+
+describe("the line that says a send failed", () => {
+  it("leads with the API's own words when it gave some, on one line", () => {
+    expect(
+      formatSendFailureSummary(
+        "Reply",
+        "not_sent",
+        422,
+        sendErrorMessage({
+          code: "validation_error",
+          message: "body\n is required",
+        }),
+      ),
+    ).toBe(
+      "Reply not sent (HTTP 422): body is required. Nothing went out; fix the problem before retrying.",
+    );
+    expect(sendErrorMessage({ message: "Already ends with a stop." })).toBe(
+      "Already ends with a stop.",
+    );
+    expect(sendErrorMessage({ message: 'Use "x.")' })).toBe('Use "x.")');
+    // Terminal control sequences never reach the line, and a long message is cut.
+    const cleaned =
+      sendErrorMessage({ message: "bad\u001b[31m red\u0007" }) ?? "";
+    expect(cleaned.includes("\u001b") || cleaned.includes("\u0007")).toBe(
+      false,
+    );
+    const long = sendErrorMessage({ message: "x".repeat(400) });
+    expect(long?.length).toBeLessThanOrEqual(301);
+    expect(long).toMatch(/x\.\.\.$/);
+    // No words of its own: the status alone, as before.
+    for (const payload of [null, {}, { message: "  " }, { message: 3 }])
+      expect(sendErrorMessage(payload)).toBeUndefined();
+    expect(formatSendFailureSummary("Message", "not_sent", 400)).toBe(
+      "Message not sent: the API rejected the request (HTTP 400). Nothing went out; fix the problem before retrying.",
+    );
+  });
+});
 
 describe("send outcome vocabulary", () => {
   it("maps each outcome to its exit code and leaves exit 2 to usage errors", () => {

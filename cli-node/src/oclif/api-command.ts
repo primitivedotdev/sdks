@@ -1498,10 +1498,12 @@ export const OPERATION_HINTS: Record<string, string> = {
     "Tip: prefer `primitive memories delete <key> [--function <function-id>]` for the common delete path.",
   searchMemories:
     "Tip: prefer `primitive memories search [prefix] [--metadata-only] [--function <function-id>]` for the common search path.",
+  listEmails:
+    "Tip: for a one-line-per-email table, `primitive emails latest --limit 100`.",
   createEmailRuleObjection:
     "Tip: say in --message (up to 500 characters) what you want. It can ask for less than turning the rule off: ask the author to narrow the rule, or to explain where its matches go (its receivers). The author accepts, which turns the rule off, or declines, optionally giving a reason, which you see in `primitive email-rule-oversight get-email-rule-objection <objection-id>`. You can withdraw it with `primitive email-rule-oversight withdraw-email-rule-objection <objection-id>`. Objecting does not change the rule.",
   declineEmailRuleObjection:
-    "Tip: the member who objected sees --reason (up to 500 characters). When the objection asked you to narrow the rule or explain a receiver, the reason can answer that: say what you changed, or what the receiver is for.",
+    "Tip: the member who objected sees --reason (up to 500 characters). If you narrow the rule instead of turning it off, decline with a reason saying what you changed: accepting turns the rule off, and the member sees the reason on the objection. When the objection asked you to explain a receiver, the reason can say what the receiver is for.",
   listEndpoints:
     "Tip: without --json, a table on stderr after the JSON shows each endpoint's ENABLED and DELIVERING. DELIVERING is read from delivery.delivering, whether a webhook is being sent mail at all, not from enabled: an endpoint can be enabled and still not be delivering (its owner's key revoked, say), shown as no with the reason codes in parentheses. A webhook whose delivery could not be checked shows unknown, and a Function or pull endpoint shows -.",
   startAgentSignup:

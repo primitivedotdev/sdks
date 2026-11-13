@@ -59,9 +59,15 @@ describe("short command help", () => {
       const help = await commandHelp(id);
       const lines = help.trimEnd().split("\n").length;
       const bytes = Buffer.byteLength(help);
-      expect(help, id).toContain(
-        `Full help: primitive ${id.replaceAll(":", " ")} --help-full`,
-      );
+      const full = `primitive ${id.replaceAll(":", " ")} --help-full`;
+      // Under the summary when the description says more, else as the last line.
+      const pointer = `Summary only. Full description: \`${full}\`.`;
+      const rendered = help.split("\n");
+      const under = rendered[1] === pointer;
+      const closing = help.trimEnd().endsWith(`Full help: ${full}`);
+      // Exactly one pointer: the line under the summary, or the closing line.
+      expect(under !== closing, id).toBe(true);
+      expect(help.split(full).length - 1, id).toBe(1);
       if (lines > MAX_LINES || bytes > MAX_BYTES)
         over.push(`${id}: ${lines} lines, ${bytes} bytes`);
     }
@@ -73,7 +79,7 @@ describe("short command help", () => {
   it("prints one line per flag, clipped to 100 columns off a terminal", async () => {
     const help = await commandHelp("reply");
     expect(help).toContain(
-      "Reply to an inbound email\n\nUSAGE\n  $ primitive reply [flags]",
+      "Reply to an inbound email\nSummary only. Full description: `primitive reply --help-full`.\n\nUSAGE\n  $ primitive reply [flags]",
     );
     expect(help).toMatch(
       /^ {2}-a, --attachment=<value>\.\.\. +Attach a file to the reply\.$/m,

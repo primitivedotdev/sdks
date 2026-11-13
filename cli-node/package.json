@@ -95,7 +95,7 @@
         "description": "Check inbound email setup and readiness, and work through mail awaiting your reply. Prefer `primitive inbox setup` for a guided setup path, `primitive inbox status` for the readiness table, and `primitive inbox next` for the oldest email awaiting your reply."
       },
       "emails": {
-        "description": "List, inspect, and wait for received emails, and see what the classifier read from one. Prefer task aliases like `primitive emails list`, `primitive emails get`, `primitive emails latest`, `primitive emails facts`, `primitive emails wait`, and `primitive emails watch`; generated API names remain available for compatibility."
+        "description": "List, inspect, and wait for received emails, and see what the classifier read from one. Prefer task aliases like `primitive emails list`, `primitive emails get`, `primitive emails latest`, `primitive emails facts`, `primitive emails wait`, and `primitive emails watch`; generated API names remain available for compatibility. For a one-line-per-email table, `primitive emails latest --limit 100`."
       },
       "search": {
         "description": "Cross-corpus semantic search. Prefer `primitive search <query>` for lexical inbound search and `primitive semantic-search <query>` for meaning-aware ranking across inbound and outbound.",
@@ -186,7 +186,7 @@
         "description": "Received and sent mail per hour, and how webhook deliveries ended"
       },
       "activity": {
-        "description": "What you created, what other members asked of you, and what their rules did to your mail, with where each stands now (ids, names and states only)"
+        "description": "Where you learn what others asked of you and did to your mail: `primitive activity asked` (rule requests for your mail and objections to your rules), `primitive activity concerning` (other members' rules that started covering your mail or changed), and `primitive activity created` (what you created, including your requests and how they were decided). `primitive doctor` sums up what is waiting for you."
       },
       "email-rules": {
         "description": "Rules written in plain English that pick out received mail"

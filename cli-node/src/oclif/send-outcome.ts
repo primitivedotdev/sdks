@@ -13,6 +13,7 @@ import { extractErrorPayload } from "./api-command.js";
 import { AGENT_PROFILE_ENV } from "./connected-agent-profile.js";
 import { formatAlreadySentNotice } from "./idempotent-replay-banner.js";
 import { thrownErrorBody } from "./json-output.js";
+import { sanitizeForTerminal } from "./terminal-text.js";
 
 /**
  * One outcome vocabulary for every command that puts mail on the wire
@@ -223,12 +224,42 @@ export function formatScheduledSummary(
   return `${noun} ${verb}${when} (id ${sent.id}). Nothing has gone out yet. Do not resend. To cancel it before then, run \`primitive sent cancel --id ${sent.id}\`${byKey}.`;
 }
 
+/**
+ * The API's own words for a refusal (`message` on its error), on one line and
+ * ending in a full stop, or undefined when it gave none.
+ */
+export function sendErrorMessage(payload: unknown): string | undefined {
+  const message =
+    payload !== null && typeof payload === "object"
+      ? (payload as { message?: unknown }).message
+      : undefined;
+  if (typeof message !== "string") return undefined;
+  const line = sanitizeForTerminal(message).replaceAll(/\s+/g, " ").trim();
+  if (!line) return undefined;
+  const cut =
+    line.length > SEND_ERROR_MESSAGE_MAX
+      ? `${line.slice(0, SEND_ERROR_MESSAGE_MAX - 3).trimEnd()}...`
+      : line;
+  return /[.!?]["')\]]*$/.test(cut) ? cut : `${cut}.`;
+}
+
+/** The longest API message the failure line repeats; the error itself follows in full. */
+const SEND_ERROR_MESSAGE_MAX = 300;
+
+/**
+ * The one line that says a send failed. A refusal leads with what the API
+ * said was wrong (`message`, from sendErrorMessage), so the first line read
+ * names the problem rather than only its status.
+ */
 export function formatSendFailureSummary(
   noun: "Message" | "Reply",
   outcome: FailedSendOutcome,
   httpStatus: number | undefined,
+  message?: string,
 ): string {
   if (outcome === "not_sent") {
+    if (message)
+      return `${noun} not sent${httpStatus === undefined ? "" : ` (HTTP ${httpStatus})`}: ${message} Nothing went out; fix the problem before retrying.`;
     const reason =
       httpStatus === undefined
         ? "the request failed before sending"
@@ -748,14 +779,20 @@ export function reportSendCommandResult(params: {
 
   if (params.result.error) {
     errorPayload = extractErrorPayload(params.result.error);
-    params.onApiError(errorPayload);
     const failure = classifySendError(httpStatus, errorPayload);
     outcome = failure;
     outcomeMessage =
       failure === "already_sent"
         ? formatDeletedEarlierSendNotice()
-        : formatSendFailureSummary(params.noun, failure, httpStatus);
+        : formatSendFailureSummary(
+            params.noun,
+            failure,
+            httpStatus,
+            sendErrorMessage(errorPayload),
+          );
+    // The line that names the problem comes first, then the error itself.
     if (!params.json) params.writeStderr(`${outcomeMessage}\n`);
+    params.onApiError(errorPayload);
   } else {
     sent =
       (params.result.data as { data?: SendMailResult } | undefined)?.data ??
