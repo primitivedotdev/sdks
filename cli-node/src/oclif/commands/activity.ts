@@ -166,6 +166,43 @@ export function formatAskedRows(
   return [line(header), ...rows.map(line)].join("\n");
 }
 
+/** Totals of who receives a rule's matches, as a receivers_changed notice carries them before and after. */
+type ReceiverTotals = {
+  keys: number;
+  reads_in_full: number;
+  webhooks: number;
+  shares: number;
+};
+
+const TOTAL_LABELS: ReadonlyArray<[keyof ReceiverTotals, string]> = [
+  ["keys", "keys"],
+  ["reads_in_full", "keys reading your mail in full"],
+  ["webhooks", "webhooks"],
+  ["shares", "shares"],
+];
+
+/**
+ * What a receivers_changed notice says changed, from its totals before and
+ * after: "keys 3 to 2, webhooks 2 to 1", or, when the totals are equal (an
+ * owner or a webhook site changed), that they are. Null for any other notice,
+ * or one from a server that sends no totals.
+ */
+export function receiversChangeText(item: ActivityItem): string | null {
+  const change = (
+    item as {
+      receivers_change?: { before?: ReceiverTotals; after?: ReceiverTotals };
+    }
+  ).receivers_change;
+  if (!change?.before || !change.after) return null;
+  const { before, after } = change;
+  const changed = TOTAL_LABELS.filter(
+    ([key]) => before[key] !== after[key],
+  ).map(([key, label]) => `${label} ${before[key]} to ${after[key]}`);
+  return changed.length > 0
+    ? changed.join(", ")
+    : "same totals, an owner or webhook site changed";
+}
+
 /** Where to see what covers you now, whatever the notices have caught up with. */
 const COVERING_NOW = `\`primitive email-rule-oversight list-email-rules-covering-me\` shows what covers you now.`;
 
@@ -201,7 +238,9 @@ export function formatConcerningRows(
         ? `${unfinished} ${COVERING_NOW}`
         : "Nothing to show.";
   const rows = items.map((item) => [
-    item.state,
+    receiversChangeText(item) === null
+      ? item.state
+      : `${item.state} (${receiversChangeText(item)})`,
     minute(item.created_at),
     item.name ?? "(unnamed)",
     item.created_through.name ?? item.created_through.id ?? "",
@@ -225,10 +264,17 @@ export function formatConcerningRows(
         `pending: the rule covers you now and its notice is not written yet. ${COVERING_NOW}`,
       ]
     : [];
+  const receivers = items.some((item) => item.state === "receivers_changed")
+    ? [
+        "",
+        "receivers_changed: who receives the rule's matches changed, in totals. `primitive email-rule-oversight get-email-rule-covering-me <rule-id>` shows who, by owner.",
+      ]
+    : [];
   return [
     line(header),
     ...rows.map(line),
     ...pending,
+    ...receivers,
     // The pending line already says where to see what covers you now.
     ...(unfinished
       ? ["", pending.length > 0 ? unfinished : `${unfinished} ${COVERING_NOW}`]
@@ -485,7 +531,7 @@ export class ActivityAskedCommand extends Command {
 
 export class ActivityConcerningCommand extends Command {
   static description =
-    `List what other members did that concerns your own mail, newest first: each time another member's rule started covering your mailboxes, that is, it was made or turned active over them or an active rule came to reach you, once per rule, not per mailbox (started), saved a new version while covering it (new_version), or changed who receives its matches: its keys, webhooks or share (receivers_changed, with the totals before and after under receivers_change in --json, at most once every 15 minutes for a rule), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline. A rule in draft or observe grants and blocks nothing and gets no notice while it stays there, though \`primitive email-rule-oversight list-email-rules-covering-me\` lists it; turning it active is what is listed, and a rule that covers you again within an hour of its last started or baseline notice gets no new one, though a version it saved meanwhile is listed as new_version. A rule that stops covering you and a rename are not listed.
+    `List what other members did that concerns your own mail, newest first: each time another member's rule started covering your mailboxes, that is, it was made or turned active over them or an active rule came to reach you, once per rule, not per mailbox (started), saved a new version while covering it (new_version), or changed who receives its matches: its keys, webhooks or share (receivers_changed, with the totals before and after in the table, and under receivers_change with --json, at most once every 15 minutes for a rule), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline. A rule in draft or observe grants and blocks nothing and gets no notice while it stays there, though \`primitive email-rule-oversight list-email-rules-covering-me\` lists it; turning it active is what is listed, and a rule that covers you again within an hour of its last started or baseline notice gets no new one, though a version it saved meanwhile is listed as new_version. A rule that stops covering you and a rename are not listed.
 
   Notices can lag. Until a start is written, a rule that now covers you is listed first as pending, dated when the rule last changed, and with --json its id is the rule's. When the check for such rules did not finish, the listing says so and --json carries pending_complete: false; run it again in a moment.
 

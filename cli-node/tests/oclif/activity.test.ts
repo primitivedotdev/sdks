@@ -432,6 +432,48 @@ describe("activity concerning command", () => {
     );
   });
 
+  it("shows a receivers_changed notice's totals before and after, and where to see who", () => {
+    const changed = (before: object, after: object) =>
+      item({
+        kind: "email_rule_coverage",
+        rule_id: "3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f",
+        name: "Vendor invoices",
+        state: "receivers_changed",
+        owned_now: "someone_else",
+        created_through: { kind: "member", id: "u-3", name: "Sam Rivera" },
+        receivers_change: { before, after },
+      } as Partial<ActivityItem>);
+    const totals = { keys: 3, reads_in_full: 1, webhooks: 2, shares: 0 };
+    const out = formatConcerningRows([
+      changed(totals, { ...totals, keys: 2, reads_in_full: 0, webhooks: 1 }),
+      changed(totals, totals),
+      item({ kind: "email_rule_coverage", state: "started", name: "Other" }),
+    ]);
+    expect(out).toMatch(
+      /^receivers_changed \(keys 3 to 2, keys reading your mail in full 1 to 0, webhooks 2 to 1\)\s+.*Vendor invoices\s+Sam Rivera\s+3b0f6a1e/m,
+    );
+    expect(out).toMatch(
+      /^receivers_changed \(same totals, an owner or webhook site changed\)\s+/m,
+    );
+    // Other notices are shown as before, by their state alone.
+    expect(out).toMatch(/^started\s+.*Other/m);
+    expect(out).toContain(
+      "get-email-rule-covering-me <rule-id>` shows who, by owner.",
+    );
+    // A server that sends no totals: the state alone, and the same pointer.
+    const bare = formatConcerningRows([
+      item({
+        kind: "email_rule_coverage",
+        state: "receivers_changed",
+        name: "Bare",
+      }),
+    ]);
+    expect(bare).toMatch(/^receivers_changed\s+.*Bare/m);
+    expect(formatConcerningRows([item({ state: "started" })])).not.toContain(
+      "receivers_changed:",
+    );
+  });
+
   it("lists coverage notices with the rule's author, and asks the API for exactly that", async () => {
     const urls = useApi([
       page(
