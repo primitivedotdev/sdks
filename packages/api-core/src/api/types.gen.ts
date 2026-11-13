@@ -7170,7 +7170,7 @@ export type EmailRuleWritten = {
         note: string;
     };
     /**
-     * After an update that saved a version: API keys listing the rule, the webhooks they own, and shares this write ended. The rule keeps its state. Absent if not read.
+     * After an update that saved a version: API keys listing the rule and the webhooks they own. shares_ended is always 0: a new version keeps the rule's share (share_notice says so). The rule keeps its state. Absent if not read.
      */
     affects?: {
         keys: number;
@@ -7178,11 +7178,11 @@ export type EmailRuleWritten = {
         shares_ended: number;
     };
     /**
-     * After a write that saved a version of an active rule keys or webhooks read without checking it first: what it changes, and how to have the next one checked.
+     * After a write that saved a version of an active rule keys, webhooks or a share read without checking it first: what it changes, and how to have the next one checked.
      */
     notice?: string;
     /**
-     * After a write that ended the rule's share: that it did, given even when affects is not, with whom it was with and the version they accepted when those can be read.
+     * After a write that saved a version of a rule with a live share: that the share goes on under it, given even when affects is not, with whom it is and the version they accepted when those can be read.
      */
     share_notice?: string;
 };
@@ -7494,7 +7494,7 @@ export type UpdateEmailRuleRequest = {
      */
     if_revision?: number;
     /**
-     * true: judge the rule as this write leaves it (new tree, restored version, new scope, or the version it activates) against the expectations it leaves, as POST /email-rules/test would, before saving; it can take as long as a test. Failed: 409 expectations_failed; on emails the rule cannot read: 409 expectations_unreadable; undecided: 409 expectations_undecided (each with details.expectations_check); none to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409 email_rule_conflict). Only writes that save a version or activate the rule are judged. Omitted: judged as with true when the write saves a version or changes the scope of an active rule that API keys or webhooks read and that has expectations. false: never judged first.
+     * true: judge the rule as this write leaves it (new tree, restored version, new scope, or the version it activates) against the expectations it leaves, as POST /email-rules/test would, before saving; it can take as long as a test. Failed: 409 expectations_failed; on emails the rule cannot read: 409 expectations_unreadable; undecided: 409 expectations_undecided (each with details.expectations_check); none to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409 email_rule_conflict). Only writes that save a version or activate the rule are judged. Omitted: judged as with true when the write saves a version or changes the scope of an active rule that API keys, webhooks or a share read and that has expectations. false: never judged first.
      */
     if_expectations_pass?: boolean;
     /**
@@ -8187,11 +8187,11 @@ export type EmailRuleShare = {
     created_at: string;
     ended_at: string | null;
     /**
-     * Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin, rule_changed (a new version of the rule was saved) or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not.
+     * Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin, rule_changed (a new version of the rule was saved, on a share that ended before new versions kept shares) or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not.
      */
     end_reason: 'stopped_by_granter' | 'removed_by_beneficiary' | 'stopped_by_admin' | 'rule_changed' | 'rule_deleted' | null;
     /**
-     * The version of the rule that was accepted. A new version of the rule ends the share.
+     * The version of the rule that was accepted. A later version keeps the share: what each version matches is shared from when it is saved.
      */
     accepted_rule_version: number;
     /**
@@ -21819,7 +21819,7 @@ export type UpdateEmailRuleData = {
 
 export type UpdateEmailRuleErrors = {
     /**
-     * validation_error: invalid body or tree (details.errors), too large (too_large), a version that no longer renders (version_not_renderable), restore_version names the current version (already_current), over 20 made-up emails (too_many_expectation_samples), or a kind other than the rule's own (kind_mismatch). no_expectations: if_expectations_pass with no expectations to judge, or a write that removes them from an active rule keys or webhooks read; nothing was saved.
+     * validation_error: invalid body or tree (details.errors), too large (too_large), a version that no longer renders (version_not_renderable), restore_version names the current version (already_current), over 20 made-up emails (too_many_expectation_samples), or a kind other than the rule's own (kind_mismatch). no_expectations: if_expectations_pass with no expectations to judge, or a write that removes them from an active rule keys, webhooks or a share read; nothing was saved.
      */
     400: ErrorResponse;
     /**
@@ -21827,7 +21827,7 @@ export type UpdateEmailRuleErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_author_only: only the rule's author may make this change. forbidden (rule_shared): the rule is shared, so only its author or a member manager can turn it off. email_rule_scope_not_readable: scope_selection names something you cannot read. grant_forbidden (mail_depth): judging a write (if_expectations_pass, or by default) needs content access to mail when it judges emails by id.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_author_only: only the rule's author may make this change. forbidden (rule_shared): the rule is shared, so only its author or a member manager can turn it off. forbidden (first_party_required): a new version of a shared rule is saved only by its author on the dashboard or the Primitive CLI, never by an app or agent acting for them. email_rule_scope_not_readable: scope_selection names something you cannot read. grant_forbidden (mail_depth): judging a write (if_expectations_pass, or by default) needs content access to mail when it judges emails by id.
      */
     403: ErrorResponse;
     /**
@@ -21835,7 +21835,7 @@ export type UpdateEmailRuleErrors = {
      */
     404: ErrorResponse;
     /**
-     * email_rule_conflict: the rule changed (details.reason version_moved with current_version, revision_moved with current_revision, expectations_moved, rule_changed or readers_changed); read it again and retry. email_rule_scope_locked: the rule is shared. email_rule_author_unresolvable: the rule could not run as you over the chosen scope. expectations_failed, expectations_unreadable (details.unreadable) or expectations_undecided, with if_expectations_pass or by default on an active rule keys or webhooks read (details.read_by): nothing was saved; details carries current_version, state and expectations_check.
+     * email_rule_conflict: the rule changed (details.reason version_moved with current_version, revision_moved with current_revision, expectations_moved, rule_changed or readers_changed); read it again and retry. email_rule_scope_locked: the rule is shared. email_rule_author_unresolvable: the rule could not run as you over the chosen scope. expectations_failed, expectations_unreadable (details.unreadable) or expectations_undecided, with if_expectations_pass or by default on an active rule keys, webhooks or a share read (details.read_by): nothing was saved; details carries current_version, state and expectations_check.
      */
     409: ErrorResponse;
     /**

@@ -20,8 +20,8 @@ T = TypeVar("T", bound="CreateEmailRuleResultAffects")
 
 @_attrs_define
 class CreateEmailRuleResultAffects:
-    """ After an update that saved a version: API keys listing the rule, the webhooks they own, and shares this write ended.
-    The rule keeps its state. Absent if not read.
+    """ After an update that saved a version: API keys listing the rule and the webhooks they own. shares_ended is always 0:
+    a new version keeps the rule's share (share_notice says so). The rule keeps its state. Absent if not read.
 
         Attributes:
             keys (int):

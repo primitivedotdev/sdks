@@ -2690,7 +2690,7 @@ describe("email-rules update-email-rule: the server's write guards", () => {
     expect(result.exitCode).toBe(1);
     expect(sentBody()).toEqual({ restore_version: 3 });
     expect(stderrLines(result).at(-1)).toBe(
-      `Hint: the rule, as this write would leave it, was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys or webhooks read it, and nothing was saved. Expectations failed: ${A}. The rule is active and 2 API keys and 1 webhook read what it grants; to save the write without the check, send it again with --no-if-expectations-pass. The command exits 1.`,
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys, webhooks or a share read it, and nothing was saved. Expectations failed: ${A}. The rule is active and 2 API keys and 1 webhook read what it grants; to save the write without the check, send it again with --no-if-expectations-pass. The command exits 1.`,
     );
     const hintFor = OPERATION_ERROR_HINTS.updateEmailRule;
     // Readers that could not be counted in time.
@@ -2708,7 +2708,7 @@ describe("email-rules update-email-rule: the server's write guards", () => {
         { id: RULE },
       ),
     ).toBe(
-      `Hint: the rule, as this write would leave it, was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys or webhooks read it, and nothing was saved. An expectation names an email this rule cannot read (deleted, or outside its scope or its author's mail): ${C}. Sending the write again will not decide it: send --expectations-file without it, or an evaluation_scope that reads it. The rule is active and API keys or webhooks may read what it grants (they could not be counted in time); to save the write without the check, send it again with --no-if-expectations-pass. The command exits 1.`,
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys, webhooks or a share read it, and nothing was saved. An expectation names an email this rule cannot read (deleted, or outside its scope or its author's mail): ${C}. Sending the write again will not decide it: send --expectations-file without it, or an evaluation_scope that reads it. The rule is active and API keys, webhooks or a share may read what it grants (they could not be counted in time); to save the write without the check, send it again with --no-if-expectations-pass. The command exits 1.`,
     );
     // Removing the expectations of a rule they read, under --fail-on-expectations.
     expect(
@@ -2792,7 +2792,7 @@ describe("email-rules update-email-rule: the server's write guards", () => {
         { id: RULE },
       ),
     ).toBe(
-      "Hint: API keys or webhooks started reading this rule while this write was being saved, and saving it would have changed what they receive without checking it against the rule's expectations, so nothing was saved. Send the write again: it is then checked first.",
+      "Hint: API keys, webhooks or a share started reading this rule while this write was being saved, and saving it would have changed what they receive without checking it against the rule's expectations, so nothing was saved. Send the write again: it is then checked first.",
     );
   });
 
@@ -2834,7 +2834,7 @@ describe("email-rules update-email-rule: the server's write guards", () => {
     expect(result.exitCode).toBe(0);
     expect(stderrLines(result)).toEqual([
       "Saved version 3 again as version 6, now current. The scope is not part of a version: the rule keeps its own.",
-      "This version reaches 2 API keys listing the rule and 1 webhook those keys own; it ended 0 shares. The rule keeps its state.",
+      "This version reaches 2 API keys listing the rule and 1 webhook those keys own. The rule keeps its state.",
       `Expectations on version 6: 1 failed (${A}). It was saved anyway and is current; the rule is in observe, so it is not live.`,
     ]);
   });

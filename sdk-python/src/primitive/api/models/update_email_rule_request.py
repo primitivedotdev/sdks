@@ -74,8 +74,8 @@ class UpdateEmailRuleRequest:
                 409 expectations_unreadable; undecided: 409 expectations_undecided (each with details.expectations_check); none
                 to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409
                 email_rule_conflict). Only writes that save a version or activate the rule are judged. Omitted: judged as with
-                true when the write saves a version or changes the scope of an active rule that API keys or webhooks read and
-                that has expectations. false: never judged first.
+                true when the write saves a version or changes the scope of an active rule that API keys, webhooks or a share
+                read and that has expectations. false: never judged first.
             restore_version (int | Unset): Save version n again as the next version (author only): its english, tree,
                 explanation, assumptions, warnings and compiled_by. A version carries no scope: the rule keeps its own unless
                 evaluation_scope is sent. 404 version_not_found; 400 already_current or version_not_renderable. Not with a

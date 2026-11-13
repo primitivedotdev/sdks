@@ -129,12 +129,12 @@ def sync_detailed(
     (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in
     expectations_check). Anyone but its author who sees it may only set state draft, and while it is
     shared only if they manage members from the dashboard. A scope change saves a new version; a shared
-    rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version
-    refuses a write once a version was saved since you read it; if_revision, once anything changed.
-    Without if_expectations_pass a version is saved even when its expectations fail, except on an active
-    rule keys or webhooks read: that write is checked first unless if_expectations_pass is false. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token).
+    rule keeps its scope, and a kind never changes. A saved version takes effect at once, on the rule's
+    share too, which goes on under it. if_version refuses a write once a version was saved since you
+    read it; if_revision, once anything changed. Without if_expectations_pass a version is saved even
+    when its expectations fail, except on an active rule keys, webhooks or a share read: that write is
+    checked first unless if_expectations_pass is false. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -175,12 +175,12 @@ def sync(
     (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in
     expectations_check). Anyone but its author who sees it may only set state draft, and while it is
     shared only if they manage members from the dashboard. A scope change saves a new version; a shared
-    rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version
-    refuses a write once a version was saved since you read it; if_revision, once anything changed.
-    Without if_expectations_pass a version is saved even when its expectations fail, except on an active
-    rule keys or webhooks read: that write is checked first unless if_expectations_pass is false. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token).
+    rule keeps its scope, and a kind never changes. A saved version takes effect at once, on the rule's
+    share too, which goes on under it. if_version refuses a write once a version was saved since you
+    read it; if_revision, once anything changed. Without if_expectations_pass a version is saved even
+    when its expectations fail, except on an active rule keys, webhooks or a share read: that write is
+    checked first unless if_expectations_pass is false. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -216,12 +216,12 @@ async def asyncio_detailed(
     (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in
     expectations_check). Anyone but its author who sees it may only set state draft, and while it is
     shared only if they manage members from the dashboard. A scope change saves a new version; a shared
-    rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version
-    refuses a write once a version was saved since you read it; if_revision, once anything changed.
-    Without if_expectations_pass a version is saved even when its expectations fail, except on an active
-    rule keys or webhooks read: that write is checked first unless if_expectations_pass is false. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token).
+    rule keeps its scope, and a kind never changes. A saved version takes effect at once, on the rule's
+    share too, which goes on under it. if_version refuses a write once a version was saved since you
+    read it; if_revision, once anything changed. Without if_expectations_pass a version is saved even
+    when its expectations fail, except on an active rule keys, webhooks or a share read: that write is
+    checked first unless if_expectations_pass is false. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -262,12 +262,12 @@ async def asyncio(
     (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in
     expectations_check). Anyone but its author who sees it may only set state draft, and while it is
     shared only if they manage members from the dashboard. A scope change saves a new version; a shared
-    rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version
-    refuses a write once a version was saved since you read it; if_revision, once anything changed.
-    Without if_expectations_pass a version is saved even when its expectations fail, except on an active
-    rule keys or webhooks read: that write is checked first unless if_expectations_pass is false. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token).
+    rule keeps its scope, and a kind never changes. A saved version takes effect at once, on the rule's
+    share too, which goes on under it. if_version refuses a write once a version was saved since you
+    read it; if_revision, once anything changed. Without if_expectations_pass a version is saved even
+    when its expectations fail, except on an active rule keys, webhooks or a share read: that write is
+    checked first unless if_expectations_pass is false. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
