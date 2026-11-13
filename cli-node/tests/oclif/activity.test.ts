@@ -927,6 +927,35 @@ describe("activity reads that fail on the way", () => {
     expect(lines).toEqual([]);
   });
 
+  it("never prints an empty error: an empty body is named by its status, and an unreadable one says so", async () => {
+    const jsonError = async (reply: () => Response) => {
+      useFetch(reply);
+      captureLog();
+      captureStderr();
+      const stdout: string[] = [];
+      vi.spyOn(console, "log").mockImplementation((line = "") => {
+        stdout.push(String(line));
+      });
+      process.exitCode = undefined;
+      await ActivityCreatedCommand.run(["--json"], { root });
+      expect(process.exitCode).toBe(1);
+      vi.restoreAllMocks();
+      return JSON.parse(stdout.join("\n")).error;
+    };
+    expect(await jsonError(() => new Response("", { status: 503 }))).toEqual({
+      code: "http_error",
+      message: "HTTP 503",
+    });
+    expect(
+      await jsonError(
+        () =>
+          new Response("not json", {
+            headers: { "content-type": "application/json" },
+          }),
+      ),
+    ).toMatchObject({ code: "response_error" });
+  });
+
   it("words a network error that does not clear, keeping the transport's code only as its cause", async () => {
     const attempts = useFetch(() => {
       throw connectTimeout();

@@ -261,9 +261,10 @@ export function compareVersions(a: string, b: string): number | null {
 type ParsedVersion = { core: number[]; prerelease: string[] };
 
 function parseVersion(value: string): ParsedVersion | null {
-  const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+.*)?$/.exec(
-    value.trim(),
-  );
+  const match =
+    /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(
+      value.trim(),
+    );
   if (!match) return null;
   return {
     core: match.slice(1, 4).map(Number),
@@ -1501,7 +1502,7 @@ export async function runMachineDoctor(
             "cli.version",
             released !== null || options.minCliVersion ? "ok" : "skip",
             preview
-              ? `${version}; the newest preview (${preview}) could not be compared with it.`
+              ? `${version}; the newest preview could not be compared with it (the tag is not a version).`
               : released !== null
                 ? `${version} is not older than the latest release ${latest}; the newest preview could not be checked.`
                 : `${version}${met} neither the latest release nor the newest preview could be checked.`,

@@ -126,20 +126,40 @@ async function call(read: () => Promise<SdkResult>): Promise<CallResult> {
     if (transientFailure(result)?.reason === "network")
       return { ok: false, payload: networkErrorPayload(result.error) };
     if (result.error !== undefined || !result.response?.ok) {
+      const status = result.response?.status;
+      // An answer whose body could not be read (cut off, or not JSON).
+      if (result.error instanceof Error)
+        return {
+          ok: false,
+          response: result.response,
+          payload: {
+            code: "response_error",
+            message: `The answer could not be read${status ? ` (HTTP ${status})` : ""}. Try again in a moment.`,
+          },
+        };
+      const extracted =
+        result.error === undefined ||
+        result.error === null ||
+        typeof result.error === "string"
+          ? undefined
+          : extractErrorPayload(result.error);
+      // An error with no code of its own (an empty body, say) is named by
+      // its status, never printed as {}.
+      const coded =
+        extracted !== null &&
+        typeof extracted === "object" &&
+        typeof (extracted as { code?: unknown }).code === "string";
       return {
         ok: false,
         response: result.response,
-        payload:
-          result.error === undefined ||
-          result.error === null ||
-          typeof result.error === "string"
-            ? {
-                code: "http_error",
-                message:
-                  (typeof result.error === "string" && result.error.trim()) ||
-                  `HTTP ${result.response?.status ?? ""}`.trim(),
-              }
-            : extractErrorPayload(result.error),
+        payload: coded
+          ? extracted
+          : {
+              code: "http_error",
+              message:
+                (typeof result.error === "string" && result.error.trim()) ||
+                `HTTP ${status ?? ""}`.trim(),
+            },
       };
     }
     const data = result.data as { data?: Page } | Page | undefined;

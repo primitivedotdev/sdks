@@ -169,6 +169,17 @@ const SAMPLE_LIST_MAX = 10;
 const UNKNOWN_FIELDS = new WeakMap<ExpectationSample, string[]>();
 
 /**
+ * A field name from a file or an answer, quoted and safe to print: JSON
+ * escapes control characters, and a long name is cut.
+ */
+function shownKey(key: string): string {
+  const shown = JSON.stringify(
+    key.length > 60 ? `${key.slice(0, 57)}...` : key,
+  );
+  return shown.replace(/[\u007f-\u009f]/g, "?");
+}
+
+/**
  * One line naming the fields this CLI does not know in the samples sent, with
  * the numbers of the samples in the file that carry each; null when none do.
  */
@@ -208,7 +219,7 @@ function checkSampleEmail(
   };
   const unknown = Object.keys(email)
     .filter((key) => !SAMPLE_EMAIL_KEYS.has(key))
-    .map((key) => `email field "${key}"`);
+    .map((key) => `email field ${shownKey(key)}`);
   if (!isRecord(email.from) || typeof email.from.address !== "string")
     fail("needs from.address");
   const list = (key: string, min: number) => {
@@ -335,7 +346,7 @@ export function samplesFromJson(
       email: item.email,
     };
     const fields = [
-      ...unknown.map((key) => `sample field "${key}"`),
+      ...unknown.map((key) => `sample field ${shownKey(key)}`),
       ...unknownEmail,
     ];
     if (fields.length > 0) UNKNOWN_FIELDS.set(sample, fields);
