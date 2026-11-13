@@ -40,7 +40,9 @@ class ListActivityObjectsResultItemsItem:
                 sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed,
                 connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn
                 (rule requests and objections), and for a coverage notice what it told: started (a rule began covering your
-                mailbox), new_version, or baseline (it already covered you when notices began).
+                mailbox), new_version, or baseline (it already covered you when notices began). pending: a rule started covering
+                your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice
+                is recorded without a new one); its id is then the rule's, and created_at when the rule last changed.
             created_at (datetime.datetime):
             ended_at (datetime.datetime | None): When it was deleted, replaced or revoked, when an API key expired, when a
                 repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null

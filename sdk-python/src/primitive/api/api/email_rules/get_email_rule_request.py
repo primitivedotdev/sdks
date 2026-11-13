@@ -100,8 +100,8 @@ def sync_detailed(
     before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have
     received. To try it on an email that has not arrived, pass the request's tree to POST /v1/email-
     rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-rules/look-
-    alikes with request_id); neither stores anything. Needs mail:read, a member's own credential with
-    their full access (not an API key, agent key or narrowed token), and the email rules feature.
+    alikes with request_id); neither stores anything. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -140,8 +140,8 @@ def sync(
     before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have
     received. To try it on an email that has not arrived, pass the request's tree to POST /v1/email-
     rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-rules/look-
-    alikes with request_id); neither stores anything. Needs mail:read, a member's own credential with
-    their full access (not an API key, agent key or narrowed token), and the email rules feature.
+    alikes with request_id); neither stores anything. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -175,8 +175,8 @@ async def asyncio_detailed(
     before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have
     received. To try it on an email that has not arrived, pass the request's tree to POST /v1/email-
     rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-rules/look-
-    alikes with request_id); neither stores anything. Needs mail:read, a member's own credential with
-    their full access (not an API key, agent key or narrowed token), and the email rules feature.
+    alikes with request_id); neither stores anything. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -215,8 +215,8 @@ async def asyncio(
     before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have
     received. To try it on an email that has not arrived, pass the request's tree to POST /v1/email-
     rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-rules/look-
-    alikes with request_id); neither stores anything. Needs mail:read, a member's own credential with
-    their full access (not an API key, agent key or narrowed token), and the email rules feature.
+    alikes with request_id); neither stores anything. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):

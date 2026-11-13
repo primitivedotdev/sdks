@@ -18,6 +18,7 @@ import datetime
 if TYPE_CHECKING:
   from ..models.conversation_message_copies_item import ConversationMessageCopiesItem
   from ..models.conversation_message_hold import ConversationMessageHold
+  from ..models.conversation_message_imported_type_0 import ConversationMessageImportedType0
   from ..models.conversation_message_repeat_type_0 import ConversationMessageRepeatType0
   from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0
   from ..models.email_attachment import EmailAttachment
@@ -94,6 +95,8 @@ class ConversationMessage:
                 outbound, in the same order. Empty when there are none or an inbound message has no parsed content. No bytes or
                 download URLs; download a part with `/emails/{id}/attachments/{part_index}` or `/sent-
                 emails/{id}/attachments/{part_index}`.
+            imported (ConversationMessageImportedType0 | None | Unset): Historical acquisition; never sender or SMTP
+                delivery proof. Null for live mail. Excluded from live tails and deltas.
             copies (list[ConversationMessageCopiesItem] | Unset): Every inbound copy of this message you can read (a message
                 to several of the org's mailboxes is stored once per mailbox), in arrival order. At most 50; past that, the ones
                 listed are your own mailboxes' copies first, then the earliest. The entry's `id` is one of them unless the entry
@@ -128,6 +131,7 @@ class ConversationMessage:
     fyi: bool | Unset = UNSET
     interaction_hint: str | Unset = UNSET
     attachments: list[EmailAttachment] | Unset = UNSET
+    imported: ConversationMessageImportedType0 | None | Unset = UNSET
     copies: list[ConversationMessageCopiesItem] | Unset = UNSET
     copies_truncated: bool | Unset = UNSET
     sent_email_id: UUID | Unset = UNSET
@@ -141,6 +145,7 @@ class ConversationMessage:
     def to_dict(self) -> dict[str, Any]:
         from ..models.conversation_message_copies_item import ConversationMessageCopiesItem # noqa: PLC0415
         from ..models.conversation_message_hold import ConversationMessageHold # noqa: PLC0415
+        from ..models.conversation_message_imported_type_0 import ConversationMessageImportedType0 # noqa: PLC0415
         from ..models.conversation_message_repeat_type_0 import ConversationMessageRepeatType0 # noqa: PLC0415
         from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0 # noqa: PLC0415
         from ..models.email_attachment import EmailAttachment # noqa: PLC0415
@@ -228,6 +233,14 @@ class ConversationMessage:
 
 
 
+        imported: dict[str, Any] | None | Unset
+        if isinstance(self.imported, Unset):
+            imported = UNSET
+        elif isinstance(self.imported, ConversationMessageImportedType0):
+            imported = self.imported.to_dict()
+        else:
+            imported = self.imported
+
         copies: list[dict[str, Any]] | Unset = UNSET
         if not isinstance(self.copies, Unset):
             copies = []
@@ -280,6 +293,8 @@ class ConversationMessage:
             field_dict["interaction_hint"] = interaction_hint
         if attachments is not UNSET:
             field_dict["attachments"] = attachments
+        if imported is not UNSET:
+            field_dict["imported"] = imported
         if copies is not UNSET:
             field_dict["copies"] = copies
         if copies_truncated is not UNSET:
@@ -297,6 +312,7 @@ class ConversationMessage:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.conversation_message_copies_item import ConversationMessageCopiesItem # noqa: PLC0415
         from ..models.conversation_message_hold import ConversationMessageHold # noqa: PLC0415
+        from ..models.conversation_message_imported_type_0 import ConversationMessageImportedType0 # noqa: PLC0415
         from ..models.conversation_message_repeat_type_0 import ConversationMessageRepeatType0 # noqa: PLC0415
         from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0 # noqa: PLC0415
         from ..models.email_attachment import EmailAttachment # noqa: PLC0415
@@ -471,6 +487,26 @@ class ConversationMessage:
                 attachments.append(attachments_item)
 
 
+        def _parse_imported(data: object) -> ConversationMessageImportedType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                imported_type_0 = ConversationMessageImportedType0.from_dict(data)
+
+
+
+                return imported_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ConversationMessageImportedType0 | None | Unset, data)
+
+        imported = _parse_imported(d.pop("imported", UNSET))
+
+
         _copies = d.pop("copies", UNSET)
         copies: list[ConversationMessageCopiesItem] | Unset = UNSET
         if _copies is not UNSET:
@@ -522,6 +558,7 @@ class ConversationMessage:
             fyi=fyi,
             interaction_hint=interaction_hint,
             attachments=attachments,
+            imported=imported,
             copies=copies,
             copies_truncated=copies_truncated,
             sent_email_id=sent_email_id,

@@ -11,7 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.endpoint import Endpoint
+  from ..models.created_endpoint import CreatedEndpoint
 
 
 
@@ -26,11 +26,11 @@ class CreateEndpointResponse200:
     """ 
         Attributes:
             success (bool):
-            data (Endpoint | Unset):
+            data (CreatedEndpoint | Unset):
      """
 
     success: bool
-    data: Endpoint | Unset = UNSET
+    data: CreatedEndpoint | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,7 +38,7 @@ class CreateEndpointResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.endpoint import Endpoint # noqa: PLC0415
+        from ..models.created_endpoint import CreatedEndpoint # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -60,16 +60,16 @@ class CreateEndpointResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.endpoint import Endpoint # noqa: PLC0415
+        from ..models.created_endpoint import CreatedEndpoint # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 
         _data = d.pop("data", UNSET)
-        data: Endpoint | Unset
+        data: CreatedEndpoint | Unset
         if isinstance(_data,  Unset):
             data = UNSET
         else:
-            data = Endpoint.from_dict(_data)
+            data = CreatedEndpoint.from_dict(_data)
 
 
 

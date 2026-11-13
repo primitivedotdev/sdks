@@ -8,6 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.email_rule_tested_kind import EmailRuleTestedKind
 from typing import cast
 from uuid import UUID
 
@@ -16,22 +17,26 @@ from uuid import UUID
 
 
 
-T = TypeVar("T", bound="GenerateLookAlikesResultRule")
+T = TypeVar("T", bound="EmailRuleTested")
 
 
 
 @_attrs_define
-class GenerateLookAlikesResultRule:
+class EmailRuleTested:
     """ 
         Attributes:
             id (None | UUID):
             version (int | None):
             vocabulary (str):
+            kind (EmailRuleTestedKind | Unset): The kind it was tested as.
+            note (str | Unset): Present when a tree was sent without kind, so it was tested as grant.
      """
 
     id: None | UUID
     version: int | None
     vocabulary: str
+    kind: EmailRuleTestedKind | Unset = UNSET
+    note: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -50,6 +55,13 @@ class GenerateLookAlikesResultRule:
 
         vocabulary = self.vocabulary
 
+        kind: str | Unset = UNSET
+        if not isinstance(self.kind, Unset):
+            kind = self.kind.value
+
+
+        note = self.note
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -58,6 +70,10 @@ class GenerateLookAlikesResultRule:
             "version": version,
             "vocabulary": vocabulary,
         })
+        if kind is not UNSET:
+            field_dict["kind"] = kind
+        if note is not UNSET:
+            field_dict["note"] = note
 
         return field_dict
 
@@ -94,15 +110,29 @@ class GenerateLookAlikesResultRule:
 
         vocabulary = d.pop("vocabulary")
 
-        generate_look_alikes_result_rule = cls(
+        _kind = d.pop("kind", UNSET)
+        kind: EmailRuleTestedKind | Unset
+        if isinstance(_kind,  Unset):
+            kind = UNSET
+        else:
+            kind = EmailRuleTestedKind(_kind)
+
+
+
+
+        note = d.pop("note", UNSET)
+
+        email_rule_tested = cls(
             id=id,
             version=version,
             vocabulary=vocabulary,
+            kind=kind,
+            note=note,
         )
 
 
-        generate_look_alikes_result_rule.additional_properties = d
-        return generate_look_alikes_result_rule
+        email_rule_tested.additional_properties = d
+        return email_rule_tested
 
     @property
     def additional_keys(self) -> list[str]:

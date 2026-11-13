@@ -16,6 +16,7 @@ const SAMPLE: EmailDetail = {
   sender: "alice@example.com",
   recipient: "support@example.com",
   subject: "Hello",
+  imported: null,
   body_text: "Hi there",
   body_html: "<p>Hi there</p>",
   status: "completed",
@@ -222,5 +223,25 @@ describe("EmailDetail type contract", () => {
     // relay stays nullable with the new field in place.
     const unrelayed: EmailDetail = { ...SAMPLE, relay: null };
     expect(unrelayed.relay?.delivery).toBeUndefined();
+  });
+
+  it("types imported as null for live mail, or where a historical message came from", () => {
+    expect(SAMPLE.imported).toBeNull();
+    const historical: EmailDetail = {
+      ...SAMPLE,
+      imported: {
+        from: "google_workspace",
+        method: "primitive_direct",
+        verification: "provider_fetched",
+        at: "2026-05-01T12:30:00.000Z",
+      },
+    };
+    const parsed = JSON.parse(JSON.stringify(historical)) as EmailDetail;
+    expect(parsed.imported).toEqual({
+      from: "google_workspace",
+      method: "primitive_direct",
+      verification: "provider_fetched",
+      at: "2026-05-01T12:30:00.000Z",
+    });
   });
 });

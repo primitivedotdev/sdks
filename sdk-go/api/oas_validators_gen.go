@@ -386,6 +386,42 @@ func (s *AcceptEmailRuleRequestRequest) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.ConditionsBreadth.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "conditions_breadth",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if s.ExpectationSamples == nil {
 			return nil // optional
 		}
@@ -425,6 +461,16 @@ func (s *AcceptEmailRuleRequestRequest) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s AcceptEmailRuleRequestRequestKind) Validate() error {
+	switch s {
+	case "grant":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
 }
 
 func (s *AcceptEmailRuleRequestResult) Validate() error {
@@ -4664,6 +4710,24 @@ func (s *ChangeInboundMessage) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Imported.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "imported",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.Snippet.Get(); ok {
 			if err := func() error {
 				if err := (validate.String{
@@ -4783,6 +4847,81 @@ func (s ChangeInboundMessageDeliveryReportType) Validate() error {
 func (s ChangeInboundMessageDirection) Validate() error {
 	switch s {
 	case "inbound":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s *ChangeInboundMessageImported) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.From.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "from",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Method.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "method",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Verification.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "verification",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s ChangeInboundMessageImportedFrom) Validate() error {
+	switch s {
+	case "google_workspace":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s ChangeInboundMessageImportedMethod) Validate() error {
+	switch s {
+	case "primitive_direct":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s ChangeInboundMessageImportedVerification) Validate() error {
+	switch s {
+	case "provider_fetched":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -7037,6 +7176,24 @@ func (s *CompileEmailRuleResult) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.Breadth.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -7051,6 +7208,24 @@ func (s *CompileEmailRuleResult) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "breadth",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.ConditionsBreadth.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "conditions_breadth",
 			Error: err,
 		})
 	}
@@ -7076,6 +7251,18 @@ func (s *CompileEmailRuleResult) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s CompileEmailRuleResultKind) Validate() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
 }
 
 func (s *CompileEmailRuleResultSQL) Validate() error {
@@ -8199,6 +8386,24 @@ func (s *ConversationMessage) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Imported.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "imported",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.CopiesTruncated.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -8237,6 +8442,81 @@ func (s ConversationMessageDirection) Validate() error {
 	case "inbound":
 		return nil
 	case "outbound":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s *ConversationMessageImported) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.From.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "from",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Method.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "method",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Verification.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "verification",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s ConversationMessageImportedFrom) Validate() error {
+	switch s {
+	case "google_workspace":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s ConversationMessageImportedMethod) Validate() error {
+	switch s {
+	case "primitive_direct":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s ConversationMessageImportedVerification) Validate() error {
+	switch s {
+	case "provider_fetched":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -9390,6 +9670,24 @@ func (s *CreateEmailRuleRequest) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if value, ok := s.ConditionsBreadth.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "conditions_breadth",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
@@ -9824,10 +10122,56 @@ func (s *CreateEmailRuleRequestRequest) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if value, ok := s.ConditionsBreadth.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "conditions_breadth",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s CreateEmailRuleRequestRequestKind) Validate() error {
+	switch s {
+	case "grant":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
 }
 
 func (s *CreateEmailRuleRequestResult) Validate() error {
@@ -12272,6 +12616,443 @@ func (s *CreateWakeScheduleInput) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s *CreatedEndpoint) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.ReceiverCapabilities.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "receiver_capabilities",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Rules.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "rules",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.OwnerKeyStatus.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "owner_key_status",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Delivery.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "delivery",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.SignedWith.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "signed_with",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *CreatedEndpointDelivery) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Reasons == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "reasons",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.HeldForOwner.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "held_for_owner",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *CreatedEndpointDeliveryHeldForOwner) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           -9007199254740991,
+			MaxSet:        true,
+			Max:           9007199254740991,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+			Pattern:       nil,
+		}).Validate(int64(s.Count)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "count",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s CreatedEndpointKind) Validate() error {
+	switch s {
+	case "http":
+		return nil
+	case "function":
+		return nil
+	case "pull":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s CreatedEndpointOwnerKeyStatus) Validate() error {
+	switch s {
+	case "active":
+		return nil
+	case "suspended":
+		return nil
+	case "revoked":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s *CreatedEndpointReceiverCapabilities) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.CompletionModes == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.CompletionModes {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "completion_modes",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.StreamProtocols == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.StreamProtocols {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "stream_protocols",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s CreatedEndpointReceiverCapabilitiesCompletionModesItem) Validate() error {
+	switch s {
+	case "http":
+		return nil
+	case "exec":
+		return nil
+	case "stdout":
+		return nil
+	case "sdk":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s CreatedEndpointReceiverCapabilitiesStreamProtocolsItem) Validate() error {
+	switch s {
+	case "primitive.events.v1":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s *CreatedEndpointRules) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.EventTypes == nil {
+			return nil // optional
+		}
+		if err := (validate.Array{
+			MinLength:    1,
+			MinLengthSet: true,
+			MaxLength:    50,
+			MaxLengthSet: true,
+		}).ValidateLength(len(s.EventTypes)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.EventTypes {
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     0,
+					MaxLengthSet:  false,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(elem)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "event_types",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.MaxSizeBytes.Get(); ok {
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           0,
+					MaxSet:        true,
+					Max:           9007199254740991,
+					MinExclusive:  true,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "max_size_bytes",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.AttachmentLimitMB.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{
+					MinSet:        true,
+					Min:           0,
+					MaxSet:        false,
+					Max:           0,
+					MinExclusive:  true,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    nil,
+					Pattern:       nil,
+				}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "attachment_limit_mb",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s CreatedEndpointSignedWith) Validate() error {
+	switch s {
+	case "own_secret":
+		return nil
+	case "organization_secret":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
 }
 
 func (s *CredentialsCreateKeyInput) Validate() error {
@@ -20504,6 +21285,24 @@ func (s *EmailDetail) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Imported.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "imported",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.Snippet.Get(); ok {
 			if err := func() error {
 				if err := (validate.String{
@@ -20709,6 +21508,81 @@ func (s EmailDetailDeliveryReportType) Validate() error {
 	case "transient":
 		return nil
 	case "undetermined":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s *EmailDetailImported) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.From.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "from",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Method.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "method",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Verification.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "verification",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s EmailDetailImportedFrom) Validate() error {
+	switch s {
+	case "google_workspace":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s EmailDetailImportedMethod) Validate() error {
+	switch s {
+	case "primitive_direct":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s EmailDetailImportedVerification) Validate() error {
+	switch s {
+	case "provider_fetched":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -20946,6 +21820,24 @@ func (s *EmailReadable) Validate() error {
 	}
 
 	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.Imported.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "imported",
+			Error: err,
+		})
+	}
 	if err := func() error {
 		if value, ok := s.ParseStatus.Get(); ok {
 			if err := func() error {
@@ -21242,6 +22134,81 @@ func (s EmailReadableBodySource) Validate() error {
 	case "text":
 		return nil
 	case "none":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s *EmailReadableImported) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.From.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "from",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Method.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "method",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Verification.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "verification",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s EmailReadableImportedFrom) Validate() error {
+	switch s {
+	case "google_workspace":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s EmailReadableImportedMethod) Validate() error {
+	switch s {
+	case "primitive_direct":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s EmailReadableImportedVerification) Validate() error {
+	switch s {
+	case "provider_fetched":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -22877,6 +23844,34 @@ func (s *EmailRuleReceiversWebhooksItem) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if value, ok := s.HostsNotListed.Get(); ok {
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           0,
+					MaxSet:        false,
+					Max:           0,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "hosts_not_listed",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
@@ -23804,6 +24799,76 @@ func (s EmailRuleState) Validate() error {
 	case "observe":
 		return nil
 	case "active":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s *EmailRuleTested) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.Version.Get(); ok {
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           0,
+					MaxSet:        false,
+					Max:           0,
+					MinExclusive:  true,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "version",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s EmailRuleTestedKind) Validate() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -25148,6 +26213,24 @@ func (s *EmailSearchResult) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Imported.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "imported",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.Snippet.Get(); ok {
 			if err := func() error {
 				if err := (validate.String{
@@ -25323,6 +26406,81 @@ func (s EmailSearchResultDirection) Validate() error {
 	case "inbound":
 		return nil
 	case "outbound":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s *EmailSearchResultImported) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.From.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "from",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Method.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "method",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Verification.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "verification",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s EmailSearchResultImportedFrom) Validate() error {
+	switch s {
+	case "google_workspace":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s EmailSearchResultImportedMethod) Validate() error {
+	switch s {
+	case "primitive_direct":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s EmailSearchResultImportedVerification) Validate() error {
+	switch s {
+	case "provider_fetched":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -25781,6 +26939,24 @@ func (s *EmailSummary) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Imported.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "imported",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.Snippet.Get(); ok {
 			if err := func() error {
 				if err := (validate.String{
@@ -25879,6 +27055,81 @@ func (s EmailSummaryDeliveryReportType) Validate() error {
 	case "transient":
 		return nil
 	case "undetermined":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s *EmailSummaryImported) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.From.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "from",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Method.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "method",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Verification.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "verification",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s EmailSummaryImportedFrom) Validate() error {
+	switch s {
+	case "google_workspace":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s EmailSummaryImportedMethod) Validate() error {
+	switch s {
+	case "primitive_direct":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s EmailSummaryImportedVerification) Validate() error {
+	switch s {
+	case "provider_fetched":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -26939,6 +28190,8 @@ func (s ErrorResponseErrorCode) Validate() error {
 		return nil
 	case "builtin_role":
 		return nil
+	case "chunk_size_mismatch":
+		return nil
 	case "chunk_too_large":
 		return nil
 	case "chunks_missing":
@@ -27106,6 +28359,8 @@ func (s ErrorResponseErrorCode) Validate() error {
 	case "invalid_cursor":
 		return nil
 	case "invalid_email":
+		return nil
+	case "invalid_manifest":
 		return nil
 	case "invalid_payload_reference":
 		return nil
@@ -29107,46 +30362,6 @@ func (s *GenerateLookAlikesResultCounts) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "dropped",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s *GenerateLookAlikesResultRule) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if value, ok := s.Version.Get(); ok {
-			if err := func() error {
-				if err := (validate.Int{
-					MinSet:        true,
-					Min:           0,
-					MaxSet:        false,
-					Max:           0,
-					MinExclusive:  true,
-					MaxExclusive:  false,
-					MultipleOfSet: false,
-					MultipleOf:    0,
-					Pattern:       nil,
-				}).Validate(int64(value)); err != nil {
-					return errors.Wrap(err, "int")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "version",
 			Error: err,
 		})
 	}
@@ -41604,6 +42819,24 @@ func (s *ListEmailRuleShareEmailsResultItem) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if value, ok := s.Imported.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "imported",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.DeliveryReport.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -42007,6 +43240,81 @@ func (s *ListEmailRuleShareEmailsResultItemHighlights) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s *ListEmailRuleShareEmailsResultItemImported) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.From.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "from",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Method.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "method",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Verification.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "verification",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s ListEmailRuleShareEmailsResultItemImportedFrom) Validate() error {
+	switch s {
+	case "google_workspace":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s ListEmailRuleShareEmailsResultItemImportedMethod) Validate() error {
+	switch s {
+	case "primitive_direct":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s ListEmailRuleShareEmailsResultItemImportedVerification) Validate() error {
+	switch s {
+	case "provider_fetched":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
 }
 
 func (s ListEmailRuleShareEmailsResultItemInteractionHint) Validate() error {
@@ -70019,46 +71327,6 @@ func (s *TestEmailRuleOnSampleResultQuestionAnswersItem) Validate() error {
 	return nil
 }
 
-func (s *TestEmailRuleOnSampleResultRule) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if value, ok := s.Version.Get(); ok {
-			if err := func() error {
-				if err := (validate.Int{
-					MinSet:        true,
-					Min:           0,
-					MaxSet:        false,
-					Max:           0,
-					MinExclusive:  true,
-					MaxExclusive:  false,
-					MultipleOfSet: false,
-					MultipleOf:    0,
-					Pattern:       nil,
-				}).Validate(int64(value)); err != nil {
-					return errors.Wrap(err, "int")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "version",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
 func (s TestEmailRuleOnSampleResultValues) Validate() error {
 	var failures []validate.FieldError
 	for key, elem := range s {
@@ -71516,46 +72784,6 @@ func (s TestEmailRuleResultResultsItemValuesItemValueConfidences) Validate() err
 		}
 	}
 
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s *TestEmailRuleResultRule) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if value, ok := s.Version.Get(); ok {
-			if err := func() error {
-				if err := (validate.Int{
-					MinSet:        true,
-					Min:           0,
-					MaxSet:        false,
-					Max:           0,
-					MinExclusive:  true,
-					MaxExclusive:  false,
-					MultipleOfSet: false,
-					MultipleOf:    0,
-					Pattern:       nil,
-				}).Validate(int64(value)); err != nil {
-					return errors.Wrap(err, "int")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "version",
-			Error: err,
-		})
-	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
@@ -74095,6 +75323,42 @@ func (s *UpdateEmailRuleRequest) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.ConditionsBreadth.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "conditions_breadth",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.EvaluationScope.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -74381,6 +75645,18 @@ func (s *UpdateEmailRuleRequestExpectations) Validate() error {
 	return nil
 }
 
+func (s UpdateEmailRuleRequestKind) Validate() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
 func (s UpdateEmailRuleRequestState) Validate() error {
 	switch s {
 	case "draft":
@@ -74393,6 +75669,14 @@ func (s UpdateEmailRuleRequestState) Validate() error {
 		// Added to the API after this client was generated.
 		return nil
 	}
+}
+
+func (s *UpdateEmailRuleServiceUnavailable) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *UpdateEmailRuleTooManyRequests) Validate() error {
@@ -78706,6 +79990,15 @@ func (s *WithdrawEmailRuleRequestUnauthorized) Validate() error {
 	return nil
 }
 
+func (s AcceptEmailRuleRequestRequestKind) validateKnown() error {
+	switch s {
+	case "grant":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s AddDefaultNetworkMemberOKCacheControl) validateKnown() error {
 	switch s {
 	case "no-store":
@@ -79014,6 +80307,33 @@ func (s ChangeInboundMessageDirection) validateKnown() error {
 	}
 }
 
+func (s ChangeInboundMessageImportedFrom) validateKnown() error {
+	switch s {
+	case "google_workspace":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ChangeInboundMessageImportedMethod) validateKnown() error {
+	switch s {
+	case "primitive_direct":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ChangeInboundMessageImportedVerification) validateKnown() error {
+	switch s {
+	case "provider_fetched":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s ChangeInboundMessageParseStatus) validateKnown() error {
 	switch s {
 	case "pending":
@@ -79266,6 +80586,17 @@ func (s CompileEmailRuleRequestKind) validateKnown() error {
 	}
 }
 
+func (s CompileEmailRuleResultKind) validateKnown() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s CompleteWebhookExecInputMode) validateKnown() error {
 	switch s {
 	case "exec":
@@ -79410,6 +80741,33 @@ func (s ConversationMessageDirection) validateKnown() error {
 	}
 }
 
+func (s ConversationMessageImportedFrom) validateKnown() error {
+	switch s {
+	case "google_workspace":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ConversationMessageImportedMethod) validateKnown() error {
+	switch s {
+	case "primitive_direct":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ConversationMessageImportedVerification) validateKnown() error {
+	switch s {
+	case "provider_fetched":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s ConversationMessageRole) validateKnown() error {
 	switch s {
 	case "user":
@@ -79468,6 +80826,15 @@ func (s CreateEmailRuleRequestKind) validateKnown() error {
 	case "grant":
 		return nil
 	case "do_not_share":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s CreateEmailRuleRequestRequestKind) validateKnown() error {
+	switch s {
+	case "grant":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -79614,6 +80981,67 @@ func (s CreateRouteInputMatchType) validateKnown() error {
 	case "wildcard":
 		return nil
 	case "regex":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s CreatedEndpointKind) validateKnown() error {
+	switch s {
+	case "http":
+		return nil
+	case "function":
+		return nil
+	case "pull":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s CreatedEndpointOwnerKeyStatus) validateKnown() error {
+	switch s {
+	case "active":
+		return nil
+	case "suspended":
+		return nil
+	case "revoked":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s CreatedEndpointReceiverCapabilitiesCompletionModesItem) validateKnown() error {
+	switch s {
+	case "http":
+		return nil
+	case "exec":
+		return nil
+	case "stdout":
+		return nil
+	case "sdk":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s CreatedEndpointReceiverCapabilitiesStreamProtocolsItem) validateKnown() error {
+	switch s {
+	case "primitive.events.v1":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s CreatedEndpointSignedWith) validateKnown() error {
+	switch s {
+	case "own_secret":
+		return nil
+	case "organization_secret":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -80583,6 +82011,33 @@ func (s EmailDetailDeliveryReportType) validateKnown() error {
 	}
 }
 
+func (s EmailDetailImportedFrom) validateKnown() error {
+	switch s {
+	case "google_workspace":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s EmailDetailImportedMethod) validateKnown() error {
+	switch s {
+	case "primitive_direct":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s EmailDetailImportedVerification) validateKnown() error {
+	switch s {
+	case "provider_fetched":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s EmailDetailParseStatus) validateKnown() error {
 	switch s {
 	case "pending":
@@ -80605,6 +82060,33 @@ func (s EmailReadableBodySource) validateKnown() error {
 	case "text":
 		return nil
 	case "none":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s EmailReadableImportedFrom) validateKnown() error {
+	switch s {
+	case "google_workspace":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s EmailReadableImportedMethod) validateKnown() error {
+	switch s {
+	case "primitive_direct":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s EmailReadableImportedVerification) validateKnown() error {
+	switch s {
+	case "provider_fetched":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -81004,6 +82486,17 @@ func (s EmailRuleState) validateKnown() error {
 	}
 }
 
+func (s EmailRuleTestedKind) validateKnown() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s EmailRuleTreeInputVersion) validateKnown() error {
 	switch s {
 	case 1:
@@ -81166,6 +82659,33 @@ func (s EmailSearchResultDirection) validateKnown() error {
 	}
 }
 
+func (s EmailSearchResultImportedFrom) validateKnown() error {
+	switch s {
+	case "google_workspace":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s EmailSearchResultImportedMethod) validateKnown() error {
+	switch s {
+	case "primitive_direct":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s EmailSearchResultImportedVerification) validateKnown() error {
+	switch s {
+	case "provider_fetched":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s EmailSearchResultParseStatus) validateKnown() error {
 	switch s {
 	case "pending":
@@ -81247,6 +82767,33 @@ func (s EmailSummaryDeliveryReportType) validateKnown() error {
 	case "transient":
 		return nil
 	case "undetermined":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s EmailSummaryImportedFrom) validateKnown() error {
+	switch s {
+	case "google_workspace":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s EmailSummaryImportedMethod) validateKnown() error {
+	switch s {
+	case "primitive_direct":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s EmailSummaryImportedVerification) validateKnown() error {
+	switch s {
+	case "provider_fetched":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -81592,6 +83139,8 @@ func (s ErrorResponseErrorCode) validateKnown() error {
 		return nil
 	case "builtin_role":
 		return nil
+	case "chunk_size_mismatch":
+		return nil
 	case "chunk_too_large":
 		return nil
 	case "chunks_missing":
@@ -81759,6 +83308,8 @@ func (s ErrorResponseErrorCode) validateKnown() error {
 	case "invalid_cursor":
 		return nil
 	case "invalid_email":
+		return nil
+	case "invalid_manifest":
 		return nil
 	case "invalid_payload_reference":
 		return nil
@@ -83273,6 +84824,33 @@ func (s ListEmailRuleShareEmailsResultItemDeliveryReportType) validateKnown() er
 	case "transient":
 		return nil
 	case "undetermined":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ListEmailRuleShareEmailsResultItemImportedFrom) validateKnown() error {
+	switch s {
+	case "google_workspace":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ListEmailRuleShareEmailsResultItemImportedMethod) validateKnown() error {
+	switch s {
+	case "primitive_direct":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ListEmailRuleShareEmailsResultItemImportedVerification) validateKnown() error {
+	switch s {
+	case "provider_fetched":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -86094,6 +87672,17 @@ func (s UpdateEmailRuleRequestEvaluationScope) validateKnown() error {
 	case "own_mailboxes":
 		return nil
 	case "selected":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s UpdateEmailRuleRequestKind) validateKnown() error {
+	switch s {
+	case "grant":
+		return nil
+	case "do_not_share":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)

@@ -125,9 +125,10 @@ def sync_detailed(
     columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
     after the conditions match; they read the subject, the new text and attachment file names, never
     attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
-    much of your recent classified mail its conditions match. include_sql returns the SQL it renders to.
-    kind do_not_share compiles for recall. Needs mail:read, a member's own credential with their full
-    access (not an API key, agent key or narrowed token), and the email rules feature.
+    much of your recent classified mail its conditions match; for a grant rule with questions,
+    conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind
+    do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-
+    access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -168,9 +169,10 @@ def sync(
     columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
     after the conditions match; they read the subject, the new text and attachment file names, never
     attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
-    much of your recent classified mail its conditions match. include_sql returns the SQL it renders to.
-    kind do_not_share compiles for recall. Needs mail:read, a member's own credential with their full
-    access (not an API key, agent key or narrowed token), and the email rules feature.
+    much of your recent classified mail its conditions match; for a grant rule with questions,
+    conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind
+    do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-
+    access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -206,9 +208,10 @@ async def asyncio_detailed(
     columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
     after the conditions match; they read the subject, the new text and attachment file names, never
     attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
-    much of your recent classified mail its conditions match. include_sql returns the SQL it renders to.
-    kind do_not_share compiles for recall. Needs mail:read, a member's own credential with their full
-    access (not an API key, agent key or narrowed token), and the email rules feature.
+    much of your recent classified mail its conditions match; for a grant rule with questions,
+    conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind
+    do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-
+    access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -249,9 +252,10 @@ async def asyncio(
     columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
     after the conditions match; they read the subject, the new text and attachment file names, never
     attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
-    much of your recent classified mail its conditions match. include_sql returns the SQL it renders to.
-    kind do_not_share compiles for recall. Needs mail:read, a member's own credential with their full
-    access (not an API key, agent key or narrowed token), and the email rules feature.
+    much of your recent classified mail its conditions match; for a grant rule with questions,
+    conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind
+    do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-
+    access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):

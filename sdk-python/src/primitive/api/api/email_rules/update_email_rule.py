@@ -93,6 +93,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_429
 
+    if response.status_code == 503:
+        response_503 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_503
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -124,9 +131,10 @@ def sync_detailed(
     shared only if they manage members from the dashboard. A scope change saves a new version; a shared
     rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version
     refuses a write once a version was saved since you read it; if_revision, once anything changed.
-    Without if_expectations_pass a version is saved even when its expectations fail. Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    Without if_expectations_pass a version is saved even when its expectations fail, except on an active
+    rule keys or webhooks read: that write is checked first unless if_expectations_pass is false. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -169,9 +177,10 @@ def sync(
     shared only if they manage members from the dashboard. A scope change saves a new version; a shared
     rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version
     refuses a write once a version was saved since you read it; if_revision, once anything changed.
-    Without if_expectations_pass a version is saved even when its expectations fail. Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    Without if_expectations_pass a version is saved even when its expectations fail, except on an active
+    rule keys or webhooks read: that write is checked first unless if_expectations_pass is false. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -209,9 +218,10 @@ async def asyncio_detailed(
     shared only if they manage members from the dashboard. A scope change saves a new version; a shared
     rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version
     refuses a write once a version was saved since you read it; if_revision, once anything changed.
-    Without if_expectations_pass a version is saved even when its expectations fail. Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    Without if_expectations_pass a version is saved even when its expectations fail, except on an active
+    rule keys or webhooks read: that write is checked first unless if_expectations_pass is false. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -254,9 +264,10 @@ async def asyncio(
     shared only if they manage members from the dashboard. A scope change saves a new version; a shared
     rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version
     refuses a write once a version was saved since you read it; if_revision, once anything changed.
-    Without if_expectations_pass a version is saved even when its expectations fail. Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    Without if_expectations_pass a version is saved even when its expectations fail, except on an active
+    rule keys or webhooks read: that write is checked first unless if_expectations_pass is false. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):

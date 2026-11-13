@@ -28,14 +28,13 @@ class EmailRuleReceivers:
     """ Who receives what the rule shares now, by person and count; empty unless it is an active grant rule.
 
         Attributes:
-            keys (list[EmailRuleReceiversKeysItem]): API keys that work now (not revoked, expired or suspended) whose access
-                lists the rule, or its live share: they read what it matches. Owner: the member who holds each, or the
-                organization.
-            webhooks (list[EmailRuleReceiversWebhooksItem]): Webhooks that are sent what it matches: those whose key, as
-                delivery acts as it, lists the rule or its live share (owner: the member who holds that key, or the
-                organization), and the webhooks of the member the rule is shared with (owner: that member).
-            shares (list[EmailRuleReceiversSharesItem]): The rule's live share, if it has one (a rule is shared at most
-                once): the member it gives what it matches to.
+            keys (list[EmailRuleReceiversKeysItem]): API keys that work now (not revoked, expired or suspended) and hold
+                mail:read, whose access lists the rule or its live share. Owner: who holds each, or the organization.
+            webhooks (list[EmailRuleReceiversWebhooksItem]): Webhooks taking received mail, bounces or reports that are sent
+                what it matches: those of the key delivery acts as, when it lists the rule or its live share (owner: its holder,
+                or the organization), and those of the member it is shared with (owner: that member).
+            shares (list[EmailRuleReceiversSharesItem]): The rule's live share (at most one), by its member, if they can
+                read it and it is among their newest 20 shares.
      """
 
     keys: list[EmailRuleReceiversKeysItem]

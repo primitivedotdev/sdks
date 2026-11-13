@@ -118,9 +118,9 @@ def sync_detailed(
     active for a do_not_share rule. You are its author, and it never reaches mail you cannot read.
     evaluation_scope is own_mailboxes unless you name author or selected (scope_selection names only
     what you can read). expectations are judged in expectations_check. kind do_not_share blocks sharing
-    what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, the
+    email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
+    token).
 
     Args:
         idempotency_key (str | Unset):
@@ -161,9 +161,9 @@ def sync(
     active for a do_not_share rule. You are its author, and it never reaches mail you cannot read.
     evaluation_scope is own_mailboxes unless you name author or selected (scope_selection names only
     what you can read). expectations are judged in expectations_check. kind do_not_share blocks sharing
-    what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, the
+    email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
+    token).
 
     Args:
         idempotency_key (str | Unset):
@@ -199,9 +199,9 @@ async def asyncio_detailed(
     active for a do_not_share rule. You are its author, and it never reaches mail you cannot read.
     evaluation_scope is own_mailboxes unless you name author or selected (scope_selection names only
     what you can read). expectations are judged in expectations_check. kind do_not_share blocks sharing
-    what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, the
+    email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
+    token).
 
     Args:
         idempotency_key (str | Unset):
@@ -242,9 +242,9 @@ async def asyncio(
     active for a do_not_share rule. You are its author, and it never reaches mail you cannot read.
     evaluation_scope is own_mailboxes unless you name author or selected (scope_selection names only
     what you can read). expectations are judged in expectations_check. kind do_not_share blocks sharing
-    what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, the
+    email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
+    token).
 
     Args:
         idempotency_key (str | Unset):

@@ -91,6 +91,7 @@ function replyEmail(overrides: Partial<EmailDetail> = {}): EmailDetail {
     thread_id: "33333333-3333-4333-8333-333333333333",
     to_email: "agent@sender.example",
     webhook_attempt_count: 1,
+    imported: null,
     webhook_status: "fired",
     parsed: {
       status: "complete",

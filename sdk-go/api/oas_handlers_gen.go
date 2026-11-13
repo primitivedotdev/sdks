@@ -37,8 +37,8 @@ func (c *codeRecorder) Unwrap() http.ResponseWriter {
 //
 // Accepts a pending objection to a rule you wrote: turns the rule off (state draft), as updating it
 // would, and records the objection accepted, together. You can turn the rule on again later. Needs
-// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-// token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 //
 // POST /email-rule-objections/{id}/accept
 func (s *Server) handleAcceptEmailRuleObjectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -238,9 +238,8 @@ func (s *Server) handleAcceptEmailRuleObjectionRequest(args [1]string, argsEscap
 // to POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree
 // to POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST
 // /v1/email-rules/look-alikes with request_id); neither stores anything. expectation_samples are
-// kept on the rule it writes. Accepting also needs mail:share_own. Needs mail:read, a member's own
-// credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature.
+// kept on the rule it writes. Accepting also needs mail:share_own. Needs mail:read, the email rules
+// feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // POST /email-rule-requests/{id}/accept
 func (s *Server) handleAcceptEmailRuleRequestRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -3766,8 +3765,8 @@ func (s *Server) handleCheckDomainDnsRequest(args [1]string, argsEscaped bool, w
 // not, which permission their role lacks. Nothing is sent and nothing is recorded. Needs
 // members:read, as listing members and their roles does. At most 60 checks an hour. Name them by
 // user id, or by their member mailbox address or verified work email (counted with asking: at most
-// 30 lookups by address an hour). Needs mail:read, a member's own credential with their full access
-// (not an API key, agent key or narrowed token), and the email rules feature.
+// 30 lookups by address an hour). Needs mail:read, the email rules feature, and a member's own
+// full-access credential (no API key, agent key or narrowed token).
 //
 // POST /email-rule-requests/target-check
 func (s *Server) handleCheckEmailRuleRequestTargetRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -4946,10 +4945,10 @@ func (s *Server) handleCliLogoutRequest(args [0]string, argsEscaped bool, w http
 // what the columns cannot express. Where the columns fall short it adds up to five yes/no questions,
 // asked only after the conditions match; they read the subject, the new text and attachment file
 // names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts,
-// read only, how much of your recent classified mail its conditions match. include_sql returns the
-// SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, a member's own
-// credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature.
+// read only, how much of your recent classified mail its conditions match; for a grant rule with
+// questions, conditions_breadth counts its conditions alone. include_sql returns the SQL it renders
+// to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a
+// member's own full-access credential (no API key, agent key or narrowed token).
 //
 // POST /email-rules/compile
 func (s *Server) handleCompileEmailRuleRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -5960,8 +5959,8 @@ func (s *Server) handleCreateAgentConnectionRequest(args [0]string, argsEscaped 
 // evaluation_scope is own_mailboxes unless you name author or selected (scope_selection names only
 // what you can read). expectations are judged in expectations_check. kind do_not_share blocks
 // sharing what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs
-// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-// token), and the email rules feature.
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token).
 //
 // POST /email-rules
 func (s *Server) handleCreateEmailRuleRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -6169,9 +6168,9 @@ func (s *Server) handleCreateEmailRuleRequest(args [0]string, argsEscaped bool, 
 // and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines
 // it, or the member who made it withdraws it, which clears its message. It never changes after that.
 // You may have one pending objection per rule and 50 in all, and object to the same rule again only
-// 10 minutes after you last did, whatever became of it. Needs mail:read, a member's own credential
-// with their full access (not an API key, agent key or narrowed token), and the email rules feature.
-// Only on your own dashboard session or the Primitive CLI.
+// 10 minutes after you last did, whatever became of it. Needs mail:read, the email rules feature,
+// and a member's own full-access credential (no API key, agent key or narrowed token). Only on your
+// own dashboard session or the Primitive CLI.
 //
 // POST /email-rule-objections
 func (s *Server) handleCreateEmailRuleObjectionRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -6379,9 +6378,9 @@ func (s *Server) handleCreateEmailRuleObjectionRequest(args [0]string, argsEscap
 // or shared until they accept, and they may change the rule first. A message (up to 500 characters,
 // fixed once sent) tells them why you ask. At most 5 pending requests to one member and 50 in all.
 // With members:read the answer says whether they can accept it under their role (target_can_accept,
-// target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, a
-// member's own credential with their full access (not an API key, agent key or narrowed token), and
-// the email rules feature.
+// target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, the
+// email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
+// token).
 //
 // POST /email-rule-requests
 func (s *Server) handleCreateEmailRuleRequestRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -9624,9 +9623,8 @@ func (s *Server) handleDecideSuspensionRequest(args [1]string, argsEscaped bool,
 // handleDeclineEmailRuleObjectionRequest handles declineEmailRuleObjection operation.
 //
 // Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is.
-// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-// narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive
-// CLI.
+// Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+// agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 //
 // POST /email-rule-objections/{id}/decline
 func (s *Server) handleDeclineEmailRuleObjectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -9834,8 +9832,8 @@ func (s *Server) handleDeclineEmailRuleObjectionRequest(args [1]string, argsEsca
 //
 // Declines a pending request made to you. Nothing is written but the decision and, if you give one,
 // its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs
-// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-// token), and the email rules feature.
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token).
 //
 // POST /email-rule-requests/{id}/decline
 func (s *Server) handleDeclineEmailRuleRequestRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -11040,8 +11038,8 @@ func (s *Server) handleDeleteEmailRequest(args [1]string, argsEscaped bool, w ht
 // answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which
 // now read nothing through it (keys, other_keys; left out when they could not be read). The author
 // or a reader of all the organization's mail may delete it; while it is shared, only the author or
-// someone who manages members from the dashboard. Needs mail:read, a member's own credential with
-// their full access (not an API key, agent key or narrowed token), and the email rules feature.
+// someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a
+// member's own full-access credential (no API key, agent key or narrowed token).
 //
 // DELETE /email-rules/{id}
 func (s *Server) handleDeleteEmailRuleRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -11228,9 +11226,8 @@ func (s *Server) handleDeleteEmailRuleRequest(args [1]string, argsEscaped bool, 
 
 // handleDeleteEmailRuleRequestRequest handles deleteEmailRuleRequest operation.
 //
-// Deletes a request you withdrew, for everyone who could see it. Needs mail:read, a member's own
-// credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature.
+// Deletes a request you withdrew, for everyone who could see it. Needs mail:read, the email rules
+// feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // DELETE /email-rule-requests/{id}
 func (s *Server) handleDeleteEmailRuleRequestRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -16727,9 +16724,8 @@ func (s *Server) handleEndEmailRuleShareRequest(args [1]string, argsEscaped bool
 // should match (expected match, kind other). failed means the rule decided one against expected.
 // Nothing is stored and no mail is read. Keep them, with their expected, with
 // add_expectation_samples, or for a request with the accept's expectation_samples. Limited to 20 an
-// hour per member. Needs mail:read, a member's own credential with their full access (not an API key,
-//
-//	agent key or narrowed token), and the email rules feature.
+// hour per member. Needs mail:read, the email rules feature, and a member's own full-access
+// credential (no API key, agent key or narrowed token).
 //
 // POST /email-rules/look-alikes
 func (s *Server) handleGenerateLookAlikesRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -19872,8 +19868,8 @@ func (s *Server) handleGetEmailReadableRequest(args [1]string, argsEscaped bool,
 // and its saved expectations. The current version's text (english, tree, explanation, assumptions,
 // warnings) is under current, and current_version is its number. What the scope comes to for its
 // author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when
-// include_sql is true. Needs mail:read, a member's own credential with their full access (not an API
-// key, agent key or narrowed token), and the email rules feature.
+// include_sql is true. Needs mail:read, the email rules feature, and a member's own full-access
+// credential (no API key, agent key or narrowed token).
 //
 // GET /email-rules/{id}
 func (s *Server) handleGetEmailRuleRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -20070,11 +20066,11 @@ func (s *Server) handleGetEmailRuleRequest(args [1]string, argsEscaped bool, w h
 // state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown
 // as written, so they can name other addresses (a condition on who an email is from or to). While it
 // covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and
-// shares, and the member each belongs to, or the organization. You do not see which keys, webhooks
-// or shares they are (no ids, names, prefixes or URLs), the other inboxes and domains its scope
-// names, or its saved expectations. Needs mail:read, a member's own credential with their full
-// access (not an API key, agent key or narrowed token), and the email rules feature. Only on your
-// own dashboard session or the Primitive CLI.
+// shares, the member each belongs to (or the organization), and the sites the webhooks deliver to.
+// You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond
+// the site), the other inboxes and domains its scope names, or its saved expectations. Needs
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 //
 // GET /email-rules/covering-me/{id}
 func (s *Server) handleGetEmailRuleCoveringMeRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -20264,9 +20260,9 @@ func (s *Server) handleGetEmailRuleCoveringMeRequest(args [1]string, argsEscaped
 // One objection you can see. An objection is seen by the member who made it, the rule's author and
 // the organization's owners and admins. It stays pending until the rule's author accepts it, turning
 // the rule off, or declines it, or the member who made it withdraws it, which clears its message. It
-// never changes after that. Needs mail:read, a member's own credential with their full access (not
-// an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard
-// session or the Primitive CLI.
+// never changes after that. Needs mail:read, the email rules feature, and a member's own full-access
+// credential (no API key, agent key or narrowed token). Only on your own dashboard session or the
+// Primitive CLI.
 //
 // GET /email-rule-objections/{id}
 func (s *Server) handleGetEmailRuleObjectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -20459,9 +20455,8 @@ func (s *Server) handleGetEmailRuleObjectionRequest(args [1]string, argsEscaped 
 // before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have
 // received. To try it on an email that has not arrived, pass the request's tree to POST
 // /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST
-// /v1/email-rules/look-alikes with request_id); neither stores anything. Needs mail:read, a member's
-// own credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature.
+// /v1/email-rules/look-alikes with request_id); neither stores anything. Needs mail:read, the email
+// rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // GET /email-rule-requests/{id}
 func (s *Server) handleGetEmailRuleRequestRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -20650,8 +20645,8 @@ func (s *Server) handleGetEmailRuleRequestRequest(args [1]string, argsEscaped bo
 //
 // Whose mail the rule runs over, and what that comes to now: a rule never reaches further than what
 // its author can read when it runs, so what a selected rule names and its author can no longer read
-// stops matching. Needs mail:read, a member's own credential with their full access (not an API key,
-// agent key or narrowed token), and the email rules feature.
+// stops matching. Needs mail:read, the email rules feature, and a member's own full-access
+// credential (no API key, agent key or narrowed token).
 //
 // GET /email-rules/{id}/scope
 func (s *Server) handleGetEmailRuleScopeRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -20838,8 +20833,8 @@ func (s *Server) handleGetEmailRuleScopeRequest(args [1]string, argsEscaped bool
 
 // handleGetEmailRuleShareRequest handles getEmailRuleShare operation.
 //
-// One share. Needs mail:read, a member's own credential with their full access (not an API key,
-// agent key or narrowed token), and the email rules feature.
+// One share. Needs mail:read, the email rules feature, and a member's own full-access credential (no
+// API key, agent key or narrowed token).
 //
 // GET /email-rule-shares/{id}
 func (s *Server) handleGetEmailRuleShareRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -21029,9 +21024,9 @@ func (s *Server) handleGetEmailRuleShareRequest(args [1]string, argsEscaped bool
 // What a rule tree you write yourself can say: each column of the current vocabulary with its type,
 // source, meaning, operators and the value each takes, options, and whether it takes min_confidence;
 // and the tree's limits, its stored size included. Built from the checks a saved or tested tree must
-// pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read, a
-// member's own credential with their full access (not an API key, agent key or narrowed token), and
-// the email rules feature.
+// pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read,
+// the email rules feature, and a member's own full-access credential (no API key, agent key or
+// narrowed token).
 //
 // GET /email-rules/vocabulary
 func (s *Server) handleGetEmailRuleVocabularyRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -23865,10 +23860,11 @@ func (s *Server) handleGetInteractionRequest(args [1]string, argsEscaped bool, w
 // mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a
 // domain, otherwise content. A rule the key lists that reads nothing any more (a deleted rule, or a
 // share that ended) is listed under grant.mail_scope.ended_rules, each with its id and reason
-// (rule_deleted or share_ended), and not under rules. The person needs access to the whole
-// organization's mail. Needs the organization's credential features to be enabled; while they are
-// not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive
-// to turn them on.
+// (rule_deleted or share_ended), and not under rules. grant.mail_scope.rule_versions gives each rule
+// it lists directly its current_version, state and version_saved_at. The person needs access to the
+// whole organization's mail. Needs the organization's credential features to be enabled; while they
+// are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact
+// Primitive to turn them on.
 // Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
 // person's role must hold keys:read. API keys, agent connection keys and agents are refused.
 //
@@ -26396,9 +26392,10 @@ func (s *Server) handleGetPublicAddressNoteRequest(args [2]string, argsEscaped b
 // handleGetRelayAutoJoinRequest handles getRelayAutoJoin operation.
 //
 // Whether someone who proves an address on the organization's mail relay domain with Google
-// Workspace joins automatically, and with what access. `option` is null when auto-join is off and an
-// invitation is required; `options` lists the choices. Answers 404 `feature_disabled` unless the
-// organization has mail relay.
+// Workspace joins automatically. Auto-joined people have no mail access until an owner or admin
+// assigns a role. `option` is null when auto-join is off and an invitation is required; legacy
+// mail-grant settings read as `no_access`. `options` lists the choices. Answers 404
+// `feature_disabled` unless the organization has mail relay.
 //
 // GET /relay-auto-join
 func (s *Server) handleGetRelayAutoJoinRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -30037,7 +30034,10 @@ func (s *Server) handleLeaveOrganizationRequest(args [0]string, argsEscaped bool
 // mailboxes or saved a new version while covering it, named as the rule was then, naming its author
 // in created_through, under their current membership; only on the dashboard or the Primitive CLI. A
 // key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads
-// as ended.
+// as ended. Notices are written by a periodic job and can lag: until the notices record a rule
+// starting to cover you, the first page lists that rule as pending (pending_complete says whether
+// that check finished), and as_of says about when the notices last looked. For what covers you now,
+// read GET /email-rules/covering-me.
 //
 // GET /activity/objects
 func (s *Server) handleListActivityObjectsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -33456,9 +33456,8 @@ func (s *Server) handleListEmailAttachmentArchiveMembersRequest(args [2]string, 
 // What the rule decided for each email it was evaluated against, newest first: whether it matched,
 // whether it nearly did, how each part decided and the answers to its questions, with which email it
 // was (from_address, subject, received_at). Only decisions on emails the caller can read are listed.
-// With matched, only matches (true) or only the rest (false). Needs mail:read, a member's own
-// credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature.
+// With matched, only matches (true) or only the rest (false). Needs mail:read, the email rules
+// feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // GET /email-rules/{id}/decisions
 func (s *Server) handleListEmailRuleDecisionsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -33660,9 +33659,10 @@ func (s *Server) handleListEmailRuleDecisionsRequest(args [1]string, argsEscaped
 // What a rule that covers your mailboxes, or decided on your mail, decided about mail at your own
 // mailboxes, newest first: never about anyone else's mail. Each decision is in the words of the
 // version that made it, which can be earlier than the current one: the questions it asked about that
-// email (question_answers) and the columns its conditions read (parts). Needs mail:read, a member's
-// own credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature. Only on your own dashboard session or the Primitive CLI.
+// email (question_answers) and the columns its conditions read (parts). Needs mail:read, the email
+// rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+//
+//	Only on your own dashboard session or the Primitive CLI.
 //
 // GET /email-rules/covering-me/{id}/decisions
 func (s *Server) handleListEmailRuleDecisionsOnMyMailRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -33865,9 +33865,8 @@ func (s *Server) handleListEmailRuleDecisionsOnMyMailRequest(args [1]string, arg
 // An objection is seen by the member who made it, the rule's author and the organization's owners
 // and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines
 // it, or the member who made it withdraws it, which clears its message. It never changes after that.
-// Needs mail:read, a member's own credential with their full access (not an API key, agent key or
-// narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive
-// CLI.
+// Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+// agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 //
 // GET /email-rule-objections
 func (s *Server) handleListEmailRuleObjectionsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -34071,9 +34070,8 @@ func (s *Server) handleListEmailRuleObjectionsRequest(args [0]string, argsEscape
 //
 //	declined and withdrawn ones, and any lists both. A request is visible to the member who made it,
 //
-// the member it was made to, and the organization's owners and admins. Needs mail:read, a member's
-// own credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature.
+// the member it was made to, and the organization's owners and admins. Needs mail:read, the email
+// rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // GET /email-rule-requests
 func (s *Server) handleListEmailRuleRequestsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -34278,8 +34276,8 @@ func (s *Server) handleListEmailRuleRequestsRequest(args [0]string, argsEscaped 
 // fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first;
 // not_listed counts the rest. Another member's rule that decided on your own mail is listed
 // read_only (dashboard and CLI only), with who receives what it shares (receivers) while it covers
-// you; hidden counts deciding rules you cannot see. Needs mail:read, a member's own credential with
-// their full access (not an API key, agent key or narrowed token), and the email rules feature.
+// you; hidden counts deciding rules you cannot see. Needs mail:read, the email rules feature, and a
+// member's own full-access credential (no API key, agent key or narrowed token).
 //
 // GET /emails/{id}/rule-results
 func (s *Server) handleListEmailRuleResultsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -34471,8 +34469,8 @@ func (s *Server) handleListEmailRuleResultsRequest(args [1]string, argsEscaped b
 // organization, addresses lists the inboxes known as someone's (member addresses, members' verified
 // work emails at the organization's domains, agents' addresses and inboxes with shared access), not
 // every address that receives mail: may_name_unlisted says when an address that is not listed, such
-// as an inbox nobody has claimed, may be named too. Needs mail:read, a member's own credential with
-// their full access (not an API key, agent key or narrowed token), and the email rules feature.
+// as an inbox nobody has claimed, may be named too. Needs mail:read, the email rules feature, and a
+// member's own full-access credential (no API key, agent key or narrowed token).
 //
 // GET /email-rule-scope-options
 func (s *Server) handleListEmailRuleScopeOptionsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -34863,9 +34861,8 @@ func (s *Server) handleListEmailRuleShareEmailsRequest(args [1]string, argsEscap
 // handleListEmailRuleSharesRequest handles listEmailRuleShares operation.
 //
 // Lists rules shared with you, rules you share, or every share you can see. A share is visible to
-// its two people and the organization's owners and admins. Needs mail:read, a member's own
-// credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature.
+// its two people and the organization's owners and admins. Needs mail:read, the email rules feature,
+// and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // GET /email-rule-shares
 func (s *Server) handleListEmailRuleSharesRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -35067,8 +35064,8 @@ func (s *Server) handleListEmailRuleSharesRequest(args [0]string, argsEscaped bo
 // A rule's versions as they were written: what each one's conditions and questions were, so a
 // decision can be read against the version that made it. Without versions, every version newest
 // first, a page at a time (meta.cursor). With versions, only those named, oldest first; numbers that
-// are not versions of the rule are left out. Needs mail:read, a member's own credential with their
-// full access (not an API key, agent key or narrowed token), and the email rules feature.
+// are not versions of the rule are left out. Needs mail:read, the email rules feature, and a
+// member's own full-access credential (no API key, agent key or narrowed token).
 //
 // GET /email-rules/{id}/versions
 func (s *Server) handleListEmailRuleVersionsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -35271,8 +35268,8 @@ func (s *Server) handleListEmailRuleVersionsRequest(args [1]string, argsEscaped 
 // reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
 // for a selected rule) and current_version, but not the version's text: read that under current from
 // GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs
-// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-// token), and the email rules feature.
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token).
 //
 // GET /email-rules
 func (s *Server) handleListEmailRulesRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -35477,13 +35474,13 @@ func (s *Server) handleListEmailRulesRequest(args [0]string, argsEscaped bool, w
 // covers you. You see its name, wording, current tree, state, kind and author, and which of your own
 // mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses
 // (a condition on who an email is from or to). While it covers you, you also see who receives what
-// it matches (receivers): how many API keys, webhooks and shares, and the member each belongs to, or
-// the organization. You do not see which keys, webhooks or shares they are (no ids, names, prefixes
-// or URLs), the other inboxes and domains its scope names, or its saved expectations. A page can
-// hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number
-// of rules): keep reading until meta.cursor is null. Needs mail:read, a member's own credential with
-// their full access (not an API key, agent key or narrowed token), and the email rules feature. Only
-// on your own dashboard session or the Primitive CLI.
+// it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the
+// organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or
+// shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains
+// its scope names, or its saved expectations. A page can hold fewer rules than limit, or none, and
+// still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor
+// is null. Needs mail:read, the email rules feature, and a member's own full-access credential (no
+// API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 //
 // GET /email-rules/covering-me
 func (s *Server) handleListEmailRulesCoveringMeRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -38244,10 +38241,11 @@ func (s *Server) handleListInteractionsRequest(args [0]string, argsEscaped bool,
 // as keys that work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its
 // scope lists an address or a domain, otherwise content. A rule the key lists that reads nothing any
 // more (a deleted rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each
-// with its id and reason (rule_deleted or share_ended), and not under rules. The person needs access
-// to the whole organization's mail. Needs the organization's credential features to be enabled;
-// while they are not, this answers 404 feature_disabled, with details.feature naming the feature.
-// Contact Primitive to turn them on.
+// with its id and reason (rule_deleted or share_ended), and not under rules. grant.mail_scope.
+// rule_versions gives each rule it lists directly its current_version, state and version_saved_at.
+// The person needs access to the whole organization's mail. Needs the organization's credential
+// features to be enabled; while they are not, this answers 404 feature_disabled, with details.
+// feature naming the feature. Contact Primitive to turn them on.
 // Person only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The
 // person's role must hold keys:read. API keys, agent connection keys and agents are refused.
 //
@@ -55137,16 +55135,16 @@ func (s *Server) handleSetOwnMailboxAccessRequest(args [1]string, argsEscaped bo
 // handleSetRelayAutoJoinRequest handles setRelayAutoJoin operation.
 //
 // `option` is a choice's id from the GET, or null to require an invitation (turning it off needs
-// only members:manage). Choosing an option answers 404 `feature_disabled` unless the organization
-// has mail relay, 400 `validation_error` for an id that is not one of the choices, 403
-// `grant_forbidden` unless the caller is an owner or admin who can assign roles and send invitations
-// and covers the role the option gives, 409 `role_key_taken` when a custom role already holds that
-// role's key, and 409 `role_assignment_unavailable` when the organization cannot be given that role
-// yet. Person only: a dashboard session, or the person's own OAuth or CLI token with a session
-// step-up of purpose `relay_auto_join.write` (the person confirms at the step_up_url a 403
-// step_up_required answer carries, which names this client, then send the token in the
-// Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs
-// members:manage, and roles:assign to turn it on. API keys are refused.
+// only members:manage). Auto-joined people have no mail access until an owner or admin assigns a
+// role; legacy mail-grant choices cannot be selected. Choosing an option answers 404
+// `feature_disabled` unless the organization has mail relay, 400 `validation_error` for an id
+// outside the current catalog, 403 `grant_forbidden` without owner or admin assignment authority,
+// and 409 `role_assignment_unavailable` when the restricted role cannot be assigned yet. Person
+// only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of
+// purpose `relay_auto_join.write` (the person confirms at the step_up_url a 403 step_up_required
+// answer carries, which names this client, then send the token in the Primitive-Step-Up header; the
+// token works only with the client it was confirmed for). Needs members:manage, and roles:assign to
+// turn it on. API keys are refused.
 //
 // PUT /relay-auto-join
 func (s *Server) handleSetRelayAutoJoinRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -57299,12 +57297,15 @@ func (s *Server) handleSuspendFunctionRuntimeKeyRequest(args [1]string, argsEsca
 //	no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and
 //
 // question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its
-// author). It reads only mail its author can read and its scope covers. Without email_ids it tests
-// the newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified
-// emails over 2 hours old are classified first unless classify_missing is false. It records no
-// decision and grants nothing, and stops at about 90 seconds. Needs mail:read, a member's own
-// credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature.
+// author). It reads only mail its author can read and its scope covers. A rule you see only because
+// it covers your own mailboxes runs as you, over only those, from the dashboard or the Primitive CLI.
+//
+//	Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any
+//
+// expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing
+// is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token).
 //
 // POST /email-rules/test
 func (s *Server) handleTestEmailRuleRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -57510,8 +57511,8 @@ func (s *Server) handleTestEmailRuleRequest(args [0]string, argsEscaped bool, w 
 // text, attachment types; optionally automated, from a mailing list, and a spam score), classified
 // and decided as received mail would be. A rule reading a spam score you gave none for decides on
 // none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The
-// answer includes what the classifier read. Needs mail:read, a member's own credential with their
-// full access (not an API key, agent key or narrowed token), and the email rules feature.
+// answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's
+// own full-access credential (no API key, agent key or narrowed token).
 //
 // POST /email-rules/test-sample
 func (s *Server) handleTestEmailRuleOnSampleRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -59945,9 +59946,10 @@ func (s *Server) handleUpdateDomainRequest(args [1]string, argsEscaped bool, w h
 // shared only if they manage members from the dashboard. A scope change saves a new version; a
 // shared rule keeps its scope, and a kind never changes. A saved version takes effect at once.
 // if_version refuses a write once a version was saved since you read it; if_revision, once anything
-// changed. Without if_expectations_pass a version is saved even when its expectations fail. Needs
-// mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-// token), and the email rules feature.
+// changed. Without if_expectations_pass a version is saved even when its expectations fail, except
+// on an active rule keys or webhooks read: that write is checked first unless if_expectations_pass
+// is false. Needs mail:read, the email rules feature, and a member's own full-access credential (no
+// API key, agent key or narrowed token).
 //
 // PATCH /email-rules/{id}
 func (s *Server) handleUpdateEmailRuleRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -64998,9 +65000,9 @@ func (s *Server) handleWhoamiRequest(args [0]string, argsEscaped bool, w http.Re
 
 // handleWithdrawEmailRuleObjectionRequest handles withdrawEmailRuleObjection operation.
 //
-// Withdraws a pending objection you made, and clears its message. Needs mail:read, a member's own
-// credential with their full access (not an API key, agent key or narrowed token), and the email
-// rules feature. Only on your own dashboard session or the Primitive CLI.
+// Withdraws a pending objection you made, and clears its message. Needs mail:read, the email rules
+// feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only
+// on your own dashboard session or the Primitive CLI.
 //
 // POST /email-rule-objections/{id}/withdraw
 func (s *Server) handleWithdrawEmailRuleObjectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -65191,8 +65193,8 @@ func (s *Server) handleWithdrawEmailRuleObjectionRequest(args [1]string, argsEsc
 
 // handleWithdrawEmailRuleRequestRequest handles withdrawEmailRuleRequest operation.
 //
-// Withdraws a pending request you made. Needs mail:read, a member's own credential with their full
-// access (not an API key, agent key or narrowed token), and the email rules feature.
+// Withdraws a pending request you made. Needs mail:read, the email rules feature, and a member's own
+// full-access credential (no API key, agent key or narrowed token).
 //
 // POST /email-rule-requests/{id}/withdraw
 func (s *Server) handleWithdrawEmailRuleRequestRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

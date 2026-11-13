@@ -1071,7 +1071,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-activity-objects",
-    "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules, rule requests and objections to rules over their mail (objections only on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it lists instead what other members asked of the person, open or answered: the rule requests made to them, and the objections to rules they wrote, under their current membership, each naming the member who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in withheld. With relation=concerning it lists instead what other members did that concerns the person's own mail: each time a rule started covering one of their mailboxes or saved a new version while covering it, named as the rule was then, naming its author in created_through, under their current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads as ended.",
+    "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules, rule requests and objections to rules over their mail (objections only on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it lists instead what other members asked of the person, open or answered: the rule requests made to them, and the objections to rules they wrote, under their current membership, each naming the member who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in withheld. With relation=concerning it lists instead what other members did that concerns the person's own mail: each time a rule started covering one of their mailboxes or saved a new version while covering it, named as the rule was then, naming its author in created_through, under their current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a periodic job and can lag: until the notices record a rule starting to cover you, the first page lists that rule as pending (pending_complete says whether that check finished), and as_of says about when the notices last looked. For what covers you now, read GET /email-rules/covering-me.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listActivityObjects",
@@ -1111,7 +1111,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       },
       {
         "default": 50,
-        "description": "Objects per page, from 1 to 200; defaults to 50.",
+        "description": "Objects per page, from 1 to 200; defaults to 50. With relation=concerning the first page may also hold pending items beyond it.",
         "enum": null,
         "maximum": 200,
         "minimum": 1,
@@ -1161,7 +1161,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "state": {
                 "type": "string",
-                "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule began covering your mailbox), new_version, or baseline (it already covered you when notices began)."
+                "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule began covering your mailbox), new_version, or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed."
               },
               "created_at": {
                 "type": "string",
@@ -1262,6 +1262,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "string",
             "null"
           ]
+        },
+        "as_of": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "With relation=concerning only: about when the notices last looked at your organization; null if never or unread. Coverage since may have no notice yet."
+        },
+        "pending_complete": {
+          "description": "With relation=concerning, on the first page only: whether the check for rules that started covering you without their start notice (state pending, listed ahead of the notices and beyond limit) was finished. false: some may be missing. Absent where there is nothing to check.",
+          "type": "boolean"
         }
       },
       "required": [
@@ -8423,6 +8435,44 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                                 "format": "uuid",
                                 "description": "With `group=message`: the send of this message, when you can read it (under a connected agent key, only its own sends)."
                               },
+                              "imported": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+                                "required": [
+                                  "from",
+                                  "method",
+                                  "verification",
+                                  "at"
+                                ],
+                                "properties": {
+                                  "from": {
+                                    "type": "string",
+                                    "enum": [
+                                      "google_workspace"
+                                    ]
+                                  },
+                                  "method": {
+                                    "type": "string",
+                                    "enum": [
+                                      "primitive_direct"
+                                    ]
+                                  },
+                                  "verification": {
+                                    "type": "string",
+                                    "enum": [
+                                      "provider_fetched"
+                                    ]
+                                  },
+                                  "at": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "description": "When Primitive acquired this historical message."
+                                  }
+                                }
+                              },
                               "snippet": {
                                 "type": [
                                   "string",
@@ -8448,6 +8498,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                               "automated_reasons",
                               "from_verified",
                               "from_header_email",
+                              "imported",
                               "snippet"
                             ]
                           },
@@ -11979,7 +12030,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-key",
-    "description": "One key's metadata, never its secret, with whether it works now (status). A revoked key whose record is kept is answered too, with status revoked, revoked_at and revoked_by, under the same access rules as a key that works: one the caller may not read is 404, revoked or not. Its grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and reason (rule_deleted or share_ended), and not under rules. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
+    "description": "One key's metadata, never its secret, with whether it works now (status). A revoked key whose record is kept is answered too, with status revoked, revoked_at and revoked_by, under the same access rules as a key that works: one the caller may not read is 404, revoked or not. Its grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and reason (rule_deleted or share_ended), and not under rules. grant.mail_scope.rule_versions gives each rule it lists directly its current_version, state and version_saved_at. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getKey",
@@ -12141,6 +12192,30 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "string",
             "null"
           ]
+        },
+        "address_warnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "address",
+              "reason",
+              "description"
+            ],
+            "additionalProperties": {}
+          },
+          "description": "Notes on the key's grant, worked out from it on every read: whole_mailbox, an address or domain listed beside email rules, which the key reads in full; no_send_address, with address empty, a key that can send but lists only email rules. The notes that need the organization's mailboxes and domains (member_address, unowned_domain) are given only when the grant is written. Only rules not deleted and shares not ended count. Empty, or absent, for a key on a template, and empty for a revoked key."
         }
       },
       "required": [
@@ -13269,6 +13344,30 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "agent_address",
                   "person"
                 ]
+              },
+              "address_warnings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "address",
+                    "reason",
+                    "description"
+                  ],
+                  "additionalProperties": {}
+                },
+                "description": "Notes on the key's grant, worked out from it on every read: whole_mailbox, an address or domain listed beside email rules, which the key reads in full; no_send_address, with address empty, a key that can send but lists only email rules. The notes that need the organization's mailboxes and domains (member_address, unowned_domain) are given only when the grant is written. Only rules not deleted and shares not ended count. Empty, or absent, for a key on a template, and empty for a revoked key."
               }
             },
             "required": [
@@ -13315,7 +13414,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-keys",
-    "description": "Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether each key works now (status). Revoked keys are left out unless include_revoked is true, which lists them too with status revoked, revoked_at and revoked_by, under the same access rules as keys that work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and reason (rule_deleted or share_ended), and not under rules. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
+    "description": "Key metadata, never a secret: name, prefix, grant, creator, last use, expiry, suspension and whether each key works now (status). Revoked keys are left out unless include_revoked is true, which lists them too with status revoked, revoked_at and revoked_by, under the same access rules as keys that work. A grant's mail_scope.depth is raw only when the key holds mail.raw:read and its scope lists an address or a domain, otherwise content. A rule the key lists that reads nothing any more (a deleted rule, or a share that ended) is listed under grant.mail_scope.ended_rules, each with its id and reason (rule_deleted or share_ended), and not under rules. grant.mail_scope.rule_versions gives each rule it lists directly its current_version, state and version_saved_at. The person needs access to the whole organization's mail. Needs the organization's credential features to be enabled; while they are not, this answers 404 feature_disabled, with details.feature naming the feature. Contact Primitive to turn them on.\n\nPerson only: a dashboard session or the person's own Primitive CLI token; no other OAuth app. The person's role must hold keys:read. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listKeys",
@@ -13492,6 +13591,30 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "string",
                   "null"
                 ]
+              },
+              "address_warnings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "address",
+                    "reason",
+                    "description"
+                  ],
+                  "additionalProperties": {}
+                },
+                "description": "Notes on the key's grant, worked out from it on every read: whole_mailbox, an address or domain listed beside email rules, which the key reads in full; no_send_address, with address empty, a key that can send but lists only email rules. The notes that need the organization's mailboxes and domains (member_address, unowned_domain) are given only when the grant is written. Only rules not deleted and shares not ended count. Empty, or absent, for a key on a template, and empty for a revoked key."
               }
             },
             "required": [
@@ -16401,7 +16524,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "accept-email-rule-objection",
-    "description": "Accepts a pending objection to a rule you wrote: turns the rule off (state draft), as updating it would, and records the objection accepted, together. You can turn the rule on again later. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+    "description": "Accepts a pending objection to a rule you wrote: turns the rule off (state draft), as updating it would, and records the objection accepted, together. You can turn the rule on again later. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": false,
     "method": "POST",
     "operationId": "acceptEmailRuleObjection",
@@ -16584,7 +16707,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-email-rule-objection",
-    "description": "Asks the author of a rule that covers one of your own mailboxes now to turn it off. Only a rule that covers you now: one you see only because it once decided on your mail cannot be objected to. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. You may have one pending objection per rule and 50 in all, and object to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+    "description": "Asks the author of a rule that covers one of your own mailboxes now to turn it off. Only a rule that covers you now: one you see only because it once decided on your mail cannot be objected to. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. You may have one pending objection per rule and 50 in all, and object to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createEmailRuleObjection",
@@ -16781,7 +16904,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "decline-email-rule-objection",
-    "description": "Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+    "description": "Declines a pending objection to a rule you wrote, optionally saying why; the rule stays as it is. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "declineEmailRuleObjection",
@@ -16978,7 +17101,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule-covering-me",
-    "description": "One rule that covers one of your own mailboxes, read-only, with its current version; or one that no longer does but decided on mail at your own mailbox (covers_now false), shown as the version that last decided on your mail, without its current name. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, and the member each belongs to, or the organization. You do not see which keys, webhooks or shares they are (no ids, names, prefixes or URLs), the other inboxes and domains its scope names, or its saved expectations. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+    "description": "One rule that covers one of your own mailboxes, read-only, with its current version; or one that no longer does but decided on mail at your own mailbox (covers_now false), shown as the version that last decided on your mail, without its current name. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRuleCoveringMe",
@@ -17167,7 +17290,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "count"
                     ]
                   },
-                  "description": "API keys that work now (not revoked, expired or suspended) whose access lists the rule, or its live share: they read what it matches. Owner: the member who holds each, or the organization."
+                  "description": "API keys that work now (not revoked, expired or suspended) and hold mail:read, whose access lists the rule or its live share. Owner: who holds each, or the organization."
                 },
                 "webhooks": {
                   "type": "array",
@@ -17220,6 +17343,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "count": {
                         "type": "integer",
                         "exclusiveMinimum": 0
+                      },
+                      "hosts": {
+                        "description": "Distinct sites they deliver to (a host's registrable domain, or a tunnel, preview or function service alone), sorted, at most 10; \"unknown host\" (last) for any that cannot be named.",
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "hosts_not_listed": {
+                        "description": "Hosts past those listed.",
+                        "type": "integer",
+                        "minimum": 0
                       }
                     },
                     "required": [
@@ -17227,7 +17362,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "count"
                     ]
                   },
-                  "description": "Webhooks that are sent what it matches: those whose key, as delivery acts as it, lists the rule or its live share (owner: the member who holds that key, or the organization), and the webhooks of the member the rule is shared with (owner: that member)."
+                  "description": "Webhooks taking received mail, bounces or reports that are sent what it matches: those of the key delivery acts as, when it lists the rule or its live share (owner: its holder, or the organization), and those of the member it is shared with (owner: that member)."
                 },
                 "shares": {
                   "type": "array",
@@ -17270,7 +17405,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "count"
                     ]
                   },
-                  "description": "The rule's live share, if it has one (a rule is shared at most once): the member it gives what it matches to."
+                  "description": "The rule's live share (at most one), by its member, if they can read it and it is among their newest 20 shares."
                 }
               },
               "required": [
@@ -17407,7 +17542,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule-objection",
-    "description": "One objection you can see. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+    "description": "One objection you can see. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRuleObjection",
@@ -17582,7 +17717,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-decisions-on-my-mail",
-    "description": "What a rule that covers your mailboxes, or decided on your mail, decided about mail at your own mailboxes, newest first: never about anyone else's mail. Each decision is in the words of the version that made it, which can be earlier than the current one: the questions it asked about that email (question_answers) and the columns its conditions read (parts). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+    "description": "What a rule that covers your mailboxes, or decided on your mail, decided about mail at your own mailboxes, newest first: never about anyone else's mail. Each decision is in the words of the version that made it, which can be earlier than the current one: the questions it asked about that email (question_answers) and the columns its conditions read (parts). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleDecisionsOnMyMail",
@@ -17725,7 +17860,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-objections",
-    "description": "Objections you made, objections to rules you wrote, or every objection you can see, newest first. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+    "description": "Objections you made, objections to rules you wrote, or every objection you can see, newest first. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it, or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleObjections",
@@ -17937,7 +18072,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rules-covering-me",
-    "description": "Every email rule that covers one of your own mailboxes now, yours included, newest first, in any state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your member mailbox, or a personal agent's address): one whose author reads all your mail (author scope, for an author who reads the organization's mail or holds an access entry for your mailbox), or one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers you. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, and the member each belongs to, or the organization. You do not see which keys, webhooks or shares they are (no ids, names, prefixes or URLs), the other inboxes and domains its scope names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+    "description": "Every email rule that covers one of your own mailboxes now, yours included, newest first, in any state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your member mailbox, or a personal agent's address): one whose author reads all your mail (author scope, for an author who reads the organization's mail or holds an access entry for your mailbox), or one that names your mailbox or its domain (selected). Another member's own_mailboxes rule never covers you. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. A page can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRulesCoveringMe",
@@ -18125,7 +18260,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                         "count"
                       ]
                     },
-                    "description": "API keys that work now (not revoked, expired or suspended) whose access lists the rule, or its live share: they read what it matches. Owner: the member who holds each, or the organization."
+                    "description": "API keys that work now (not revoked, expired or suspended) and hold mail:read, whose access lists the rule or its live share. Owner: who holds each, or the organization."
                   },
                   "webhooks": {
                     "type": "array",
@@ -18178,6 +18313,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                         "count": {
                           "type": "integer",
                           "exclusiveMinimum": 0
+                        },
+                        "hosts": {
+                          "description": "Distinct sites they deliver to (a host's registrable domain, or a tunnel, preview or function service alone), sorted, at most 10; \"unknown host\" (last) for any that cannot be named.",
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "hosts_not_listed": {
+                          "description": "Hosts past those listed.",
+                          "type": "integer",
+                          "minimum": 0
                         }
                       },
                       "required": [
@@ -18185,7 +18332,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                         "count"
                       ]
                     },
-                    "description": "Webhooks that are sent what it matches: those whose key, as delivery acts as it, lists the rule or its live share (owner: the member who holds that key, or the organization), and the webhooks of the member the rule is shared with (owner: that member)."
+                    "description": "Webhooks taking received mail, bounces or reports that are sent what it matches: those of the key delivery acts as, when it lists the rule or its live share (owner: its holder, or the organization), and those of the member it is shared with (owner: that member)."
                   },
                   "shares": {
                     "type": "array",
@@ -18228,7 +18375,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                         "count"
                       ]
                     },
-                    "description": "The rule's live share, if it has one (a rule is shared at most once): the member it gives what it matches to."
+                    "description": "The rule's live share (at most one), by its member, if they can read it and it is among their newest 20 shares."
                   }
                 },
                 "required": [
@@ -18271,7 +18418,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "withdraw-email-rule-objection",
-    "description": "Withdraws a pending objection you made, and clears its message. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.",
+    "description": "Withdraws a pending objection you made, and clears its message. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": false,
     "method": "POST",
     "operationId": "withdrawEmailRuleObjection",
@@ -18454,7 +18601,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "accept-email-rule-request",
-    "description": "Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from now on with the member who asked: each email in full with its attachments, but never raw. It does not go back through mail already received. Send no body to accept it as asked, or change it first with english and tree together (and an explanation, or the server writes one). Because this gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the rule it writes. Accepting also needs mail:share_own. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from now on with the member who asked: each email in full with its attachments, but never raw. It does not go back through mail already received. Send no body to accept it as asked, or change it first with english and tree together (and an explanation, or the server writes one). Because this gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the rule it writes. Accepting also needs mail:share_own. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "acceptEmailRuleRequest",
@@ -18590,6 +18737,38 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "type": "null"
             }
           ]
+        },
+        "conditions_breadth": {
+          "description": "Ignored.",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "checked": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                },
+                "matched": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Of those, how many they hold for (for a do-not-share rule, one they cannot decide counts)."
+                }
+              },
+              "required": [
+                "checked",
+                "matched"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "description": "Only grant.",
+          "type": "string",
+          "const": "grant"
         },
         "expectation_samples": {
           "description": "Made-up emails the rule must match or not, such as look-alikes it must never match, kept on the rule this accept writes.",
@@ -19452,7 +19631,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "check-email-rule-request-target",
-    "description": "Says, before you ask, whether a member could accept a rule request now under their role, and if not, which permission their role lacks. Nothing is sent and nothing is recorded. Needs members:read, as listing members and their roles does. At most 60 checks an hour. Name them by user id, or by their member mailbox address or verified work email (counted with asking: at most 30 lookups by address an hour). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Says, before you ask, whether a member could accept a rule request now under their role, and if not, which permission their role lacks. Nothing is sent and nothing is recorded. Needs members:read, as listing members and their roles does. At most 60 checks an hour. Name them by user id, or by their member mailbox address or verified work email (counted with asking: at most 30 lookups by address an hour). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "checkEmailRuleRequestTarget",
@@ -19555,7 +19734,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "compile-email-rule",
-    "description": "Turns a plain-English description of which received emails to match into a rule tree over the column contract, with an explanation of what it matches, the assumptions made, and warnings for what the columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only after the conditions match; they read the subject, the new text and attachment file names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how much of your recent classified mail its conditions match. include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Turns a plain-English description of which received emails to match into a rule tree over the column contract, with an explanation of what it matches, the assumptions made, and warnings for what the columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only after the conditions match; they read the subject, the new text and attachment file names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how much of your recent classified mail its conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone. include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "compileEmailRule",
@@ -19655,14 +19834,49 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "items": {
             "type": "string"
           },
-          "description": "Parts of the description the column contract cannot express, and how the rule handles them. It also has notes on reading automated, from_mailing_list or sender_relationship, a sender address the description does not give, and a grant worded as a prohibition. When the rule has no questions and its conditions hold for all of the caller's recent classified mail (what a test of it covers by default), or for at least 90% of at least 20 emails, the first warning says so. That count is not made for a caller whose access shows headers only, or who could not run a test of the rule, and may also be skipped when the compile ran long or the count fails."
+          "description": "Parts of the description the column contract cannot express, how the rule handles them, and the compiler's own notes on the rule (the Email Rules docs list them). When the rule has no questions and its conditions hold for nearly all of your recent mail (see breadth), or it is a grant rule whose conditions alone hold for over 20% of at least 20 emails (see conditions_breadth), the first warning says so."
         },
         "compiled_by": {
           "type": "string",
           "description": "An opaque name for the version of the rule compiler that produced the rule, such as rule-compiler-v1. Send it back as compiled_by when you save the rule."
         },
+        "kind": {
+          "description": "The kind it was compiled for. Send it with the tree to a test.",
+          "type": "string",
+          "enum": [
+            "grant",
+            "do_not_share"
+          ]
+        },
         "breadth": {
           "description": "How many of your recent emails its conditions hold for, counted over your own mailboxes whatever scope you save it with, warning or not. Null when not counted in full: a rule with questions, headers-only access, no test of it possible as you, or a count that failed or ran out of time. Writes ignore it, so a compile answer (without include_sql) can be sent back unchanged.",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "checked": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                },
+                "matched": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Of those, how many they hold for (for a do-not-share rule, one they cannot decide counts)."
+                }
+              },
+              "required": [
+                "checked",
+                "matched"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "conditions_breadth": {
+          "description": "For a grant rule with questions, breadth counted on its conditions alone: the emails its questions are asked about. Null for any other rule, or when not counted in full (as breadth).",
           "anyOf": [
             {
               "type": "object",
@@ -19725,7 +19939,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-email-rule",
-    "description": "Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column contract. It starts in observe (recorded, nothing granted or blocked) unless state is draft, or active for a do_not_share rule. You are its author, and it never reaches mail you cannot read. evaluation_scope is own_mailboxes unless you name author or selected (scope_selection names only what you can read). expectations are judged in expectations_check. kind do_not_share blocks sharing what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column contract. It starts in observe (recorded, nothing granted or blocked) unless state is draft, or active for a do_not_share rule. You are its author, and it never reaches mail you cannot read. evaluation_scope is own_mailboxes unless you name author or selected (scope_selection names only what you can read). expectations are judged in expectations_check. kind do_not_share blocks sharing what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createEmailRule",
@@ -20027,6 +20241,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "breadth": {
           "description": "Ignored (the compile answer's breadth).",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "checked": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                },
+                "matched": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Of those, how many they hold for (for a do-not-share rule, one they cannot decide counts)."
+                }
+              },
+              "required": [
+                "checked",
+                "matched"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "conditions_breadth": {
+          "description": "Ignored.",
           "anyOf": [
             {
               "type": "object",
@@ -20554,6 +20795,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "endpoints",
             "shares_ended"
           ]
+        },
+        "notice": {
+          "description": "After a write that saved a version of an active rule keys or webhooks read without checking it first: what it changes, and how to have the next one checked.",
+          "type": "string"
         }
       },
       "required": [
@@ -20577,7 +20822,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-email-rule-request",
-    "description": "Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated or shared until they accept, and they may change the rule first. A message (up to 500 characters, fixed once sent) tells them why you ask. At most 5 pending requests to one member and 50 in all. With members:read the answer says whether they can accept it under their role (target_can_accept, target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Asks another member of the organization for a rule over their own mail, from a compile response or a tree you wrote. Name them by user id, or by their member mailbox address, or by their verified work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated or shared until they accept, and they may change the rule first. A message (up to 500 characters, fixed once sent) tells them why you ask. At most 5 pending requests to one member and 50 in all. With members:read the answer says whether they can accept it under their role (target_can_accept, target_warning); POST /v1/email-rule-requests/target-check checks first. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createEmailRuleRequest",
@@ -20725,6 +20970,38 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "type": "null"
             }
           ]
+        },
+        "conditions_breadth": {
+          "description": "Ignored.",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "checked": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                },
+                "matched": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Of those, how many they hold for (for a do-not-share rule, one they cannot decide counts)."
+                }
+              },
+              "required": [
+                "checked",
+                "matched"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "description": "Only grant.",
+          "type": "string",
+          "const": "grant"
         }
       },
       "required": [
@@ -21017,7 +21294,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "decline-email-rule-request",
-    "description": "Declines a pending request made to you. Nothing is written but the decision and, if you give one, its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Declines a pending request made to you. Nothing is written but the decision and, if you give one, its reason (reason, up to 500 characters), which the member who asked sees with the request. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "declineEmailRuleRequest",
@@ -21329,7 +21606,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "delete-email-rule",
-    "description": "Deletes a rule with its versions, its decisions and the access it granted. A share of it ends (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out when they could not be read). The author or a reader of all the organization's mail may delete it; while it is shared, only the author or someone who manages members from the dashboard. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Deletes a rule with its versions, its decisions and the access it granted. A share of it ends (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out when they could not be read). The author or a reader of all the organization's mail may delete it; while it is shared, only the author or someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "DELETE",
     "operationId": "deleteEmailRule",
@@ -21409,7 +21686,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "delete-email-rule-request",
-    "description": "Deletes a request you withdrew, for everyone who could see it. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Deletes a request you withdrew, for everyone who could see it. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "DELETE",
     "operationId": "deleteEmailRuleRequest",
@@ -21496,7 +21773,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "generate-look-alikes",
-    "description": "Writes made-up emails that come close to what a grant rule describes, and reports what the rule decides for each, as test-sample would. Most should not match (expected no_match): business near misses from its senders and topic (kind other: an all-clear, a reply with nothing new, a related document, another subject) and private mail (a personal medical bill, pay for named people, a personal purchase, personal banking or tax). By default a third, rounded down, are near cases it should match (expected match, kind other). failed means the rule decided one against expected. Nothing is stored and no mail is read. Keep them, with their expected, with add_expectation_samples, or for a request with the accept's expectation_samples. Limited to 20 an hour per member. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Writes made-up emails that come close to what a grant rule describes, and reports what the rule decides for each, as test-sample would. Most should not match (expected no_match): business near misses from its senders and topic (kind other: an all-clear, a reply with nothing new, a related document, another subject) and private mail (a personal medical bill, pay for named people, a personal purchase, personal banking or tax). By default a third, rounded down, are near cases it should match (expected match, kind other). failed means the rule decided one against expected. Nothing is stored and no mail is read. Keep them, with their expected, with add_expectation_samples, or for a request with the accept's expectation_samples. Limited to 20 an hour per member. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "generateLookAlikes",
@@ -21666,6 +21943,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "exclusiveMinimum": 0
             },
             "vocabulary": {
+              "type": "string"
+            },
+            "kind": {
+              "description": "The kind it was tested as.",
+              "type": "string",
+              "enum": [
+                "grant",
+                "do_not_share"
+              ]
+            },
+            "note": {
+              "description": "Present when a tree was sent without kind, so it was tested as grant.",
               "type": "string"
             }
           },
@@ -21872,7 +22161,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule",
-    "description": "A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version and its saved expectations. The current version's text (english, tree, explanation, assumptions, warnings) is under current, and current_version is its number. What the scope comes to for its author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when include_sql is true. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version and its saved expectations. The current version's text (english, tree, explanation, assumptions, warnings) is under current, and current_version is its number. What the scope comes to for its author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when include_sql is true. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRule",
@@ -22304,7 +22593,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule-request",
-    "description": "A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a member. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. If you are the member asked, you can try the rule as proposed before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have received. To try it on an email that has not arrived, pass the request's tree to POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-rules/look-alikes with request_id); neither stores anything. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "A rule request: the rule as proposed, who made it and to whom, and whether each of them is still a member. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. If you are the member asked, you can try the rule as proposed before answering: pass the request's tree to POST /v1/email-rules/test to test it on mail you have received. To try it on an email that has not arrived, pass the request's tree to POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-rules/look-alikes with request_id); neither stores anything. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRuleRequest",
@@ -22594,7 +22883,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule-scope",
-    "description": "Whose mail the rule runs over, and what that comes to now: a rule never reaches further than what its author can read when it runs, so what a selected rule names and its author can no longer read stops matching. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Whose mail the rule runs over, and what that comes to now: a rule never reaches further than what its author can read when it runs, so what a selected rule names and its author can no longer read stops matching. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRuleScope",
@@ -22767,7 +23056,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule-share",
-    "description": "One share. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "One share. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRuleShare",
@@ -23002,7 +23291,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule-vocabulary",
-    "description": "What a rule tree you write yourself can say: each column of the current vocabulary with its type, source, meaning, operators and the value each takes, options, and whether it takes min_confidence; and the tree's limits, its stored size included. Built from the checks a saved or tested tree must pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "What a rule tree you write yourself can say: each column of the current vocabulary with its type, source, meaning, operators and the value each takes, options, and whether it takes min_confidence; and the tree's limits, its stored size included. Built from the checks a saved or tested tree must pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRuleVocabulary",
@@ -23192,7 +23481,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-decisions",
-    "description": "What the rule decided for each email it was evaluated against, newest first: whether it matched, whether it nearly did, how each part decided and the answers to its questions, with which email it was (from_address, subject, received_at). Only decisions on emails the caller can read are listed. With matched, only matches (true) or only the rest (false). Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "What the rule decided for each email it was evaluated against, newest first: whether it matched, whether it nearly did, how each part decided and the answers to its questions, with which email it was (from_address, subject, received_at). Only decisions on emails the caller can read are listed. With matched, only matches (true) or only the rest (false). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleDecisions",
@@ -23368,7 +23657,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-requests",
-    "description": "Rule requests, newest first: those made to you (box incoming, the default), those you made (outgoing), or every one you can see (all). Pending ones by default; status decided lists accepted, declined and withdrawn ones, and any lists both. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Rule requests, newest first: those made to you (box incoming, the default), those you made (outgoing), or every one you can see (all). Pending ones by default; status decided lists accepted, declined and withdrawn ones, and any lists both. A request is visible to the member who made it, the member it was made to, and the organization's owners and admins. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleRequests",
@@ -23695,7 +23984,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-results",
-    "description": "What each rule you can see decided about this email (matched, not matched, or not run), in the words of the deciding version. A do_not_share rule that matched it blocks sharing while active; earlier shares stay. Only a caller who can read the email gets an answer. classification is every fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard and CLI only), with who receives what it shares (receivers) while it covers you; hidden counts deciding rules you cannot see. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "What each rule you can see decided about this email (matched, not matched, or not run), in the words of the deciding version. A do_not_share rule that matched it blocks sharing while active; earlier shares stay. Only a caller who can read the email gets an answer. classification is every fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard and CLI only), with who receives what it shares (receivers) while it covers you; hidden counts deciding rules you cannot see. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleResults",
@@ -24076,7 +24365,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                             "count"
                           ]
                         },
-                        "description": "API keys that work now (not revoked, expired or suspended) whose access lists the rule, or its live share: they read what it matches. Owner: the member who holds each, or the organization."
+                        "description": "API keys that work now (not revoked, expired or suspended) and hold mail:read, whose access lists the rule or its live share. Owner: who holds each, or the organization."
                       },
                       "webhooks": {
                         "type": "array",
@@ -24129,6 +24418,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                             "count": {
                               "type": "integer",
                               "exclusiveMinimum": 0
+                            },
+                            "hosts": {
+                              "description": "Distinct sites they deliver to (a host's registrable domain, or a tunnel, preview or function service alone), sorted, at most 10; \"unknown host\" (last) for any that cannot be named.",
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "hosts_not_listed": {
+                              "description": "Hosts past those listed.",
+                              "type": "integer",
+                              "minimum": 0
                             }
                           },
                           "required": [
@@ -24136,7 +24437,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                             "count"
                           ]
                         },
-                        "description": "Webhooks that are sent what it matches: those whose key, as delivery acts as it, lists the rule or its live share (owner: the member who holds that key, or the organization), and the webhooks of the member the rule is shared with (owner: that member)."
+                        "description": "Webhooks taking received mail, bounces or reports that are sent what it matches: those of the key delivery acts as, when it lists the rule or its live share (owner: its holder, or the organization), and those of the member it is shared with (owner: that member)."
                       },
                       "shares": {
                         "type": "array",
@@ -24179,7 +24480,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                             "count"
                           ]
                         },
-                        "description": "The rule's live share, if it has one (a rule is shared at most once): the member it gives what it matches to."
+                        "description": "The rule's live share (at most one), by its member, if they can read it and it is among their newest 20 shares."
                       }
                     },
                     "required": [
@@ -24309,7 +24610,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-scope-options",
-    "description": "How much the caller can read, and the inboxes and domains the caller can read, which is what they may name when a rule runs over selected inboxes and domains. For a caller who reads the whole organization, addresses lists the inboxes known as someone's (member addresses, members' verified work emails at the organization's domains, agents' addresses and inboxes with shared access), not every address that receives mail: may_name_unlisted says when an address that is not listed, such as an inbox nobody has claimed, may be named too. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "How much the caller can read, and the inboxes and domains the caller can read, which is what they may name when a rule runs over selected inboxes and domains. For a caller who reads the whole organization, addresses lists the inboxes known as someone's (member addresses, members' verified work emails at the organization's domains, agents' addresses and inboxes with shared access), not every address that receives mail: may_name_unlisted says when an address that is not listed, such as an inbox nobody has claimed, may be named too. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleScopeOptions",
@@ -24434,6 +24735,37 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "items": {
         "type": "object",
         "properties": {
+          "imported": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "from": {
+                "type": "string",
+                "const": "google_workspace"
+              },
+              "method": {
+                "type": "string",
+                "const": "primitive_direct"
+              },
+              "verification": {
+                "type": "string",
+                "const": "provider_fetched"
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "from",
+              "method",
+              "verification",
+              "at"
+            ],
+            "default": null
+          },
           "delivery_report": {
             "type": [
               "object",
@@ -24870,6 +25202,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           }
         },
         "required": [
+          "imported",
           "id",
           "message_id",
           "domain_id",
@@ -24908,7 +25241,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-shares",
-    "description": "Lists rules shared with you, rules you share, or every share you can see. A share is visible to its two people and the organization's owners and admins. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Lists rules shared with you, rules you share, or every share you can see. A share is visible to its two people and the organization's owners and admins. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleShares",
@@ -25180,7 +25513,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-versions",
-    "description": "A rule's versions as they were written: what each one's conditions and questions were, so a decision can be read against the version that made it. Without versions, every version newest first, a page at a time (meta.cursor). With versions, only those named, oldest first; numbers that are not versions of the rule are left out. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "A rule's versions as they were written: what each one's conditions and questions were, so a decision can be read against the version that made it. Without versions, every version newest first, a page at a time (meta.cursor). With versions, only those named, oldest first; numbers that are not versions of the rule are left out. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleVersions",
@@ -25339,7 +25672,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rules",
-    "description": "The rules the caller can see, newest first: their own, or every member's rules for a caller who reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection for a selected rule) and current_version, but not the version's text: read that under current from GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "The rules the caller can see, newest first: their own, or every member's rules for a caller who reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection for a selected rule) and current_version, but not the version's text: read that under current from GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRules",
@@ -25783,7 +26116,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "test-email-rule",
-    "description": "Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its author). It reads only mail its author can read and its scope covers. Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its author). It reads only mail its author can read and its scope covers. A rule you see only because it covers your own mailboxes runs as you, over only those, from the dashboard or the Primitive CLI. Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "testEmailRule",
@@ -25877,7 +26210,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "For a selected rule: inboxes, and domains (each address at them the author reads); each one you can read."
         },
         "rule_id": {
-          "description": "A saved rule you can see. Its current version is tested, with its author's access.",
+          "description": "A saved rule you can see. Its current version is tested, with its author's access; one you see only because it covers your mailboxes, with yours, over only those (dashboard or Primitive CLI only).",
           "type": "string",
           "format": "uuid"
         },
@@ -26071,6 +26404,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "exclusiveMinimum": 0
             },
             "vocabulary": {
+              "type": "string"
+            },
+            "kind": {
+              "description": "The kind it was tested as.",
+              "type": "string",
+              "enum": [
+                "grant",
+                "do_not_share"
+              ]
+            },
+            "note": {
+              "description": "Present when a tree was sent without kind, so it was tested as grant.",
               "type": "string"
             }
           },
@@ -26706,7 +27051,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "test-email-rule-on-sample",
-    "description": "Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text, attachment types; optionally automated, from a mailing list, and a spam score), classified and decided as received mail would be. A rule reading a spam score you gave none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer includes what the classifier read. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Reports what a rule would decide for an email you describe (sender, recipients, subject, plain text, attachment types; optionally automated, from a mailing list, and a spam score), classified and decided as received mail would be. A rule reading a spam score you gave none for decides on none (unset_columns). Nothing is stored. Test an unsaved tree or a saved rule by rule_id. The answer includes what the classifier read. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "testEmailRuleOnSample",
@@ -26927,6 +27272,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "vocabulary": {
               "type": "string"
+            },
+            "kind": {
+              "description": "The kind it was tested as.",
+              "type": "string",
+              "enum": [
+                "grant",
+                "do_not_share"
+              ]
+            },
+            "note": {
+              "description": "Present when a tree was sent without kind, so it was tested as grant.",
+              "type": "string"
             }
           },
           "required": [
@@ -27134,7 +27491,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-email-rule",
-    "description": "Renames the rule, saves a new version (english and tree together; earlier versions stay) or restores one (restore_version), changes its state (draft is off; observe; active), its scope (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in expectations_check). Anyone but its author who sees it may only set state draft, and while it is shared only if they manage members from the dashboard. A scope change saves a new version; a shared rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version refuses a write once a version was saved since you read it; if_revision, once anything changed. Without if_expectations_pass a version is saved even when its expectations fail. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Renames the rule, saves a new version (english and tree together; earlier versions stay) or restores one (restore_version), changes its state (draft is off; observe; active), its scope (evaluation_scope, with scope_selection when selected) or its saved expectations (judged in expectations_check). Anyone but its author who sees it may only set state draft, and while it is shared only if they manage members from the dashboard. A scope change saves a new version; a shared rule keeps its scope, and a kind never changes. A saved version takes effect at once. if_version refuses a write once a version was saved since you read it; if_revision, once anything changed. Without if_expectations_pass a version is saved even when its expectations fail, except on an active rule keys or webhooks read: that write is checked first unless if_expectations_pass is false. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "PATCH",
     "operationId": "updateEmailRule",
@@ -27269,6 +27626,41 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             {
               "type": "null"
             }
+          ]
+        },
+        "conditions_breadth": {
+          "description": "Ignored.",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "checked": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Classified emails the conditions were decided for: of the newest 200 from the last 30 days in your own mailboxes (for a grant rule, those you may share), the ones you can still read."
+                },
+                "matched": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Of those, how many they hold for (for a do-not-share rule, one they cannot decide counts)."
+                }
+              },
+              "required": [
+                "checked",
+                "matched"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "description": "Must be the rule's own (400 kind_mismatch).",
+          "type": "string",
+          "enum": [
+            "grant",
+            "do_not_share"
           ]
         },
         "evaluation_scope": {
@@ -27593,7 +27985,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "maximum": 2147483647
         },
         "if_expectations_pass": {
-          "description": "true: judge the rule as this write leaves it (new tree, restored version, new scope, or the version it activates) against the expectations it leaves, as POST /email-rules/test would, before saving; it can take as long as a test. Failed: 409 expectations_failed; on emails the rule cannot read: 409 expectations_unreadable; undecided: 409 expectations_undecided (each with details.expectations_check); none to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409 email_rule_conflict). Only writes that save a version or activate the rule are judged.",
+          "description": "true: judge the rule as this write leaves it (new tree, restored version, new scope, or the version it activates) against the expectations it leaves, as POST /email-rules/test would, before saving; it can take as long as a test. Failed: 409 expectations_failed; on emails the rule cannot read: 409 expectations_unreadable; undecided: 409 expectations_undecided (each with details.expectations_check); none to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409 email_rule_conflict). Only writes that save a version or activate the rule are judged. Omitted: judged as with true when the write saves a version or changes the scope of an active rule that API keys or webhooks read and that has expectations. false: never judged first.",
           "type": "boolean"
         },
         "restore_version": {
@@ -28099,6 +28491,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "endpoints",
             "shares_ended"
           ]
+        },
+        "notice": {
+          "description": "After a write that saved a version of an active rule keys or webhooks read without checking it first: what it changes, and how to have the next one checked.",
+          "type": "string"
         }
       },
       "required": [
@@ -28122,7 +28518,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "withdraw-email-rule-request",
-    "description": "Withdraws a pending request you made. Needs mail:read, a member's own credential with their full access (not an API key, agent key or narrowed token), and the email rules feature.",
+    "description": "Withdraws a pending request you made. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "POST",
     "operationId": "withdrawEmailRuleRequest",
@@ -29020,6 +29416,44 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   ]
                 },
                 "description": "Attachment metadata for this message, each item as its own detail read reports it: `parsed.attachments` on `/emails/{id}` for inbound, `attachments` on `/sent-emails/{id}` for outbound, in the same order. Empty when there are none or an inbound message has no parsed content. No bytes or download URLs; download a part with `/emails/{id}/attachments/{part_index}` or `/sent-emails/{id}/attachments/{part_index}`."
+              },
+              "imported": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "enum": [
+                      "google_workspace"
+                    ]
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "primitive_direct"
+                    ]
+                  },
+                  "verification": {
+                    "type": "string",
+                    "enum": [
+                      "provider_fetched"
+                    ]
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When Primitive acquired this historical message."
+                  }
+                }
               },
               "copies": {
                 "type": "array",
@@ -30273,6 +30707,44 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           }
         },
+        "imported": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+          "required": [
+            "from",
+            "method",
+            "verification",
+            "at"
+          ],
+          "properties": {
+            "from": {
+              "type": "string",
+              "enum": [
+                "google_workspace"
+              ]
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "primitive_direct"
+              ]
+            },
+            "verification": {
+              "type": "string",
+              "enum": [
+                "provider_fetched"
+              ]
+            },
+            "at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When Primitive acquired this historical message."
+            }
+          }
+        },
         "snippet": {
           "type": [
             "string",
@@ -30305,6 +30777,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "from_verified",
         "from_header_email",
         "from_name",
+        "imported",
         "snippet"
       ]
     },
@@ -30369,6 +30842,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "type": "object",
       "description": "What an inbound email says, as plain text, with the fields that identify it.",
       "required": [
+        "imported",
         "id",
         "thread_id",
         "received_at",
@@ -30389,6 +30863,44 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "attachments"
       ],
       "properties": {
+        "imported": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+          "required": [
+            "from",
+            "method",
+            "verification",
+            "at"
+          ],
+          "properties": {
+            "from": {
+              "type": "string",
+              "enum": [
+                "google_workspace"
+              ]
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "primitive_direct"
+              ]
+            },
+            "verification": {
+              "type": "string",
+              "enum": [
+                "provider_fetched"
+              ]
+            },
+            "at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When Primitive acquired this historical message."
+            }
+          }
+        },
         "id": {
           "type": "string",
           "format": "uuid",
@@ -31458,6 +31970,44 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "format": "uuid",
             "description": "With `group=message`: the send of this message, when you can read it (under a connected agent key, only its own sends)."
           },
+          "imported": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+            "required": [
+              "from",
+              "method",
+              "verification",
+              "at"
+            ],
+            "properties": {
+              "from": {
+                "type": "string",
+                "enum": [
+                  "google_workspace"
+                ]
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "primitive_direct"
+                ]
+              },
+              "verification": {
+                "type": "string",
+                "enum": [
+                  "provider_fetched"
+                ]
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "When Primitive acquired this historical message."
+              }
+            }
+          },
           "snippet": {
             "type": [
               "string",
@@ -31483,6 +32033,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "automated_reasons",
           "from_verified",
           "from_header_email",
+          "imported",
           "snippet"
         ]
       }
@@ -32349,6 +32900,44 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "format": "uuid",
                 "description": "With `group=message`: the send of this message, when you can read it (under a connected agent key, only its own sends)."
               },
+              "imported": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "enum": [
+                      "google_workspace"
+                    ]
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "primitive_direct"
+                    ]
+                  },
+                  "verification": {
+                    "type": "string",
+                    "enum": [
+                      "provider_fetched"
+                    ]
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When Primitive acquired this historical message."
+                  }
+                }
+              },
               "snippet": {
                 "type": [
                   "string",
@@ -32374,6 +32963,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "automated_reasons",
               "from_verified",
               "from_header_email",
+              "imported",
               "snippet"
             ]
           },
@@ -32911,261 +33501,353 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     },
     "responseSchema": {
-      "type": "object",
-      "properties": {
-        "recipient": {
-          "description": "Server-enforced recipient for an address-scoped pull subscription; null for an account-wide destination created before pull creation required a connected-agent credential.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "receiver_capabilities": {
+      "allOf": [
+        {
           "type": "object",
           "properties": {
-            "completion_modes": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "http",
-                  "exec",
-                  "stdout",
-                  "sdk"
-                ]
+            "recipient": {
+              "description": "Server-enforced recipient for an address-scoped pull subscription; null for an account-wide destination created before pull creation required a connected-agent credential.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "receiver_capabilities": {
+              "type": "object",
+              "properties": {
+                "completion_modes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "http",
+                      "exec",
+                      "stdout",
+                      "sdk"
+                    ]
+                  }
+                },
+                "stream_protocols": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "primitive.events.v1"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "completion_modes",
+                "stream_protocols"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "org_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "domain_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "Restrict this endpoint to emails from a specific domain"
+            },
+            "rules": {
+              "type": "object",
+              "description": "Endpoint-specific filtering rules",
+              "additionalProperties": true,
+              "properties": {
+                "event_types": {
+                  "minItems": 1,
+                  "maxItems": 50,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": "Event types this endpoint receives. Omitted: every event type except the opt-in sent_email.* events, which an endpoint receives only when it lists them."
+                },
+                "max_size_bytes": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Skip messages larger than this many bytes."
+                },
+                "exclude_attachments": {
+                  "type": "boolean",
+                  "description": "When true, skip messages that have attachments."
+                },
+                "attachment_limit_mb": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "description": "Skip messages whose attachments total more than this many megabytes."
+                },
+                "sender_whitelist": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "email",
+                        "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+                      }
+                    ]
+                  },
+                  "description": "Deliver only messages whose authenticated From identity matches an entry: an exact address, or @domain, which also matches its subdomains."
+                },
+                "sender_blacklist": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "email",
+                        "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+                      }
+                    ]
+                  },
+                  "description": "Skip messages whose envelope sender or From address matches an entry: an exact address, or @domain, which also matches its subdomains."
+                }
               }
             },
-            "stream_protocols": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "primitive.events.v1"
-                ]
-              }
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "delivery_count": {
+              "type": "integer",
+              "description": "Total webhook deliveries attempted"
+            },
+            "success_count": {
+              "type": "integer",
+              "description": "Successful deliveries"
+            },
+            "failure_count": {
+              "type": "integer",
+              "description": "Failed deliveries"
+            },
+            "consecutive_fails": {
+              "type": "integer",
+              "description": "Current streak of consecutive failures"
+            },
+            "last_delivery_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "last_success_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "last_failure_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "deactivated_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "http",
+                "function",
+                "pull"
+              ],
+              "description": "http: deliver to the webhook URL. function: invoke a Primitive Function."
+            },
+            "function_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "The Function this endpoint invokes, when kind is function."
+            },
+            "is_route_target": {
+              "type": "boolean",
+              "description": "When true, this endpoint is reachable only via an explicit recipient\nroute, never as a domain's default destination, and is exempt from\nthe one-endpoint-per-domain rule (so many can share a domain).\n"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "A pull destination's stable name, or an http webhook's label (null when it has none)."
+            },
+            "owned_by_key": {
+              "description": "Whether an API key owns this webhook instead of the organization.",
+              "type": "boolean"
+            },
+            "owner_key_id": {
+              "description": "The API key that owns this webhook. In endpoint responses it is set only for a caller who may read API key metadata, and is null otherwise and when the organization owns the webhook. After a rotation, the key that carries on for the key first named while it can act. When none can, the key delivery stops on: the key first named while it is suspended and not expired, otherwise the newest key of its rotation that is not revoked, otherwise the newest one (only the key first named when nothing may carry on for it).",
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "owner_key_status": {
+              "description": "Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. It is the state delivery acts on. Suspended also covers an expired key. A suspended or revoked owner is sent nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the key.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "active",
+                "suspended",
+                "revoked",
+                null
+              ]
+            },
+            "disabled_reason": {
+              "description": "Why the platform turned this endpoint off, when it names a reason. owner_changed: it was given to a new owner while its URL stayed, and the URL was chosen under the previous owner; turning it on or giving it a new URL starts it again. owner_credential_revoked: the third-party app or agent delegate grant that owned it was revoked; an owner or admin who turns it back on takes it over. Null while it is on and when it was turned off by hand. An access suspension does not set it (a suspension is decided through its own record). Other values may be added.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "delivery": {
+              "description": "For a webhook (kind http) in GET /endpoints and GET /endpoints/{id}: whether it is being sent received mail, and why not. Shown to anyone who may read the endpoint; it names a state, never a key. Null when it could not be checked just now. Absent from other kinds of endpoint and from create and update answers.",
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "delivering": {
+                  "type": "boolean",
+                  "description": "Whether the webhook is being sent received mail at all now: it is on, it is not held, and its owner can receive mail. Which messages reach it is still decided per message, by routing, rule grants and its own rules."
+                },
+                "reasons": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "message"
+                    ],
+                    "additionalProperties": {}
+                  },
+                  "description": "Every reason it is not, in the order delivery checks them; empty when it is. Codes, of which more may be added: disabled: the endpoint is off (disabled_reason on the endpoint says why). held: the endpoint, or the route the email came through, is held pending an owner or admin decision after its creator's access was reduced. acting_owner_revoked, acting_owner_suspended (which covers an expired key) and acting_owner_left: its owner cannot act now. acting_owner_permission: its owner does not read mail. acting_owner_depth: its owner sees headers only. acting_owner_scope: its owner does not read this email's mailbox, or, with no email to judge, reads no received mail at all now. These three name what the owner's access holds, so a caller who may not read API key metadata sees acting_owner_access in their place."
+                },
+                "held_for_owner": {
+                  "description": "Rule-granted mail held for this webhook while its owner cannot act; null when none is. Only for a caller with access to every mailbox (held mail can be an earlier owner's), and absent when it could not be read just now.",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "count": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Rule-granted emails waiting for this webhook because its owner could not act at their last check."
+                    },
+                    "oldest_queued_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "description": "When the oldest of them was queued."
+                    },
+                    "expires_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "description": "When the oldest is given up on if its owner still cannot act. Each is checked again periodically, so the count can trail a change of the owner's state."
+                    }
+                  },
+                  "required": [
+                    "count",
+                    "oldest_queued_at",
+                    "expires_at"
+                  ],
+                  "additionalProperties": {}
+                }
+              },
+              "required": [
+                "delivering",
+                "reasons"
+              ],
+              "additionalProperties": {}
+            },
+            "signed_with": {
+              "description": "Which secret signs deliveries to this webhook: its own (read it from GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a webhook.",
+              "type": "string",
+              "enum": [
+                "own_secret",
+                "organization_secret"
+              ]
+            },
+            "signing_secret": {
+              "description": "Only in the response that creates a webhook made with a signing secret of its own (one made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.",
+              "type": "string"
             }
           },
           "required": [
-            "completion_modes",
-            "stream_protocols"
+            "id",
+            "org_id",
+            "enabled",
+            "rules",
+            "created_at",
+            "updated_at",
+            "delivery_count",
+            "success_count",
+            "failure_count",
+            "consecutive_fails"
           ]
         },
-        "id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "org_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "url": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "domain_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "uuid",
-          "description": "Restrict this endpoint to emails from a specific domain"
-        },
-        "rules": {
+        {
           "type": "object",
-          "description": "Endpoint-specific filtering rules",
-          "additionalProperties": true,
           "properties": {
-            "event_types": {
-              "minItems": 1,
-              "maxItems": 50,
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              },
-              "description": "Event types this endpoint receives. Omitted: every event type except the opt-in sent_email.* events, which an endpoint receives only when it lists them."
-            },
-            "max_size_bytes": {
-              "type": "integer",
-              "exclusiveMinimum": 0,
-              "maximum": 9007199254740991,
-              "description": "Skip messages larger than this many bytes."
-            },
-            "exclude_attachments": {
-              "type": "boolean",
-              "description": "When true, skip messages that have attachments."
-            },
-            "attachment_limit_mb": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "description": "Skip messages whose attachments total more than this many megabytes."
-            },
-            "sender_whitelist": {
-              "type": "array",
-              "items": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "format": "email",
-                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                  },
-                  {
-                    "type": "string",
-                    "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
-                  }
-                ]
-              },
-              "description": "Deliver only messages whose authenticated From identity matches an entry: an exact address, or @domain, which also matches its subdomains."
-            },
-            "sender_blacklist": {
-              "type": "array",
-              "items": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "format": "email",
-                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                  },
-                  {
-                    "type": "string",
-                    "pattern": "^@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
-                  }
-                ]
-              },
-              "description": "Skip messages whose envelope sender or From address matches an entry: an exact address, or @domain, which also matches its subdomains."
-            }
-          }
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "delivery_count": {
-          "type": "integer",
-          "description": "Total webhook deliveries attempted"
-        },
-        "success_count": {
-          "type": "integer",
-          "description": "Successful deliveries"
-        },
-        "failure_count": {
-          "type": "integer",
-          "description": "Failed deliveries"
-        },
-        "consecutive_fails": {
-          "type": "integer",
-          "description": "Current streak of consecutive failures"
-        },
-        "last_delivery_at": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "last_success_at": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "last_failure_at": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "deactivated_at": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "kind": {
-          "type": "string",
-          "enum": [
-            "http",
-            "function",
-            "pull"
-          ],
-          "description": "http: deliver to the webhook URL. function: invoke a Primitive Function."
-        },
-        "function_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "uuid",
-          "description": "The Function this endpoint invokes, when kind is function."
-        },
-        "is_route_target": {
-          "type": "boolean",
-          "description": "When true, this endpoint is reachable only via an explicit recipient\nroute, never as a domain's default destination, and is exempt from\nthe one-endpoint-per-domain rule (so many can share a domain).\n"
-        },
-        "name": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "A pull destination's stable name, or an http webhook's label (null when it has none)."
-        },
-        "owned_by_key": {
-          "description": "Whether an API key owns this webhook instead of the organization.",
-          "type": "boolean"
-        },
-        "owner_key_id": {
-          "description": "The API key that owns this webhook. In endpoint responses it is set only for a caller who may read API key metadata, and is null otherwise and when the organization owns the webhook. After a rotation, the key that carries on for the key first named while it can act. When none can, the key delivery stops on: the key first named while it is suspended and not expired, otherwise the newest key of its rotation that is not revoked, otherwise the newest one (only the key first named when nothing may carry on for it).",
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "uuid",
-          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-        },
-        "owner_key_status": {
-          "description": "Whether the owning key can act now. In endpoint responses it is set only for a caller who may read API key metadata. It is the state delivery acts on. Suspended also covers an expired key. A suspended or revoked owner is sent nothing. Anyone who may read the endpoint learns that from delivery.reasons, which never names the key.",
-          "type": [
-            "string",
-            "null"
-          ],
-          "enum": [
-            "active",
-            "suspended",
-            "revoked",
-            null
-          ]
-        },
-        "disabled_reason": {
-          "description": "Why the platform turned this endpoint off, when it names a reason. owner_changed: it was given to a new owner while its URL stayed, and the URL was chosen under the previous owner; turning it on or giving it a new URL starts it again. owner_credential_revoked: the third-party app or agent delegate grant that owned it was revoked; an owner or admin who turns it back on takes it over. Null while it is on and when it was turned off by hand. An access suspension does not set it (a suspension is decided through its own record). Other values may be added.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "delivery": {
-          "description": "For a webhook (kind http) in GET /endpoints and GET /endpoints/{id}: whether it is being sent received mail, and why not. Shown to anyone who may read the endpoint; it names a state, never a key. Null when it could not be checked just now. Absent from other kinds of endpoint and from create and update answers.",
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "delivering": {
-              "type": "boolean",
-              "description": "Whether the webhook is being sent received mail at all now: it is on, it is not held, and its owner can receive mail. Which messages reach it is still decided per message, by routing, rule grants and its own rules."
-            },
-            "reasons": {
+            "warnings": {
+              "description": "For a webhook (kind http). same_path_as_another_endpoint: another webhook you can see, on and not deleted, sends to the same scheme, host and path with any query string, so each email both receive is delivered twice; endpoint_id names it (at most 5, newest first). The URL is never echoed. Empty when none; absent when it could not be checked (a caller who may not read endpoints, or a failed read). Other codes may be added.",
               "type": "array",
               "items": {
                 "type": "object",
@@ -33175,6 +33857,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   },
                   "message": {
                     "type": "string"
+                  },
+                  "endpoint_id": {
+                    "description": "The other webhook a same_path_as_another_endpoint warning names.",
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                   }
                 },
                 "required": [
@@ -33182,73 +33870,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "message"
                 ],
                 "additionalProperties": {}
-              },
-              "description": "Every reason it is not, in the order delivery checks them; empty when it is. Codes, of which more may be added: disabled: the endpoint is off (disabled_reason on the endpoint says why). held: the endpoint, or the route the email came through, is held pending an owner or admin decision after its creator's access was reduced. acting_owner_revoked, acting_owner_suspended (which covers an expired key) and acting_owner_left: its owner cannot act now. acting_owner_permission: its owner does not read mail. acting_owner_depth: its owner sees headers only. acting_owner_scope: its owner does not read this email's mailbox, or, with no email to judge, reads no received mail at all now. These three name what the owner's access holds, so a caller who may not read API key metadata sees acting_owner_access in their place."
-            },
-            "held_for_owner": {
-              "description": "Rule-granted mail held for this webhook while its owner cannot act; null when none is. Only for a caller with access to every mailbox (held mail can be an earlier owner's), and absent when it could not be read just now.",
-              "type": [
-                "object",
-                "null"
-              ],
-              "properties": {
-                "count": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991,
-                  "description": "Rule-granted emails waiting for this webhook because its owner could not act at their last check."
-                },
-                "oldest_queued_at": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
-                  "description": "When the oldest of them was queued."
-                },
-                "expires_at": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
-                  "description": "When the oldest is given up on if its owner still cannot act. Each is checked again periodically, so the count can trail a change of the owner's state."
-                }
-              },
-              "required": [
-                "count",
-                "oldest_queued_at",
-                "expires_at"
-              ],
-              "additionalProperties": {}
+              }
             }
-          },
-          "required": [
-            "delivering",
-            "reasons"
-          ],
-          "additionalProperties": {}
-        },
-        "signed_with": {
-          "description": "Which secret signs deliveries to this webhook: its own (read it from GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a webhook.",
-          "type": "string",
-          "enum": [
-            "own_secret",
-            "organization_secret"
-          ]
-        },
-        "signing_secret": {
-          "description": "Only in the response that creates a webhook made with a signing secret of its own (one made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.",
-          "type": "string"
+          }
         }
-      },
-      "required": [
-        "id",
-        "org_id",
-        "enabled",
-        "rules",
-        "created_at",
-        "updated_at",
-        "delivery_count",
-        "success_count",
-        "failure_count",
-        "consecutive_fails"
       ]
     },
     "sdkName": "createEndpoint",
@@ -49671,7 +50296,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-relay-auto-join",
-    "description": "Whether someone who proves an address on the organization's mail relay domain with Google Workspace joins automatically, and with what access. `option` is null when auto-join is off and an invitation is required; `options` lists the choices. Answers 404 `feature_disabled` unless the organization has mail relay.",
+    "description": "Whether someone who proves an address on the organization's mail relay domain with Google Workspace joins automatically. Auto-joined people have no mail access until an owner or admin assigns a role. `option` is null when auto-join is off and an invitation is required; legacy mail-grant settings read as `no_access`. `options` lists the choices. Answers 404 `feature_disabled` unless the organization has mail relay.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getRelayAutoJoin",
@@ -50779,7 +51404,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "set-relay-auto-join",
-    "description": "`option` is a choice's id from the GET, or null to require an invitation (turning it off needs only members:manage). Choosing an option answers 404 `feature_disabled` unless the organization has mail relay, 400 `validation_error` for an id that is not one of the choices, 403 `grant_forbidden` unless the caller is an owner or admin who can assign roles and send invitations and covers the role the option gives, 409 `role_key_taken` when a custom role already holds that role's key, and 409 `role_assignment_unavailable` when the organization cannot be given that role yet. Person only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose `relay_auto_join.write` (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this client, then send the token in the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs members:manage, and roles:assign to turn it on. API keys are refused.",
+    "description": "`option` is a choice's id from the GET, or null to require an invitation (turning it off needs only members:manage). Auto-joined people have no mail access until an owner or admin assigns a role; legacy mail-grant choices cannot be selected. Choosing an option answers 404 `feature_disabled` unless the organization has mail relay, 400 `validation_error` for an id outside the current catalog, 403 `grant_forbidden` without owner or admin assignment authority, and 409 `role_assignment_unavailable` when the restricted role cannot be assigned yet. Person only: a dashboard session, or the person's own OAuth or CLI token with a session step-up of purpose `relay_auto_join.write` (the person confirms at the step_up_url a 403 step_up_required answer carries, which names this client, then send the token in the Primitive-Step-Up header; the token works only with the client it was confirmed for). Needs members:manage, and roles:assign to turn it on. API keys are refused.",
     "hasJsonBody": true,
     "method": "PUT",
     "operationId": "setRelayAutoJoin",

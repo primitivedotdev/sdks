@@ -142,8 +142,8 @@ def sync_detailed(
     should match (expected match, kind other). failed means the rule decided one against expected.
     Nothing is stored and no mail is read. Keep them, with their expected, with add_expectation_samples,
     or for a request with the accept's expectation_samples. Limited to 20 an hour per member. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -187,8 +187,8 @@ def sync(
     should match (expected match, kind other). failed means the rule decided one against expected.
     Nothing is stored and no mail is read. Keep them, with their expected, with add_expectation_samples,
     or for a request with the accept's expectation_samples. Limited to 20 an hour per member. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -227,8 +227,8 @@ async def asyncio_detailed(
     should match (expected match, kind other). failed means the rule decided one against expected.
     Nothing is stored and no mail is read. Keep them, with their expected, with add_expectation_samples,
     or for a request with the accept's expectation_samples. Limited to 20 an hour per member. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -272,8 +272,8 @@ async def asyncio(
     should match (expected match, kind other). failed means the rule decided one against expected.
     Nothing is stored and no mail is read. Keep them, with their expected, with add_expectation_samples,
     or for a request with the accept's expectation_samples. Limited to 20 an hour per member. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         idempotency_key (str | Unset):

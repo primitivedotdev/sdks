@@ -101,9 +101,8 @@ def sync_detailed(
 ) -> Response[DeleteEmailRuleRequestResponse200 | ErrorResponse]:
     """ Delete a withdrawn rule request
 
-     Deletes a request you withdrew, for everyone who could see it. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+     Deletes a request you withdrew, for everyone who could see it. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -136,9 +135,8 @@ def sync(
 ) -> DeleteEmailRuleRequestResponse200 | ErrorResponse | None:
     """ Delete a withdrawn rule request
 
-     Deletes a request you withdrew, for everyone who could see it. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+     Deletes a request you withdrew, for everyone who could see it. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -166,9 +164,8 @@ async def asyncio_detailed(
 ) -> Response[DeleteEmailRuleRequestResponse200 | ErrorResponse]:
     """ Delete a withdrawn rule request
 
-     Deletes a request you withdrew, for everyone who could see it. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+     Deletes a request you withdrew, for everyone who could see it. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -201,9 +198,8 @@ async def asyncio(
 ) -> DeleteEmailRuleRequestResponse200 | ErrorResponse | None:
     """ Delete a withdrawn rule request
 
-     Deletes a request you withdrew, for everyone who could see it. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+     Deletes a request you withdrew, for everyone who could see it. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):

@@ -123,11 +123,13 @@ def sync_detailed(
      Runs a rule over received mail and reports what it would decide for each email (matched, near_miss,
     no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and
     question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its
-    author). It reads only mail its author can read and its scope covers. Without email_ids it tests the
-    newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails
-    over 2 hours old are classified first unless classify_missing is false. It records no decision and
-    grants nothing, and stops at about 90 seconds. Needs mail:read, a member's own credential with their
-    full access (not an API key, agent key or narrowed token), and the email rules feature.
+    author). It reads only mail its author can read and its scope covers. A rule you see only because it
+    covers your own mailboxes runs as you, over only those, from the dashboard or the Primitive CLI.
+    Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any
+    expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is
+    false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -166,11 +168,13 @@ def sync(
      Runs a rule over received mail and reports what it would decide for each email (matched, near_miss,
     no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and
     question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its
-    author). It reads only mail its author can read and its scope covers. Without email_ids it tests the
-    newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails
-    over 2 hours old are classified first unless classify_missing is false. It records no decision and
-    grants nothing, and stops at about 90 seconds. Needs mail:read, a member's own credential with their
-    full access (not an API key, agent key or narrowed token), and the email rules feature.
+    author). It reads only mail its author can read and its scope covers. A rule you see only because it
+    covers your own mailboxes runs as you, over only those, from the dashboard or the Primitive CLI.
+    Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any
+    expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is
+    false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -204,11 +208,13 @@ async def asyncio_detailed(
      Runs a rule over received mail and reports what it would decide for each email (matched, near_miss,
     no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and
     question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its
-    author). It reads only mail its author can read and its scope covers. Without email_ids it tests the
-    newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails
-    over 2 hours old are classified first unless classify_missing is false. It records no decision and
-    grants nothing, and stops at about 90 seconds. Needs mail:read, a member's own credential with their
-    full access (not an API key, agent key or narrowed token), and the email rules feature.
+    author). It reads only mail its author can read and its scope covers. A rule you see only because it
+    covers your own mailboxes runs as you, over only those, from the dashboard or the Primitive CLI.
+    Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any
+    expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is
+    false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -247,11 +253,13 @@ async def asyncio(
      Runs a rule over received mail and reports what it would decide for each email (matched, near_miss,
     no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and
     question decided. Test an unsaved tree, or a saved rule by rule_id (its current version, as its
-    author). It reads only mail its author can read and its scope covers. Without email_ids it tests the
-    newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails
-    over 2 hours old are classified first unless classify_missing is false. It records no decision and
-    grants nothing, and stops at about 90 seconds. Needs mail:read, a member's own credential with their
-    full access (not an API key, agent key or narrowed token), and the email rules feature.
+    author). It reads only mail its author can read and its scope covers. A rule you see only because it
+    covers your own mailboxes runs as you, over only those, from the dashboard or the Primitive CLI.
+    Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any
+    expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is
+    false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):

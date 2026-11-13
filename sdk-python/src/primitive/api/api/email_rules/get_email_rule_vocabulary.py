@@ -87,9 +87,9 @@ def sync_detailed(
      What a rule tree you write yourself can say: each column of the current vocabulary with its type,
     source, meaning, operators and the value each takes, options, and whether it takes min_confidence;
     and the tree's limits, its stored size included. Built from the checks a saved or tested tree must
-    pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read, the
+    email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
+    token).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -120,9 +120,9 @@ def sync(
      What a rule tree you write yourself can say: each column of the current vocabulary with its type,
     source, meaning, operators and the value each takes, options, and whether it takes min_confidence;
     and the tree's limits, its stored size included. Built from the checks a saved or tested tree must
-    pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read, the
+    email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
+    token).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -148,9 +148,9 @@ async def asyncio_detailed(
      What a rule tree you write yourself can say: each column of the current vocabulary with its type,
     source, meaning, operators and the value each takes, options, and whether it takes min_confidence;
     and the tree's limits, its stored size included. Built from the checks a saved or tested tree must
-    pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read, the
+    email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
+    token).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -181,9 +181,9 @@ async def asyncio(
      What a rule tree you write yourself can say: each column of the current vocabulary with its type,
     source, meaning, operators and the value each takes, options, and whether it takes min_confidence;
     and the tree's limits, its stored size included. Built from the checks a saved or tested tree must
-    pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read, a
-    member's own credential with their full access (not an API key, agent key or narrowed token), and
-    the email rules feature.
+    pass. A tree is {version: tree_version, vocabulary: version, when, questions}. Needs mail:read, the
+    email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
+    token).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

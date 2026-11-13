@@ -99,8 +99,8 @@ def sync_detailed(
     lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read
     nothing through it (keys, other_keys; left out when they could not be read). The author or a reader
     of all the organization's mail may delete it; while it is shared, only the author or someone who
-    manages members from the dashboard. Needs mail:read, a member's own credential with their full
-    access (not an API key, agent key or narrowed token), and the email rules feature.
+    manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -138,8 +138,8 @@ def sync(
     lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read
     nothing through it (keys, other_keys; left out when they could not be read). The author or a reader
     of all the organization's mail may delete it; while it is shared, only the author or someone who
-    manages members from the dashboard. Needs mail:read, a member's own credential with their full
-    access (not an API key, agent key or narrowed token), and the email rules feature.
+    manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -172,8 +172,8 @@ async def asyncio_detailed(
     lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read
     nothing through it (keys, other_keys; left out when they could not be read). The author or a reader
     of all the organization's mail may delete it; while it is shared, only the author or someone who
-    manages members from the dashboard. Needs mail:read, a member's own credential with their full
-    access (not an API key, agent key or narrowed token), and the email rules feature.
+    manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -211,8 +211,8 @@ async def asyncio(
     lists the shares it ended (ended_shares) and the unrevoked keys that still list it, which now read
     nothing through it (keys, other_keys; left out when they could not be read). The author or a reader
     of all the organization's mail may delete it; while it is shared, only the author or someone who
-    manages members from the dashboard. Needs mail:read, a member's own credential with their full
-    access (not an API key, agent key or narrowed token), and the email rules feature.
+    manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):

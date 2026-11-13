@@ -96,8 +96,8 @@ def sync_detailed(
 
      Whose mail the rule runs over, and what that comes to now: a rule never reaches further than what
     its author can read when it runs, so what a selected rule names and its author can no longer read
-    stops matching. Needs mail:read, a member's own credential with their full access (not an API key,
-    agent key or narrowed token), and the email rules feature.
+    stops matching. Needs mail:read, the email rules feature, and a member's own full-access credential
+    (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -132,8 +132,8 @@ def sync(
 
      Whose mail the rule runs over, and what that comes to now: a rule never reaches further than what
     its author can read when it runs, so what a selected rule names and its author can no longer read
-    stops matching. Needs mail:read, a member's own credential with their full access (not an API key,
-    agent key or narrowed token), and the email rules feature.
+    stops matching. Needs mail:read, the email rules feature, and a member's own full-access credential
+    (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -163,8 +163,8 @@ async def asyncio_detailed(
 
      Whose mail the rule runs over, and what that comes to now: a rule never reaches further than what
     its author can read when it runs, so what a selected rule names and its author can no longer read
-    stops matching. Needs mail:read, a member's own credential with their full access (not an API key,
-    agent key or narrowed token), and the email rules feature.
+    stops matching. Needs mail:read, the email rules feature, and a member's own full-access credential
+    (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -199,8 +199,8 @@ async def asyncio(
 
      Whose mail the rule runs over, and what that comes to now: a rule never reaches further than what
     its author can read when it runs, so what a selected rule names and its author can no longer read
-    stops matching. Needs mail:read, a member's own credential with their full access (not an API key,
-    agent key or narrowed token), and the email rules feature.
+    stops matching. Needs mail:read, the email rules feature, and a member's own full-access credential
+    (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):

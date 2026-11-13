@@ -34,6 +34,7 @@ function makeEmail(
     sender: "sender@example.net",
     status: "accepted",
     webhook_attempt_count: 0,
+    imported: null,
     thread_id: null,
     ...overrides,
   };

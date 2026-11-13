@@ -72,6 +72,8 @@ class CreateEmailRuleResult:
                 (restore_version): which, and that the scope is not part of a version.
             affects (CreateEmailRuleResultAffects | Unset): After an update that saved a version: API keys listing the rule,
                 the webhooks they own, and shares this write ended. The rule keeps its state. Absent if not read.
+            notice (str | Unset): After a write that saved a version of an active rule keys or webhooks read without
+                checking it first: what it changes, and how to have the next one checked.
      """
 
     id: UUID
@@ -94,6 +96,7 @@ class CreateEmailRuleResult:
     expectations_check: CreateEmailRuleResultExpectationsCheck | Unset = UNSET
     restored_from: CreateEmailRuleResultRestoredFrom | Unset = UNSET
     affects: CreateEmailRuleResultAffects | Unset = UNSET
+    notice: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -188,6 +191,8 @@ class CreateEmailRuleResult:
         if not isinstance(self.affects, Unset):
             affects = self.affects.to_dict()
 
+        notice = self.notice
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -224,6 +229,8 @@ class CreateEmailRuleResult:
             field_dict["restored_from"] = restored_from
         if affects is not UNSET:
             field_dict["affects"] = affects
+        if notice is not UNSET:
+            field_dict["notice"] = notice
 
         return field_dict
 
@@ -403,6 +410,8 @@ class CreateEmailRuleResult:
 
 
 
+        notice = d.pop("notice", UNSET)
+
         create_email_rule_result = cls(
             id=id,
             name=name,
@@ -424,6 +433,7 @@ class CreateEmailRuleResult:
             expectations_check=expectations_check,
             restored_from=restored_from,
             affects=affects,
+            notice=notice,
         )
 
 

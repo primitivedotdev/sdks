@@ -26,6 +26,7 @@ if TYPE_CHECKING:
   from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
   from ..models.email_summary_copies_item import EmailSummaryCopiesItem
   from ..models.email_summary_delivery_report_type_0 import EmailSummaryDeliveryReportType0
+  from ..models.email_summary_imported_type_0 import EmailSummaryImportedType0
   from ..models.email_summary_relay_type_0 import EmailSummaryRelayType0
   from ..models.email_summary_repeat_type_0 import EmailSummaryRepeatType0
   from ..models.email_summary_sender_member_type_0 import EmailSummarySenderMemberType0
@@ -146,6 +147,8 @@ class EmailSummary:
                 judgement.
             from_header_email (None | str): The From header address, lowercased, that `from_verified` is about; null when
                 the message had none. Unlike `sender` it is never the envelope address.
+            imported (EmailSummaryImportedType0 | None): Historical acquisition; never sender or SMTP delivery proof. Null
+                for live mail. Excluded from live tails and deltas.
             snippet (None | str): A plain-text preview of `body_text` (never `body_html`), computed once when the message is
                 stored: quoted replies (an "On ... wrote:" line, an "Original Message" separator, a From/Sent header block, `>`
                 lines) and a `-- ` signature are cut off, whitespace is collapsed to single spaces, and the result is at most
@@ -305,6 +308,7 @@ class EmailSummary:
     automated_reasons: list[str]
     from_verified: bool | None
     from_header_email: None | str
+    imported: EmailSummaryImportedType0 | None
     snippet: None | str
     message_id: None | str | Unset = UNSET
     domain_id: None | Unset | UUID = UNSET
@@ -353,6 +357,7 @@ class EmailSummary:
         from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0 # noqa: PLC0415
         from ..models.email_summary_copies_item import EmailSummaryCopiesItem # noqa: PLC0415
         from ..models.email_summary_delivery_report_type_0 import EmailSummaryDeliveryReportType0 # noqa: PLC0415
+        from ..models.email_summary_imported_type_0 import EmailSummaryImportedType0 # noqa: PLC0415
         from ..models.email_summary_relay_type_0 import EmailSummaryRelayType0 # noqa: PLC0415
         from ..models.email_summary_repeat_type_0 import EmailSummaryRepeatType0 # noqa: PLC0415
         from ..models.email_summary_sender_member_type_0 import EmailSummarySenderMemberType0 # noqa: PLC0415
@@ -395,6 +400,12 @@ class EmailSummary:
 
         from_header_email: None | str
         from_header_email = self.from_header_email
+
+        imported: dict[str, Any] | None
+        if isinstance(self.imported, EmailSummaryImportedType0):
+            imported = self.imported.to_dict()
+        else:
+            imported = self.imported
 
         snippet: None | str
         snippet = self.snippet
@@ -645,6 +656,7 @@ class EmailSummary:
             "automated_reasons": automated_reasons,
             "from_verified": from_verified,
             "from_header_email": from_header_email,
+            "imported": imported,
             "snippet": snippet,
         })
         if message_id is not UNSET:
@@ -730,6 +742,7 @@ class EmailSummary:
         from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0 # noqa: PLC0415
         from ..models.email_summary_copies_item import EmailSummaryCopiesItem # noqa: PLC0415
         from ..models.email_summary_delivery_report_type_0 import EmailSummaryDeliveryReportType0 # noqa: PLC0415
+        from ..models.email_summary_imported_type_0 import EmailSummaryImportedType0 # noqa: PLC0415
         from ..models.email_summary_relay_type_0 import EmailSummaryRelayType0 # noqa: PLC0415
         from ..models.email_summary_repeat_type_0 import EmailSummaryRepeatType0 # noqa: PLC0415
         from ..models.email_summary_sender_member_type_0 import EmailSummarySenderMemberType0 # noqa: PLC0415
@@ -808,6 +821,24 @@ class EmailSummary:
             return cast(None | str, data)
 
         from_header_email = _parse_from_header_email(d.pop("from_header_email"))
+
+
+        def _parse_imported(data: object) -> EmailSummaryImportedType0 | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                imported_type_0 = EmailSummaryImportedType0.from_dict(data)
+
+
+
+                return imported_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailSummaryImportedType0 | None, data)
+
+        imported = _parse_imported(d.pop("imported"))
 
 
         def _parse_snippet(data: object) -> None | str:
@@ -1304,6 +1335,7 @@ class EmailSummary:
             automated_reasons=automated_reasons,
             from_verified=from_verified,
             from_header_email=from_header_email,
+            imported=imported,
             snippet=snippet,
             message_id=message_id,
             domain_id=domain_id,

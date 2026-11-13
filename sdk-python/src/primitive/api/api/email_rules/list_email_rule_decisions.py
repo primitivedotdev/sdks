@@ -128,9 +128,8 @@ def sync_detailed(
      What the rule decided for each email it was evaluated against, newest first: whether it matched,
     whether it nearly did, how each part decided and the answers to its questions, with which email it
     was (from_address, subject, received_at). Only decisions on emails the caller can read are listed.
-    With matched, only matches (true) or only the rest (false). Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+    With matched, only matches (true) or only the rest (false). Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -176,9 +175,8 @@ def sync(
      What the rule decided for each email it was evaluated against, newest first: whether it matched,
     whether it nearly did, how each part decided and the answers to its questions, with which email it
     was (from_address, subject, received_at). Only decisions on emails the caller can read are listed.
-    With matched, only matches (true) or only the rest (false). Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+    With matched, only matches (true) or only the rest (false). Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -219,9 +217,8 @@ async def asyncio_detailed(
      What the rule decided for each email it was evaluated against, newest first: whether it matched,
     whether it nearly did, how each part decided and the answers to its questions, with which email it
     was (from_address, subject, received_at). Only decisions on emails the caller can read are listed.
-    With matched, only matches (true) or only the rest (false). Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+    With matched, only matches (true) or only the rest (false). Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -267,9 +264,8 @@ async def asyncio(
      What the rule decided for each email it was evaluated against, newest first: whether it matched,
     whether it nearly did, how each part decided and the answers to its questions, with which email it
     was (from_address, subject, received_at). Only decisions on emails the caller can read are listed.
-    With matched, only matches (true) or only the rest (false). Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature.
+    With matched, only matches (true) or only the rest (false). Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):

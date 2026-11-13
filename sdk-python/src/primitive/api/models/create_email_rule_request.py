@@ -58,6 +58,7 @@ class CreateEmailRuleRequest:
             compiled_by (str | Unset): Who produced the tree (not verified): the compile response's compiled_by, or member
                 (the default) for a tree you wrote or edited.
             breadth (EmailRuleBreadth | None | Unset): Ignored (the compile answer's breadth).
+            conditions_breadth (EmailRuleBreadth | None | Unset): Ignored.
      """
 
     name: str
@@ -74,6 +75,7 @@ class CreateEmailRuleRequest:
     warnings: list[str] | Unset = UNSET
     compiled_by: str | Unset = UNSET
     breadth: EmailRuleBreadth | None | Unset = UNSET
+    conditions_breadth: EmailRuleBreadth | None | Unset = UNSET
 
 
 
@@ -147,6 +149,14 @@ class CreateEmailRuleRequest:
         else:
             breadth = self.breadth
 
+        conditions_breadth: dict[str, Any] | None | Unset
+        if isinstance(self.conditions_breadth, Unset):
+            conditions_breadth = UNSET
+        elif isinstance(self.conditions_breadth, EmailRuleBreadth):
+            conditions_breadth = self.conditions_breadth.to_dict()
+        else:
+            conditions_breadth = self.conditions_breadth
+
 
         field_dict: dict[str, Any] = {}
 
@@ -177,6 +187,8 @@ class CreateEmailRuleRequest:
             field_dict["compiled_by"] = compiled_by
         if breadth is not UNSET:
             field_dict["breadth"] = breadth
+        if conditions_breadth is not UNSET:
+            field_dict["conditions_breadth"] = conditions_breadth
 
         return field_dict
 
@@ -291,6 +303,26 @@ class CreateEmailRuleRequest:
         breadth = _parse_breadth(d.pop("breadth", UNSET))
 
 
+        def _parse_conditions_breadth(data: object) -> EmailRuleBreadth | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                conditions_breadth_type_1 = EmailRuleBreadth.from_dict(data)
+
+
+
+                return conditions_breadth_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleBreadth | None | Unset, data)
+
+        conditions_breadth = _parse_conditions_breadth(d.pop("conditions_breadth", UNSET))
+
+
         create_email_rule_request = cls(
             name=name,
             english=english,
@@ -306,6 +338,7 @@ class CreateEmailRuleRequest:
             warnings=warnings,
             compiled_by=compiled_by,
             breadth=breadth,
+            conditions_breadth=conditions_breadth,
         )
 
         return create_email_rule_request

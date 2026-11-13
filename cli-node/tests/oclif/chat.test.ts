@@ -170,6 +170,7 @@ function replyEmail(overrides: Partial<EmailDetail> = {}): EmailDetail {
     thread_id: "thread-1",
     to_email: "agent@sender.example",
     webhook_attempt_count: 1,
+    imported: null,
     webhook_status: "fired",
     parsed: {
       status: "complete",
@@ -2076,6 +2077,7 @@ describe("resolveIdempotentReplayReply", () => {
       status: "accepted",
       thread_id: null,
       webhook_attempt_count: 0,
+      imported: null,
       ...overrides,
     };
   }

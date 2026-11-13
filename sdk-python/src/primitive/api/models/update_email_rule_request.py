@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.update_email_rule_request_evaluation_scope import UpdateEmailRuleRequestEvaluationScope
+from ..models.update_email_rule_request_kind import UpdateEmailRuleRequestKind
 from ..models.update_email_rule_request_state import UpdateEmailRuleRequestState
 from typing import cast
 
@@ -47,6 +48,8 @@ class UpdateEmailRuleRequest:
             compiled_by (str | Unset): Who produced the tree (not verified): the compile response's compiled_by, or member
                 (the default) for a tree you wrote or edited.
             breadth (EmailRuleBreadth | None | Unset): Ignored (the compile answer's breadth).
+            conditions_breadth (EmailRuleBreadth | None | Unset): Ignored.
+            kind (UpdateEmailRuleRequestKind | Unset): Must be the rule's own (400 kind_mismatch).
             evaluation_scope (UpdateEmailRuleRequestEvaluationScope | Unset): own_mailboxes: mail to your own addresses and
                 agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
                 later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version
@@ -68,7 +71,9 @@ class UpdateEmailRuleRequest:
                 before saving; it can take as long as a test. Failed: 409 expectations_failed; on emails the rule cannot read:
                 409 expectations_unreadable; undecided: 409 expectations_undecided (each with details.expectations_check); none
                 to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409
-                email_rule_conflict). Only writes that save a version or activate the rule are judged.
+                email_rule_conflict). Only writes that save a version or activate the rule are judged. Omitted: judged as with
+                true when the write saves a version or changes the scope of an active rule that API keys or webhooks read and
+                that has expectations. false: never judged first.
             restore_version (int | Unset): Save version n again as the next version (author only): its english, tree,
                 explanation, assumptions, warnings and compiled_by. A version carries no scope: the rule keeps its own unless
                 evaluation_scope is sent. 404 version_not_found; 400 already_current or version_not_renderable. Not with a
@@ -84,6 +89,8 @@ class UpdateEmailRuleRequest:
     warnings: list[str] | Unset = UNSET
     compiled_by: str | Unset = UNSET
     breadth: EmailRuleBreadth | None | Unset = UNSET
+    conditions_breadth: EmailRuleBreadth | None | Unset = UNSET
+    kind: UpdateEmailRuleRequestKind | Unset = UNSET
     evaluation_scope: UpdateEmailRuleRequestEvaluationScope | Unset = UNSET
     scope_selection: EmailRuleScopeSelection | Unset = UNSET
     if_version: int | Unset = UNSET
@@ -140,6 +147,19 @@ class UpdateEmailRuleRequest:
             breadth = self.breadth.to_dict()
         else:
             breadth = self.breadth
+
+        conditions_breadth: dict[str, Any] | None | Unset
+        if isinstance(self.conditions_breadth, Unset):
+            conditions_breadth = UNSET
+        elif isinstance(self.conditions_breadth, EmailRuleBreadth):
+            conditions_breadth = self.conditions_breadth.to_dict()
+        else:
+            conditions_breadth = self.conditions_breadth
+
+        kind: str | Unset = UNSET
+        if not isinstance(self.kind, Unset):
+            kind = self.kind.value
+
 
         evaluation_scope: str | Unset = UNSET
         if not isinstance(self.evaluation_scope, Unset):
@@ -211,6 +231,10 @@ class UpdateEmailRuleRequest:
             field_dict["compiled_by"] = compiled_by
         if breadth is not UNSET:
             field_dict["breadth"] = breadth
+        if conditions_breadth is not UNSET:
+            field_dict["conditions_breadth"] = conditions_breadth
+        if kind is not UNSET:
+            field_dict["kind"] = kind
         if evaluation_scope is not UNSET:
             field_dict["evaluation_scope"] = evaluation_scope
         if scope_selection is not UNSET:
@@ -294,6 +318,36 @@ class UpdateEmailRuleRequest:
             return cast(EmailRuleBreadth | None | Unset, data)
 
         breadth = _parse_breadth(d.pop("breadth", UNSET))
+
+
+        def _parse_conditions_breadth(data: object) -> EmailRuleBreadth | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                conditions_breadth_type_1 = EmailRuleBreadth.from_dict(data)
+
+
+
+                return conditions_breadth_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleBreadth | None | Unset, data)
+
+        conditions_breadth = _parse_conditions_breadth(d.pop("conditions_breadth", UNSET))
+
+
+        _kind = d.pop("kind", UNSET)
+        kind: UpdateEmailRuleRequestKind | Unset
+        if isinstance(_kind,  Unset):
+            kind = UNSET
+        else:
+            kind = UpdateEmailRuleRequestKind(_kind)
+
+
 
 
         _evaluation_scope = d.pop("evaluation_scope", UNSET)
@@ -391,6 +445,8 @@ class UpdateEmailRuleRequest:
             warnings=warnings,
             compiled_by=compiled_by,
             breadth=breadth,
+            conditions_breadth=conditions_breadth,
+            kind=kind,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
             if_version=if_version,

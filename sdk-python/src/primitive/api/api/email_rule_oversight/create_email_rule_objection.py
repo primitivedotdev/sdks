@@ -133,9 +133,9 @@ def sync_detailed(
     admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
     or the member who made it withdraws it, which clears its message. It never changes after that. You
     may have one pending objection per rule and 50 in all, and object to the same rule again only 10
-    minutes after you last did, whatever became of it. Needs mail:read, a member's own credential with
-    their full access (not an API key, agent key or narrowed token), and the email rules feature. Only
-    on your own dashboard session or the Primitive CLI.
+    minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
+    dashboard session or the Primitive CLI.
 
     Args:
         idempotency_key (str | Unset):
@@ -177,9 +177,9 @@ def sync(
     admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
     or the member who made it withdraws it, which clears its message. It never changes after that. You
     may have one pending objection per rule and 50 in all, and object to the same rule again only 10
-    minutes after you last did, whatever became of it. Needs mail:read, a member's own credential with
-    their full access (not an API key, agent key or narrowed token), and the email rules feature. Only
-    on your own dashboard session or the Primitive CLI.
+    minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
+    dashboard session or the Primitive CLI.
 
     Args:
         idempotency_key (str | Unset):
@@ -216,9 +216,9 @@ async def asyncio_detailed(
     admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
     or the member who made it withdraws it, which clears its message. It never changes after that. You
     may have one pending objection per rule and 50 in all, and object to the same rule again only 10
-    minutes after you last did, whatever became of it. Needs mail:read, a member's own credential with
-    their full access (not an API key, agent key or narrowed token), and the email rules feature. Only
-    on your own dashboard session or the Primitive CLI.
+    minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
+    dashboard session or the Primitive CLI.
 
     Args:
         idempotency_key (str | Unset):
@@ -260,9 +260,9 @@ async def asyncio(
     admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
     or the member who made it withdraws it, which clears its message. It never changes after that. You
     may have one pending objection per rule and 50 in all, and object to the same rule again only 10
-    minutes after you last did, whatever became of it. Needs mail:read, a member's own credential with
-    their full access (not an API key, agent key or narrowed token), and the email rules feature. Only
-    on your own dashboard session or the Primitive CLI.
+    minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a
+    member's own full-access credential (no API key, agent key or narrowed token). Only on your own
+    dashboard session or the Primitive CLI.
 
     Args:
         idempotency_key (str | Unset):

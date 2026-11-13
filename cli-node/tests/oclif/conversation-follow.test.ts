@@ -57,6 +57,7 @@ function fixture() {
     automated: false,
     automated_reasons: [],
     webhook_attempt_count: 0,
+    imported: null,
     body_text: "I need owner approval first.",
     parsed: { status: "complete", attachments: [] },
     auth: {

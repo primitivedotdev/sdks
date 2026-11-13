@@ -12,8 +12,8 @@ from typing import cast
 
 if TYPE_CHECKING:
   from ..models.email_rule_look_alike import EmailRuleLookAlike
+  from ..models.email_rule_tested import EmailRuleTested
   from ..models.generate_look_alikes_result_counts import GenerateLookAlikesResultCounts
-  from ..models.generate_look_alikes_result_rule import GenerateLookAlikesResultRule
 
 
 
@@ -27,13 +27,13 @@ T = TypeVar("T", bound="GenerateLookAlikesResult")
 class GenerateLookAlikesResult:
     """ 
         Attributes:
-            rule (GenerateLookAlikesResultRule):
+            rule (EmailRuleTested):
             look_alikes (list[EmailRuleLookAlike]):
             counts (GenerateLookAlikesResultCounts):
             note (str): That the emails are made up and were never sent or stored.
      """
 
-    rule: GenerateLookAlikesResultRule
+    rule: EmailRuleTested
     look_alikes: list[EmailRuleLookAlike]
     counts: GenerateLookAlikesResultCounts
     note: str
@@ -45,8 +45,8 @@ class GenerateLookAlikesResult:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_rule_look_alike import EmailRuleLookAlike # noqa: PLC0415
+        from ..models.email_rule_tested import EmailRuleTested # noqa: PLC0415
         from ..models.generate_look_alikes_result_counts import GenerateLookAlikesResultCounts # noqa: PLC0415
-        from ..models.generate_look_alikes_result_rule import GenerateLookAlikesResultRule # noqa: PLC0415
         rule = self.rule.to_dict()
 
         look_alikes = []
@@ -77,10 +77,10 @@ class GenerateLookAlikesResult:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_rule_look_alike import EmailRuleLookAlike # noqa: PLC0415
+        from ..models.email_rule_tested import EmailRuleTested # noqa: PLC0415
         from ..models.generate_look_alikes_result_counts import GenerateLookAlikesResultCounts # noqa: PLC0415
-        from ..models.generate_look_alikes_result_rule import GenerateLookAlikesResultRule # noqa: PLC0415
         d = dict(src_dict)
-        rule = GenerateLookAlikesResultRule.from_dict(d.pop("rule"))
+        rule = EmailRuleTested.from_dict(d.pop("rule"))
 
 
 

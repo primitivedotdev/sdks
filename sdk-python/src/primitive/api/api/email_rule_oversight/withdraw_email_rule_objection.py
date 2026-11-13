@@ -110,9 +110,9 @@ def sync_detailed(
 ) -> Response[ErrorResponse | WithdrawEmailRuleObjectionResponse200]:
     """ Withdraw an objection
 
-     Withdraws a pending objection you made, and clears its message. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature. Only on your own dashboard session or the Primitive CLI.
+     Withdraws a pending objection you made, and clears its message. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only
+    on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -148,9 +148,9 @@ def sync(
 ) -> ErrorResponse | WithdrawEmailRuleObjectionResponse200 | None:
     """ Withdraw an objection
 
-     Withdraws a pending objection you made, and clears its message. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature. Only on your own dashboard session or the Primitive CLI.
+     Withdraws a pending objection you made, and clears its message. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only
+    on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -181,9 +181,9 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | WithdrawEmailRuleObjectionResponse200]:
     """ Withdraw an objection
 
-     Withdraws a pending objection you made, and clears its message. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature. Only on your own dashboard session or the Primitive CLI.
+     Withdraws a pending objection you made, and clears its message. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only
+    on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -219,9 +219,9 @@ async def asyncio(
 ) -> ErrorResponse | WithdrawEmailRuleObjectionResponse200 | None:
     """ Withdraw an objection
 
-     Withdraws a pending objection you made, and clears its message. Needs mail:read, a member's own
-    credential with their full access (not an API key, agent key or narrowed token), and the email rules
-    feature. Only on your own dashboard session or the Primitive CLI.
+     Withdraws a pending objection you made, and clears its message. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only
+    on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):

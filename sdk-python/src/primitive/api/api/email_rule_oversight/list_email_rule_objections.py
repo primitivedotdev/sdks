@@ -128,8 +128,8 @@ def sync_detailed(
     objection is seen by the member who made it, the rule's author and the organization's owners and
     admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
     or the member who made it withdraws it, which clears its message. It never changes after that. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         box (ListEmailRuleObjectionsBox | Unset): outgoing: objections you made; incoming:
@@ -178,8 +178,8 @@ def sync(
     objection is seen by the member who made it, the rule's author and the organization's owners and
     admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
     or the member who made it withdraws it, which clears its message. It never changes after that. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         box (ListEmailRuleObjectionsBox | Unset): outgoing: objections you made; incoming:
@@ -223,8 +223,8 @@ async def asyncio_detailed(
     objection is seen by the member who made it, the rule's author and the organization's owners and
     admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
     or the member who made it withdraws it, which clears its message. It never changes after that. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         box (ListEmailRuleObjectionsBox | Unset): outgoing: objections you made; incoming:
@@ -273,8 +273,8 @@ async def asyncio(
     objection is seen by the member who made it, the rule's author and the organization's owners and
     admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it,
     or the member who made it withdraws it, which clears its message. It never changes after that. Needs
-    mail:read, a member's own credential with their full access (not an API key, agent key or narrowed
-    token), and the email rules feature. Only on your own dashboard session or the Primitive CLI.
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token). Only on your own dashboard session or the Primitive CLI.
 
     Args:
         box (ListEmailRuleObjectionsBox | Unset): outgoing: objections you made; incoming:

@@ -5,6 +5,7 @@ from .accept_email_rule_objection_result import AcceptEmailRuleObjectionResult
 from .accept_email_rule_objection_result_rule import AcceptEmailRuleObjectionResultRule
 from .accept_email_rule_objection_result_status import AcceptEmailRuleObjectionResultStatus
 from .accept_email_rule_request_request import AcceptEmailRuleRequestRequest
+from .accept_email_rule_request_request_kind import AcceptEmailRuleRequestRequestKind
 from .accept_email_rule_request_response_201 import AcceptEmailRuleRequestResponse201
 from .accept_email_rule_request_result import AcceptEmailRuleRequestResult
 from .account import Account
@@ -139,6 +140,7 @@ from .compile_email_rule_request import CompileEmailRuleRequest
 from .compile_email_rule_request_kind import CompileEmailRuleRequestKind
 from .compile_email_rule_response_200 import CompileEmailRuleResponse200
 from .compile_email_rule_result import CompileEmailRuleResult
+from .compile_email_rule_result_kind import CompileEmailRuleResultKind
 from .compile_email_rule_result_sql import CompileEmailRuleResultSql
 from .complete_webhook_exec_input import CompleteWebhookExecInput
 from .complete_webhook_exec_input_mode import CompleteWebhookExecInputMode
@@ -167,6 +169,10 @@ from .conversation_message import ConversationMessage
 from .conversation_message_copies_item import ConversationMessageCopiesItem
 from .conversation_message_direction import ConversationMessageDirection
 from .conversation_message_hold import ConversationMessageHold
+from .conversation_message_imported_type_0 import ConversationMessageImportedType0
+from .conversation_message_imported_type_0_from import ConversationMessageImportedType0From
+from .conversation_message_imported_type_0_method import ConversationMessageImportedType0Method
+from .conversation_message_imported_type_0_verification import ConversationMessageImportedType0Verification
 from .conversation_message_repeat_type_0 import ConversationMessageRepeatType0
 from .conversation_message_role import ConversationMessageRole
 from .conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0
@@ -189,6 +195,7 @@ from .create_email_rule_request_evaluation_scope import CreateEmailRuleRequestEv
 from .create_email_rule_request_expectations import CreateEmailRuleRequestExpectations
 from .create_email_rule_request_kind import CreateEmailRuleRequestKind
 from .create_email_rule_request_request import CreateEmailRuleRequestRequest
+from .create_email_rule_request_request_kind import CreateEmailRuleRequestRequestKind
 from .create_email_rule_request_response_201 import CreateEmailRuleRequestResponse201
 from .create_email_rule_request_result import CreateEmailRuleRequestResult
 from .create_email_rule_request_result_proposed_via import CreateEmailRuleRequestResultProposedVia
@@ -245,6 +252,7 @@ from .create_wake_authorization_response_201 import CreateWakeAuthorizationRespo
 from .create_wake_schedule_input import CreateWakeScheduleInput
 from .create_wake_schedule_input_args import CreateWakeScheduleInputArgs
 from .create_wake_schedule_response_201 import CreateWakeScheduleResponse201
+from .created_endpoint import CreatedEndpoint
 from .credentials_create_key_input import CredentialsCreateKeyInput
 from .credentials_create_key_input_conditions import CredentialsCreateKeyInputConditions
 from .credentials_create_key_input_grant_type_0 import CredentialsCreateKeyInputGrantType0
@@ -270,6 +278,7 @@ from .credentials_get_key_builder_result_policy_super_admin_key_creators import 
 from .credentials_get_key_builder_result_presets_item import CredentialsGetKeyBuilderResultPresetsItem
 from .credentials_get_key_builder_result_presets_item_mail_reach import CredentialsGetKeyBuilderResultPresetsItemMailReach
 from .credentials_get_key_result import CredentialsGetKeyResult
+from .credentials_get_key_result_address_warnings_item import CredentialsGetKeyResultAddressWarningsItem
 from .credentials_get_key_result_grant import CredentialsGetKeyResultGrant
 from .credentials_get_key_result_grant_resources_type_0 import CredentialsGetKeyResultGrantResourcesType0
 from .credentials_get_key_result_kind import CredentialsGetKeyResultKind
@@ -293,6 +302,7 @@ from .credentials_list_credentials_result import CredentialsListCredentialsResul
 from .credentials_list_credentials_result_counts import CredentialsListCredentialsResultCounts
 from .credentials_list_credentials_result_items_item import CredentialsListCredentialsResultItemsItem
 from .credentials_list_credentials_result_items_item_actions_item import CredentialsListCredentialsResultItemsItemActionsItem
+from .credentials_list_credentials_result_items_item_address_warnings_item import CredentialsListCredentialsResultItemsItemAddressWarningsItem
 from .credentials_list_credentials_result_items_item_belongs_to import CredentialsListCredentialsResultItemsItemBelongsTo
 from .credentials_list_credentials_result_items_item_belongs_to_function_type_0 import CredentialsListCredentialsResultItemsItemBelongsToFunctionType0
 from .credentials_list_credentials_result_items_item_belongs_to_person_type_0 import CredentialsListCredentialsResultItemsItemBelongsToPersonType0
@@ -306,6 +316,7 @@ from .credentials_list_credentials_result_items_item_grant_type import Credentia
 from .credentials_list_credentials_result_items_item_kind import CredentialsListCredentialsResultItemsItemKind
 from .credentials_list_keys_result import CredentialsListKeysResult
 from .credentials_list_keys_result_items_item import CredentialsListKeysResultItemsItem
+from .credentials_list_keys_result_items_item_address_warnings_item import CredentialsListKeysResultItemsItemAddressWarningsItem
 from .credentials_list_keys_result_items_item_grant import CredentialsListKeysResultItemsItemGrant
 from .credentials_list_keys_result_items_item_grant_resources_type_0 import CredentialsListKeysResultItemsItemGrantResourcesType0
 from .credentials_list_keys_result_items_item_kind import CredentialsListKeysResultItemsItemKind
@@ -451,6 +462,10 @@ from .email_detail_collaboration_peer_signal_on_my_last_type_0_kind import Email
 from .email_detail_collaboration_sender_relationship import EmailDetailCollaborationSenderRelationship
 from .email_detail_delivery_report_type_0 import EmailDetailDeliveryReportType0
 from .email_detail_delivery_report_type_0_type import EmailDetailDeliveryReportType0Type
+from .email_detail_imported_type_0 import EmailDetailImportedType0
+from .email_detail_imported_type_0_from import EmailDetailImportedType0From
+from .email_detail_imported_type_0_method import EmailDetailImportedType0Method
+from .email_detail_imported_type_0_verification import EmailDetailImportedType0Verification
 from .email_detail_parse_status_type_1 import EmailDetailParseStatusType1
 from .email_detail_parse_status_type_2_type_1 import EmailDetailParseStatusType2Type1
 from .email_detail_parse_status_type_3_type_1 import EmailDetailParseStatusType3Type1
@@ -468,6 +483,10 @@ from .email_list_meta import EmailListMeta
 from .email_readable import EmailReadable
 from .email_readable_attachment import EmailReadableAttachment
 from .email_readable_body_source import EmailReadableBodySource
+from .email_readable_imported_type_0 import EmailReadableImportedType0
+from .email_readable_imported_type_0_from import EmailReadableImportedType0From
+from .email_readable_imported_type_0_method import EmailReadableImportedType0Method
+from .email_readable_imported_type_0_verification import EmailReadableImportedType0Verification
 from .email_readable_link import EmailReadableLink
 from .email_readable_parse_status_type_1 import EmailReadableParseStatusType1
 from .email_readable_parse_status_type_2_type_1 import EmailReadableParseStatusType2Type1
@@ -545,6 +564,8 @@ from .email_rule_share_granter import EmailRuleShareGranter
 from .email_rule_share_rule_type_0 import EmailRuleShareRuleType0
 from .email_rule_share_rule_type_0_state import EmailRuleShareRuleType0State
 from .email_rule_state import EmailRuleState
+from .email_rule_tested import EmailRuleTested
+from .email_rule_tested_kind import EmailRuleTestedKind
 from .email_rule_tree import EmailRuleTree
 from .email_rule_tree_input import EmailRuleTreeInput
 from .email_rule_tree_input_version import EmailRuleTreeInputVersion
@@ -584,6 +605,10 @@ from .email_summary_awaiting import EmailSummaryAwaiting
 from .email_summary_copies_item import EmailSummaryCopiesItem
 from .email_summary_delivery_report_type_0 import EmailSummaryDeliveryReportType0
 from .email_summary_delivery_report_type_0_type import EmailSummaryDeliveryReportType0Type
+from .email_summary_imported_type_0 import EmailSummaryImportedType0
+from .email_summary_imported_type_0_from import EmailSummaryImportedType0From
+from .email_summary_imported_type_0_method import EmailSummaryImportedType0Method
+from .email_summary_imported_type_0_verification import EmailSummaryImportedType0Verification
 from .email_summary_parse_status_type_1 import EmailSummaryParseStatusType1
 from .email_summary_parse_status_type_2_type_1 import EmailSummaryParseStatusType2Type1
 from .email_summary_parse_status_type_3_type_1 import EmailSummaryParseStatusType3Type1
@@ -599,6 +624,7 @@ from .end_break_glass_result import EndBreakGlassResult
 from .end_email_rule_share_response_200 import EndEmailRuleShareResponse200
 from .end_email_rule_share_result import EndEmailRuleShareResult
 from .endpoint import Endpoint
+from .endpoint_create_warning import EndpointCreateWarning
 from .endpoint_delivery_type_0 import EndpointDeliveryType0
 from .endpoint_delivery_type_0_held_for_owner_type_0 import EndpointDeliveryType0HeldForOwnerType0
 from .endpoint_delivery_type_0_reasons_item import EndpointDeliveryType0ReasonsItem
@@ -673,7 +699,6 @@ from .generate_look_alikes_request_kinds_item import GenerateLookAlikesRequestKi
 from .generate_look_alikes_response_200 import GenerateLookAlikesResponse200
 from .generate_look_alikes_result import GenerateLookAlikesResult
 from .generate_look_alikes_result_counts import GenerateLookAlikesResultCounts
-from .generate_look_alikes_result_rule import GenerateLookAlikesResultRule
 from .get_access_mode_response_200 import GetAccessModeResponse200
 from .get_access_mode_result import GetAccessModeResult
 from .get_access_mode_result_decisions import GetAccessModeResultDecisions
@@ -971,6 +996,10 @@ from .list_email_rule_share_emails_result_item_awaiting import ListEmailRuleShar
 from .list_email_rule_share_emails_result_item_delivery_report_type_0 import ListEmailRuleShareEmailsResultItemDeliveryReportType0
 from .list_email_rule_share_emails_result_item_delivery_report_type_0_type import ListEmailRuleShareEmailsResultItemDeliveryReportType0Type
 from .list_email_rule_share_emails_result_item_highlights_type_0 import ListEmailRuleShareEmailsResultItemHighlightsType0
+from .list_email_rule_share_emails_result_item_imported_type_0 import ListEmailRuleShareEmailsResultItemImportedType0
+from .list_email_rule_share_emails_result_item_imported_type_0_from import ListEmailRuleShareEmailsResultItemImportedType0From
+from .list_email_rule_share_emails_result_item_imported_type_0_method import ListEmailRuleShareEmailsResultItemImportedType0Method
+from .list_email_rule_share_emails_result_item_imported_type_0_verification import ListEmailRuleShareEmailsResultItemImportedType0Verification
 from .list_email_rule_share_emails_result_item_interaction_hint import ListEmailRuleShareEmailsResultItemInteractionHint
 from .list_email_rule_share_emails_result_item_parse_status_type_1 import ListEmailRuleShareEmailsResultItemParseStatusType1
 from .list_email_rule_share_emails_result_item_parse_status_type_2_type_1 import ListEmailRuleShareEmailsResultItemParseStatusType2Type1
@@ -1652,7 +1681,6 @@ from .test_email_rule_on_sample_result_facts_additional_property import TestEmai
 from .test_email_rule_on_sample_result_outcome import TestEmailRuleOnSampleResultOutcome
 from .test_email_rule_on_sample_result_parts_item import TestEmailRuleOnSampleResultPartsItem
 from .test_email_rule_on_sample_result_question_answers_item import TestEmailRuleOnSampleResultQuestionAnswersItem
-from .test_email_rule_on_sample_result_rule import TestEmailRuleOnSampleResultRule
 from .test_email_rule_on_sample_result_values import TestEmailRuleOnSampleResultValues
 from .test_email_rule_on_sample_result_values_additional_property import TestEmailRuleOnSampleResultValuesAdditionalProperty
 from .test_email_rule_on_sample_result_values_additional_property_value_confidences import TestEmailRuleOnSampleResultValuesAdditionalPropertyValueConfidences
@@ -1681,7 +1709,6 @@ from .test_email_rule_result_results_item_unclassified_reason import TestEmailRu
 from .test_email_rule_result_results_item_values import TestEmailRuleResultResultsItemValues
 from .test_email_rule_result_results_item_values_additional_property import TestEmailRuleResultResultsItemValuesAdditionalProperty
 from .test_email_rule_result_results_item_values_additional_property_value_confidences import TestEmailRuleResultResultsItemValuesAdditionalPropertyValueConfidences
-from .test_email_rule_result_rule import TestEmailRuleResultRule
 from .test_email_rule_result_summary import TestEmailRuleResultSummary
 from .test_email_rule_result_summary_conditions_item import TestEmailRuleResultSummaryConditionsItem
 from .test_email_rule_result_summary_questions_item import TestEmailRuleResultSummaryQuestionsItem
@@ -1740,6 +1767,7 @@ from .update_domain_response_200 import UpdateDomainResponse200
 from .update_email_rule_request import UpdateEmailRuleRequest
 from .update_email_rule_request_evaluation_scope import UpdateEmailRuleRequestEvaluationScope
 from .update_email_rule_request_expectations_type_0 import UpdateEmailRuleRequestExpectationsType0
+from .update_email_rule_request_kind import UpdateEmailRuleRequestKind
 from .update_email_rule_request_state import UpdateEmailRuleRequestState
 from .update_email_rule_response_200 import UpdateEmailRuleResponse200
 from .update_email_rule_result import UpdateEmailRuleResult
@@ -1835,6 +1863,7 @@ __all__ = (
     "AcceptEmailRuleObjectionResultRule",
     "AcceptEmailRuleObjectionResultStatus",
     "AcceptEmailRuleRequestRequest",
+    "AcceptEmailRuleRequestRequestKind",
     "AcceptEmailRuleRequestResponse201",
     "AcceptEmailRuleRequestResult",
     "Account",
@@ -1969,6 +1998,7 @@ __all__ = (
     "CompileEmailRuleRequestKind",
     "CompileEmailRuleResponse200",
     "CompileEmailRuleResult",
+    "CompileEmailRuleResultKind",
     "CompileEmailRuleResultSql",
     "CompleteWebhookExecInput",
     "CompleteWebhookExecInputMode",
@@ -1997,6 +2027,10 @@ __all__ = (
     "ConversationMessageCopiesItem",
     "ConversationMessageDirection",
     "ConversationMessageHold",
+    "ConversationMessageImportedType0",
+    "ConversationMessageImportedType0From",
+    "ConversationMessageImportedType0Method",
+    "ConversationMessageImportedType0Verification",
     "ConversationMessageRepeatType0",
     "ConversationMessageRole",
     "ConversationMessageSenderMemberType0",
@@ -2009,6 +2043,7 @@ __all__ = (
     "CreateAgentConnectionResponse200",
     "CreateAgentConnectionResponse200Data",
     "CreateAgentConnectionResponse200DataInvitationType0",
+    "CreatedEndpoint",
     "CreateEmailRuleObjectionRequest",
     "CreateEmailRuleObjectionResponse200",
     "CreateEmailRuleObjectionResult",
@@ -2019,6 +2054,7 @@ __all__ = (
     "CreateEmailRuleRequestExpectations",
     "CreateEmailRuleRequestKind",
     "CreateEmailRuleRequestRequest",
+    "CreateEmailRuleRequestRequestKind",
     "CreateEmailRuleRequestResponse201",
     "CreateEmailRuleRequestResult",
     "CreateEmailRuleRequestResultProposedVia",
@@ -2100,6 +2136,7 @@ __all__ = (
     "CredentialsGetKeyBuilderResultPresetsItem",
     "CredentialsGetKeyBuilderResultPresetsItemMailReach",
     "CredentialsGetKeyResult",
+    "CredentialsGetKeyResultAddressWarningsItem",
     "CredentialsGetKeyResultGrant",
     "CredentialsGetKeyResultGrantResourcesType0",
     "CredentialsGetKeyResultKind",
@@ -2123,6 +2160,7 @@ __all__ = (
     "CredentialsListCredentialsResultCounts",
     "CredentialsListCredentialsResultItemsItem",
     "CredentialsListCredentialsResultItemsItemActionsItem",
+    "CredentialsListCredentialsResultItemsItemAddressWarningsItem",
     "CredentialsListCredentialsResultItemsItemBelongsTo",
     "CredentialsListCredentialsResultItemsItemBelongsToFunctionType0",
     "CredentialsListCredentialsResultItemsItemBelongsToPersonType0",
@@ -2136,6 +2174,7 @@ __all__ = (
     "CredentialsListCredentialsResultItemsItemKind",
     "CredentialsListKeysResult",
     "CredentialsListKeysResultItemsItem",
+    "CredentialsListKeysResultItemsItemAddressWarningsItem",
     "CredentialsListKeysResultItemsItemGrant",
     "CredentialsListKeysResultItemsItemGrantResourcesType0",
     "CredentialsListKeysResultItemsItemKind",
@@ -2281,6 +2320,10 @@ __all__ = (
     "EmailDetailCollaborationSenderRelationship",
     "EmailDetailDeliveryReportType0",
     "EmailDetailDeliveryReportType0Type",
+    "EmailDetailImportedType0",
+    "EmailDetailImportedType0From",
+    "EmailDetailImportedType0Method",
+    "EmailDetailImportedType0Verification",
     "EmailDetailParseStatusType1",
     "EmailDetailParseStatusType2Type1",
     "EmailDetailParseStatusType3Type1",
@@ -2298,6 +2341,10 @@ __all__ = (
     "EmailReadable",
     "EmailReadableAttachment",
     "EmailReadableBodySource",
+    "EmailReadableImportedType0",
+    "EmailReadableImportedType0From",
+    "EmailReadableImportedType0Method",
+    "EmailReadableImportedType0Verification",
     "EmailReadableLink",
     "EmailReadableParseStatusType1",
     "EmailReadableParseStatusType2Type1",
@@ -2375,6 +2422,8 @@ __all__ = (
     "EmailRuleShareRuleType0",
     "EmailRuleShareRuleType0State",
     "EmailRuleState",
+    "EmailRuleTested",
+    "EmailRuleTestedKind",
     "EmailRuleTree",
     "EmailRuleTreeInput",
     "EmailRuleTreeInputVersion",
@@ -2414,6 +2463,10 @@ __all__ = (
     "EmailSummaryCopiesItem",
     "EmailSummaryDeliveryReportType0",
     "EmailSummaryDeliveryReportType0Type",
+    "EmailSummaryImportedType0",
+    "EmailSummaryImportedType0From",
+    "EmailSummaryImportedType0Method",
+    "EmailSummaryImportedType0Verification",
     "EmailSummaryParseStatusType1",
     "EmailSummaryParseStatusType2Type1",
     "EmailSummaryParseStatusType3Type1",
@@ -2429,6 +2482,7 @@ __all__ = (
     "EndEmailRuleShareResponse200",
     "EndEmailRuleShareResult",
     "Endpoint",
+    "EndpointCreateWarning",
     "EndpointDeliveryType0",
     "EndpointDeliveryType0HeldForOwnerType0",
     "EndpointDeliveryType0ReasonsItem",
@@ -2503,7 +2557,6 @@ __all__ = (
     "GenerateLookAlikesResponse200",
     "GenerateLookAlikesResult",
     "GenerateLookAlikesResultCounts",
-    "GenerateLookAlikesResultRule",
     "GetAccessModeResponse200",
     "GetAccessModeResult",
     "GetAccessModeResultDecisions",
@@ -2802,6 +2855,10 @@ __all__ = (
     "ListEmailRuleShareEmailsResultItemDeliveryReportType0",
     "ListEmailRuleShareEmailsResultItemDeliveryReportType0Type",
     "ListEmailRuleShareEmailsResultItemHighlightsType0",
+    "ListEmailRuleShareEmailsResultItemImportedType0",
+    "ListEmailRuleShareEmailsResultItemImportedType0From",
+    "ListEmailRuleShareEmailsResultItemImportedType0Method",
+    "ListEmailRuleShareEmailsResultItemImportedType0Verification",
     "ListEmailRuleShareEmailsResultItemInteractionHint",
     "ListEmailRuleShareEmailsResultItemParseStatusType1",
     "ListEmailRuleShareEmailsResultItemParseStatusType2Type1",
@@ -3482,7 +3539,6 @@ __all__ = (
     "TestEmailRuleOnSampleResultOutcome",
     "TestEmailRuleOnSampleResultPartsItem",
     "TestEmailRuleOnSampleResultQuestionAnswersItem",
-    "TestEmailRuleOnSampleResultRule",
     "TestEmailRuleOnSampleResultValues",
     "TestEmailRuleOnSampleResultValuesAdditionalProperty",
     "TestEmailRuleOnSampleResultValuesAdditionalPropertyValueConfidences",
@@ -3511,7 +3567,6 @@ __all__ = (
     "TestEmailRuleResultResultsItemValues",
     "TestEmailRuleResultResultsItemValuesAdditionalProperty",
     "TestEmailRuleResultResultsItemValuesAdditionalPropertyValueConfidences",
-    "TestEmailRuleResultRule",
     "TestEmailRuleResultSummary",
     "TestEmailRuleResultSummaryConditionsItem",
     "TestEmailRuleResultSummaryQuestionsItem",
@@ -3573,6 +3628,7 @@ __all__ = (
     "UpdateEmailRuleRequest",
     "UpdateEmailRuleRequestEvaluationScope",
     "UpdateEmailRuleRequestExpectationsType0",
+    "UpdateEmailRuleRequestKind",
     "UpdateEmailRuleRequestState",
     "UpdateEmailRuleResponse200",
     "UpdateEmailRuleResult",

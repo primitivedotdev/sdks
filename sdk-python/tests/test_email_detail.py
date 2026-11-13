@@ -8,6 +8,9 @@ import datetime
 # this test fails loudly when that happens.
 from primitive.api.models.email_detail import EmailDetail
 from primitive.api.models.email_detail_awaiting import EmailDetailAwaiting
+from primitive.api.models.email_detail_imported_type_0 import (
+    EmailDetailImportedType0,
+)
 from primitive.api.models.email_detail_relay_type_0 import EmailDetailRelayType0
 from primitive.api.models.email_detail_relay_type_0_delivery_item import (
     EmailDetailRelayType0DeliveryItem,
@@ -35,6 +38,7 @@ SAMPLE = {
     "rejection_reason": None,
     "webhook_status": "fired",
     "webhook_attempt_count": 1,
+    "imported": None,
     "webhook_last_attempt_at": None,
     "webhook_last_status_code": 200,
     "webhook_last_error": None,
@@ -258,3 +262,28 @@ def test_email_detail_from_name_is_required_and_nullable() -> None:
     )
     assert named.from_name == "Dana R\u00faiz"
     assert named.to_dict()["from_name"] == "Dana R\u00faiz"
+
+
+def test_email_detail_imported_is_null_for_live_mail_and_round_trips() -> None:
+    live = EmailDetail.from_dict(SAMPLE)
+    assert live.imported is None
+    assert live.to_dict()["imported"] is None
+
+    imported = {
+        "from": "google_workspace",
+        "method": "primitive_direct",
+        "verification": "provider_fetched",
+        "at": "2026-05-01T12:30:00Z",
+    }
+    detail = EmailDetail.from_dict({**SAMPLE, "imported": imported})
+    assert isinstance(detail.imported, EmailDetailImportedType0)
+    assert detail.imported.from_ == "google_workspace"
+    assert detail.imported.method == "primitive_direct"
+    assert detail.imported.verification == "provider_fetched"
+    assert detail.imported.at == datetime.datetime(
+        2026, 5, 1, 12, 30, tzinfo=datetime.timezone.utc
+    )
+    again = EmailDetail.from_dict(detail.to_dict())
+    assert isinstance(again.imported, EmailDetailImportedType0)
+    assert again.imported.to_dict() == detail.imported.to_dict()
+    assert detail.to_dict()["imported"]["from"] == "google_workspace"
