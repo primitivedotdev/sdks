@@ -1,11 +1,14 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import { describe, expect, it, vi } from "vitest";
 import DoctorCommand, {
   checkApiKey,
+  checkAskedOfYou,
   checkNode,
   checkProxy,
+  RECENT_COVERAGE_DAYS,
   renderRow,
 } from "../../src/oclif/commands/doctor.js";
 import {
@@ -516,4 +519,263 @@ describe("doctor with a saved connected profile", () => {
       rmSync(directory, { recursive: true, force: true });
     }
   }, 15_000);
+});
+
+describe("checkAskedOfYou", () => {
+  const NOW = Date.parse("2026-11-13T00:00:00.000Z");
+  const DAYS = RECENT_COVERAGE_DAYS;
+  type Item = { kind: string; state: string; created_at: string };
+  const entry = (
+    kind: string,
+    state: string,
+    created_at = "2026-11-12T23:50:03.000Z",
+  ): Item => ({ kind, state, created_at });
+  const page = (items: Item[], extra: Record<string, unknown> = {}) => ({
+    covers: "you",
+    items,
+    withheld: [],
+    next_cursor: null,
+    ...extra,
+  });
+  type Answer = { data?: unknown; status?: number; throws?: boolean };
+  /** The answers a person's asked and concerning lists give, by relation. */
+  function client(asked: Answer, concerning: Answer = { data: page([]) }) {
+    const urls: URL[] = [];
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
+      const url = new URL(new Request(input, init).url);
+      urls.push(url);
+      const answer =
+        url.searchParams.get("relation") === "asked" ? asked : concerning;
+      if (answer.throws) throw new TypeError("fetch failed");
+      const status = answer.status ?? 200;
+      return new Response(
+        JSON.stringify(
+          status === 200
+            ? { success: true, data: answer.data }
+            : { success: false, error: { code: "refused", message: "no" } },
+        ),
+        { status, headers: { "content-type": "application/json" } },
+      );
+    });
+    return {
+      urls,
+      api: new PrimitiveApiClient({
+        apiKey: "test-key",
+        apiBaseUrl: "https://api.example.test/v1",
+        fetch,
+      }),
+    };
+  }
+
+  it("warns with what is waiting, what covers your mail with no notice yet, and recent notices", async () => {
+    const { api, urls } = client(
+      {
+        data: page([
+          entry("email_rule_request", "pending"),
+          entry("email_rule_objection", "pending"),
+        ]),
+      },
+      {
+        data: page([
+          entry("email_rule_coverage", "pending"),
+          entry("email_rule_coverage", "started"),
+          entry("email_rule_coverage", "new_version"),
+          entry("email_rule_coverage", "baseline"),
+          entry("email_rule_coverage", "started", "2026-10-01T00:00:00.000Z"),
+        ]),
+      },
+    );
+    expect(await checkAskedOfYou(api, NOW)).toEqual({
+      status: "warn",
+      message: `1 rule request and 1 objection waiting for you; 1 rule covers your mail with no notice written yet; 2 coverage notices in the last ${DAYS} days`,
+      hint: "Run `primitive activity asked --state live` and `primitive activity concerning`.",
+    });
+    expect(Object.fromEntries(urls[0]?.searchParams ?? [])).toEqual({
+      relation: "asked",
+      state: "live",
+      limit: "50",
+    });
+    expect(Object.fromEntries(urls[1]?.searchParams ?? [])).toEqual({
+      relation: "concerning",
+      state: "all",
+      limit: "50",
+    });
+  });
+
+  it("is OK when nothing is waiting, saying how far the notices go, or that they lag when the API does not say", async () => {
+    const asOf = { data: page([], { as_of: "2026-11-12T23:50:03.315Z" }) };
+    expect(
+      await checkAskedOfYou(client({ data: page([]) }, asOf).api, NOW),
+    ).toEqual({
+      status: "ok",
+      message:
+        "nothing waiting for you; coverage notices as of 2026-11-12 23:50 UTC",
+    });
+    expect(await checkAskedOfYou(client({ data: page([]) }).api, NOW)).toEqual({
+      status: "ok",
+      message:
+        "nothing waiting for you; coverage notices can take about a minute to appear",
+    });
+  });
+
+  it("says at least, not exactly, when either list has more than one page", async () => {
+    const requests = Array.from({ length: 50 }, () =>
+      entry("email_rule_request", "pending"),
+    );
+    const notices = Array.from({ length: 3 }, () =>
+      entry("email_rule_coverage", "started"),
+    );
+    const { api } = client(
+      { data: page(requests, { next_cursor: "next" }) },
+      { data: page(notices, { next_cursor: "next" }) },
+    );
+    expect((await checkAskedOfYou(api, NOW))?.message).toBe(
+      `at least 50 rule requests and objections waiting for you; 3+ coverage notices in the last ${DAYS} days`,
+    );
+  });
+
+  it("never says nothing is waiting for what it could not see", async () => {
+    const unreadable = await checkAskedOfYou(
+      client({ data: page([]) }, { status: 500 }).api,
+      NOW,
+    );
+    expect(unreadable).toEqual({
+      status: "warn",
+      message: "could not check the rules over your mail",
+      hint: "Run `primitive activity concerning`.",
+    });
+    const thrown = await checkAskedOfYou(
+      client({ data: page([]) }, { throws: true }).api,
+      NOW,
+    );
+    expect(thrown?.message).toBe("could not check the rules over your mail");
+    const objections = await checkAskedOfYou(
+      client({
+        data: page([], {
+          withheld: [
+            {
+              kind: "email_rule_objection",
+              reason: "not_for_this_credential",
+              permission: null,
+            },
+          ],
+        }),
+      }).api,
+      NOW,
+    );
+    expect(objections).toMatchObject({
+      status: "warn",
+      message: "objections not shown to this credential",
+    });
+    const coverage = await checkAskedOfYou(
+      client(
+        { data: page([]) },
+        {
+          data: page([], {
+            withheld: [
+              {
+                kind: "email_rule_coverage",
+                reason: "not_for_this_credential",
+                permission: null,
+              },
+            ],
+          }),
+        },
+      ).api,
+      NOW,
+    );
+    expect(coverage).toMatchObject({
+      status: "warn",
+      message: "rules over your mail not shown to this credential",
+    });
+    for (const asked of [{ status: 500 }, { throws: true }]) {
+      expect(await checkAskedOfYou(client(asked).api, NOW)).toMatchObject({
+        status: "warn",
+        message: "could not check what is waiting for you",
+      });
+    }
+  });
+
+  it("has no row for a credential that is asked nothing", async () => {
+    const withheldAll = page([], {
+      withheld: ["email_rule_request", "email_rule_objection"].map((kind) => ({
+        kind,
+        reason: "not_for_this_credential",
+        permission: null,
+      })),
+    });
+    for (const asked of [
+      { data: page([], { covers: "this_credential" }) },
+      { data: withheldAll },
+      { status: 403 },
+      { status: 401 },
+    ]) {
+      expect(await checkAskedOfYou(client(asked).api, NOW)).toBeNull();
+    }
+  });
+
+  it("shows in doctor after Domains, as a warning that leaves the run ok", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "primitive-doctor-asked-"));
+    const stderr: string[] = [];
+    const write = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk: string | Uint8Array) => {
+        stderr.push(String(chunk));
+        return true;
+      });
+    const logged: string[] = [];
+    const log = vi.spyOn(console, "log").mockImplementation((line) => {
+      logged.push(String(line));
+    });
+    const json = (data: unknown) =>
+      new Response(JSON.stringify({ success: true, data }), {
+        headers: { "content-type": "application/json" },
+      });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof globalThis.fetch>(async (input, init) => {
+        const url = new URL(new Request(input, init).url);
+        if (url.pathname.endsWith("/account"))
+          return json({ id: "acct", email: "me@example.test", plan: "free" });
+        if (url.pathname.endsWith("/domains"))
+          return json([{ domain: "example.test", is_active: true }]);
+        return json(
+          url.searchParams.get("relation") === "asked"
+            ? page([entry("email_rule_request", "pending")])
+            : page([]),
+        );
+      }),
+    );
+    try {
+      vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
+      vi.stubEnv("PRIMITIVE_AGENT_PROFILE", undefined);
+      await DoctorCommand.run(
+        [
+          "--api-key",
+          "prim_test_key",
+          "--api-base-url",
+          "https://api.example.test/v1",
+        ],
+        { root: resolve(import.meta.dirname, "../..") },
+      );
+      const text = stderr.join("");
+      expect(text).toMatch(
+        /\[OK\]\s+Domains: .*\n\[WARN\] Asked of you: 1 rule request waiting for you\n/,
+      );
+      const summary = JSON.parse(logged.join("\n"));
+      expect(summary.ok).toBe(true);
+      expect(summary.checks.at(-1)).toMatchObject({
+        label: "Asked of you",
+        status: "warn",
+        message: "1 rule request waiting for you",
+      });
+      expect(process.exitCode ?? 0).toBe(0);
+    } finally {
+      write.mockRestore();
+      log.mockRestore();
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
 });

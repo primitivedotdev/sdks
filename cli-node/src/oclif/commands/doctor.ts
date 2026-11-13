@@ -1,9 +1,14 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Command, Flags } from "@oclif/core";
-import type { Account } from "@primitivedotdev/api-core";
+import type {
+  Account,
+  ListActivityObjectsData,
+  ListActivityObjectsResult,
+} from "@primitivedotdev/api-core";
 import {
   getAccount,
+  listActivityObjects,
   listDomains,
   type PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
@@ -19,6 +24,7 @@ import {
 } from "../connected-agent-profile.js";
 import { backgroundListenStatus } from "../listen-background.js";
 import { notificationScope } from "../notify-session.js";
+import { minute } from "./activity.js";
 
 // `primitive doctor` is a one-command health check the AGX walkthrough
 // kept asking for. Before this command, a user with a misconfigured
@@ -367,6 +373,144 @@ async function checkDomains(client: PrimitiveApiClient): Promise<CheckOutcome> {
   }
 }
 
+/** How far back a coverage notice still counts as news in the "Asked of you" row. */
+export const RECENT_COVERAGE_DAYS = 7;
+
+const ASKED_PAGE = 50;
+const ASKED_KINDS = ["email_rule_request", "email_rule_objection"] as const;
+
+type ActivityPage = ListActivityObjectsResult & { as_of?: string | null };
+
+/**
+ * One page of the caller's activity list; "refused" when the credential may
+ * not list activity at all (401 or 403), null when it could not be read.
+ */
+async function activityPage(
+  client: PrimitiveApiClient,
+  query: NonNullable<ListActivityObjectsData["query"]>,
+): Promise<ActivityPage | "refused" | null> {
+  try {
+    const result = await listActivityObjects({
+      client: client.client,
+      query,
+      responseStyle: "fields",
+    });
+    const status = result.response?.status;
+    if (status === 401 || status === 403) return "refused";
+    if (result.error) return null;
+    return (result.data as { data?: ActivityPage } | undefined)?.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/**
+ * What is waiting on a person, read from the activity lists (notification
+ * emails can be off, so this is where they are told): rule requests made to
+ * them and objections to rules they wrote that are still open, rules that
+ * cover their mail now with no notice written yet, and coverage notices from
+ * the last RECENT_COVERAGE_DAYS days. Null for a credential that is asked
+ * nothing: one the list refuses, one whose list is not a person's own, or one
+ * from which every asked kind is withheld. A kind withheld from it is named,
+ * so the row is never OK for what it could not see. WARN when anything is
+ * waiting or could not be read; never a FAIL.
+ */
+export async function checkAskedOfYou(
+  client: PrimitiveApiClient,
+  now = Date.now(),
+): Promise<CheckOutcome | null> {
+  const asked = await activityPage(client, {
+    relation: "asked",
+    state: "live",
+    limit: ASKED_PAGE,
+  });
+  if (asked === "refused") return null;
+  if (!asked)
+    return {
+      status: "warn",
+      message: "could not check what is waiting for you",
+      hint: "Run `primitive activity asked --state live` and `primitive activity concerning`.",
+    };
+  const hidden = new Set(asked.withheld.map((entry) => entry.kind));
+  if (asked.covers !== "you" || ASKED_KINDS.every((kind) => hidden.has(kind)))
+    return null;
+  const read = await activityPage(client, {
+    relation: "concerning",
+    state: "all",
+    limit: ASKED_PAGE,
+  });
+  const concerning = read === "refused" ? null : read;
+  const coverageHidden =
+    concerning?.withheld.some(
+      (entry) => entry.kind === "email_rule_coverage",
+    ) ?? false;
+
+  const requests = asked.items.filter(
+    (item) => item.kind === "email_rule_request",
+  ).length;
+  const objections = asked.items.filter(
+    (item) => item.kind === "email_rule_objection",
+  ).length;
+  const waiting =
+    asked.next_cursor != null
+      ? [`at least ${requests + objections} rule requests and objections`]
+      : [
+          ...(requests > 0 ? [plural(requests, "rule request")] : []),
+          ...(objections > 0 ? [plural(objections, "objection")] : []),
+        ];
+  const items = concerning?.items ?? [];
+  const pending = items.filter((item) => item.state === "pending").length;
+  const since = now - RECENT_COVERAGE_DAYS * 24 * 60 * 60 * 1000;
+  const notices = items.filter(
+    (item) =>
+      (item.state === "started" || item.state === "new_version") &&
+      Date.parse(item.created_at) >= since,
+  ).length;
+  const moreNotices = concerning?.next_cursor != null;
+  const parts = [
+    ...(waiting.length > 0 ? [`${waiting.join(" and ")} waiting for you`] : []),
+    ...ASKED_KINDS.filter((kind) => hidden.has(kind)).map(
+      (kind) =>
+        `${kind === "email_rule_request" ? "rule requests" : "objections"} not shown to this credential`,
+    ),
+    ...(pending > 0
+      ? [
+          `${plural(pending, "rule")} ${pending === 1 ? "covers" : "cover"} your mail with no notice written yet`,
+        ]
+      : []),
+    ...(notices > 0
+      ? [
+          `${notices}${moreNotices ? "+" : ""} coverage notice${notices === 1 && !moreNotices ? "" : "s"} in the last ${RECENT_COVERAGE_DAYS} days`,
+        ]
+      : []),
+    ...(coverageHidden
+      ? ["rules over your mail not shown to this credential"]
+      : concerning
+        ? []
+        : ["could not check the rules over your mail"]),
+  ];
+  if (parts.length === 0) {
+    const asOf = concerning?.as_of;
+    return {
+      status: "ok",
+      message: `nothing waiting for you; ${asOf ? `coverage notices as of ${minute(asOf)} UTC` : "coverage notices can take about a minute to appear"}`,
+    };
+  }
+  const commands = [
+    ...(waiting.length > 0 ? ["`primitive activity asked --state live`"] : []),
+    ...(pending > 0 || notices > 0 || !concerning
+      ? ["`primitive activity concerning`"]
+      : []),
+  ];
+  return {
+    status: "warn",
+    message: parts.join("; "),
+    ...(commands.length > 0 ? { hint: `Run ${commands.join(" and ")}.` } : {}),
+  };
+}
+
 /**
  * A background start that gave up, such as a receiver replacing its lost
  * supervisor, has no terminal to report to. Its saved reason is read
@@ -402,7 +546,7 @@ function checkReceiverStart(
 
 class DoctorCommand extends Command {
   static description =
-    `Run a one-shot environment health check: Node version, proxy env, CLI auth resolution, /account reachability, and verified-domain status. With PRIMITIVE_AGENT_PROFILE selected, reports saved identity offline and points to whoami and exact listener status instead of account-only checks. Prints actionable hints for each warning or failure.`;
+    `Run a one-shot environment health check: Node version, proxy env, CLI auth resolution, /account reachability, verified-domain status, and, signed in as yourself, the rule requests and objections waiting for you and the rules that recently started covering your mail. With PRIMITIVE_AGENT_PROFILE selected, reports saved identity offline and points to whoami and exact listener status instead of account-only checks. Prints actionable hints for each warning or failure.`;
 
   static summary =
     "Check the local environment and live API for common problems";
@@ -484,6 +628,8 @@ class DoctorCommand extends Command {
         if (accountCheck.outcome.status === "ok") {
           const domainsOutcome = await checkDomains(apiClient);
           rows.push({ label: "Domains", outcome: domainsOutcome });
+          const asked = await checkAskedOfYou(apiClient);
+          if (asked) rows.push({ label: "Asked of you", outcome: asked });
         }
       }
     }
