@@ -204,7 +204,7 @@
         "description": "Manage repeating sends you created with `primitive send` or `primitive reply` and --repeat-every. Use `primitive repeats list|get|pause|resume|cancel`."
       },
       "changes": {
-        "description": "Long-poll one replayable feed of what changed. Use `primitive changes list --since start` for a baseline, then `--since <next_cursor> --wait 20`; add `--expand message` to inline each message and `--address a@x,b@y` to keep only mail to or from those addresses."
+        "description": "Long-poll a replayable feed of mail, send, thread mute and read-state, agent and access changes, for a login or key with changes:read. Use `primitive changes list --since start` for a baseline, then `--since <next_cursor> --wait 20`; add `--expand message` to inline each message and `--address a@x,b@y` to keep only mail to or from those addresses. Rule requests and rules over your mail are in `primitive activity asked` and `primitive activity concerning`."
       },
       "repeating-sends": {
         "description": "Generated API operations for repeating sends. Prefer `primitive repeats ...` (sender) and `primitive repeat stop` (recipient)."

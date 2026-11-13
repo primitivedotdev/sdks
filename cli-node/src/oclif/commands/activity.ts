@@ -73,7 +73,8 @@ async function call(
   }
 }
 
-function minute(value: string | null | undefined): string {
+/** A time as "YYYY-MM-DD HH:MM" in UTC; anything that is not a time, as given. */
+export function minute(value: string | null | undefined): string {
   if (!value) return "";
   const date = new Date(value);
   return Number.isNaN(date.getTime())
@@ -165,21 +166,28 @@ export function formatAskedRows(
   return [line(header), ...rows.map(line)].join("\n");
 }
 
+/** Where to see what covers you now, whatever the notices have caught up with. */
+const COVERING_NOW = `\`primitive email-rule-oversight list-email-rules-covering-me\` shows what covers you now.`;
+
 /**
  * One line per coverage notice: what it told (started, new_version, or
  * baseline for a rule that already covered you when notices began), when, the
- * rule's name then, and its author. No id: a notice's id is not a rule's, and
- * no command takes it. `complete` says the listing is the whole of it (from
- * the first page to the last, nothing withheld), the only time an empty one
- * means no notice has been written for you.
+ * rule's name then, and its author; and, first, each rule that covers you now
+ * whose notice is not written yet (pending, dated when the rule last
+ * changed). No id: a notice's id is not a rule's, and no command takes it.
+ * `complete` says the listing is the whole of it (from the first page to the
+ * last, nothing withheld). Even then an empty one is no promise that nothing
+ * covers you: notices are written by a periodic job and can lag, so it
+ * says how far they go (`asOf`, when the server says) and where to look now.
  */
 export function formatConcerningRows(
   items: readonly ActivityItem[],
   complete = false,
+  asOf?: string | null,
 ): string {
   if (items.length === 0)
     return complete
-      ? "No other member's rule has covered your mail since these notices began."
+      ? `${asOf ? `Nothing recorded for you as of ${minute(asOf)} UTC.` : "Nothing recorded for you yet."} A rule that starts covering your mail can take a few minutes to appear here. ${COVERING_NOW}`
       : "Nothing to show.";
   const rows = items.map((item) => [
     item.state,
@@ -197,7 +205,13 @@ export function formatConcerningRows(
         i === cells.length - 1 ? cell : cell.padEnd(widths[i] ?? 0),
       )
       .join("  ");
-  return [line(header), ...rows.map(line)].join("\n");
+  const pending = items.some((item) => item.state === "pending")
+    ? [
+        "",
+        `pending: the rule covers you now and its notice is not written yet. ${COVERING_NOW}`,
+      ]
+    : [];
+  return [line(header), ...rows.map(line), ...pending].join("\n");
 }
 
 /** What was left out, and why: no counts, only the kinds and what would show them. */
@@ -265,6 +279,8 @@ async function runActivityList(
   const items: ActivityItem[] = [];
   let covers = "";
   let withheld: WithheldKind[] = [];
+  // With relation=concerning, when the notices last looked (the first page's).
+  let asOf: string | null | undefined;
   let cursor = flags.cursor;
   for (let page = 0; page < (flags.all ? ALL_PAGES_LIMIT : 1); page += 1) {
     const result = await call(
@@ -294,6 +310,8 @@ async function runActivityList(
     }
     covers = result.data.covers;
     withheld = result.data.withheld;
+    if (page === 0)
+      asOf = (result.data as Page & { as_of?: string | null }).as_of;
     items.push(...result.data.items);
     cursor = result.data.next_cursor ?? undefined;
     if (!cursor) break;
@@ -301,7 +319,13 @@ async function runActivityList(
   if (flags.json) {
     command.log(
       JSON.stringify(
-        { covers, items, withheld, next_cursor: cursor ?? null },
+        {
+          covers,
+          items,
+          withheld,
+          next_cursor: cursor ?? null,
+          ...(asOf !== undefined ? { as_of: asOf } : {}),
+        },
         null,
         2,
       ),
@@ -315,7 +339,7 @@ async function runActivityList(
     relation === "asked"
       ? formatAskedRows(items, complete)
       : relation === "concerning"
-        ? formatConcerningRows(items, complete)
+        ? formatConcerningRows(items, complete, asOf)
         : formatActivityRows(covers, items),
   );
   const notShown = formatWithheld(withheld);
@@ -424,7 +448,9 @@ export class ActivityConcerningCommand extends Command {
   static description =
     `List what other members did that concerns your own mail, newest first: each time another member's rule started covering one of your mailboxes (started), or saved a new version while covering it (new_version), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline.
 
-  Signed in with \`primitive login\`, you see the notices about your own mail under your current membership. A key, an app or an agent has none. The rules that cover you now, with their ids, are listed by \`primitive email-rule-oversight list-email-rules-covering-me\`; ask a rule's author to turn it off with \`primitive email-rule-oversight create-email-rule-objection --rule-id <rule-id>\`. With --json each item's id is the notice's, not the rule's.`;
+  Notices are written by a job that runs every minute or so and can lag. Until a rule's notice is written, a rule that covers you now is listed first as pending, dated when the rule last changed, and with --json its id is the rule's.
+
+  Signed in with \`primitive login\`, you see the notices about your own mail under your current membership. A key, an app or an agent has none. The rules that cover you now, with their ids, are listed by \`primitive email-rule-oversight list-email-rules-covering-me\`; ask a rule's author to turn it off with \`primitive email-rule-oversight create-email-rule-objection --rule-id <rule-id>\`. With --json each notice's id is the notice's, not the rule's.`;
 
   static summary = "List rules that started covering your mail or changed";
 

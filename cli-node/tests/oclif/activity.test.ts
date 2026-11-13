@@ -467,12 +467,31 @@ describe("activity concerning command", () => {
     expect(out).toMatch(/More: \S+ activity concerning --cursor next-page$/m);
   });
 
-  it("says no rule has covered your mail only when the listing is the whole of it", async () => {
-    const none =
-      "No other member's rule has covered your mail since these notices began.";
-    expect(formatConcerningRows([], true)).toBe(none);
+  it("never reads an empty listing as no rule covering you: it says how far the notices go and where to look now", async () => {
+    const now =
+      "A rule that starts covering your mail can take a few minutes to appear here. `primitive email-rule-oversight list-email-rules-covering-me` shows what covers you now.";
+    expect(formatConcerningRows([], true)).toBe(
+      `Nothing recorded for you yet. ${now}`,
+    );
+    expect(formatConcerningRows([], true, "2026-11-12T23:50:03.315Z")).toBe(
+      `Nothing recorded for you as of 2026-11-12 23:50 UTC. ${now}`,
+    );
     expect(formatConcerningRows([])).toBe("Nothing to show.");
-    useApi([page([], null)]);
+    expect(formatConcerningRows([], true)).not.toMatch(/has covered/);
+    const urls = useApi([
+      {
+        body: {
+          success: true,
+          data: {
+            covers: "you",
+            items: [],
+            withheld: [],
+            next_cursor: null,
+            as_of: "2026-11-12T23:50:03.315Z",
+          },
+        },
+      },
+    ]);
     const lines: string[] = [];
     vi.spyOn(ActivityConcerningCommand.prototype, "log").mockImplementation(
       (message?: string) => {
@@ -480,6 +499,56 @@ describe("activity concerning command", () => {
       },
     );
     await ActivityConcerningCommand.run([], { root });
-    expect(lines.join("\n")).toContain(none);
+    expect(urls).toHaveLength(1);
+    expect(lines.join("\n")).toContain(
+      `Nothing recorded for you as of 2026-11-12 23:50 UTC. ${now}`,
+    );
+  });
+
+  it("lists a rule that covers you before its notice is written as pending, and keeps as_of in --json", async () => {
+    const pending = item({
+      kind: "email_rule_coverage",
+      id: "6e4dc223-0000-4000-8000-000000000001",
+      name: "edge-test-noshare-secrets",
+      state: "pending",
+      created_at: "2026-11-12T23:49:21.000Z",
+      owned_now: "someone_else",
+      created_through: { kind: "member", id: "u-1", name: "Ethan Byrd" },
+    });
+    const out = formatConcerningRows([pending], true, null);
+    expect(out).toMatch(
+      /^pending\s+2026-11-12 23:49\s+edge-test-noshare-secrets\s+Ethan Byrd$/m,
+    );
+    expect(out).toContain(
+      "pending: the rule covers you now and its notice is not written yet.",
+    );
+    expect(formatConcerningRows([item({ state: "started" })])).not.toContain(
+      "pending:",
+    );
+    useApi([
+      {
+        body: {
+          success: true,
+          data: {
+            covers: "you",
+            items: [pending],
+            withheld: [],
+            next_cursor: null,
+            as_of: null,
+          },
+        },
+      },
+    ]);
+    const lines: string[] = [];
+    vi.spyOn(ActivityConcerningCommand.prototype, "log").mockImplementation(
+      (message?: string) => {
+        lines.push(message ?? "");
+      },
+    );
+    await ActivityConcerningCommand.run(["--json"], { root });
+    expect(JSON.parse(lines.join("\n"))).toMatchObject({
+      items: [{ id: pending.id, state: "pending" }],
+      as_of: null,
+    });
   });
 });
