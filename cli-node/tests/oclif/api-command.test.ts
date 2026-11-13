@@ -826,7 +826,7 @@ describe("emptyRuleListHint", () => {
 
   it("says which default filters hid objections", () => {
     expect(emptyRuleListHint("listEmailRuleObjections", {})).toBe(
-      "(no results) No objections match. By default this lists only pending objections you made: add `--box all --status any` to widen it.",
+      "(no results) No objections match. By default this lists only pending objections you made and those to rules you wrote: add `--box all --status any` to widen it.",
     );
     expect(
       emptyRuleListHint("listEmailRuleObjections", { box: "incoming" }),
@@ -836,7 +836,7 @@ describe("emptyRuleListHint", () => {
     expect(
       emptyRuleListHint("listEmailRuleObjections", { status: "decided" }),
     ).toBe(
-      "(no results) No objections match. By default this lists only objections you made: add `--box all` to widen it.",
+      "(no results) No objections match. By default this lists only objections you made and those to rules you wrote: add `--box all` to widen it.",
     );
     expect(
       emptyRuleListHint("listEmailRuleObjections", {

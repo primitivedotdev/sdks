@@ -1321,8 +1321,10 @@ parsers.
   list-email-rule-objections`, say which default filter applied and how to
   widen it (`--box all`, `--status any`, `--live any`) on every page read
   with a default in place, not only an empty one; with `--json --envelope`
-  in `summary`. `list-email-rule-objections` asks for its default box,
-  `outgoing`, by name. An empty `webhook-deliveries
+  in `summary`. `list-email-rule-objections` asks for its default box by
+  name: `mine`, objections you made and those to rules you wrote. A server
+  that does not take `mine` is asked once more for `outgoing`, and the line
+  says that is what it listed. `--box mine` is accepted. An empty `webhook-deliveries
   list-deliveries` narrowed by a filter (such as `--endpoint-id` or
   `--status`) names the filters given and notes that test fires are not
   logged, instead of saying no deliveries were logged.
