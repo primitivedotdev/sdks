@@ -17,6 +17,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.create_email_rule_result_affects import CreateEmailRuleResultAffects
+  from ..models.create_email_rule_result_expectations import CreateEmailRuleResultExpectations
   from ..models.create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck
   from ..models.create_email_rule_result_restored_from import CreateEmailRuleResultRestoredFrom
   from ..models.email_rule_author import EmailRuleAuthor
@@ -63,6 +64,8 @@ class CreateEmailRuleResult:
                 to answer.
             scope_warnings (list[EmailRuleScopeWarning] | Unset): Names in scope_selection that match nothing this
                 organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
+            expectations (CreateEmailRuleResultExpectations | Unset): Its saved expectations, each list by email id, as
+                stored: on every create, and on an update that set or removed them.
             expectation_samples (list[EmailRuleExpectationSample] | Unset): Its saved made-up emails, when this write set or
                 added some.
             expectations_check (CreateEmailRuleResultExpectationsCheck | Unset): After a write that saved a version or
@@ -101,6 +104,7 @@ class CreateEmailRuleResult:
     pending_objections: int | Unset = UNSET
     objection_notice: str | Unset = UNSET
     scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
+    expectations: CreateEmailRuleResultExpectations | Unset = UNSET
     expectation_samples: list[EmailRuleExpectationSample] | Unset = UNSET
     expectations_check: CreateEmailRuleResultExpectationsCheck | Unset = UNSET
     restored_from: CreateEmailRuleResultRestoredFrom | Unset = UNSET
@@ -115,6 +119,7 @@ class CreateEmailRuleResult:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.create_email_rule_result_affects import CreateEmailRuleResultAffects # noqa: PLC0415
+        from ..models.create_email_rule_result_expectations import CreateEmailRuleResultExpectations # noqa: PLC0415
         from ..models.create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck # noqa: PLC0415
         from ..models.create_email_rule_result_restored_from import CreateEmailRuleResultRestoredFrom # noqa: PLC0415
         from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
@@ -184,6 +189,10 @@ class CreateEmailRuleResult:
 
 
 
+        expectations: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.expectations, Unset):
+            expectations = self.expectations.to_dict()
+
         expectation_samples: list[dict[str, Any]] | Unset = UNSET
         if not isinstance(self.expectation_samples, Unset):
             expectation_samples = []
@@ -241,6 +250,8 @@ class CreateEmailRuleResult:
             field_dict["objection_notice"] = objection_notice
         if scope_warnings is not UNSET:
             field_dict["scope_warnings"] = scope_warnings
+        if expectations is not UNSET:
+            field_dict["expectations"] = expectations
         if expectation_samples is not UNSET:
             field_dict["expectation_samples"] = expectation_samples
         if expectations_check is not UNSET:
@@ -261,6 +272,7 @@ class CreateEmailRuleResult:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.create_email_rule_result_affects import CreateEmailRuleResultAffects # noqa: PLC0415
+        from ..models.create_email_rule_result_expectations import CreateEmailRuleResultExpectations # noqa: PLC0415
         from ..models.create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck # noqa: PLC0415
         from ..models.create_email_rule_result_restored_from import CreateEmailRuleResultRestoredFrom # noqa: PLC0415
         from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
@@ -394,6 +406,16 @@ class CreateEmailRuleResult:
                 scope_warnings.append(scope_warnings_item)
 
 
+        _expectations = d.pop("expectations", UNSET)
+        expectations: CreateEmailRuleResultExpectations | Unset
+        if isinstance(_expectations,  Unset):
+            expectations = UNSET
+        else:
+            expectations = CreateEmailRuleResultExpectations.from_dict(_expectations)
+
+
+
+
         _expectation_samples = d.pop("expectation_samples", UNSET)
         expectation_samples: list[EmailRuleExpectationSample] | Unset = UNSET
         if _expectation_samples is not UNSET:
@@ -459,6 +481,7 @@ class CreateEmailRuleResult:
             pending_objections=pending_objections,
             objection_notice=objection_notice,
             scope_warnings=scope_warnings,
+            expectations=expectations,
             expectation_samples=expectation_samples,
             expectations_check=expectations_check,
             restored_from=restored_from,

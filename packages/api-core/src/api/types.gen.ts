@@ -2661,6 +2661,23 @@ export type SendMailInput = {
         value: string;
     }>;
     /**
+     * One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the unsubscribe. Every recipient of the message gets the same `url`, so send one message per recipient when the URL identifies who to unsubscribe. The `headers` map refuses both header names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send.
+     */
+    unsubscribe?: {
+        /**
+         * Absolute https URL that unsubscribes the recipient, at most 700 characters of URL characters only: printable ASCII with no spaces, double quotes, angle brackets or commas (percent-encode a comma as %2C), `%` only as a percent-encoded byte, `[` and `]` only around an IPv6 address host, a port from 1 to 65535, no `=?` (which mail readers can decode as an encoded word), and no user name or password. The host must be public: not a single-label name, `localhost` or a name under `.localhost`, `.internal`, `.local`, `.home.arpa` or `.localdomain`, or a loopback, link-local, private, shared, reserved, multicast or unspecified IP address, including an IPv6 address that embeds one. The scheme is written in lower case.
+         */
+        url: string;
+        /**
+         * Whether to also write `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, which tells the receiver it may unsubscribe with a single POST to `url`. Set false when `url` needs the recipient to open a page and confirm.
+         */
+        one_click?: boolean;
+        /**
+         * An address to also offer as a `mailto:` unsubscribe, written after `url`. The address alone, without the `mailto:` prefix: at most 64 letters, digits and `.!$'*+=_~-` before the `@`, and a dotted domain after it. An `=` is written as `%3D` in the header.
+         */
+        mailto?: string;
+    };
+    /**
      * Extra headers, as `{ "Name": "value" }`, at most 25. A name is one of `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`, `X-Primitive-Function-Hop`, or a custom `X-` name of letters, digits and hyphens that is not credential-like (a word such as `auth`, `token`, `key`, `secret`, `session` or `bearer`, joined forms included) and not in a reserved family: X-Primitive*, X-Original-*, X-Originating-*, X-Forwarded-*, X-Received*, X-Authenticated*, X-Envelope-*, X-Delivered-To, X-Apparently-To, X-Failed-Recipients, X-Loop, X-Priority, X-MSMail-*, X-MS-*, X-Microsoft-*, X-Forefront-*, X-Exchange-*, X-Google-*, X-GM-*, X-Apple-*, X-Yahoo-*, X-YMail-*, X-AOL-*, X-Spam*, X-Virus-*, X-Proofpoint-*, X-Barracuda-*, X-Rspamd-*, X-Mimecast-*, X-IronPort-*, X-Sophos-*, X-Report-Abuse*, X-CSA-*. Names compare case-insensitively (`_` and `.` count as `-` for families); a repeated or any other name is a `validation_error`. Values: 1 to 200 printable ASCII characters. Custom headers are sent as spelled, are not DKIM-signed, and can be searched with `header` on `GET /sent-emails`.
      */
     headers?: {
@@ -3556,6 +3573,23 @@ export type ReplyInput = {
      * Send an informational message the receiver need not answer or wake for. It is sent as an `ack` signal (status `received`) about the message in `in_reply_to`, whose note is `body_text` (at most 2000 characters, which may be omitted). Receivers see it as `fyi: true`. Plain text only: it cannot be combined with `body_html`, `attachments`, `payload_attachments` or `scheduled_at`, and on `/send-mail` it requires `in_reply_to`.
      */
     fyi?: boolean;
+    /**
+     * One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the unsubscribe. Every recipient of the message gets the same `url`, so send one message per recipient when the URL identifies who to unsubscribe. The `headers` map refuses both header names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send.
+     */
+    unsubscribe?: {
+        /**
+         * Absolute https URL that unsubscribes the recipient, at most 700 characters of URL characters only: printable ASCII with no spaces, double quotes, angle brackets or commas (percent-encode a comma as %2C), `%` only as a percent-encoded byte, `[` and `]` only around an IPv6 address host, a port from 1 to 65535, no `=?` (which mail readers can decode as an encoded word), and no user name or password. The host must be public: not a single-label name, `localhost` or a name under `.localhost`, `.internal`, `.local`, `.home.arpa` or `.localdomain`, or a loopback, link-local, private, shared, reserved, multicast or unspecified IP address, including an IPv6 address that embeds one. The scheme is written in lower case.
+         */
+        url: string;
+        /**
+         * Whether to also write `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, which tells the receiver it may unsubscribe with a single POST to `url`. Set false when `url` needs the recipient to open a page and confirm.
+         */
+        one_click?: boolean;
+        /**
+         * An address to also offer as a `mailto:` unsubscribe, written after `url`. The address alone, without the `mailto:` prefix: at most 64 letters, digits and `.!$'*+=_~-` before the `@`, and a dotted domain after it. An `=` is written as `%3D` in the header.
+         */
+        mailto?: string;
+    };
     /**
      * Extra headers, as `{ "Name": "value" }`, at most 25. A name is one of `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`, `X-Primitive-Function-Hop`, or a custom `X-` name of letters, digits and hyphens that is not credential-like (a word such as `auth`, `token`, `key`, `secret`, `session` or `bearer`, joined forms included) and not in a reserved family: X-Primitive*, X-Original-*, X-Originating-*, X-Forwarded-*, X-Received*, X-Authenticated*, X-Envelope-*, X-Delivered-To, X-Apparently-To, X-Failed-Recipients, X-Loop, X-Priority, X-MSMail-*, X-MS-*, X-Microsoft-*, X-Forefront-*, X-Exchange-*, X-Google-*, X-GM-*, X-Apple-*, X-Yahoo-*, X-YMail-*, X-AOL-*, X-Spam*, X-Virus-*, X-Proofpoint-*, X-Barracuda-*, X-Rspamd-*, X-Mimecast-*, X-IronPort-*, X-Sophos-*, X-Report-Abuse*, X-CSA-*. Names compare case-insensitively (`_` and `.` count as `-` for families); a repeated or any other name is a `validation_error`. Values: 1 to 200 printable ASCII characters. Custom headers are sent as spelled, are not DKIM-signed, and can be searched with `header` on `GET /sent-emails`.
      */
@@ -6932,6 +6966,13 @@ export type EmailRuleWritten = {
      * Names in scope_selection that match nothing this organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
      */
     scope_warnings?: Array<EmailRuleScopeWarning>;
+    /**
+     * Its saved expectations, each list by email id, as stored: on every create, and on an update that set or removed them.
+     */
+    expectations?: {
+        match: Array<string>;
+        no_match: Array<string>;
+    };
     /**
      * Its saved made-up emails, when this write set or added some.
      */

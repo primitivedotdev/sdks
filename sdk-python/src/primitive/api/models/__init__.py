@@ -206,6 +206,7 @@ from .create_email_rule_response_201 import CreateEmailRuleResponse201
 from .create_email_rule_result import CreateEmailRuleResult
 from .create_email_rule_result_affects import CreateEmailRuleResultAffects
 from .create_email_rule_result_evaluation_scope import CreateEmailRuleResultEvaluationScope
+from .create_email_rule_result_expectations import CreateEmailRuleResultExpectations
 from .create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck
 from .create_email_rule_result_kind import CreateEmailRuleResultKind
 from .create_email_rule_result_restored_from import CreateEmailRuleResultRestoredFrom
@@ -585,6 +586,7 @@ from .email_rule_withheld_by_reason import EmailRuleWithheldByReason
 from .email_rule_written import EmailRuleWritten
 from .email_rule_written_affects import EmailRuleWrittenAffects
 from .email_rule_written_evaluation_scope import EmailRuleWrittenEvaluationScope
+from .email_rule_written_expectations import EmailRuleWrittenExpectations
 from .email_rule_written_expectations_check import EmailRuleWrittenExpectationsCheck
 from .email_rule_written_kind import EmailRuleWrittenKind
 from .email_rule_written_restored_from import EmailRuleWrittenRestoredFrom
@@ -1423,6 +1425,7 @@ from .replay_result import ReplayResult
 from .reply_email import ReplyEmail
 from .reply_input import ReplyInput
 from .reply_input_headers import ReplyInputHeaders
+from .reply_input_unsubscribe import ReplyInputUnsubscribe
 from .reply_to_email_response_200 import ReplyToEmailResponse200
 from .request_function_runtime_key_runner_request import RequestFunctionRuntimeKeyRunnerRequest
 from .request_function_runtime_key_runner_response_200 import RequestFunctionRuntimeKeyRunnerResponse200
@@ -1499,6 +1502,7 @@ from .send_mail_idempotency_replay_key_source import SendMailIdempotencyReplayKe
 from .send_mail_input import SendMailInput
 from .send_mail_input_headers import SendMailInputHeaders
 from .send_mail_input_tags_item import SendMailInputTagsItem
+from .send_mail_input_unsubscribe import SendMailInputUnsubscribe
 from .send_mail_payload_ref import SendMailPayloadRef
 from .send_mail_result import SendMailResult
 from .send_mail_result_dedup_reason_type_1 import SendMailResultDedupReasonType1
@@ -1784,6 +1788,7 @@ from .update_email_rule_response_200 import UpdateEmailRuleResponse200
 from .update_email_rule_result import UpdateEmailRuleResult
 from .update_email_rule_result_affects import UpdateEmailRuleResultAffects
 from .update_email_rule_result_evaluation_scope import UpdateEmailRuleResultEvaluationScope
+from .update_email_rule_result_expectations import UpdateEmailRuleResultExpectations
 from .update_email_rule_result_expectations_check import UpdateEmailRuleResultExpectationsCheck
 from .update_email_rule_result_kind import UpdateEmailRuleResultKind
 from .update_email_rule_result_restored_from import UpdateEmailRuleResultRestoredFrom
@@ -2076,6 +2081,7 @@ __all__ = (
     "CreateEmailRuleResult",
     "CreateEmailRuleResultAffects",
     "CreateEmailRuleResultEvaluationScope",
+    "CreateEmailRuleResultExpectations",
     "CreateEmailRuleResultExpectationsCheck",
     "CreateEmailRuleResultKind",
     "CreateEmailRuleResultRestoredFrom",
@@ -2454,6 +2460,7 @@ __all__ = (
     "EmailRuleWritten",
     "EmailRuleWrittenAffects",
     "EmailRuleWrittenEvaluationScope",
+    "EmailRuleWrittenExpectations",
     "EmailRuleWrittenExpectationsCheck",
     "EmailRuleWrittenKind",
     "EmailRuleWrittenRestoredFrom",
@@ -3292,6 +3299,7 @@ __all__ = (
     "ReplyEmail",
     "ReplyInput",
     "ReplyInputHeaders",
+    "ReplyInputUnsubscribe",
     "ReplyToEmailResponse200",
     "RequestFunctionRuntimeKeyRunnerRequest",
     "RequestFunctionRuntimeKeyRunnerResponse200",
@@ -3368,6 +3376,7 @@ __all__ = (
     "SendMailInput",
     "SendMailInputHeaders",
     "SendMailInputTagsItem",
+    "SendMailInputUnsubscribe",
     "SendMailPayloadRef",
     "SendMailResult",
     "SendMailResultDedupReasonType1",
@@ -3656,6 +3665,7 @@ __all__ = (
     "UpdateEmailRuleResult",
     "UpdateEmailRuleResultAffects",
     "UpdateEmailRuleResultEvaluationScope",
+    "UpdateEmailRuleResultExpectations",
     "UpdateEmailRuleResultExpectationsCheck",
     "UpdateEmailRuleResultKind",
     "UpdateEmailRuleResultRestoredFrom",

@@ -17,6 +17,7 @@ if TYPE_CHECKING:
   from ..models.send_mail_attachment import SendMailAttachment
   from ..models.send_mail_input_headers import SendMailInputHeaders
   from ..models.send_mail_input_tags_item import SendMailInputTagsItem
+  from ..models.send_mail_input_unsubscribe import SendMailInputUnsubscribe
   from ..models.send_mail_payload_ref import SendMailPayloadRef
 
 
@@ -105,6 +106,14 @@ class SendMailInput:
                 not a recipient, so it does not count toward the recipient limit.
             tags (list[SendMailInputTagsItem] | Unset): Metadata tags stored with the send for correlation and filtering, at
                 most 10, with unique names. Tags never affect delivery and are not added to the message.
+            unsubscribe (SendMailInputUnsubscribe | Unset): One-click unsubscribe for the message. Primitive writes a `List-
+                Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-
+                Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe
+                sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the
+                unsubscribe. Every recipient of the message gets the same `url`, so send one message per recipient when the URL
+                identifies who to unsubscribe. The `headers` map refuses both header names, so this field is the only way to set
+                them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-
+                Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send.
             headers (SendMailInputHeaders | Unset): Extra headers, as `{ "Name": "value" }`, at most 25. A name is one of
                 `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-
                 Ref`, `X-Primitive-Function-Hop`, or a custom `X-` name of letters, digits and hyphens that is not credential-
@@ -138,6 +147,7 @@ class SendMailInput:
     fyi: bool | Unset = UNSET
     reply_to: list[str] | str | Unset = UNSET
     tags: list[SendMailInputTagsItem] | Unset = UNSET
+    unsubscribe: SendMailInputUnsubscribe | Unset = UNSET
     headers: SendMailInputHeaders | Unset = UNSET
 
 
@@ -149,6 +159,7 @@ class SendMailInput:
         from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
         from ..models.send_mail_input_headers import SendMailInputHeaders # noqa: PLC0415
         from ..models.send_mail_input_tags_item import SendMailInputTagsItem # noqa: PLC0415
+        from ..models.send_mail_input_unsubscribe import SendMailInputUnsubscribe # noqa: PLC0415
         from ..models.send_mail_payload_ref import SendMailPayloadRef # noqa: PLC0415
         from_ = self.from_
 
@@ -243,6 +254,10 @@ class SendMailInput:
 
 
 
+        unsubscribe: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.unsubscribe, Unset):
+            unsubscribe = self.unsubscribe.to_dict()
+
         headers: dict[str, Any] | Unset = UNSET
         if not isinstance(self.headers, Unset):
             headers = self.headers.to_dict()
@@ -287,6 +302,8 @@ class SendMailInput:
             field_dict["reply_to"] = reply_to
         if tags is not UNSET:
             field_dict["tags"] = tags
+        if unsubscribe is not UNSET:
+            field_dict["unsubscribe"] = unsubscribe
         if headers is not UNSET:
             field_dict["headers"] = headers
 
@@ -300,6 +317,7 @@ class SendMailInput:
         from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
         from ..models.send_mail_input_headers import SendMailInputHeaders # noqa: PLC0415
         from ..models.send_mail_input_tags_item import SendMailInputTagsItem # noqa: PLC0415
+        from ..models.send_mail_input_unsubscribe import SendMailInputUnsubscribe # noqa: PLC0415
         from ..models.send_mail_payload_ref import SendMailPayloadRef # noqa: PLC0415
         d = dict(src_dict)
         from_ = d.pop("from")
@@ -437,6 +455,16 @@ class SendMailInput:
                 tags.append(tags_item)
 
 
+        _unsubscribe = d.pop("unsubscribe", UNSET)
+        unsubscribe: SendMailInputUnsubscribe | Unset
+        if isinstance(_unsubscribe,  Unset):
+            unsubscribe = UNSET
+        else:
+            unsubscribe = SendMailInputUnsubscribe.from_dict(_unsubscribe)
+
+
+
+
         _headers = d.pop("headers", UNSET)
         headers: SendMailInputHeaders | Unset
         if isinstance(_headers,  Unset):
@@ -467,6 +495,7 @@ class SendMailInput:
             fyi=fyi,
             reply_to=reply_to,
             tags=tags,
+            unsubscribe=unsubscribe,
             headers=headers,
         )
 

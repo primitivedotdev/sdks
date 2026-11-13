@@ -39967,6 +39967,9 @@ type EmailRuleWritten struct {
 	// Names in scope_selection that match nothing this organization receives mail at (a typo, or an
 	// inbox not yet in use). Present only when there are some.
 	ScopeWarnings []EmailRuleScopeWarning `json:"scope_warnings"`
+	// Its saved expectations, each list by email id, as stored: on every create, and on an update that
+	// set or removed them.
+	Expectations OptEmailRuleWrittenExpectations `json:"expectations"`
 	// Its saved made-up emails, when this write set or added some.
 	ExpectationSamples []EmailRuleExpectationSample `json:"expectation_samples"`
 	// After a write that saved a version or changed its expectations or made-up emails, if it has some:
@@ -40080,6 +40083,11 @@ func (s *EmailRuleWritten) GetCurrent() NilEmailRuleVersion {
 // GetScopeWarnings returns the value of ScopeWarnings.
 func (s *EmailRuleWritten) GetScopeWarnings() []EmailRuleScopeWarning {
 	return s.ScopeWarnings
+}
+
+// GetExpectations returns the value of Expectations.
+func (s *EmailRuleWritten) GetExpectations() OptEmailRuleWrittenExpectations {
+	return s.Expectations
 }
 
 // GetExpectationSamples returns the value of ExpectationSamples.
@@ -40202,6 +40210,11 @@ func (s *EmailRuleWritten) SetScopeWarnings(val []EmailRuleScopeWarning) {
 	s.ScopeWarnings = val
 }
 
+// SetExpectations sets the value of Expectations.
+func (s *EmailRuleWritten) SetExpectations(val OptEmailRuleWrittenExpectations) {
+	s.Expectations = val
+}
+
 // SetExpectationSamples sets the value of ExpectationSamples.
 func (s *EmailRuleWritten) SetExpectationSamples(val []EmailRuleExpectationSample) {
 	s.ExpectationSamples = val
@@ -40317,6 +40330,33 @@ func (s *EmailRuleWrittenEvaluationScope) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Its saved expectations, each list by email id, as stored: on every create, and on an update that
+// set or removed them.
+type EmailRuleWrittenExpectations struct {
+	Match   []uuid.UUID `json:"match"`
+	NoMatch []uuid.UUID `json:"no_match"`
+}
+
+// GetMatch returns the value of Match.
+func (s *EmailRuleWrittenExpectations) GetMatch() []uuid.UUID {
+	return s.Match
+}
+
+// GetNoMatch returns the value of NoMatch.
+func (s *EmailRuleWrittenExpectations) GetNoMatch() []uuid.UUID {
+	return s.NoMatch
+}
+
+// SetMatch sets the value of Match.
+func (s *EmailRuleWrittenExpectations) SetMatch(val []uuid.UUID) {
+	s.Match = val
+}
+
+// SetNoMatch sets the value of NoMatch.
+func (s *EmailRuleWrittenExpectations) SetNoMatch(val []uuid.UUID) {
+	s.NoMatch = val
 }
 
 // After a write that saved a version or changed its expectations or made-up emails, if it has some:
@@ -87511,6 +87551,52 @@ func (o OptEmailRuleWrittenEvaluationScope) Or(d EmailRuleWrittenEvaluationScope
 	return d
 }
 
+// NewOptEmailRuleWrittenExpectations returns new OptEmailRuleWrittenExpectations with value set to v.
+func NewOptEmailRuleWrittenExpectations(v EmailRuleWrittenExpectations) OptEmailRuleWrittenExpectations {
+	return OptEmailRuleWrittenExpectations{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEmailRuleWrittenExpectations is optional EmailRuleWrittenExpectations.
+type OptEmailRuleWrittenExpectations struct {
+	Value EmailRuleWrittenExpectations
+	Set   bool
+}
+
+// IsSet returns true if OptEmailRuleWrittenExpectations was set.
+func (o OptEmailRuleWrittenExpectations) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEmailRuleWrittenExpectations) Reset() {
+	var v EmailRuleWrittenExpectations
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEmailRuleWrittenExpectations) SetTo(v EmailRuleWrittenExpectations) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEmailRuleWrittenExpectations) Get() (v EmailRuleWrittenExpectations, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEmailRuleWrittenExpectations) Or(d EmailRuleWrittenExpectations) EmailRuleWrittenExpectations {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptEmailRuleWrittenExpectationsCheck returns new OptEmailRuleWrittenExpectationsCheck with value set to v.
 func NewOptEmailRuleWrittenExpectationsCheck(v EmailRuleWrittenExpectationsCheck) OptEmailRuleWrittenExpectationsCheck {
 	return OptEmailRuleWrittenExpectationsCheck{
@@ -101528,6 +101614,52 @@ func (o OptReplyInputHeaders) Or(d ReplyInputHeaders) ReplyInputHeaders {
 	return d
 }
 
+// NewOptReplyInputUnsubscribe returns new OptReplyInputUnsubscribe with value set to v.
+func NewOptReplyInputUnsubscribe(v ReplyInputUnsubscribe) OptReplyInputUnsubscribe {
+	return OptReplyInputUnsubscribe{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptReplyInputUnsubscribe is optional ReplyInputUnsubscribe.
+type OptReplyInputUnsubscribe struct {
+	Value ReplyInputUnsubscribe
+	Set   bool
+}
+
+// IsSet returns true if OptReplyInputUnsubscribe was set.
+func (o OptReplyInputUnsubscribe) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptReplyInputUnsubscribe) Reset() {
+	var v ReplyInputUnsubscribe
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptReplyInputUnsubscribe) SetTo(v ReplyInputUnsubscribe) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptReplyInputUnsubscribe) Get() (v ReplyInputUnsubscribe, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptReplyInputUnsubscribe) Or(d ReplyInputUnsubscribe) ReplyInputUnsubscribe {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptRevokeAgentConnectionOKCacheControl returns new OptRevokeAgentConnectionOKCacheControl with value set to v.
 func NewOptRevokeAgentConnectionOKCacheControl(v RevokeAgentConnectionOKCacheControl) OptRevokeAgentConnectionOKCacheControl {
 	return OptRevokeAgentConnectionOKCacheControl{
@@ -102488,6 +102620,52 @@ func (o OptSendMailInputReplyTo) Get() (v SendMailInputReplyTo, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptSendMailInputReplyTo) Or(d SendMailInputReplyTo) SendMailInputReplyTo {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSendMailInputUnsubscribe returns new OptSendMailInputUnsubscribe with value set to v.
+func NewOptSendMailInputUnsubscribe(v SendMailInputUnsubscribe) OptSendMailInputUnsubscribe {
+	return OptSendMailInputUnsubscribe{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSendMailInputUnsubscribe is optional SendMailInputUnsubscribe.
+type OptSendMailInputUnsubscribe struct {
+	Value SendMailInputUnsubscribe
+	Set   bool
+}
+
+// IsSet returns true if OptSendMailInputUnsubscribe was set.
+func (o OptSendMailInputUnsubscribe) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSendMailInputUnsubscribe) Reset() {
+	var v SendMailInputUnsubscribe
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSendMailInputUnsubscribe) SetTo(v SendMailInputUnsubscribe) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSendMailInputUnsubscribe) Get() (v SendMailInputUnsubscribe, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSendMailInputUnsubscribe) Or(d SendMailInputUnsubscribe) SendMailInputUnsubscribe {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -117154,6 +117332,16 @@ type ReplyInput struct {
 	// cannot be combined with `body_html`, `attachments`, `payload_attachments` or `scheduled_at`, and
 	// on `/send-mail` it requires `in_reply_to`.
 	Fyi OptBool `json:"fyi"`
+	// One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url`
+	// (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post:
+	// List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click
+	// unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your
+	// endpoint records the unsubscribe. Every recipient of the message gets the same `url`, so send one
+	// message per recipient when the URL identifies who to unsubscribe. The `headers` map refuses both
+	// header names, so this field is the only way to set them, and the headers it adds count toward the
+	// 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters
+	// is refused. Not accepted on a repeating send.
+	Unsubscribe OptReplyInputUnsubscribe `json:"unsubscribe"`
 	// Extra headers, as `{ "Name": "value" }`, at most 25. A name is one of `Auto-Submitted`,
 	// `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`,
 	//  `X-Primitive-Function-Hop`, or a custom `X-` name of letters, digits and hyphens that is not
@@ -117215,6 +117403,11 @@ func (s *ReplyInput) GetFyi() OptBool {
 	return s.Fyi
 }
 
+// GetUnsubscribe returns the value of Unsubscribe.
+func (s *ReplyInput) GetUnsubscribe() OptReplyInputUnsubscribe {
+	return s.Unsubscribe
+}
+
 // GetHeaders returns the value of Headers.
 func (s *ReplyInput) GetHeaders() OptReplyInputHeaders {
 	return s.Headers
@@ -117265,6 +117458,11 @@ func (s *ReplyInput) SetFyi(val OptBool) {
 	s.Fyi = val
 }
 
+// SetUnsubscribe sets the value of Unsubscribe.
+func (s *ReplyInput) SetUnsubscribe(val OptReplyInputUnsubscribe) {
+	s.Unsubscribe = val
+}
+
 // SetHeaders sets the value of Headers.
 func (s *ReplyInput) SetHeaders(val OptReplyInputHeaders) {
 	s.Headers = val
@@ -117296,6 +117494,65 @@ func (s *ReplyInputHeaders) init() ReplyInputHeaders {
 		*s = m
 	}
 	return m
+}
+
+// One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url`
+// (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post:
+// List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click
+// unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your
+// endpoint records the unsubscribe. Every recipient of the message gets the same `url`, so send one
+// message per recipient when the URL identifies who to unsubscribe. The `headers` map refuses both
+// header names, so this field is the only way to set them, and the headers it adds count toward the
+// 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters
+// is refused. Not accepted on a repeating send.
+type ReplyInputUnsubscribe struct {
+	// Absolute https URL that unsubscribes the recipient, at most 700 characters of URL characters only:
+	// printable ASCII with no spaces, double quotes, angle brackets or commas (percent-encode a comma as
+	// %2C), `%` only as a percent-encoded byte, `[` and `]` only around an IPv6 address host, a port
+	// from 1 to 65535, no `=?` (which mail readers can decode as an encoded word), and no user name or
+	// password. The host must be public: not a single-label name, `localhost` or a name under `.
+	// localhost`, `.internal`, `.local`, `.home.arpa` or `.localdomain`, or a loopback, link-local,
+	// private, shared, reserved, multicast or unspecified IP address, including an IPv6 address that
+	// embeds one. The scheme is written in lower case.
+	URL string `json:"url"`
+	// Whether to also write `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, which tells the
+	// receiver it may unsubscribe with a single POST to `url`. Set false when `url` needs the recipient
+	// to open a page and confirm.
+	OneClick OptBool `json:"one_click"`
+	// An address to also offer as a `mailto:` unsubscribe, written after `url`. The address alone,
+	// without the `mailto:` prefix: at most 64 letters, digits and `.!$'*+=_~-` before the `@`, and a
+	// dotted domain after it. An `=` is written as `%3D` in the header.
+	Mailto OptString `json:"mailto"`
+}
+
+// GetURL returns the value of URL.
+func (s *ReplyInputUnsubscribe) GetURL() string {
+	return s.URL
+}
+
+// GetOneClick returns the value of OneClick.
+func (s *ReplyInputUnsubscribe) GetOneClick() OptBool {
+	return s.OneClick
+}
+
+// GetMailto returns the value of Mailto.
+func (s *ReplyInputUnsubscribe) GetMailto() OptString {
+	return s.Mailto
+}
+
+// SetURL sets the value of URL.
+func (s *ReplyInputUnsubscribe) SetURL(val string) {
+	s.URL = val
+}
+
+// SetOneClick sets the value of OneClick.
+func (s *ReplyInputUnsubscribe) SetOneClick(val OptBool) {
+	s.OneClick = val
+}
+
+// SetMailto sets the value of Mailto.
+func (s *ReplyInputUnsubscribe) SetMailto(val OptString) {
+	s.Mailto = val
 }
 
 type ReplyToEmailBadGateway ErrorResponseHeaders
@@ -121282,6 +121539,16 @@ type SendMailInput struct {
 	// Metadata tags stored with the send for correlation and filtering, at most 10, with unique names.
 	// Tags never affect delivery and are not added to the message.
 	Tags []SendMailInputTagsItem `json:"tags"`
+	// One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url`
+	// (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post:
+	// List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click
+	// unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your
+	// endpoint records the unsubscribe. Every recipient of the message gets the same `url`, so send one
+	// message per recipient when the URL identifies who to unsubscribe. The `headers` map refuses both
+	// header names, so this field is the only way to set them, and the headers it adds count toward the
+	// 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters
+	// is refused. Not accepted on a repeating send.
+	Unsubscribe OptSendMailInputUnsubscribe `json:"unsubscribe"`
 	// Extra headers, as `{ "Name": "value" }`, at most 25. A name is one of `Auto-Submitted`,
 	// `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`,
 	//  `X-Primitive-Function-Hop`, or a custom `X-` name of letters, digits and hyphens that is not
@@ -121393,6 +121660,11 @@ func (s *SendMailInput) GetTags() []SendMailInputTagsItem {
 	return s.Tags
 }
 
+// GetUnsubscribe returns the value of Unsubscribe.
+func (s *SendMailInput) GetUnsubscribe() OptSendMailInputUnsubscribe {
+	return s.Unsubscribe
+}
+
 // GetHeaders returns the value of Headers.
 func (s *SendMailInput) GetHeaders() OptSendMailInputHeaders {
 	return s.Headers
@@ -121491,6 +121763,11 @@ func (s *SendMailInput) SetReplyTo(val OptSendMailInputReplyTo) {
 // SetTags sets the value of Tags.
 func (s *SendMailInput) SetTags(val []SendMailInputTagsItem) {
 	s.Tags = val
+}
+
+// SetUnsubscribe sets the value of Unsubscribe.
+func (s *SendMailInput) SetUnsubscribe(val OptSendMailInputUnsubscribe) {
+	s.Unsubscribe = val
 }
 
 // SetHeaders sets the value of Headers.
@@ -121753,6 +122030,65 @@ func (s *SendMailInputTagsItem) SetName(val string) {
 // SetValue sets the value of Value.
 func (s *SendMailInputTagsItem) SetValue(val string) {
 	s.Value = val
+}
+
+// One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url`
+// (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post:
+// List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click
+// unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your
+// endpoint records the unsubscribe. Every recipient of the message gets the same `url`, so send one
+// message per recipient when the URL identifies who to unsubscribe. The `headers` map refuses both
+// header names, so this field is the only way to set them, and the headers it adds count toward the
+// 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters
+// is refused. Not accepted on a repeating send.
+type SendMailInputUnsubscribe struct {
+	// Absolute https URL that unsubscribes the recipient, at most 700 characters of URL characters only:
+	// printable ASCII with no spaces, double quotes, angle brackets or commas (percent-encode a comma as
+	// %2C), `%` only as a percent-encoded byte, `[` and `]` only around an IPv6 address host, a port
+	// from 1 to 65535, no `=?` (which mail readers can decode as an encoded word), and no user name or
+	// password. The host must be public: not a single-label name, `localhost` or a name under `.
+	// localhost`, `.internal`, `.local`, `.home.arpa` or `.localdomain`, or a loopback, link-local,
+	// private, shared, reserved, multicast or unspecified IP address, including an IPv6 address that
+	// embeds one. The scheme is written in lower case.
+	URL string `json:"url"`
+	// Whether to also write `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, which tells the
+	// receiver it may unsubscribe with a single POST to `url`. Set false when `url` needs the recipient
+	// to open a page and confirm.
+	OneClick OptBool `json:"one_click"`
+	// An address to also offer as a `mailto:` unsubscribe, written after `url`. The address alone,
+	// without the `mailto:` prefix: at most 64 letters, digits and `.!$'*+=_~-` before the `@`, and a
+	// dotted domain after it. An `=` is written as `%3D` in the header.
+	Mailto OptString `json:"mailto"`
+}
+
+// GetURL returns the value of URL.
+func (s *SendMailInputUnsubscribe) GetURL() string {
+	return s.URL
+}
+
+// GetOneClick returns the value of OneClick.
+func (s *SendMailInputUnsubscribe) GetOneClick() OptBool {
+	return s.OneClick
+}
+
+// GetMailto returns the value of Mailto.
+func (s *SendMailInputUnsubscribe) GetMailto() OptString {
+	return s.Mailto
+}
+
+// SetURL sets the value of URL.
+func (s *SendMailInputUnsubscribe) SetURL(val string) {
+	s.URL = val
+}
+
+// SetOneClick sets the value of OneClick.
+func (s *SendMailInputUnsubscribe) SetOneClick(val OptBool) {
+	s.OneClick = val
+}
+
+// SetMailto sets the value of Mailto.
+func (s *SendMailInputUnsubscribe) SetMailto(val OptString) {
+	s.Mailto = val
 }
 
 // A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without

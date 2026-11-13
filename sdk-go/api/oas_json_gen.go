@@ -88122,6 +88122,12 @@ func (s *EmailRuleWritten) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Expectations.Set {
+			e.FieldStart("expectations")
+			s.Expectations.Encode(e)
+		}
+	}
+	{
 		if s.ExpectationSamples != nil {
 			e.FieldStart("expectation_samples")
 			e.ArrStart()
@@ -88163,7 +88169,7 @@ func (s *EmailRuleWritten) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailRuleWritten = [24]string{
+var jsonFieldsNameOfEmailRuleWritten = [25]string{
 	0:  "id",
 	1:  "name",
 	2:  "state",
@@ -88182,12 +88188,13 @@ var jsonFieldsNameOfEmailRuleWritten = [24]string{
 	15: "updated_at",
 	16: "current",
 	17: "scope_warnings",
-	18: "expectation_samples",
-	19: "expectations_check",
-	20: "restored_from",
-	21: "affects",
-	22: "notice",
-	23: "share_notice",
+	18: "expectations",
+	19: "expectation_samples",
+	20: "expectations_check",
+	21: "restored_from",
+	22: "affects",
+	23: "notice",
+	24: "share_notice",
 }
 
 // Decode decodes EmailRuleWritten from json.
@@ -88195,7 +88202,7 @@ func (s *EmailRuleWritten) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode EmailRuleWritten to nil")
 	}
-	var requiredBitSet [3]uint8
+	var requiredBitSet [4]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -88398,6 +88405,16 @@ func (s *EmailRuleWritten) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"scope_warnings\"")
 			}
+		case "expectations":
+			if err := func() error {
+				s.Expectations.Reset()
+				if err := s.Expectations.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"expectations\"")
+			}
 		case "expectation_samples":
 			if err := func() error {
 				s.ExpectationSamples = make([]EmailRuleExpectationSample, 0)
@@ -88474,10 +88491,11 @@ func (s *EmailRuleWritten) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [3]uint8{
+	for i, mask := range [4]uint8{
 		0b10000111,
 		0b11001010,
 		0b00000001,
+		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -88691,6 +88709,143 @@ func (s EmailRuleWrittenEvaluationScope) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *EmailRuleWrittenEvaluationScope) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailRuleWrittenExpectations) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailRuleWrittenExpectations) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("match")
+		e.ArrStart()
+		for _, elem := range s.Match {
+			json.EncodeUUID(e, elem)
+		}
+		e.ArrEnd()
+	}
+	{
+		e.FieldStart("no_match")
+		e.ArrStart()
+		for _, elem := range s.NoMatch {
+			json.EncodeUUID(e, elem)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfEmailRuleWrittenExpectations = [2]string{
+	0: "match",
+	1: "no_match",
+}
+
+// Decode decodes EmailRuleWrittenExpectations from json.
+func (s *EmailRuleWrittenExpectations) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailRuleWrittenExpectations to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "match":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				s.Match = make([]uuid.UUID, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem uuid.UUID
+					v, err := json.DecodeUUID(d)
+					elem = v
+					if err != nil {
+						return err
+					}
+					s.Match = append(s.Match, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"match\"")
+			}
+		case "no_match":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				s.NoMatch = make([]uuid.UUID, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem uuid.UUID
+					v, err := json.DecodeUUID(d)
+					elem = v
+					if err != nil {
+						return err
+					}
+					s.NoMatch = append(s.NoMatch, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"no_match\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailRuleWrittenExpectations")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailRuleWrittenExpectations) {
+					name = jsonFieldsNameOfEmailRuleWrittenExpectations[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailRuleWrittenExpectations) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailRuleWrittenExpectations) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -181599,6 +181754,39 @@ func (s *OptEmailRuleWrittenEvaluationScope) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes EmailRuleWrittenExpectations as json.
+func (o OptEmailRuleWrittenExpectations) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes EmailRuleWrittenExpectations from json.
+func (o *OptEmailRuleWrittenExpectations) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptEmailRuleWrittenExpectations to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptEmailRuleWrittenExpectations) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptEmailRuleWrittenExpectations) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes EmailRuleWrittenExpectationsCheck as json.
 func (o OptEmailRuleWrittenExpectationsCheck) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -189937,6 +190125,39 @@ func (s *OptReplyInputHeaders) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes ReplyInputUnsubscribe as json.
+func (o OptReplyInputUnsubscribe) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes ReplyInputUnsubscribe from json.
+func (o *OptReplyInputUnsubscribe) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptReplyInputUnsubscribe to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptReplyInputUnsubscribe) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptReplyInputUnsubscribe) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes SemanticSearchInputMode as json.
 func (o OptSemanticSearchInputMode) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -190198,6 +190419,39 @@ func (s OptSendMailInputReplyTo) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptSendMailInputReplyTo) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SendMailInputUnsubscribe as json.
+func (o OptSendMailInputUnsubscribe) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes SendMailInputUnsubscribe from json.
+func (o *OptSendMailInputUnsubscribe) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptSendMailInputUnsubscribe to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptSendMailInputUnsubscribe) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptSendMailInputUnsubscribe) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -220557,6 +220811,12 @@ func (s *ReplyInput) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Unsubscribe.Set {
+			e.FieldStart("unsubscribe")
+			s.Unsubscribe.Encode(e)
+		}
+	}
+	{
 		if s.Headers.Set {
 			e.FieldStart("headers")
 			s.Headers.Encode(e)
@@ -220564,17 +220824,18 @@ func (s *ReplyInput) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfReplyInput = [10]string{
-	0: "body_text",
-	1: "body_html",
-	2: "from",
-	3: "wait",
-	4: "reply_all",
-	5: "attachments",
-	6: "repeat",
-	7: "if_latest_message_id",
-	8: "fyi",
-	9: "headers",
+var jsonFieldsNameOfReplyInput = [11]string{
+	0:  "body_text",
+	1:  "body_html",
+	2:  "from",
+	3:  "wait",
+	4:  "reply_all",
+	5:  "attachments",
+	6:  "repeat",
+	7:  "if_latest_message_id",
+	8:  "fyi",
+	9:  "unsubscribe",
+	10: "headers",
 }
 
 // Decode decodes ReplyInput from json.
@@ -220682,6 +220943,16 @@ func (s *ReplyInput) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"fyi\"")
 			}
+		case "unsubscribe":
+			if err := func() error {
+				s.Unsubscribe.Reset()
+				if err := s.Unsubscribe.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"unsubscribe\"")
+			}
 		case "headers":
 			if err := func() error {
 				s.Headers.Reset()
@@ -220779,6 +221050,137 @@ func (s ReplyInputHeaders) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ReplyInputHeaders) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ReplyInputUnsubscribe) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ReplyInputUnsubscribe) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("url")
+		e.Str(s.URL)
+	}
+	{
+		if s.OneClick.Set {
+			e.FieldStart("one_click")
+			s.OneClick.Encode(e)
+		}
+	}
+	{
+		if s.Mailto.Set {
+			e.FieldStart("mailto")
+			s.Mailto.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfReplyInputUnsubscribe = [3]string{
+	0: "url",
+	1: "one_click",
+	2: "mailto",
+}
+
+// Decode decodes ReplyInputUnsubscribe from json.
+func (s *ReplyInputUnsubscribe) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ReplyInputUnsubscribe to nil")
+	}
+	var requiredBitSet [1]uint8
+	s.setDefaults()
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "url":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.URL = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"url\"")
+			}
+		case "one_click":
+			if err := func() error {
+				s.OneClick.Reset()
+				if err := s.OneClick.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"one_click\"")
+			}
+		case "mailto":
+			if err := func() error {
+				s.Mailto.Reset()
+				if err := s.Mailto.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"mailto\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ReplyInputUnsubscribe")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfReplyInputUnsubscribe) {
+					name = jsonFieldsNameOfReplyInputUnsubscribe[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ReplyInputUnsubscribe) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ReplyInputUnsubscribe) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -230655,6 +231057,12 @@ func (s *SendMailInput) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Unsubscribe.Set {
+			e.FieldStart("unsubscribe")
+			s.Unsubscribe.Encode(e)
+		}
+	}
+	{
 		if s.Headers.Set {
 			e.FieldStart("headers")
 			s.Headers.Encode(e)
@@ -230662,7 +231070,7 @@ func (s *SendMailInput) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSendMailInput = [20]string{
+var jsonFieldsNameOfSendMailInput = [21]string{
 	0:  "repeat",
 	1:  "from",
 	2:  "to",
@@ -230682,7 +231090,8 @@ var jsonFieldsNameOfSendMailInput = [20]string{
 	16: "fyi",
 	17: "reply_to",
 	18: "tags",
-	19: "headers",
+	19: "unsubscribe",
+	20: "headers",
 }
 
 // Decode decodes SendMailInput from json.
@@ -230919,6 +231328,16 @@ func (s *SendMailInput) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"tags\"")
+			}
+		case "unsubscribe":
+			if err := func() error {
+				s.Unsubscribe.Reset()
+				if err := s.Unsubscribe.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"unsubscribe\"")
 			}
 		case "headers":
 			if err := func() error {
@@ -231350,6 +231769,137 @@ func (s *SendMailInputTagsItem) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SendMailInputTagsItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SendMailInputUnsubscribe) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SendMailInputUnsubscribe) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("url")
+		e.Str(s.URL)
+	}
+	{
+		if s.OneClick.Set {
+			e.FieldStart("one_click")
+			s.OneClick.Encode(e)
+		}
+	}
+	{
+		if s.Mailto.Set {
+			e.FieldStart("mailto")
+			s.Mailto.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfSendMailInputUnsubscribe = [3]string{
+	0: "url",
+	1: "one_click",
+	2: "mailto",
+}
+
+// Decode decodes SendMailInputUnsubscribe from json.
+func (s *SendMailInputUnsubscribe) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SendMailInputUnsubscribe to nil")
+	}
+	var requiredBitSet [1]uint8
+	s.setDefaults()
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "url":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.URL = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"url\"")
+			}
+		case "one_click":
+			if err := func() error {
+				s.OneClick.Reset()
+				if err := s.OneClick.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"one_click\"")
+			}
+		case "mailto":
+			if err := func() error {
+				s.Mailto.Reset()
+				if err := s.Mailto.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"mailto\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SendMailInputUnsubscribe")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfSendMailInputUnsubscribe) {
+					name = jsonFieldsNameOfSendMailInputUnsubscribe[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SendMailInputUnsubscribe) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SendMailInputUnsubscribe) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

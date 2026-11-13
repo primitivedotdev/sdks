@@ -771,6 +771,15 @@ date-time is kept as null and sorts last. A sync stops with an error after
   In a rule's `receivers`, each `keys` entry over your mail carries
   `reads_in_full`, how many of those keys also list one of your own
   mailboxes or its domain.
+- `createEmailRule` and `updateEmailRule` answer the rule's saved
+  `expectations` (`match` and `no_match`, by email id, as stored): on every
+  create, and on an update that set or removed them.
+- `sendEmail`, `sendMailBatch` and `replyToEmail` take `unsubscribe`: a
+  one-click unsubscribe `url` (https, public host, at most 700 characters),
+  an optional `mailto`, and `one_click` (default true). Primitive writes
+  and DKIM-signs `List-Unsubscribe` and, unless `one_click` is false,
+  `List-Unsubscribe-Post` (RFC 8058). The `headers` map refuses both
+  names, and a repeating send refuses `unsubscribe`.
 - `testEmailRuleOnSample` and `generateLookAlikes` take as `rule_id` a
   rule that covers your mailboxes, run as you (on the dashboard or the CLI
   only). `acceptEmailRuleRequest`'s `notice` says first when your changes
