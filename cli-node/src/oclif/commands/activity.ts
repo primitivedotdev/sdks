@@ -174,10 +174,11 @@ const COVERING_NOW = `\`primitive email-rule-oversight list-email-rules-covering
  * baseline for a rule that already covered you when notices began), when, the
  * rule's name then, and its author; and, first, each rule that covers you now
  * whose notice is not written yet (pending, dated when the rule last
- * changed). No id: a notice's id is not a rule's, and no command takes it.
+ * changed), then the rule's id (rule_id; a pending row's own id is the
+ * rule's), never the notice's own id, which no command takes.
  * `complete` says the listing is the whole of it (from the first page to the
  * last, nothing withheld). Even then an empty one is no promise that nothing
- * covers you: notices are written by a periodic job and can lag, so it
+ * covers you: notices can lag, so it
  * says how far they go (`asOf`, when the server says) and where to look now.
  */
 export function formatConcerningRows(
@@ -195,7 +196,7 @@ export function formatConcerningRows(
       : null;
   if (items.length === 0)
     return complete
-      ? `${asOf ? `Nothing recorded for you as of ${minute(asOf)} UTC.` : "Nothing recorded for you yet."} A rule that starts covering your mail can take a few minutes to appear here. ${COVERING_NOW}`
+      ? `${asOf ? `Nothing recorded for you as of ${minute(asOf)} UTC.` : "Nothing recorded for you yet."} Notices can lag, so a rule that starts covering your mail may not appear here yet. ${COVERING_NOW}`
       : unfinished
         ? `${unfinished} ${COVERING_NOW}`
         : "Nothing to show.";
@@ -204,8 +205,10 @@ export function formatConcerningRows(
     minute(item.created_at),
     item.name ?? "(unnamed)",
     item.created_through.name ?? item.created_through.id ?? "",
+    // An older server sends no rule_id; a pending row's id is the rule's.
+    item.rule_id ?? (item.state === "pending" ? item.id : ""),
   ]);
-  const header = ["NOTICE", "WHEN (UTC)", "RULE", "AUTHOR"];
+  const header = ["NOTICE", "WHEN (UTC)", "RULE", "AUTHOR", "RULE ID"];
   const widths = header.map((h, i) =>
     Math.max(h.length, ...rows.map((row) => (row[i] ?? "").length)),
   );
@@ -214,7 +217,8 @@ export function formatConcerningRows(
       .map((cell, i) =>
         i === cells.length - 1 ? cell : cell.padEnd(widths[i] ?? 0),
       )
-      .join("  ");
+      .join("  ")
+      .trimEnd();
   const pending = items.some((item) => item.state === "pending")
     ? [
         "",
@@ -483,9 +487,9 @@ export class ActivityConcerningCommand extends Command {
   static description =
     `List what other members did that concerns your own mail, newest first: each time another member's rule started covering your mailboxes, that is, it was made or turned active over them or an active rule came to reach you, once per rule, not per mailbox (started), or saved a new version while covering it (new_version), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline. A rule in draft or observe grants and blocks nothing and gets no notice while it stays there, though \`primitive email-rule-oversight list-email-rules-covering-me\` lists it; turning it active is what is listed, and a rule that covers you again within an hour of its last started or baseline notice gets no new one, though a version it saved meanwhile is listed as new_version. A rule that stops covering you, a rename, and changes to its keys, webhooks or share are not listed.
 
-  Notices are written by a job that runs every minute or so and can lag. Until a start is written, a rule that now covers you is listed first as pending, dated when the rule last changed, and with --json its id is the rule's. When the check for such rules did not finish, the listing says so and --json carries pending_complete: false; run it again in a moment.
+  Notices can lag. Until a start is written, a rule that now covers you is listed first as pending, dated when the rule last changed, and with --json its id is the rule's. When the check for such rules did not finish, the listing says so and --json carries pending_complete: false; run it again in a moment.
 
-  Signed in with \`primitive login\`, you see the notices about your own mail under your current membership. A key, an app or an agent has none. The rules that cover you now, with their ids, are listed by \`primitive email-rule-oversight list-email-rules-covering-me\`; ask a rule's author to turn it off with \`primitive email-rule-oversight create-email-rule-objection --rule-id <rule-id>\`. With --json each notice's id is the notice's, not the rule's.`;
+  Signed in with \`primitive login\`, you see the notices about your own mail under your current membership. A key, an app or an agent has none. The rules that cover you now, with their ids, are listed by \`primitive email-rule-oversight list-email-rules-covering-me\`; ask a rule's author to turn it off with \`primitive email-rule-oversight create-email-rule-objection --rule-id <rule-id>\`. The table's RULE ID, and rule_id with --json, is the rule's id, which \`primitive email-rule-oversight get-email-rule-covering-me <rule-id>\` and create-email-rule-objection --rule-id take; with --json each notice's own id is the notice's, not the rule's.`;
 
   static summary = "List rules that started covering your mail or changed";
 

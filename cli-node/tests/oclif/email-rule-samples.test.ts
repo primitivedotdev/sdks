@@ -161,6 +161,15 @@ describe("samplesFromJson", () => {
     expect(
       samplesFromJson([{ expected: "no_match", email: named }], "f"),
     ).toEqual([{ expected: "no_match", email: named }]);
+    // A generate-look-alikes answer saved as printed, whose look-alikes carry them.
+    expect(
+      samplesFromJson(
+        answer([
+          { ...lookAlike("Statement", "passed", "no_match"), email: named },
+        ]),
+        "f",
+      ).map((sample) => sample.email),
+    ).toEqual([named]);
     // Names alone are kept too: the API pairs by position only when both list files.
     const namesOnly = { ...email("b"), attachment_names: ["notes.txt"] };
     expect(

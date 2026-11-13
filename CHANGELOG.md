@@ -1303,8 +1303,8 @@ parsers.
   version without its leading `v`). It needs no login and does not call
   the API, and it is listed in the root help.
 - `email-rules create-email-rule`, `update-email-rule`, `test-email-rule`,
-  `test-email-rule-on-sample` and `generate-look-alikes` take
-  `--scope-address` and `--scope-domain`, so a selected scope no longer
+  `test-email-rule-on-sample`, `generate-look-alikes` and
+  `compile-email-rule` take `--scope-address` and `--scope-domain`, so a selected scope no longer
   needs `--raw-body`: `--evaluation-scope selected --scope-address
   support@example.com --scope-domain example.org` sends `scope_selection`
   with both lists, and a list not given is sent empty. Repeat a flag or give
@@ -1331,7 +1331,9 @@ parsers.
   cut short (`meta.truncated`). `--json` output is unchanged.
 - Without `--json`, `email-rules compile-email-rule` prints each of the
   compile answer's warnings (such as a sender judged by the classifier
-  alone, or a grant worded as a prohibition) before its breadth, and
+  alone, or a grant worded as a prohibition) before its breadth, which says
+  the scope it was counted over (`--evaluation-scope`, by default your own
+  mailboxes), and
   `create-email-rule`, `update-email-rule`, `get-email-rule` and
   `list-email-rules` print a do-not-share rule's `protection_note` (that it
   protects nothing yet, that a classifier fact narrows it, or that its
@@ -1444,7 +1446,11 @@ parsers.
   `new_version` or `baseline`), when, the rule's name then and its author.
   It takes `--limit`, `--cursor`, `--all` and `--json`. `--json` keeps the
   answer's `pending_complete`, and when that is false the text says the
-  check for rules covering you with no notice yet did not finish.
+  check for rules covering you with no notice yet did not finish. Its
+  `RULE ID` column is each notice's `rule_id`, which
+  `email-rule-oversight get-email-rule-covering-me` and
+  `create-email-rule-objection --rule-id` take, and its help and empty
+  listing say only that notices can lag, naming no interval.
 - When the API lists no address and no domain a credential can send from,
   send's error no longer suggests `--from`, which cannot help then.
 - `primitive activity created` lists what you created, newest first, with
@@ -1629,6 +1635,30 @@ parsers.
   rule's version moved, a hint names its current version, when the answer
   gives one, and says to read the rule again with `primitive email-rules
   get-email-rule <id>` and reapply the change.
+- When `email-rules update-email-rule` is refused after the server checked
+  the write by default, because API keys or webhooks read the active rule
+  (`details.read_by`), the hint says so, counts them, and says how to save
+  the write without the check (`--no-if-expectations-pass`). A `409`
+  `readers_changed` gets a hint too: keys or webhooks started reading the
+  rule while it was saved, and sending the write again checks it first. The
+  help of `--fail-on-expectations` and the samples flags says when the
+  server checks a write without them.
+- Without `--json`, `email-rules create-email-rule` and `update-email-rule`
+  print the answer's `share_notice` (the share a write ended, and with whom)
+  and `notice` (a version saved unchecked on a rule keys or webhooks read),
+  and they and `get-email-rule` print `objection_notice` to the rule's
+  author. `delete-email-rule` prints `share_notice` in place of its count of
+  ended shares, and `test-email-rule` says how many decided emails the
+  conditions held on together (`summary.conditions_held`).
+- Samples files (`--expectation-samples-file`, `--add-expectation-samples-file`,
+  `--expect-samples-file`) take `attachment_names`, as look-alikes now carry
+  them, and refuse a sample whose names and types differ in number when both
+  list files.
+- `domains zone-file` takes `--inbound-only`, the MX and ownership TXT
+  records only, not with `--outbound-only`; `--outbound-only`'s help no
+  longer says verified domains default to it. Without either, the file has
+  every record.
+- `keys update --json` carries the answer's `rules_added`.
 - `primitive emails facts <id>` prints what the classifier read from a
   received email, one fact per line with its value and confidence. With
   `--json` it prints the `classification` object, or null when the email has
