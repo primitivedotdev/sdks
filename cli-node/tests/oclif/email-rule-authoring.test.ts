@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   OPERATION_ERROR_HINTS,
   OPERATION_EXTENSIONS,
+  overLongBodyField,
 } from "../../src/oclif/api-command.js";
 import {
   endEmailRuleShareReport,
@@ -1000,6 +1001,145 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
   });
 });
 
+describe("email-rules test-email-rule: which mail was tested (--same-emails-as)", () => {
+  const windowed = (mode: "recent" | "ids") => ({
+    ...testResult(),
+    window: {
+      mode,
+      since: mode === "recent" ? "2026-10-11T00:00:00Z" : null,
+      limit: 198,
+      oldest_at: "2026-11-12T08:53:50.000Z",
+      newest_at: "2026-11-13T10:13:50.000Z",
+    },
+  });
+
+  it("says first which mail a test of recent mail covered, and how to test a second tree over the same", async () => {
+    answer(windowed("recent"));
+    const result = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+    ]);
+    expect(stderrLines(result)[0]).toBe(
+      "Tested 4 emails received 2026-11-12 08:53 UTC to 2026-11-13 10:13 UTC. A later test of recent mail covers what has arrived since: to compare two trees, test the second with --same-emails-as <this answer, saved with --json>.",
+    );
+    // Emails by id do not move, so only the span is said.
+    answer(windowed("ids"));
+    const byId = await run("email-rules:test-email-rule", ["--rule-id", RULE]);
+    expect(stderrLines(byId)[0]).toBe(
+      "Tested 4 emails received 2026-11-12 08:53 UTC to 2026-11-13 10:13 UTC.",
+    );
+  });
+
+  it("tests exactly the emails a saved answer tested, as --json printed it or with --envelope", async () => {
+    const saved = windowed("recent");
+    for (const [name, content] of [
+      ["answer.json", saved],
+      ["envelope.json", { success: true, data: saved }],
+    ] as const) {
+      calls.length = 0;
+      answer(saved);
+      const result = await run("email-rules:test-email-rule", [
+        "--rule-id",
+        RULE,
+        "--same-emails-as",
+        tempFile(name, JSON.stringify(content)),
+      ]);
+      expect(result.exitCode, result.stderr).not.toBe(2);
+      expect(
+        (calls[0]?.body as { email_ids?: string[] } | undefined)?.email_ids,
+      ).toEqual(saved.results.map((r) => r.email_id));
+    }
+  });
+
+  it("says nothing of the span without one, and leaves emails not found out of the count", async () => {
+    answer(testResult());
+    const plain = await run("email-rules:test-email-rule", ["--rule-id", RULE]);
+    expect(stderrLines(plain)[0]).not.toMatch(/^Tested /);
+    const withMissing = windowed("recent");
+    answer({
+      ...withMissing,
+      counts: { ...withMissing.counts, emails: 5, not_found: 2 },
+    });
+    const missing = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+    ]);
+    expect(stderrLines(missing)[0]).toMatch(/^Tested 3 emails received /);
+  });
+
+  it("takes each email once, in lower case, over the body's own email_ids", async () => {
+    calls.length = 0;
+    answer(windowed("ids"));
+    const upper = A.toUpperCase();
+    const result = await run("email-rules:test-email-rule", [
+      "--body-file",
+      tempFile("body.json", JSON.stringify({ rule_id: RULE, email_ids: [C] })),
+      "--same-emails-as",
+      tempFile(
+        "dupes.json",
+        JSON.stringify({
+          results: [
+            { email_id: upper },
+            { email_id: A },
+            { email_id: "not-an-id" },
+            { email_id: B },
+            { outcome: "matched" },
+          ],
+        }),
+      ),
+    ]);
+    expect(result.exitCode, result.stderr).not.toBe(2);
+    expect(
+      (calls[0]?.body as { email_ids?: string[] } | undefined)?.email_ids,
+    ).toEqual([A.toLowerCase(), B]);
+  });
+
+  it("refuses a saved answer that names no emails, or more than a test takes with the expected ones", async () => {
+    calls.length = 0;
+    const none = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+      "--same-emails-as",
+      tempFile("none.json", JSON.stringify({ results: [] })),
+    ]);
+    expect(none.exitCode).toBe(2);
+    expect(none.stderr).toContain("names no emails");
+    const many = Array.from(
+      { length: 200 },
+      (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+    );
+    const full = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+      "--expect-match",
+      "00000000-0000-4000-8000-999999999999",
+      "--same-emails-as",
+      tempFile(
+        "many.json",
+        JSON.stringify({ results: many.map((email_id) => ({ email_id })) }),
+      ),
+    ]);
+    expect(full.exitCode).toBe(2);
+    expect(full.stderr).toContain("201 in all, and a test takes at most 200");
+    expect(calls).toEqual([]);
+  });
+
+  it("refuses a file that is not a saved answer, sending nothing", async () => {
+    calls.length = 0;
+    const result = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+      "--same-emails-as",
+      tempFile("other.json", JSON.stringify({ rules: [] })),
+    ]);
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain(
+      "is not a saved test-email-rule answer: it has no results",
+    );
+    expect(calls).toEqual([]);
+  });
+});
+
 describe("email-rules test-email-rule --json", () => {
   it("keeps the exit code and states why in one document, with nothing on stderr", async () => {
     const data = testResult(FAILED_EXPECTATIONS);
@@ -1918,6 +2058,99 @@ describe("email-rules accept-email-rule-request --expectation-samples-file", () 
     expect(calls[0]?.body).toEqual({
       expectation_samples: [samples[2], samples[0]],
     });
+  });
+
+  it("reports, after the notice, the rule as it was agreed, not the request as asked", async () => {
+    answer({
+      notice:
+        "You changed the rule before accepting it.\n\nThe member who asked can now read each email.",
+      rule: {
+        id: RULE,
+        name: "Vendor receipts",
+        state: "active",
+        current: {
+          version: 1,
+          english: "Receipts from vendors, not personal ones.",
+        },
+      },
+      share: {},
+      request: { id: REQUEST, english: "Receipts" },
+    });
+    const result = await run("email-rules:accept-email-rule-request", [
+      REQUEST,
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    const report = result.stderr.trimEnd().split("\n");
+    expect(report.slice(-3)).toEqual([
+      "You changed the rule before accepting it.",
+      "The member who asked can now read each email.",
+      `Accepted as Vendor receipts (${RULE}), version 1, active. What you agreed to: Receipts from vendors, not personal ones.`,
+    ]);
+    // With --json, the answer alone.
+    answer({ notice: "x", rule: { id: RULE, name: "n" }, share: {} });
+    const json = await run("email-rules:accept-email-rule-request", [
+      REQUEST,
+      "--json",
+    ]);
+    expect(json.stderr).not.toContain("Accepted as");
+  });
+
+  it("refuses a text field over the API's limit before sending it, from a flag or --body-file", async () => {
+    calls.length = 0;
+    const long = `${"x".repeat(612)}  `;
+    const declined = await run("email-rules:decline-email-rule-request", [
+      REQUEST,
+      "--reason",
+      long,
+    ]);
+    expect(declined.exitCode).toBe(2);
+    expect(declined.stderr).toContain(
+      "reason is 612 characters; the API takes at most 500. Nothing was sent.",
+    );
+    const objected = await run(
+      "email-rule-oversight:create-email-rule-objection",
+      [
+        "--body-file",
+        tempFile(
+          "objection.json",
+          JSON.stringify({ rule_id: RULE, message: long }),
+        ),
+      ],
+    );
+    expect(objected.exitCode).toBe(2);
+    expect(objected.stderr).toContain("message is 612 characters");
+    expect(calls).toEqual([]);
+    // A single-code-point emoji counts once, so 300 of them are within 500, and the refusal counts code points.
+    expect(
+      overLongBodyField(
+        { properties: { reason: { maxLength: 500 } } },
+        { reason: "\u{1F600}".repeat(300) },
+      ),
+    ).toBeUndefined();
+    expect(
+      overLongBodyField(
+        { properties: { reason: { maxLength: 500 } } },
+        { reason: "\u{1F600}".repeat(501) },
+      ),
+    ).toBe(
+      "reason is 501 characters; the API takes at most 500. Nothing was sent.",
+    );
+    // Text over no limit, and values that are not text, are left to the API.
+    expect(
+      overLongBodyField(
+        { properties: { reason: { maxLength: 5 }, n: { maxLength: 1 } } },
+        { reason: null, n: 12, other: "x".repeat(50) },
+      ),
+    ).toBeUndefined();
+    // At the limit, with spaces the server trims around it, it is sent.
+    answer({ id: REQUEST, status: "declined" });
+    const atLimit = await run("email-rules:decline-email-rule-request", [
+      REQUEST,
+      "--reason",
+      ` ${"x".repeat(500)} `,
+    ]);
+    expect(atLimit.exitCode, atLimit.stderr).toBe(0);
+    expect(calls).toHaveLength(1);
   });
 
   it("writes look-alikes for a request with --request-id", async () => {

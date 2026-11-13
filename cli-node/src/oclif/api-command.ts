@@ -1197,8 +1197,11 @@ function buildFlags(operation: PrimitiveOperationManifest): {
         "Full request body as raw JSON. Escape hatch for nested or complex fields (e.g. arrays); prefer per-field flags (e.g. --to, --from, --body-text) when available.",
     });
     flags["body-file"] = Flags.string({
-      description:
-        "Path to a JSON file used as the request body. Same role as --raw-body for callers passing a saved payload.",
+      description: `Path to a JSON file used as the request body. Same role as --raw-body for callers passing a saved payload.${
+        BODY_FILE_HELP[operation.sdkName]
+          ? ` ${BODY_FILE_HELP[operation.sdkName]}`
+          : ""
+      }`,
     });
 
     // Expand top-level scalar body fields into individual flags so
@@ -1512,6 +1515,46 @@ export const OPERATION_HINTS: Record<string, string> = {
     "Tip: --expect-match and --expect-no-match (or --expect-file) set expect, the emails the rule must match and must not. When no expect is sent, by these flags or in the body, a saved rule's saved expectations are judged instead. Either way, the answer reports the expectations it judged in expectations: passed, counts and per-email results. (create-email-rule and update-email-rule instead judge the rule's saved expectations on the version they save, in expectations_check: passed, decided, failed and undecided.) The exit code follows that report: 1 when one failed; 1 when one is undecided and testing again will not decide it (its email cannot be found or read, cannot be classified, or cannot be tested: skipped); 3 when the only undecided ones can be decided later (not classified yet, or a question unanswered), so test again later. Exit 1 also means the request failed. With --json, error.code tells these apart: expectations_failed, expectations_unresolvable, expectations_undecided (exit 3), or the API's own code. Without --json a readable report follows the JSON on stderr: warnings, how each condition held, the expectations, and the values each email that did not match was compared on.",
   verifyAgentSignup:
     "Tip: pass --verification-code <code> (or --code; both work). The response carries OAuth tokens but not your assigned inbox domain; run `primitive domains list` (or `primitive whoami`) after success to see the managed *.primitive.email address that routes to this account.",
+};
+
+/**
+ * A top-level text field of `body` longer than the spec's maxLength for it,
+ * said as a refusal, or undefined. Counted after trimming the ends, by code
+ * point, which is never more than the API counts, so nothing the API would
+ * take is refused here; a message over the limit is refused before it is
+ * sent rather than by the API after typing it.
+ */
+export function overLongBodyField(
+  schema: unknown,
+  body: unknown,
+): string | undefined {
+  if (body === null || typeof body !== "object" || Array.isArray(body))
+    return undefined;
+  const properties = (
+    schema as { properties?: Record<string, { maxLength?: unknown }> } | null
+  )?.properties;
+  if (!properties) return undefined;
+  for (const [field, value] of Object.entries(body)) {
+    const max = properties[field]?.maxLength;
+    if (typeof value !== "string" || typeof max !== "number") continue;
+    // By code point, as the API counts these fields: never more than the API counts, so nothing it takes is refused.
+    const length = Array.from(value.trim()).length;
+    if (length > max)
+      return `${field} is ${length} characters; the API takes at most ${max}. Nothing was sent.`;
+  }
+  return undefined;
+}
+
+/** What a write that takes a compile answer reads from --body-file, said beside the generic help. */
+const COMPILE_ANSWER =
+  "the answer `compile-email-rule --json` printed (without --include-sql), unchanged: save it to a file";
+const SCOPE_AGAIN =
+  "The answer carries no scope: pass --evaluation-scope again if you compiled with one.";
+export const BODY_FILE_HELP: Record<string, string> = {
+  createEmailRule: `For this command, ${COMPILE_ANSWER}, and add --english with the description you compiled, and --name. ${SCOPE_AGAIN}`,
+  updateEmailRule: `For a new version, ${COMPILE_ANSWER}, and add --english with the description you compiled (required with a new tree); --name only to rename it.`,
+  createEmailRuleRequest: `For this command, ${COMPILE_ANSWER}, and add --english with the description you compiled, --name and --target-email.`,
+  acceptEmailRuleRequest: `To change the rule as you accept it, ${COMPILE_ANSWER}, and add --english with the description you compiled.`,
 };
 
 // Per-operation flag aliases keyed by operation.sdkName and body
@@ -1866,6 +1909,9 @@ export function createOperationCommand(
             `Operation ${operation.operationId} requires a body. Pass each field as a --flag (see --help) or supply JSON via --raw-body / --body-file.`,
           );
         }
+
+        const tooLong = overLongBodyField(operation.requestSchema, body);
+        if (tooLong) throw new Errors.CLIError(tooLong, { exit: 2 });
 
         const operationFn = operations[
           operation.sdkName as OperationName

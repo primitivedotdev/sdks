@@ -213,6 +213,79 @@ export function expectBodyFields(
   return [{ flag: given.join(", "), property: "expect", value: expect }];
 }
 
+/** test-email-rule's flag that tests the emails an earlier answer tested. */
+export const SAME_EMAILS_FLAG = "same-emails-as";
+const EMAIL_IDS_MAX = 200;
+
+/**
+ * `email_ids` for test-email-rule, from --same-emails-as: every email an
+ * earlier test's answer, saved as it printed it, tested (its results'
+ * email_id), so a second tree is tested over the same mail rather than over
+ * whatever is newest by then.
+ */
+export function sameEmailsBodyFields(
+  flags: Record<string, unknown>,
+): ExtensionBodyField[] {
+  const file = flags[SAME_EMAILS_FLAG];
+  if (typeof file !== "string") return [];
+  const saved = readJsonFileFlag(file, `--${SAME_EMAILS_FLAG}`);
+  // The answer as --json prints it, or with --envelope.
+  const answer = isRecord(saved) && isRecord(saved.data) ? saved.data : saved;
+  const results =
+    isRecord(answer) && Array.isArray(answer.results) ? answer.results : null;
+  if (!results)
+    throw usageError(
+      `--${SAME_EMAILS_FLAG} ${file} is not a saved test-email-rule answer: it has no results. Save one with test-email-rule --json > answer.json.`,
+    );
+  const ids = [
+    ...new Set(
+      results.flatMap((result) =>
+        isRecord(result) &&
+        typeof result.email_id === "string" &&
+        isEmailId(result.email_id)
+          ? [result.email_id.toLowerCase()]
+          : [],
+      ),
+    ),
+  ];
+  if (ids.length === 0)
+    throw usageError(`--${SAME_EMAILS_FLAG} ${file} names no emails.`);
+  if (ids.length > EMAIL_IDS_MAX)
+    throw usageError(
+      `--${SAME_EMAILS_FLAG} ${file} names ${ids.length} emails; a test takes at most ${EMAIL_IDS_MAX}.`,
+    );
+  return [{ flag: `--${SAME_EMAILS_FLAG}`, property: "email_ids", value: ids }];
+}
+
+/**
+ * The emails --same-emails-as names with the expected ones this test sends
+ * (from the expect flags, or the body's own expect) are at most
+ * EMAIL_IDS_MAX, as the API takes them: refused here, naming the flag,
+ * rather than by the API as email_ids the caller never typed. A saved rule's
+ * own expectations are not known here; the API counts those.
+ */
+function checkSameEmailsWithExpected(
+  same: ExtensionBodyField[],
+  expect: ExtensionBodyField[],
+  base: unknown,
+): void {
+  const ids = same[0]?.value;
+  if (!Array.isArray(ids)) return;
+  const sent = expect[0]?.value ?? (isRecord(base) ? base.expect : undefined);
+  const expected = isRecord(sent)
+    ? [sent.match, sent.no_match].flatMap((list) =>
+        Array.isArray(list)
+          ? list.filter((id): id is string => typeof id === "string")
+          : [],
+      )
+    : [];
+  const all = new Set([...ids, ...expected.map((id) => id.toLowerCase())]);
+  if (all.size > EMAIL_IDS_MAX)
+    throw usageError(
+      `--${SAME_EMAILS_FLAG} names ${ids.length} emails and the expectations sent name others: ${all.size} in all, and a test takes at most ${EMAIL_IDS_MAX}.`,
+    );
+}
+
 /**
  * `expectations` for create-email-rule and update-email-rule, from
  * --expectations-file. A file holding `null` removes the saved expectations,
@@ -732,6 +805,34 @@ export function expectationsOutcome(
   return {};
 }
 
+/** A time an answer gives, to the minute, in UTC. */
+function minuteUtc(value: string): string {
+  const at = new Date(value);
+  return Number.isNaN(at.getTime())
+    ? value
+    : `${at.toISOString().slice(0, 16).replace("T", " ")} UTC`;
+}
+
+/**
+ * The first line of a test report: which mail was tested. A test of recent
+ * mail covers the newest emails, so a later one covers what has arrived since,
+ * and two counts compare only over the same emails.
+ */
+function windowLine(data: Record<string, unknown>, tested: number): string[] {
+  const window = isRecord(data.window) ? data.window : undefined;
+  const oldest =
+    typeof window?.oldest_at === "string" ? window.oldest_at : undefined;
+  const newest =
+    typeof window?.newest_at === "string" ? window.newest_at : undefined;
+  if (!window || !oldest || !newest) return [];
+  const span = `Tested ${plural(tested, "email", "emails")} received ${minuteUtc(oldest)} to ${minuteUtc(newest)}.`;
+  return window.mode === "recent"
+    ? [
+        `${span} A later test of recent mail covers what has arrived since: to compare two trees, test the second with --${SAME_EMAILS_FLAG} <this answer, saved with --json>.`,
+      ]
+    : [span];
+}
+
 /** The stderr report and exit code of a test-email-rule answer. */
 export function testEmailRuleReport(
   data: unknown,
@@ -742,7 +843,13 @@ export function testEmailRuleReport(
   const result = data as Partial<TestEmailRuleResult>;
   const results = Array.isArray(result.results) ? result.results : [];
   const summary = isRecord(result.summary) ? result.summary : undefined;
+  // Emails not found have no arrival, so the span says nothing of them.
+  const counts = isRecord(data.counts) ? data.counts : undefined;
+  const tested =
+    (typeof counts?.emails === "number" ? counts.emails : results.length) -
+    (typeof counts?.not_found === "number" ? counts.not_found : 0);
   const lines = [
+    ...windowLine(data, tested),
     ...(Array.isArray(summary?.warnings) ? summary.warnings : []).map(
       (warning) => `Warning: ${warning}`,
     ),
@@ -1618,7 +1725,7 @@ export function listEmailRulesReport(data: unknown): OperationReport {
 
 /** create-email-rule's --fail-on-expectations: the exit code follows the check made after saving. */
 const FAIL_ON_EXPECTATIONS_HELP =
-  "Exit 1 when an expectation in the answer's expectations_check failed, and 3 when none failed but one is undecided or the expectations this write sent were not checked (test the rule to decide). A create does not judge made-up emails, so with some it exits 3. Without it the command exits 0 whatever the check says.";
+  "Exit 1 when an expectation in the answer's expectations_check failed, and 3 when none failed but one is undecided or the expectations this write sent were not checked (test the rule to decide). A create does not judge made-up emails, so with some it exits 3. It judges emails by id on their stored classification without asking the rule's questions, so on a new rule with questions an email whose conditions hold stays undecided (exit 3) until `test-email-rule --rule-id` asks them. Without it the command exits 0 whatever the check says.";
 
 /** update-email-rule's --fail-on-expectations: the server refuses the write. */
 const UPDATE_FAIL_ON_EXPECTATIONS_HELP =
@@ -1666,6 +1773,40 @@ export function endEmailRuleShareReport(data: unknown): OperationReport {
   return { lines: note ? [note] : [] };
 }
 
+/**
+ * accept-email-rule-request without --json: the answer's notice, then the
+ * rule as it was agreed, since the answer's request block holds the rule as
+ * it was asked and reads like what was accepted.
+ */
+export function acceptEmailRuleRequestReport(data: unknown): OperationReport {
+  if (!isRecord(data)) return { lines: [] };
+  const notice =
+    typeof data.notice === "string"
+      ? data.notice
+          .split(/\n\s*\n/)
+          .map((part) => part.trim())
+          .filter(Boolean)
+      : [];
+  const rule = isRecord(data.rule) ? data.rule : undefined;
+  const current = rule && isRecord(rule.current) ? rule.current : undefined;
+  const lines = [...notice];
+  if (rule && typeof rule.name === "string" && typeof rule.id === "string") {
+    const version =
+      typeof current?.version === "number"
+        ? `, version ${current.version}`
+        : "";
+    const state = typeof rule.state === "string" ? `, ${rule.state}` : "";
+    const agreed =
+      typeof current?.english === "string"
+        ? ` What you agreed to: ${current.english}`
+        : "";
+    lines.push(
+      `Accepted as ${rule.name} (${rule.id})${version}${state}.${agreed}`,
+    );
+  }
+  return { lines };
+}
+
 export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   string,
   OperationExtension
@@ -1693,12 +1834,17 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
       [PICK_FLAG]: Flags.string({
         description: pickFlagHelp([EXPECT_SAMPLES_FILE_FLAG]),
       }),
+      [SAME_EMAILS_FLAG]: Flags.string({
+        description: `Test the same emails as an earlier test: a file holding what test-email-rule --json printed. Sets email_ids to its results' email_id, over any in --body-file or --raw-body, so two trees are compared over the same mail; a test of recent mail covers the newest emails, which move on as mail arrives. At most ${EMAIL_IDS_MAX} emails, counting the expected ones a test adds (a saved rule's own, with --rule-id).`,
+      }),
       ...scopeSelectionFlags(),
     },
-    bodyFields: (flags, base) => [
-      ...expectBodyFields(flags),
-      ...scopeSelectionBodyFields(flags, base),
-    ],
+    bodyFields: (flags, base) => {
+      const expect = expectBodyFields(flags);
+      const same = sameEmailsBodyFields(flags);
+      checkSameEmailsWithExpected(same, expect, base);
+      return [...expect, ...same, ...scopeSelectionBodyFields(flags, base)];
+    },
     bodyProperties: ["expect", "scope_selection"],
     // Fail closed: expectations that are there and not passed exit 1.
     fallbackExitCode: (data) => {
@@ -1803,6 +1949,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
     },
     bodyFields: samplesBodyFields(false),
     bodyProperties: ["expectation_samples"],
+    report: acceptEmailRuleRequestReport,
   },
   compileEmailRule: {
     flags: scopeSelectionFlags(),
