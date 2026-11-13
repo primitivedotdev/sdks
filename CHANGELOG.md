@@ -684,23 +684,25 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - Emails carry `imported`: null for live mail, and for a historical message
   Primitive acquired, where it came from (`from`, `method`, `verification`)
   and when (`at`). It is required, and nullable, on email details, list and
-  search rows, readable emails and a share's emails, and optional on a
-  conversation's messages.
+  search rows (and the change feed's expanded messages), readable emails and
+  a share's emails, and optional on a conversation's messages.
 - `createEndpoint` answers with `warnings` (`EndpointCreateWarning`):
   `same_path_as_another_endpoint`, with the other webhook's `endpoint_id`,
   when another webhook you can see sends to the same scheme, host and path.
 - `getKey`, `listKeys` and `listCredentials` carry each key's
-  `address_warnings`, notes on its grant worked out on every read, and a
-  key's `grant.mail_scope.rule_versions` gives each rule it lists its
-  `current_version`, `state` and `version_saved_at`.
+  `address_warnings`, notes on its grant worked out on every read. On
+  `getKey`, `grant.mail_scope.rule_versions` gives each rule the key lists
+  directly its `current_version`, `state` and `version_saved_at` (documented
+  in the operation's description, not typed).
 - `compileEmailRule` answers with `kind` and, for a grant rule with
   questions, `conditions_breadth`, breadth counted on its conditions alone.
   The `rule` that `testEmailRule`, `testEmailRuleOnSample` and
   `generateLookAlikes` answer with is `EmailRuleTested`. `createEmailRule`,
   `updateEmailRule` and `acceptEmailRuleRequest` (and
-  `createEmailRuleRequest`) take `kind` and `conditions_breadth` as a
-  compile answer carries them; on an update `kind` must be the rule's own
-  (`400` `validation_error`, `kind_mismatch`). A written rule can carry a
+  `createEmailRuleRequest`) accept `kind` and `conditions_breadth` as a
+  compile answer carries them, and ignore `conditions_breadth`; on an
+  update `kind` must be the rule's own (`400` `validation_error`,
+  `kind_mismatch`). A written rule can carry a
   `notice`.
 - `updateEmailRule` without `if_expectations_pass` judges a write that saves
   a version, or changes the scope, of an active rule that API keys or

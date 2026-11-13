@@ -564,7 +564,9 @@ function normalizeForCodegen(value: unknown): unknown {
   // default and stops on. Leaving the field out means null anyway.
   if (
     next.default === null &&
-    (next.type === "object" || isSchemaNode(next.properties))
+    (next.type === "object" ||
+      (Array.isArray(next.type) && next.type.includes("object")) ||
+      isSchemaNode(next.properties))
   ) {
     delete next.default;
   }
