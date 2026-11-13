@@ -426,6 +426,8 @@ export function buildCreateGrant(
  * The mail scope fields a change can restate. `ended_rules` (rules the key
  * lists that read nothing any more: a deleted rule, or a share that ended) is
  * read only: a change never sends it back, so the key is saved without them.
+ * `rule_versions` (each listed rule's current version, its state and when
+ * that version was saved) is read only too, and is never sent back.
  */
 const RESTATABLE_SCOPE_FIELDS = new Set([
   "addresses",
@@ -433,6 +435,7 @@ const RESTATABLE_SCOPE_FIELDS = new Set([
   "rules",
   "depth",
   "ended_rules",
+  "rule_versions",
 ]);
 
 export type GrantChange = {
@@ -588,7 +591,7 @@ export function buildUpdatedGrant(
     return {
       ok: false,
       message:
-        "This key's mail scope could not be read. Change it in the dashboard.",
+        "This key's mail scope could not be read. Change the key in the dashboard, or create a key with what you need and revoke this one.",
     };
   }
   const record = scope as Record<string, unknown>;
@@ -609,16 +612,25 @@ export function buildUpdatedGrant(
     };
   }
   const rules = heldRules ? nextRules(heldRules, change) : null;
-  if (
-    !addresses ||
-    !domains ||
-    !rules ||
-    Object.keys(record).some((field) => !RESTATABLE_SCOPE_FIELDS.has(field))
-  ) {
+  const unknownFields = Object.keys(record).filter(
+    (field) => !RESTATABLE_SCOPE_FIELDS.has(field),
+  );
+  if (unknownFields.length > 0) {
+    const one = unknownFields.length === 1;
     return {
       ok: false,
-      message:
-        "This key's mail scope has settings the CLI cannot restate. Change it in the dashboard.",
+      message: `This key's mail scope has ${one ? "a setting" : "settings"} the CLI cannot restate (${unknownFields.join(", ")}), and a change here could drop ${one ? "it" : "them"}. Change the key in the dashboard, or create a key with what you need and revoke this one.`,
+    };
+  }
+  if (!addresses || !domains || !rules) {
+    const unreadable = [
+      ...(addresses ? [] : ["addresses"]),
+      ...(domains ? [] : ["domains"]),
+      ...(rules ? [] : ["rules"]),
+    ];
+    return {
+      ok: false,
+      message: `This key's mail scope has ${unreadable.join(" and ")} the CLI could not read. Change the key in the dashboard, or create a key with what you need and revoke this one.`,
     };
   }
   if (addresses.length === 0 && domains.length === 0 && rules.length === 0) {

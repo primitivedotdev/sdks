@@ -1279,6 +1279,9 @@ downgrading, or sign in again afterwards.
   grant leaves it off too and lists it under the rules taken off. `keys get`
   and `keys list` show them with their reason, and `--add-rule` or `--rule`
   refuse to put one back.
+- `keys update` changes the grant of a key whose read shows
+  `grant.mail_scope.rule_versions`, which it never sends back. A mail scope
+  setting it cannot restate is named in the refusal.
 
 #### Rule request and objection webhook events
 
