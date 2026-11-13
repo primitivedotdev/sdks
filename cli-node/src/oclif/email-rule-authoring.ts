@@ -1052,8 +1052,9 @@ export function writtenEmailRuleReport(
   const reach = affectsLine(rule.affects);
   if (reach) lines.push(reach);
   // That the rule's share goes on under the new version, and with whom; then,
-  // for a version saved on an active rule keys, webhooks or a share read without a check, what it
-  // changes; and, on a grant rule's create, that do-not-share rules run first.
+  // for a version saved on an active rule keys, webhooks or a share read
+  // without a check, what it changes; and, on a grant rule's create, that
+  // do-not-share rules run first.
   for (const note of [rule.share_notice, rule.notice, rule.do_not_share_note]) {
     const line = noteLine(note);
     if (line) lines.push(line);

@@ -714,7 +714,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
   a version, or changes the scope, of an active rule that API keys, webhooks
   or a live share read and that has expectations, as `true` would; `false`
   never judges first. The refusal's `details.read_by` counts `keys`,
-  `webhooks` and `shares` (null when they could not be counted in time). Removing the expectations of such a rule is refused with
+  `webhooks` and `shares` (null when they could not be counted in time).
+  Removing the expectations of such a rule is refused with
   `400` `no_expectations`. It can answer `409` `email_rule_conflict` with
   `details.reason` `readers_changed`, and `503` `service_unavailable`
   (`rule_keys_unread` or `rule_readers_unread`) when the rule's keys or
@@ -1765,8 +1766,8 @@ parsers.
   version, and with whom) and `notice` (a version saved unchecked on a rule
   keys, webhooks or a share read), and they and `get-email-rule` print
   `objection_notice` to the rule's author. The line on what a new version
-  reaches names ended shares only when there are any. `delete-email-rule` prints `share_notice` in place of its count of
-  ended shares, and `test-email-rule` says how many decided emails the
+  reaches names ended shares only when there are any. `delete-email-rule`
+  prints `share_notice` in place of its count of ended shares, and `test-email-rule` says how many decided emails the
   conditions held on together (`summary.conditions_held`).
 - `email-rules test-email-rule-on-sample` takes `--with-protection`, as
   true or false like the CLI's other boolean flags, and without `--json`

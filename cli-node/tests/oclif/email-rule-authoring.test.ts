@@ -3109,7 +3109,7 @@ describe("email-rules compile-email-rule and get-email-rule reports", () => {
     const objectionNotice =
       "1 objection to this rule is waiting for your answer: a member whose mail it covered asked you to turn it off. Read it with GET /v1/email-rule-objections?box=incoming, or primitive email-rule-oversight list-email-rule-objections --box incoming (each names its rule). Then accept it, which turns the rule off (state draft), or decline it.";
     const shareNotice =
-      "Saving version 6 kept this rule's share with Dana (accepted at version 5): what version 6 matches is shared with them from the next email on, and they see its description. A share ends only when someone ends it or the rule is deleted, and stops if either of you leaves the organization.";
+      "Saving version 6 kept this rule's share with Dana (accepted at version 5): what version 6 matches is shared with them from the next email on.";
     const savedNotice =
       "This version is in force now and changes what 2 API keys and 1 webhook that read this rule receive. It was saved without being checked against the rule's expectations (if_expectations_pass: false).";
     const rule = {
