@@ -1,4 +1,6 @@
-import { resolve } from "node:path";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import type { SendMailResult } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -81,6 +83,7 @@ function validationError(message: string) {
 }
 
 type RunResult = {
+  error?: unknown;
   exitCode: number | string | null | undefined;
   stderr: string;
   stdout: string;
@@ -117,6 +120,7 @@ async function run(command: string, argv: string[]): Promise<RunResult> {
       : (thrown as { oclif?: { exit?: number } }).oclif?.exit;
   process.exitCode = previousExitCode;
   return {
+    error: thrown,
     exitCode,
     stderr: stderrChunks.join(""),
     stdout: stdoutChunks.join(""),
@@ -586,5 +590,61 @@ describe("generated operations: declared request headers", () => {
   it("leaves primitive send's own --idempotency-key working", async () => {
     await run("send", sendArgs("--idempotency-key", "send-key-1"));
     expect(sentKey()).toBe("send-key-1");
+  });
+});
+
+describe("--text", () => {
+  it("is the same flag as --body on send and reply", async () => {
+    const sent = await run("send", [
+      "--to",
+      "alice@example.com",
+      "--from",
+      "support@example.com",
+      "--text",
+      "Hello by text",
+    ]);
+    expect(sent.exitCode).toBeUndefined();
+    expect(sentBody().body_text).toBe("Hello by text");
+    const replied = await run("reply", [
+      "--id",
+      "email-1",
+      "--text",
+      "Thanks by text.",
+    ]);
+    expect(replied.exitCode).toBeUndefined();
+    expect(mocks.replyToEmail.mock.calls[0]?.[0].body.body_text).toBe(
+      "Thanks by text.",
+    );
+  });
+
+  it("is refused beside --body or another body source, as --body would be", async () => {
+    const twice = await run("send", [...sendArgs(), "--text", "Hello again"]);
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    expect(twice.exitCode).toBe(2);
+    expect(String((twice.error as Error).message)).toMatch(
+      /can only be specified once/,
+    );
+    const dir = mkdtempSync(join(tmpdir(), "send-text-"));
+    try {
+      const file = join(dir, "body.txt");
+      writeFileSync(file, "From a file");
+      for (const [command, argv] of [
+        [
+          "send",
+          ["--to", "alice@example.com", "--text", "x", "--body-file", file],
+        ],
+        ["reply", ["--id", "email-1", "--text", "x", "--body-file", file]],
+      ] as const) {
+        const result = await run(command, [...argv]);
+        expect(result.exitCode).toBe(2);
+        expect(
+          `${result.stderr}${String((result.error as Error | undefined)?.message ?? "")}`,
+        ).toMatch(/Pass only one plain-text body source/);
+      }
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
+      expect(mocks.replyToEmail).not.toHaveBeenCalled();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
