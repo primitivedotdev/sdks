@@ -53,15 +53,6 @@ import {
   withEventTypes,
 } from "./endpoint-event-types.js";
 import {
-  ENDPOINT_URL_OPERATIONS,
-  ENDPOINT_URL_WRITE_OPERATIONS,
-  endpointsWithQueryHidden,
-  errorWithQueryHidden,
-  HIDDEN_QUERY_NOTE,
-  hiddenQueryUrlRefusal,
-  SHOW_URL_FLAG_DESCRIPTION,
-} from "./endpoint-url-shown.js";
-import {
   type ListEndpointsFn,
   maybeWriteFunctionEndpointRedirect,
 } from "./endpoints-test-redirect.js";
@@ -1295,17 +1286,6 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     });
   }
 
-  if (ENDPOINT_URL_OPERATIONS.has(operation.sdkName)) {
-    // A spec parameter of the same name would be sent as well; refuse to build.
-    if (flags["show-url"] !== undefined)
-      throw new Error(
-        `${operation.sdkName}: --show-url is both a generated flag and the CLI's own`,
-      );
-    flags["show-url"] = Flags.boolean({
-      description: SHOW_URL_FLAG_DESCRIPTION,
-    });
-  }
-
   if (ATTACHMENT_WAIT_OPERATIONS.has(operation.sdkName)) {
     flags.wait = Flags.boolean({
       allowNo: true,
@@ -1789,24 +1769,6 @@ export function createOperationCommand(
       ) {
         requireDefaultLoginProfile();
       }
-      // An endpoint write's JSON body is read before any credential is, so
-      // a URL as the endpoint commands print it, query hidden, is refused
-      // before anything is sent, a credential refresh included.
-      const prereadBody =
-        ENDPOINT_URL_WRITE_OPERATIONS.has(operation.sdkName) &&
-        operation.hasJsonBody
-          ? { value: readJsonBody(parsedFlags) }
-          : undefined;
-      if (prereadBody) {
-        const urlFlag = [...bodyFieldFlagToProperty].find(
-          ([, property]) => property === "url",
-        )?.[0];
-        const flagUrl = urlFlag ? parsedFlags[urlFlag] : undefined;
-        const refusal = hiddenQueryUrlRefusal(
-          typeof flagUrl === "string" ? { url: flagUrl } : prereadBody.value,
-        );
-        if (refusal) throw new Errors.CLIError(refusal, { exit: 2 });
-      }
       await runWithTiming(parsedFlags.time === true, async () => {
         const { apiClient, auth, baseUrlOverridden } =
           await createAuthenticatedCliApiClient({
@@ -1828,9 +1790,7 @@ export function createOperationCommand(
         // and override one field on the command line.
         let body: unknown;
         if (operation.hasJsonBody) {
-          const explicit = prereadBody
-            ? prereadBody.value
-            : readJsonBody(parsedFlags);
+          const explicit = readJsonBody(parsedFlags);
           const overrides = collectBodyFieldFlags(
             parsedFlags,
             bodyFieldFlagToProperty,
@@ -1876,14 +1836,6 @@ export function createOperationCommand(
           } else {
             body = explicit;
           }
-        }
-
-        // A backstop for the check before authenticating: a URL as these
-        // commands print it, query hidden, is never sent in place of the
-        // real one.
-        if (ENDPOINT_URL_WRITE_OPERATIONS.has(operation.sdkName)) {
-          const refusal = hiddenQueryUrlRefusal(body);
-          if (refusal) throw new Errors.CLIError(refusal, { exit: 2 });
         }
 
         if (
@@ -2123,14 +2075,7 @@ export function createOperationCommand(
             collectValues(operation.pathParams, parsedFlags, operation.sdkName),
             parsedFlags,
           );
-          // An error can name another endpoint's URL (a 409's
-          // details.holder), whose query string is hidden as in an answer.
-          const printedErrorPayload =
-            ENDPOINT_URL_OPERATIONS.has(operation.sdkName) &&
-            parsedFlags["show-url"] !== true
-              ? errorWithQueryHidden(errorPayload)
-              : errorPayload;
-          writeErrorWithHints(printedErrorPayload, result.response, {
+          writeErrorWithHints(errorPayload, result.response, {
             codeHint: !(
               operationErrorHint &&
               OPERATION_ERROR_HINTS_REPLACING_CODE_HINT.has(operation.sdkName)
@@ -2446,26 +2391,10 @@ export function createOperationCommand(
               },
             };
         }
-        // A webhook URL's query string can carry a secret, so it is hidden
-        // unless --show-url asks for it, under --json too.
-        let shownEnvelope = envelope;
-        let queryHidden = false;
-        if (
-          ENDPOINT_URL_OPERATIONS.has(operation.sdkName) &&
-          parsedFlags["show-url"] !== true &&
-          envelope
-        ) {
-          const shown = endpointsWithQueryHidden(envelope.data);
-          if (shown.hidden) {
-            shownEnvelope = { ...envelope, data: shown.data };
-            queryHidden = true;
-            if (jsonOutput && withEnvelope) summary.push(HIDDEN_QUERY_NOTE);
-          }
-        }
         let printed =
           jsonOutput && withEnvelope
-            ? operationJsonDocument(shownEnvelope, summary)
-            : operationOutputPayload(shownEnvelope, withEnvelope);
+            ? operationJsonDocument(envelope, summary)
+            : operationOutputPayload(envelope, withEnvelope);
         if (
           jsonOutput &&
           report?.exitCode &&
@@ -2477,8 +2406,6 @@ export function createOperationCommand(
           printed = { ...printed, error: report.error };
         }
         this.log(JSON.stringify(printed, null, 2));
-        if (queryHidden && !jsonOutput)
-          process.stderr.write(`${HIDDEN_QUERY_NOTE}\n`);
         if (reportError !== undefined) {
           process.stderr.write(
             `Warning: ${operation.sdkName} succeeded but its report could not be built (${reportError}). The JSON above is the full answer; read it rather than the exit code.\n`,
