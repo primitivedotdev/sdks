@@ -490,6 +490,20 @@ Go (package `api`):
   (`-y`): otherwise it exits 2 and sends nothing. An answer other than `y` or
   `yes` exits 1 and the rule is kept.
 
+#### CLI webhook URLs
+
+- `endpoints get`, `list`, `create` and `update` hide a webhook URL's
+  query string, which can carry a secret such as a deployment protection
+  bypass token, with or without `--json`: `url` reads
+  `https://host/path?... (query hidden)`, and the endpoint gains
+  `url_query_hidden: true`. A URL an error names, such as the endpoint
+  holding a slot in a `409`, is hidden the same way. Without `--json` a
+  note on stderr says so. A script that reads `url` from these commands
+  gets the placeholder: pass `--show-url` for the URL in full, as before.
+- `endpoints create` and `update` refuse (exit 2), sending nothing, a URL
+  that carries `?...`, the start of that placeholder, so a printed URL is
+  not written back in place of the real one.
+
 #### CLI whoami and role text
 
 - `primitive whoami` text output changed: the first line names your member
