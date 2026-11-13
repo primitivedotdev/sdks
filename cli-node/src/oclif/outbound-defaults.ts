@@ -670,7 +670,10 @@ async function sendFromAnswer(
     );
   // Only a person without a member address gets a suggestion to claim one.
   parts.push(await claimHint(apiClient));
-  parts.push("Pass the address to use with --from <address>.");
+  // With nothing listed to send from, no --from can be sent from either (a
+  // key that lists only email rules, say): the server's reason says why.
+  if (addresses.length > 0 || domains.length > 0)
+    parts.push("Pass the address to use with --from <address>.");
   throw new Errors.CLIError(parts.filter((part) => part).join(" "), {
     exit: 1,
   });

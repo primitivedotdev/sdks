@@ -83,6 +83,10 @@ import {
   replyStateSurfaceForOperation,
 } from "./reply-state.js";
 import {
+  emptyRuleListHint,
+  ruleListDefaultsNote,
+} from "./rule-list-defaults.js";
+import {
   createEndpointRuleRequestHint,
   updateEndpointRuleRequestHint,
 } from "./rule-request-webhooks.js";
@@ -1141,7 +1145,7 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   if (!operation.binaryResponse) {
     flags.json = Flags.boolean({
       description:
-        "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr. Stdout keeps its usual shape: the data payload, or with --envelope the full response envelope (data plus meta, including meta.cursor, and empty-result hints in summary). The next-cursor line is not printed; use --envelope to page. A failure prints the error with exit_code. Without --json, the cursor and notices go to stderr.",
+        "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr. Stdout keeps its usual shape: the data payload, or with --envelope the full response envelope (data plus meta, including meta.cursor, and, in summary, empty-result hints and what a list's default filters left out). The next-cursor line is not printed; use --envelope to page. A failure prints the error with exit_code. Without --json, the cursor and notices go to stderr.",
     });
     flags.envelope = Flags.boolean({
       description:
@@ -2166,6 +2170,9 @@ export function createOperationCommand(
         }
         if (pagingNote && !jsonOutput) process.stderr.write(`${pagingNote}\n`);
         const summary: string[] = [];
+        // Set when the empty-result hint below said what a rule list's
+        // defaults left out, so the line is not said twice.
+        let ruleListHintSaid = false;
 
         // Empty-result hint. When a list-style operation returns
         // an empty array, emit an operation-specific note to
@@ -2191,6 +2198,8 @@ export function createOperationCommand(
           // the grant too, and nor does a page with more to read.
           const tail = query.since !== undefined;
           const more = envelope?.meta?.cursor ?? null;
+          const ruleListHint = emptyRuleListHint(operation.sdkName, query);
+          ruleListHintSaid = ruleListHint !== undefined;
           const hint =
             operation.sdkName === "listEmails"
               ? emptyEmailListHint({
@@ -2209,11 +2218,23 @@ export function createOperationCommand(
                       ? null
                       : await readCallerMailFor(auth, apiClient.client),
                 })
-              : (emptyRuleListHint(operation.sdkName, query) ??
+              : (ruleListHint ??
                 emptyDeliveriesHint(operation.sdkName, query) ??
                 EMPTY_RESULT_HINTS[operation.sdkName]);
           if (hint && jsonOutput) summary.push(hint);
           else if (hint) process.stderr.write(`${hint}\n`);
+        }
+
+        // A rule list read with a default left in place says what that
+        // default leaves out on every page, not only an empty first one:
+        // one live share of seven reads as all there is. An empty first page
+        // said it above, after "(no results)".
+        if (Array.isArray(envelope?.data) && (!jsonOutput || withEnvelope)) {
+          const note = ruleListHintSaid
+            ? undefined
+            : ruleListDefaultsNote(operation.sdkName, query);
+          if (note && jsonOutput) summary.push(note);
+          else if (note) process.stderr.write(`${note}\n`);
         }
 
         // What the answer's meta says about the data, such as a --recipient
@@ -2369,79 +2390,6 @@ export const EMPTY_RESULT_HINTS: Record<string, string> = {
   listFunctions:
     "(no results) No Functions configured yet. Start with `primitive functions templates`, then `primitive functions init --template <template>` and `primitive functions deploy --name <name> --file <bundle>`.",
 };
-
-/**
- * An empty rule request, share or objection list, read by the filters the
- * call left at their defaults: each list shows only part of what you can see
- * by default (pending requests made to you; live shares made with you;
- * pending objections you made), so an empty answer says which flags widen
- * it. Undefined for any other list, when every filter was given, or on a
- * later page (--cursor), which is empty only past the end.
- */
-export function emptyRuleListHint(
-  sdkName: string,
-  query: Record<string, unknown>,
-): string | undefined {
-  if (query.cursor !== undefined) return undefined;
-  const unset = (name: string) => query[name] === undefined;
-  const said = (noun: string, phrase: string | null, flags: string[]) =>
-    phrase === null
-      ? undefined
-      : `(no results) No ${noun} match. By default this lists only ${phrase}: add \`${flags.join(" ")}\` to widen it.`;
-  if (sdkName === "listEmailRuleRequests") {
-    const box = unset("box");
-    const status = unset("status");
-    const phrase =
-      box && status
-        ? "pending requests made to you"
-        : box
-          ? "requests made to you"
-          : status
-            ? "pending requests"
-            : null;
-    return said("requests", phrase, [
-      ...(box ? ["--box all"] : []),
-      ...(status ? ["--status any"] : []),
-    ]);
-  }
-  if (sdkName === "listEmailRuleShares") {
-    const box = unset("box");
-    const live = unset("live");
-    const phrase =
-      box && live
-        ? "live shares made with you"
-        : box
-          ? "shares made with you"
-          : live
-            ? "live shares"
-            : null;
-    return said("shares", phrase, [
-      ...(box ? ["--box all"] : []),
-      ...(live ? ["--live any"] : []),
-    ]);
-  }
-  if (sdkName === "listGivenEmailRuleShares")
-    return said("shares", unset("live") ? "live shares of your mail" : null, [
-      "--live any",
-    ]);
-  if (sdkName === "listEmailRuleObjections") {
-    const box = unset("box");
-    const status = unset("status");
-    const phrase =
-      box && status
-        ? "pending objections you made"
-        : box
-          ? "objections you made"
-          : status
-            ? "pending objections"
-            : null;
-    return said("objections", phrase, [
-      ...(box ? ["--box all"] : []),
-      ...(status ? ["--status any"] : []),
-    ]);
-  }
-  return undefined;
-}
 
 /**
  * An empty delivery list narrowed by a filter (--endpoint-id, --status,

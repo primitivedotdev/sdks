@@ -184,11 +184,21 @@ export function formatConcerningRows(
   items: readonly ActivityItem[],
   complete = false,
   asOf?: string | null,
+  pendingComplete?: boolean,
 ): string {
+  // The server's check for rules covering you with no notice yet ran out of
+  // time: some may be missing from the list, so say so rather than imply the
+  // list is whole.
+  const unfinished =
+    pendingComplete === false
+      ? "The check for rules that cover you with no notice written yet did not finish, so some may be missing: run this again in a moment."
+      : null;
   if (items.length === 0)
     return complete
       ? `${asOf ? `Nothing recorded for you as of ${minute(asOf)} UTC.` : "Nothing recorded for you yet."} A rule that starts covering your mail can take a few minutes to appear here. ${COVERING_NOW}`
-      : "Nothing to show.";
+      : unfinished
+        ? `${unfinished} ${COVERING_NOW}`
+        : "Nothing to show.";
   const rows = items.map((item) => [
     item.state,
     minute(item.created_at),
@@ -211,7 +221,15 @@ export function formatConcerningRows(
         `pending: the rule covers you now and its notice is not written yet. ${COVERING_NOW}`,
       ]
     : [];
-  return [line(header), ...rows.map(line), ...pending].join("\n");
+  return [
+    line(header),
+    ...rows.map(line),
+    ...pending,
+    // The pending line already says where to see what covers you now.
+    ...(unfinished
+      ? ["", pending.length > 0 ? unfinished : `${unfinished} ${COVERING_NOW}`]
+      : []),
+  ].join("\n");
 }
 
 /** What was left out, and why: no counts, only the kinds and what would show them. */
@@ -279,8 +297,11 @@ async function runActivityList(
   const items: ActivityItem[] = [];
   let covers = "";
   let withheld: WithheldKind[] = [];
-  // With relation=concerning, when the notices last looked (the first page's).
+  // With relation=concerning, when the notices last looked, and whether the
+  // check for rules covering you with no notice yet finished (both the first
+  // page's).
   let asOf: string | null | undefined;
+  let pendingComplete: boolean | undefined;
   let cursor = flags.cursor;
   for (let page = 0; page < (flags.all ? ALL_PAGES_LIMIT : 1); page += 1) {
     const result = await call(
@@ -310,8 +331,14 @@ async function runActivityList(
     }
     covers = result.data.covers;
     withheld = result.data.withheld;
-    if (page === 0)
-      asOf = (result.data as Page & { as_of?: string | null }).as_of;
+    if (page === 0) {
+      const first = result.data as Page & {
+        as_of?: string | null;
+        pending_complete?: boolean;
+      };
+      asOf = first.as_of;
+      pendingComplete = first.pending_complete;
+    }
     items.push(...result.data.items);
     cursor = result.data.next_cursor ?? undefined;
     if (!cursor) break;
@@ -325,6 +352,9 @@ async function runActivityList(
           withheld,
           next_cursor: cursor ?? null,
           ...(asOf !== undefined ? { as_of: asOf } : {}),
+          ...(pendingComplete !== undefined
+            ? { pending_complete: pendingComplete }
+            : {}),
         },
         null,
         2,
@@ -332,14 +362,19 @@ async function runActivityList(
     );
     return;
   }
-  // Every state, from the first page to the last, with nothing withheld.
+  // Every state, from the first page to the last, with nothing withheld, and
+  // for relation=concerning the check for pending rows finished.
   const complete =
-    flags.state === "all" && !flags.cursor && !cursor && withheld.length === 0;
+    flags.state === "all" &&
+    !flags.cursor &&
+    !cursor &&
+    withheld.length === 0 &&
+    pendingComplete !== false;
   command.log(
     relation === "asked"
       ? formatAskedRows(items, complete)
       : relation === "concerning"
-        ? formatConcerningRows(items, complete, asOf)
+        ? formatConcerningRows(items, complete, asOf, pendingComplete)
         : formatActivityRows(covers, items),
   );
   const notShown = formatWithheld(withheld);

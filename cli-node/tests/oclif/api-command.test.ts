@@ -13,7 +13,6 @@ import {
   domainVerificationFailedHint,
   EMPTY_RESULT_HINTS,
   emptyDeliveriesHint,
-  emptyRuleListHint,
   extractErrorCode,
   extractErrorPayload,
   flagForParameter,
@@ -33,6 +32,7 @@ import {
   type StoredCliCredentials,
   saveCliCredentials,
 } from "../../src/oclif/auth.js";
+import { emptyRuleListHint } from "../../src/oclif/rule-list-defaults.js";
 
 describe("formatErrorPayload", () => {
   it("wraps a fetch TypeError into a code/message payload instead of {}", () => {
