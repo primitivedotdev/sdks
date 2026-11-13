@@ -469,6 +469,9 @@ describe("--json prints one document on a merged stream", () => {
         expect(document).toMatchObject({ error: expect.anything() });
       }
     },
+    // The activity commands retry the failing API's 503 with backoff (up to
+    // about 7 s in all) before they print the one document.
+    15_000,
   );
 });
 
