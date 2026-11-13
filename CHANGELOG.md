@@ -1315,11 +1315,14 @@ parsers.
   rule's own. With or without `--json`, its exit code counts them: 1 when
   one failed or may stay undecided, 3 when a later test can decide it.
 - `email-rules end-email-rule-share` prints the answer's note, that ending
-  a share leaves the rule itself as it was. An empty `email-rules
-  list-email-rule-requests`, `list-email-rule-shares` or
-  `list-given-email-rule-shares`, or `email-rule-oversight
-  list-email-rule-objections`, says which default filter hid the rest
-  (`--box all`, `--status any`, `--live any`). An empty `webhook-deliveries
+  a share leaves the rule itself as it was. `email-rules
+  list-email-rule-requests`, `list-email-rule-shares` and
+  `list-given-email-rule-shares`, and `email-rule-oversight
+  list-email-rule-objections`, say which default filter applied and how to
+  widen it (`--box all`, `--status any`, `--live any`) on every page read
+  with a default in place, not only an empty one; with `--json --envelope`
+  in `summary`. `list-email-rule-objections` asks for its default box,
+  `outgoing`, by name. An empty `webhook-deliveries
   list-deliveries` narrowed by a filter (such as `--endpoint-id` or
   `--status`) names the filters given and notes that test fires are not
   logged, instead of saying no deliveries were logged.
@@ -1380,7 +1383,11 @@ parsers.
 - `primitive activity concerning` lists what other members' rules did to
   your own mail, newest first: each coverage notice (`started`,
   `new_version` or `baseline`), when, the rule's name then and its author.
-  It takes `--limit`, `--cursor`, `--all` and `--json`.
+  It takes `--limit`, `--cursor`, `--all` and `--json`. `--json` keeps the
+  answer's `pending_complete`, and when that is false the text says the
+  check for rules covering you with no notice yet did not finish.
+- When the API lists no address and no domain a credential can send from,
+  send's error no longer suggests `--from`, which cannot help then.
 - `primitive activity created` lists what you created, newest first, with
   where each object stands now. Signed in with `primitive login`, it covers
   what you created through any credential of yours, names the credential on

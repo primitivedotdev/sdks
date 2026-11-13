@@ -551,4 +551,61 @@ describe("activity concerning command", () => {
       as_of: null,
     });
   });
+
+  it("keeps pending_complete in --json, and says when the check for pending rows did not finish", async () => {
+    const unfinished =
+      "The check for rules that cover you with no notice written yet did not finish, so some may be missing: run this again in a moment.";
+    const covering =
+      "`primitive email-rule-oversight list-email-rules-covering-me` shows what covers you now.";
+    // Nothing listed, but the check ran out of time: not "nothing recorded".
+    expect(formatConcerningRows([], false, null, false)).toBe(
+      `${unfinished} ${covering}`,
+    );
+    const started = item({ kind: "email_rule_coverage", state: "started" });
+    expect(formatConcerningRows([started], false, null, false)).toContain(
+      `\n\n${unfinished} ${covering}`,
+    );
+    // Under a pending row's own note, the pointer is not said twice.
+    const pending = item({ kind: "email_rule_coverage", state: "pending" });
+    const both = formatConcerningRows([pending], false, null, false);
+    expect(both.split(covering)).toHaveLength(2);
+    expect(both.endsWith(unfinished)).toBe(true);
+    expect(formatConcerningRows([started], true, null, true)).not.toContain(
+      unfinished,
+    );
+    const answer = (pending_complete?: boolean) => ({
+      body: {
+        success: true,
+        data: {
+          covers: "you",
+          items: [],
+          withheld: [],
+          next_cursor: null,
+          as_of: "2026-11-12T23:50:03.315Z",
+          ...(pending_complete === undefined ? {} : { pending_complete }),
+        },
+      },
+    });
+    const lines: string[] = [];
+    vi.spyOn(ActivityConcerningCommand.prototype, "log").mockImplementation(
+      (message?: string) => {
+        lines.push(message ?? "");
+      },
+    );
+    useApi([answer(false)]);
+    await ActivityConcerningCommand.run(["--json"], { root });
+    expect(JSON.parse(lines.join("\n"))).toMatchObject({
+      pending_complete: false,
+    });
+    // Unfinished is never read as a complete, empty listing.
+    lines.length = 0;
+    useApi([answer(false)]);
+    await ActivityConcerningCommand.run([], { root });
+    expect(lines.join("\n")).toBe(`${unfinished} ${covering}`);
+    // An answer without it keeps the document as it was.
+    lines.length = 0;
+    useApi([answer()]);
+    await ActivityConcerningCommand.run(["--json"], { root });
+    expect(JSON.parse(lines.join("\n"))).not.toHaveProperty("pending_complete");
+  });
 });

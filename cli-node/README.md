@@ -500,7 +500,8 @@ and stderr stays empty. Output merged with `2>&1` therefore still parses:
   keep printing only the data payload with `--json`, the same stdout as
   without it, but do not write the `next cursor: <cursor>` line to stderr. To
   page, add `--envelope`: it prints the full response envelope, with
-  `meta.cursor` for the next page and empty-result hints in `summary`.
+  `meta.cursor` for the next page and, in `summary`, empty-result hints and
+  what a list's default filters left out.
 - Commands whose `--json` output is a bare array keep that shape.
 - `primitive listen` streams JSONL and is not covered by this rule.
 

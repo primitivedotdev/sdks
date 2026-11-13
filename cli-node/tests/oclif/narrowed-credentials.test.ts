@@ -554,7 +554,7 @@ describe("resolveDefaultFrom from the API's own answer", () => {
     );
   });
 
-  it("refuses with the reason alone, and a claim hint, when nothing can be sent from", async () => {
+  it("refuses with the reason alone, and a claim hint, and no --from line, when nothing can be sent from", async () => {
     const { client } = recordingClient({
       "/whoami/send-from": answer({
         reason:
@@ -570,7 +570,16 @@ describe("resolveDefaultFrom from the API's own answer", () => {
         }),
     });
     await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
-      /^You have no member address of your own, so there is no default From\. Claim a member address\. You have no member address of your own; to claim one, run `primitive account provision-member-address --address dana@acme\.example`\. Pass the address to use with --from <address>\.$/,
+      /^You have no member address of your own, so there is no default From\. Claim a member address\. You have no member address of your own; to claim one, run `primitive account provision-member-address --address dana@acme\.example`\.$/,
+    );
+  });
+
+  it("says a credential with nothing listed cannot send when the API gives no reason, and suggests no --from", async () => {
+    const { client } = recordingClient({
+      "/whoami/send-from": answer({}),
+    });
+    await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
+      /^This credential lists no address or domain it can send from, so it cannot send\.$/,
     );
   });
 
@@ -712,7 +721,7 @@ describe("resolveDefaultFrom from the API's own answer", () => {
       }
     });
 
-    it("keeps the API's reason and the --from hint when the grant holds mail:send or cannot be read", async () => {
+    it("keeps the API's reason, with no --from line since nothing is listed to send from, when the grant holds mail:send or cannot be read", async () => {
       const held: Array<() => Response> = [
         () =>
           ownGrant(
@@ -747,8 +756,9 @@ describe("resolveDefaultFrom from the API's own answer", () => {
           (thrown: unknown) => thrown,
         );
         expect(error).not.toBeInstanceOf(MissingSendPermissionError);
+        // Nothing is listed to send from, so no --from would be either.
         expect((error as Error).message).toBe(
-          "This credential cannot send from any address right now. Pass the address to use with --from <address>.",
+          "This credential cannot send from any address right now.",
         );
       }
     });
