@@ -181,11 +181,13 @@ describe("ruleListDefaultsNote", () => {
 });
 
 describe("rule lists say what their defaults leave out", () => {
-  it("says so above a page of objections that holds some", async () => {
+  it("asks for the objection list's default box by name, and says so above a page that holds some", async () => {
     responder = () => page([objection]);
     const result = await run(OBJECTIONS, []);
     expect(result.exitCode).toBe(0);
-    expect(requested.map((url) => url.searchParams.get("box"))).toEqual([null]);
+    expect(requested.map((url) => url.searchParams.get("box"))).toEqual([
+      "outgoing",
+    ]);
     expect(JSON.parse(result.stdout)).toEqual([objection]);
     expect(result.stderr).toContain(
       "By default this lists only pending objections you made: add `--box all --status any` to widen it.",
@@ -207,14 +209,36 @@ describe("rule lists say what their defaults leave out", () => {
     responder = () => page([{ id: "s1" }]);
     const enveloped = await run(SHARES, ["--json", "--envelope"]);
     expect(enveloped.stderr).toBe("");
-    expect(JSON.parse(enveloped.stdout)).toMatchObject({
+    const document = JSON.parse(enveloped.stdout) as Record<string, unknown>;
+    expect(document).toMatchObject({
       data: [{ id: "s1" }],
       summary:
         "By default this lists only live shares made with you: add `--box all --live any` to widen it.",
     });
+    expect(document).not.toHaveProperty("warnings");
     const bare = await run(SHARES, ["--json"]);
     expect(bare.stderr).toBe("");
     expect(JSON.parse(bare.stdout)).toEqual([{ id: "s1" }]);
+  });
+
+  it("says it once on an empty first page, after (no results), on stderr or in summary", async () => {
+    const line =
+      "(no results) No shares match. By default this lists only live shares made with you: add `--box all --live any` to widen it.";
+    const text = await run(SHARES, []);
+    expect(text.stderr.split(line)).toHaveLength(2);
+    expect(text.stderr).not.toMatch(/\nBy default this lists/);
+    const enveloped = await run(SHARES, ["--json", "--envelope"]);
+    expect(enveloped.stderr).toBe("");
+    const document = JSON.parse(enveloped.stdout) as Record<string, unknown>;
+    expect(document.summary).toBe(line);
+    expect(document).not.toHaveProperty("warnings");
+  });
+
+  it("sends --box as given", async () => {
+    await run(OBJECTIONS, ["--box", "incoming"]);
+    expect(requested.map((url) => url.searchParams.get("box"))).toEqual([
+      "incoming",
+    ]);
   });
 
   it("says nothing once every default is given", async () => {

@@ -85,6 +85,7 @@ import {
 import {
   emptyRuleListHint,
   ruleListDefaultsNote,
+  withDefaultObjectionBox,
 } from "./rule-list-defaults.js";
 import {
   createEndpointRuleRequestHint,
@@ -1859,9 +1860,13 @@ export function createOperationCommand(
         // And for `from_verified`, a trust filter: rows without the
         // requested value are refused, never printed.
         const fromVerified = fromVerifiedExpectation(operation.sdkName, query);
+        // What is sent: the query as given, with the objection list's default
+        // box asked for by name (rule-list-defaults.ts). `query` stays as
+        // given, for the notes that say which defaults applied.
+        const sentQuery = withDefaultObjectionBox(operation.sdkName, query);
         const callOperation = (
           stepUpToken?: string,
-          pageQuery: Record<string, unknown> = query,
+          pageQuery: Record<string, unknown> = sentQuery,
         ) => {
           const sent = stepUpToken
             ? { ...headers, [STEP_UP_HEADER]: stepUpToken }
@@ -1937,7 +1942,7 @@ export function createOperationCommand(
           const rows: unknown[] = [];
           let sentCursor = query.cursor;
           let last = await callOperation(undefined, {
-            ...query,
+            ...sentQuery,
             limit: Math.min(max, wanted),
           });
           // Only a null cursor ends a list: a page can come back short, even
@@ -1978,7 +1983,7 @@ export function createOperationCommand(
             }
             sentCursor = cursor;
             last = await callOperation(undefined, {
-              ...query,
+              ...sentQuery,
               cursor,
               limit: Math.min(max, wanted - rows.length),
             });

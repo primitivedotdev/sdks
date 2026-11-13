@@ -574,6 +574,15 @@ describe("resolveDefaultFrom from the API's own answer", () => {
     );
   });
 
+  it("says a credential with nothing listed cannot send when the API gives no reason, and suggests no --from", async () => {
+    const { client } = recordingClient({
+      "/whoami/send-from": answer({}),
+    });
+    await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
+      /^This credential lists no address or domain it can send from, so it cannot send\.$/,
+    );
+  });
+
   it("refuses an answer it cannot read, asking nothing else", async () => {
     for (const data of [{}, { default_from: null }, null]) {
       const { client, requests } = recordingClient({

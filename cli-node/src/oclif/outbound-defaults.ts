@@ -657,10 +657,13 @@ async function sendFromAnswer(
     const missing = await missingSendPermission(apiClient);
     if (missing) throw new MissingSendPermissionError(missing);
   }
+  const nothingListed = addresses.length === 0 && domains.length === 0;
   const reason =
     typeof data.reason === "string" && data.reason.trim()
       ? data.reason.trim().replace(/\.?$/, ".")
-      : "This credential has no single address to send from, so --from has no default.";
+      : nothingListed
+        ? "This credential lists no address or domain it can send from, so it cannot send."
+        : "This credential has no single address to send from, so --from has no default.";
   const parts = [reason];
   if (addresses.length > 0)
     parts.push(`Addresses you may send from: ${addresses.join(", ")}.`);
@@ -672,7 +675,7 @@ async function sendFromAnswer(
   parts.push(await claimHint(apiClient));
   // With nothing listed to send from, no --from can be sent from either (a
   // key that lists only email rules, say): the server's reason says why.
-  if (addresses.length > 0 || domains.length > 0)
+  if (!nothingListed)
     parts.push("Pass the address to use with --from <address>.");
   throw new Errors.CLIError(parts.filter((part) => part).join(" "), {
     exit: 1,

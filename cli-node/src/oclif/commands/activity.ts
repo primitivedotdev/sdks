@@ -483,7 +483,7 @@ export class ActivityConcerningCommand extends Command {
   static description =
     `List what other members did that concerns your own mail, newest first: each time another member's rule started covering one of your mailboxes (started), or saved a new version while covering it (new_version), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline.
 
-  Notices are written by a job that runs every minute or so and can lag. Until a rule's notice is written, a rule that covers you now is listed first as pending, dated when the rule last changed, and with --json its id is the rule's.
+  Notices are written by a job that runs every minute or so and can lag. Until a rule's notice is written, a rule that covers you now is listed first as pending, dated when the rule last changed, and with --json its id is the rule's. When the check for such rules did not finish, the listing says so and --json carries pending_complete: false; run it again in a moment.
 
   Signed in with \`primitive login\`, you see the notices about your own mail under your current membership. A key, an app or an agent has none. The rules that cover you now, with their ids, are listed by \`primitive email-rule-oversight list-email-rules-covering-me\`; ask a rule's author to turn it off with \`primitive email-rule-oversight create-email-rule-objection --rule-id <rule-id>\`. With --json each notice's id is the notice's, not the rule's.`;
 
