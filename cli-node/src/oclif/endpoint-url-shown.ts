@@ -83,15 +83,47 @@ export function endpointsWithQueryHidden(data: unknown): {
   return { data: rows, hidden };
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+/** How deep errorWithQueryHidden looks into an error payload. */
+const ERROR_DEPTH = 8;
+
+/**
+ * An error answer with the query string hidden in every `url` it names, such
+ * as `details.holder.url` on a 409 for a slot another endpoint holds.
+ * Anything that is not a plain object or a list is left as it is.
+ */
+export function errorWithQueryHidden(payload: unknown, depth = 0): unknown {
+  if (depth > ERROR_DEPTH) return payload;
+  if (Array.isArray(payload))
+    return payload.map((entry) => errorWithQueryHidden(entry, depth + 1));
+  if (!isPlainObject(payload)) return payload;
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(payload))
+    out[key] = errorWithQueryHidden(value, depth + 1);
+  return hideOne(out).value;
+}
+
+/**
+ * A query string as a partial copy of HIDDEN_QUERY leaves it: a terminal's
+ * word selection stops at its first space, after `?...`.
+ */
+const HIDDEN_QUERY_START = "?...";
+
 /**
  * The refusal for a request body whose url is a URL as these commands print
- * it with the query hidden, so a printed URL is never written back in place
- * of the real one; null for any other body.
+ * it with the query hidden, whole or cut at its first space, so a printed URL
+ * is never written back in place of the real one; null for any other body.
  */
 export function hiddenQueryUrlRefusal(body: unknown): string | null {
   if (body === null || typeof body !== "object" || Array.isArray(body))
     return null;
   const url = (body as { url?: unknown }).url;
-  if (typeof url !== "string" || !url.includes(HIDDEN_QUERY)) return null;
-  return `The url carries ${HIDDEN_QUERY}, which is how the endpoint commands print a URL with its query string hidden, not the URL itself. Pass the full URL; \`primitive endpoints get <id> --show-url\` prints a webhook's URL in full.`;
+  if (typeof url !== "string" || !url.includes(HIDDEN_QUERY_START)) return null;
+  return `The url carries ${HIDDEN_QUERY_START}, the start of ${HIDDEN_QUERY}, which is how the endpoint commands print a URL with its query string hidden, not the URL itself. Pass the full URL; \`primitive endpoints get <id> --show-url\` prints a webhook's URL in full.`;
 }

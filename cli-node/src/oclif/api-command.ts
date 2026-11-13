@@ -56,6 +56,7 @@ import {
   ENDPOINT_URL_OPERATIONS,
   ENDPOINT_URL_WRITE_OPERATIONS,
   endpointsWithQueryHidden,
+  errorWithQueryHidden,
   HIDDEN_QUERY_NOTE,
   hiddenQueryUrlRefusal,
   SHOW_URL_FLAG_DESCRIPTION,
@@ -1286,6 +1287,11 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   }
 
   if (ENDPOINT_URL_OPERATIONS.has(operation.sdkName)) {
+    // A spec parameter of the same name would be sent as well; refuse to build.
+    if (flags["show-url"] !== undefined)
+      throw new Error(
+        `${operation.sdkName}: --show-url is both a generated flag and the CLI's own`,
+      );
     flags["show-url"] = Flags.boolean({
       description: SHOW_URL_FLAG_DESCRIPTION,
     });
@@ -2081,7 +2087,14 @@ export function createOperationCommand(
             collectValues(operation.pathParams, parsedFlags, operation.sdkName),
             parsedFlags,
           );
-          writeErrorWithHints(errorPayload, result.response, {
+          // An error can name another endpoint's URL (a 409's
+          // details.holder), whose query string is hidden as in an answer.
+          const printedErrorPayload =
+            ENDPOINT_URL_OPERATIONS.has(operation.sdkName) &&
+            parsedFlags["show-url"] !== true
+              ? errorWithQueryHidden(errorPayload)
+              : errorPayload;
+          writeErrorWithHints(printedErrorPayload, result.response, {
             codeHint: !(
               operationErrorHint &&
               OPERATION_ERROR_HINTS_REPLACING_CODE_HINT.has(operation.sdkName)

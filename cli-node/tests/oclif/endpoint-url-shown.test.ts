@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createOperationCommand } from "../../src/oclif/api-command.js";
 import {
   endpointsWithQueryHidden,
+  errorWithQueryHidden,
   HIDDEN_QUERY_NOTE,
   hiddenQueryUrlRefusal,
   urlWithQueryHidden,
@@ -162,9 +163,41 @@ describe("endpointsWithQueryHidden", () => {
   });
 });
 
+describe("errorWithQueryHidden", () => {
+  it("hides the query of every url an error names, and leaves the rest", () => {
+    const error = {
+      code: "conflict",
+      message: "The domain already has an endpoint.",
+      details: {
+        holder: { id: ENDPOINT_ID, kind: "http", url: SECRET_URL },
+        others: [{ url: "https://a.test/p" }],
+      },
+    };
+    expect(errorWithQueryHidden(error)).toEqual({
+      ...error,
+      details: {
+        holder: {
+          id: ENDPOINT_ID,
+          kind: "http",
+          url: SHOWN_URL,
+          url_query_hidden: true,
+        },
+        others: [{ url: "https://a.test/p" }],
+      },
+    });
+    const network = new Error("fetch failed");
+    expect(errorWithQueryHidden(network)).toBe(network);
+    expect(errorWithQueryHidden("boom")).toBe("boom");
+  });
+});
+
 describe("hiddenQueryUrlRefusal", () => {
   it("refuses a URL as the commands print it, and nothing else", () => {
     expect(hiddenQueryUrlRefusal({ url: SHOWN_URL })).toContain("--show-url");
+    // Cut at its first space, as a terminal's word selection copies it.
+    expect(
+      hiddenQueryUrlRefusal({ url: "https://hooks.example.test/api?..." }),
+    ).toContain("--show-url");
     expect(hiddenQueryUrlRefusal({ url: SECRET_URL })).toBeNull();
     expect(hiddenQueryUrlRefusal({ enabled: false })).toBeNull();
     expect(hiddenQueryUrlRefusal(undefined)).toBeNull();
@@ -268,6 +301,41 @@ describe("the endpoint commands' URLs", () => {
     });
   });
 
+  it("an error that names another endpoint's URL hides its query, in text and --json, unless --show-url", async () => {
+    const conflict = {
+      status: 409,
+      body: {
+        success: false,
+        error: {
+          code: "conflict",
+          message: "This domain already has an endpoint.",
+          details: {
+            holder: { id: ENDPOINT_ID, kind: "http", url: SECRET_URL },
+          },
+        },
+      },
+    };
+    for (const argv of [
+      ["--url", "https://new.example.test/hook"],
+      ["--url", "https://new.example.test/hook", "--json"],
+    ]) {
+      fixture(conflict);
+      const result = await run("createEndpoint", argv);
+      expect(result.exitCode).toBe(1);
+      const printed = `${result.stdout}${result.stderr}`;
+      expect(printed).toContain("conflict");
+      expect(printed).toContain("?... (query hidden)");
+      expect(printed).not.toContain("s3cr3t");
+    }
+    fixture(conflict);
+    const shown = await run("createEndpoint", [
+      "--url",
+      "https://new.example.test/hook",
+      "--show-url",
+    ]);
+    expect(`${shown.stdout}${shown.stderr}`).toContain(SECRET_URL);
+  });
+
   it("create and update refuse a URL as these commands print it, sending nothing", async () => {
     for (const [sdkName, argv] of [
       ["createEndpoint", ["--url", SHOWN_URL]],
@@ -275,6 +343,17 @@ describe("the endpoint commands' URLs", () => {
       [
         "updateEndpoint",
         [ENDPOINT_ID, "--raw-body", JSON.stringify({ url: SHOWN_URL })],
+      ],
+      // Before the endpoint's rules are read for --event-types.
+      [
+        "updateEndpoint",
+        [
+          ENDPOINT_ID,
+          "--url",
+          "https://hooks.example.test/api/primitive?...",
+          "--event-types",
+          "email.received",
+        ],
       ],
     ] as const) {
       const calls = fixture();
