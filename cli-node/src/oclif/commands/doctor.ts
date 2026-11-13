@@ -524,12 +524,12 @@ export async function checkAskedOfYou(
     ),
     ...(pending > 0
       ? [
-          `${plural(pending, "rule")} ${pending === 1 ? "covers" : "cover"} your mail with no notice written yet`,
+          `${concerning?.first.pending_complete === false ? "at least " : ""}${plural(pending, "rule")} ${pending === 1 ? "covers" : "cover"} your mail with no notice written yet`,
         ]
       : []),
     ...(notices > 0
       ? [
-          `${plural(notices, "coverage notice")} in the last ${RECENT_COVERAGE_DAYS} days`,
+          `${concerning?.more ? "at least " : ""}${plural(notices, "coverage notice")} in the last ${RECENT_COVERAGE_DAYS} days`,
         ]
       : []),
     ...(coverageHidden

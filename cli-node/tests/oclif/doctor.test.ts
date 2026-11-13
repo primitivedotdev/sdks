@@ -692,6 +692,36 @@ describe("checkAskedOfYou", () => {
     expect(urls).toHaveLength(2);
   });
 
+  it("gives counts it could not finish as lower bounds", async () => {
+    const started = entry("email_rule_coverage", "started");
+    const notices = client(
+      { data: page([]) },
+      {
+        data: page([started], { next_cursor: "c2" }),
+        pages: Object.fromEntries(
+          Array.from({ length: ASKED_PAGES }, (_, n) => [
+            `c${n + 2}`,
+            { data: page([started], { next_cursor: `c${n + 3}` }) },
+          ]),
+        ),
+      },
+    );
+    expect((await checkAskedOfYou(notices.api, NOW))?.message).toBe(
+      `at least ${ASKED_PAGES} coverage notices in the last ${DAYS} days; the check of the rules over your mail did not finish`,
+    );
+    const pending = client(
+      { data: page([]) },
+      {
+        data: page([entry("email_rule_coverage", "pending")], {
+          pending_complete: false,
+        }),
+      },
+    );
+    expect((await checkAskedOfYou(pending.api, NOW))?.message).toBe(
+      "at least 1 rule covers your mail with no notice written yet; the check of the rules over your mail did not finish",
+    );
+  });
+
   it("never says nothing is waiting for what it could not see", async () => {
     for (const concerning of [
       { data: page([], { pending_complete: false }) },
