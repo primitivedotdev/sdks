@@ -16,46 +16,54 @@ the same OpenAPI spec. See `RELEASE.md`.
 OpenAPI document the API serves, and every client is regenerated from it. Most
 of the changes below follow from that document.
 
-Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.11` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.11`), and `3.0.0rc11` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.10` (`3.0.0rc10`), which added email rule objections, the email rule scope flags and true or false on boolean flags, `3.0.0-preview.9` (`3.0.0rc9`), which added email rule oversight and look-alikes that carry `expected`, and changed what `hidden` counts on rule results, `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
+Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.12` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.12`), and `3.0.0rc12` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.11` (`3.0.0rc11`), which added server notes on rule requests, rule receivers, `activity concerning` and the rule objection webhook events, `3.0.0-preview.10` (`3.0.0rc10`), which added email rule objections, the email rule scope flags and true or false on boolean flags, `3.0.0-preview.9` (`3.0.0rc9`), which added email rule oversight and look-alikes that carry `expected`, and changed what `hidden` counts on rule results, `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
 
-What `3.0.0-preview.11` (`3.0.0rc11`) changes from `3.0.0-preview.10`:
+What `3.0.0-preview.12` (`3.0.0rc12`) changes from `3.0.0-preview.11`:
 
-- The spec follows the API's current release. A rule request, and
-  `createEmailRuleRequest`'s answer, can carry `server_explanation`, the
-  API's own reading of what the rule as asked does, and `server_notes`, its
-  own notes on the rule; neither is written by the member who asked. For
-  the member asked, while pending, `notice` starts with that reading and
-  the API's warnings, and a request's `warnings` add every compiler note on
-  the rule's tree and words that the asker's warnings lack. A rule saved by
-  `createEmailRule`, `updateEmailRule` or `acceptEmailRuleRequest` keeps the
-  `warnings` sent, then any server note they lack on an address or domain
-  the description names that the rule does not test.
-- The covering view (`listEmailRulesCoveringMe`, `getEmailRuleCoveringMe`)
-  and a `read_only` rule in `listEmailRuleResults` carry `receivers`
-  (`EmailRuleReceivers`): the working API keys and webhooks that receive
-  what the rule shares, each by its owner and a count, and its live share
-  by the member it gives to. On the covering view it is required and null
-  when it could not be read in time (or, on a read, with `covers_now`
-  false), so the Python and Go clients expect the field.
-- `listActivityObjects` takes `relation=concerning`: coverage notices (kind
-  `email_rule_coverage`) for each time another member's rule started
-  covering one of your mailboxes (`started`) or saved a new version while
-  covering it (`new_version`), with `baseline` for a rule that already
-  covered you when notices began. They are listed on the dashboard and in
-  the CLI only; a key, an app or an agent gets `email_rule_coverage` in
-  `withheld`. `primitive activity concerning` lists them with the rule's
-  name then and its author.
-- `testEndpoint`'s `body` is null for a caller without organization-wide
-  `mail.raw:read`: Node `string | null`, Python `str | None`, Go
-  `NilString`.
-- The Node, Python and Go event catalogs list the opt-in rule objection
-  events, `email_rule_objection.created`, `accepted`, `declined` and
-  `withdrawn`, and the Node SDK has `EmailRuleObjectionEvent` and
-  `isEmailRuleObjectionEvent`. `--event-types 'email_rule_objection.*'`
-  expands to the four, and the hints `endpoints create-endpoint` and
-  `update-endpoint` print when such a webhook is refused cover them.
-- An empty `webhook-deliveries list-deliveries` narrowed by a filter names
-  the filters given and notes that test fires are not logged.
+- The spec follows the API's current release. Emails carry `imported`, null
+  for live mail and, for a historical message Primitive acquired, where it
+  came from and when. It is required on email details, list and search
+  rows, readable emails and a share's emails, so the Python and Go clients
+  expect it.
+- `listActivityObjects` with `relation=concerning` lists first, as
+  `pending`, each rule that covers you now whose notice is not written yet,
+  and carries `as_of` (about when the notices last looked) and
+  `pending_complete`. In `primitive activity concerning`, an empty listing
+  says how far the notices go and where to see what covers you now, rather
+  than saying nothing covers you, a pending row is explained under the
+  table, and `--json` keeps `as_of`.
+- `primitive doctor` has an "Asked of you" row for a person signed in with
+  `primitive login`: open rule requests and objections waiting for you,
+  rules that cover you with no notice written yet, and coverage notices from
+  the last 7 days, with the commands that show them.
+- `createEndpoint` answers with `warnings`, such as
+  `same_path_as_another_endpoint` when another webhook you can see sends to
+  the same scheme, host and path.
+- Keys carry `address_warnings`, notes on their grant, on every read.
+  `keys get` prints them under `Notes:`, and `keys list` marks a key that
+  has some.
+- `compileEmailRule` answers with `kind` and `conditions_breadth`, and the
+  rule in test, test-on-sample and look-alike answers is `EmailRuleTested`.
+  An update with a `kind` other than the rule's own is refused
+  (`kind_mismatch`). `testEmailRule` can test a rule you see only because
+  it covers your own mailboxes, run as you over only those, from the
+  dashboard or the CLI.
+- `updateEmailRule` without `if_expectations_pass` judges a write that
+  saves a version, or changes the scope, of an active rule that API keys or
+  webhooks read and that has expectations (refusing with `409`
+  `expectations_*` and `details.read_by`); `false` skips that. Removing
+  the expectations of such a rule is refused with `400` `no_expectations`.
+  A write saved without that check can carry a `notice`. It can also answer
+  `409` with `readers_changed` and `503` with `rule_keys_unread` or
+  `rule_readers_unread`. A rule's `receivers` webhooks carry `hosts` and
+  `hosts_not_listed`, and its `keys` count only keys that hold `mail:read`.
+- Relay auto join: auto-joined people have no mail access until an owner or
+  admin assigns a role. Legacy mail-grant choices read as `no_access` and
+  cannot be set (`400` for one outside the current catalog), and
+  `setRelayAutoJoin` no longer answers `409` `role_key_taken`.
+- `primitive version` prints what `primitive --version` prints, and with
+  `--json` the `version`, `platform`, `arch` and `node` fields.
+- New error codes: `chunk_size_mismatch` and `invalid_manifest`.
 
 ### Breaking changes
 
@@ -65,7 +73,7 @@ What `3.0.0-preview.11` (`3.0.0rc11`) changes from `3.0.0-preview.10`:
   CLI moves from 1.75.0.
 - The Go module path is `github.com/primitivedotdev/sdks/sdk-go/v3`. Update
   imports from `.../sdk-go/v2` and `.../sdk-go/v2/api`.
-- `primitive functions init` scaffolds projects on `^3.0.0-preview.11` of both
+- `primitive functions init` scaffolds projects on `^3.0.0-preview.12` of both
   `@primitivedotdev/sdk` and `primitive`.
 
 #### Removed code
@@ -691,9 +699,10 @@ date-time is kept as null and sorts last. A sync stops with an error after
   when another webhook you can see sends to the same scheme, host and path.
 - `getKey`, `listKeys` and `listCredentials` carry each key's
   `address_warnings`, notes on its grant worked out on every read. On
-  `getKey`, `grant.mail_scope.rule_versions` gives each rule the key lists
-  directly its `current_version`, `state` and `version_saved_at` (documented
-  in the operation's description, not typed).
+  `getKey` and `listKeys`, `grant.mail_scope.rule_versions` gives each rule
+  the key lists directly its `current_version`, `state` and
+  `version_saved_at` (documented in the operations' descriptions, not
+  typed).
 - `compileEmailRule` answers with `kind` and, for a grant rule with
   questions, `conditions_breadth`, breadth counted on its conditions alone.
   The `rule` that `testEmailRule`, `testEmailRuleOnSample` and
@@ -707,10 +716,17 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - `updateEmailRule` without `if_expectations_pass` judges a write that saves
   a version, or changes the scope, of an active rule that API keys or
   webhooks read and that has expectations, as `true` would; `false` never
-  judges first. It can answer `409` `email_rule_conflict` with
+  judges first. Removing the expectations of such a rule is refused with
+  `400` `no_expectations`. It can answer `409` `email_rule_conflict` with
   `details.reason` `readers_changed`, and `503` `service_unavailable`
   (`rule_keys_unread` or `rule_readers_unread`) when the rule's keys or
   readers could not be read in time.
+- `testEmailRule` can test a rule you see only because it covers your own
+  mailboxes, run as you over only those, from the dashboard or the CLI.
+- Relay auto join: auto-joined people have no mail access until an owner or
+  admin assigns a role. Legacy mail-grant choices read as `no_access` and
+  cannot be set, and `setRelayAutoJoin` no longer answers `409`
+  `role_key_taken`.
 - A rule's `receivers` webhooks carry `hosts`, the distinct sites they
   deliver to (at most 10), and `hosts_not_listed`.
 - New error codes: `chunk_size_mismatch` and `invalid_manifest`.
