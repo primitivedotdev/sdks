@@ -188,11 +188,14 @@ export function unknownFieldsNote(
   sent: readonly ExpectationSample[],
   all: readonly ExpectationSample[],
 ): string | null {
-  const carriers = new Map<string, number[]>();
+  const carriers = new Map<string, string[]>();
   for (const sample of sent) {
-    const number = all.indexOf(sample) + 1;
+    const index = all.indexOf(sample);
     for (const field of UNKNOWN_FIELDS.get(sample) ?? [])
-      carriers.set(field, [...(carriers.get(field) ?? []), number]);
+      carriers.set(field, [
+        ...(carriers.get(field) ?? []),
+        `${index + 1} (index ${index})`,
+      ]);
   }
   if (carriers.size === 0) return null;
   const named = [...carriers]
@@ -305,7 +308,7 @@ export function samplesFromJson(
     samples.forEach((sample, index) => {
       const unknown = checkSampleEmail(
         sample.email,
-        `${source}, look-alike ${index + 1}`,
+        `${source}, look-alike ${index + 1} (index ${index})`,
       );
       if (unknown.length > 0) UNKNOWN_FIELDS.set(sample, unknown);
     });
@@ -316,7 +319,8 @@ export function samplesFromJson(
       `${source} must hold a JSON array of samples, such as [{"expected": "no_match", "label": "a personal bill", "email": {...}}], or a generate-look-alikes answer.`,
     );
   return data.map((item, index) => {
-    const at = `${source}, sample ${index + 1}`;
+    // Numbered from 1 as in the file, with its index in the file from 0 (as .[N] reads it).
+    const at = `${source}, sample ${index + 1} (index ${index})`;
     if (!isRecord(item)) throw usageError(`${at} is not an object.`);
     const unknown = Object.keys(item).filter((key) => !SAMPLE_KEYS.has(key));
     if (item.expected !== "match" && item.expected !== "no_match")
