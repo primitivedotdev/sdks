@@ -426,18 +426,29 @@ describe("activity concerning command", () => {
   it("says in its help that notices can lag, promising no cadence, and which id is the rule's", () => {
     const help = ActivityConcerningCommand.description;
     expect(help).toContain("Notices can lag.");
+    // receivers_changed is listed, with its totals, and no longer said to be left out.
+    expect(help).toContain(
+      "receivers_changed, with the totals before and after in the table",
+    );
+    expect(help).not.toContain(
+      "changes to its keys, webhooks or share are not listed",
+    );
     expect(help).not.toMatch(/every minute|a few minutes/);
     expect(help).toContain(
       "RULE ID, and rule_id with --json, is the rule's id",
     );
   });
 
-  it("shows a receivers_changed notice's totals before and after, and where to see who", () => {
-    const changed = (before: object, after: object) =>
+  it("shows a receivers_changed notice's totals before and after in a last column, and where to see who", () => {
+    const changed = (
+      before: unknown,
+      after: unknown,
+      name = "Vendor invoices",
+    ) =>
       item({
         kind: "email_rule_coverage",
         rule_id: "3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f",
-        name: "Vendor invoices",
+        name,
         state: "receivers_changed",
         owned_now: "someone_else",
         created_through: { kind: "member", id: "u-3", name: "Sam Rivera" },
@@ -446,29 +457,76 @@ describe("activity concerning command", () => {
     const totals = { keys: 3, reads_in_full: 1, webhooks: 2, shares: 0 };
     const out = formatConcerningRows([
       changed(totals, { ...totals, keys: 2, reads_in_full: 0, webhooks: 1 }),
-      changed(totals, totals),
+      changed(totals, totals, "Same"),
+      changed(totals, { ...totals, reads_in_full: 2 }, "Full"),
       item({ kind: "email_rule_coverage", state: "started", name: "Other" }),
     ]);
     expect(out).toMatch(
-      /^receivers_changed \(keys 3 to 2, keys reading your mail in full 1 to 0, webhooks 2 to 1\)\s+.*Vendor invoices\s+Sam Rivera\s+3b0f6a1e/m,
+      /^NOTICE\s+WHEN \(UTC\)\s+RULE\s+AUTHOR\s+RULE ID\s+CHANGE$/m,
     );
     expect(out).toMatch(
-      /^receivers_changed \(same totals, an owner or webhook site changed\)\s+/m,
+      /^receivers_changed {2,}.*Vendor invoices\s+Sam Rivera\s+3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f {2}keys 3 to 2 \(1 to 0 reading your mail in full\), webhooks 2 to 1$/m,
     );
-    // Other notices are shown as before, by their state alone.
-    expect(out).toMatch(/^started\s+.*Other/m);
+    expect(out).toMatch(
+      /Same\s+.*same totals, an owner or webhook site changed$/m,
+    );
+    expect(out).toMatch(
+      /Full\s+.*keys 3 \(1 to 2 reading your mail in full\)$/m,
+    );
+    // Other notices keep their state alone, and nothing is added to the NOTICE column.
+    expect(out).toMatch(/^started {2,}.*Other/m);
+    expect(out).not.toContain("receivers_changed (");
     expect(out).toContain(
-      "get-email-rule-covering-me <rule-id>` shows who, by owner.",
+      "get-email-rule-covering-me <rule-id>` shows who receives them now, by owner, while the rule covers you.",
     );
-    // A server that sends no totals: the state alone, and the same pointer.
-    const bare = formatConcerningRows([
+  });
+
+  it("shows no CHANGE for totals that are missing or not counts, and lists every footnote together", () => {
+    const odd = (receivers_change: unknown, state = "receivers_changed") =>
       item({
         kind: "email_rule_coverage",
-        state: "receivers_changed",
-        name: "Bare",
-      }),
-    ]);
-    expect(bare).toMatch(/^receivers_changed\s+.*Bare/m);
+        state,
+        name: "Odd",
+        receivers_change,
+      } as Partial<ActivityItem>);
+    const totals = { keys: 3, reads_in_full: 1, webhooks: 2, shares: 0 };
+    for (const change of [
+      undefined,
+      { before: { keys: 3 }, after: totals },
+      { before: {}, after: {} },
+      { before: [], after: [] },
+      { before: { ...totals, keys: "3" }, after: totals },
+      { before: { ...totals, keys: -1 }, after: totals },
+    ]) {
+      const out = formatConcerningRows([odd(change)]);
+      expect(out).not.toContain("CHANGE");
+      expect(out).not.toContain("undefined");
+      expect(out).toMatch(/^receivers_changed {2,}2026-/m);
+    }
+    // Totals on any other notice are not shown.
+    expect(
+      formatConcerningRows([
+        odd({ before: totals, after: { ...totals, keys: 1 } }, "new_version"),
+      ]),
+    ).not.toContain("CHANGE");
+    const all = formatConcerningRows(
+      [
+        item({
+          kind: "email_rule_coverage",
+          state: "pending",
+          name: "Waiting",
+        }),
+        odd({ before: totals, after: { ...totals, webhooks: 3 } }),
+      ],
+      false,
+      null,
+      false,
+    );
+    expect(all).toContain("pending: the rule covers you now");
+    expect(all).toContain(
+      "receivers_changed: who receives the rule's matches changed",
+    );
+    expect(all).toContain("did not finish");
     expect(formatConcerningRows([item({ state: "started" })])).not.toContain(
       "receivers_changed:",
     );

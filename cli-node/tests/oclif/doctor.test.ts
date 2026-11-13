@@ -590,6 +590,7 @@ describe("checkAskedOfYou", () => {
           entry("email_rule_coverage", "pending"),
           entry("email_rule_coverage", "started"),
           entry("email_rule_coverage", "new_version"),
+          entry("email_rule_coverage", "receivers_changed"),
           entry("email_rule_coverage", "baseline"),
           entry("email_rule_coverage", "started", "2026-10-01T00:00:00.000Z"),
         ]),
@@ -597,7 +598,7 @@ describe("checkAskedOfYou", () => {
     );
     expect(await checkAskedOfYou(api, NOW)).toEqual({
       status: "warn",
-      message: `1 rule request and 1 objection waiting for you; 1 rule covers your mail with no notice written yet; 2 coverage notices in the last ${DAYS} days`,
+      message: `1 rule request and 1 objection waiting for you; 1 rule covers your mail with no notice written yet; 3 coverage notices in the last ${DAYS} days`,
       hint: "Run `primitive activity asked --state live` and `primitive activity concerning`.",
     });
     expect(Object.fromEntries(urls[0]?.searchParams ?? [])).toEqual({

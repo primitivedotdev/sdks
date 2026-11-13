@@ -513,7 +513,9 @@ export async function checkAskedOfYou(
   const pending = items.filter((item) => item.state === "pending").length;
   const notices = items.filter(
     (item) =>
-      (item.state === "started" || item.state === "new_version") &&
+      (item.state === "started" ||
+        item.state === "new_version" ||
+        item.state === "receivers_changed") &&
       Date.parse(item.created_at) >= since,
   ).length;
   const parts = [
