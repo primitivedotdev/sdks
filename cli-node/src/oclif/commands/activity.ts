@@ -105,12 +105,16 @@ async function readWithRetry(
     if (!failure || attempt + 1 >= ACTIVITY_ATTEMPTS) return result;
     const wait = failure.retryAfterMs ?? backoffDelay(attempt);
     if (wait > deadline - Date.now()) return result;
-    // The wait worked out here is the one slept, so the check above holds.
-    await pauseForTransientFailure(
-      { ...failure, retryAfterMs: wait },
-      attempt,
-      { deadline },
-    );
+    // The wait worked out here is the one slept, so the check above holds;
+    // a sleep that ran past the deadline ends the retries all the same.
+    if (
+      !(await pauseForTransientFailure(
+        { ...failure, retryAfterMs: wait },
+        attempt,
+        { deadline },
+      ))
+    )
+      return result;
   }
 }
 

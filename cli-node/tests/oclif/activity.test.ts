@@ -857,6 +857,20 @@ describe("activity reads that fail on the way", () => {
     expect(stderr.join("")).toContain("Retry in 60 s.");
   });
 
+  it("stops retrying once a sleep runs past its budget", async () => {
+    let now = Date.now();
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    sleeps.sleep.mockImplementationOnce(async () => {
+      now += 20_000;
+    });
+    const attempts = useFetch(() => new Response("", { status: 503 }));
+    captureLog();
+    captureStderr();
+    await ActivityCreatedCommand.run([], { root });
+    expect(attempts()).toBe(1);
+    expect(process.exitCode).toBe(1);
+  });
+
   it("keeps a network error's own code beside the words, with its hint", async () => {
     const attempts = useFetch(() => {
       throw fetchFailed("ENOTFOUND");
