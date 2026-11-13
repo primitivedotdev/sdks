@@ -689,7 +689,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
   members choose, and `getEmailNotificationSettings` and
   `updateEmailNotificationSettings`, the organization's mode for each kind
   (`off`, `optional_on`, `optional_off` or `required`). For a person only,
-  not an API key or an agent. In the CLI: the `email-notifications` topic.
+  not an API key or an agent. They are not CLI commands yet.
 - Email rule shares: `listEmailRuleShares`, `listGivenEmailRuleShares`,
   `getEmailRuleShare`, `listEmailRuleShareEmails`, `endEmailRuleShare`
   (whose answer carries a `note` saying the rule itself is left unchanged,
