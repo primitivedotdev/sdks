@@ -230,7 +230,8 @@ export type MachineDoctorOptions = {
   latestVersion?: () => Promise<string | null>;
   /**
    * The newest preview published (npm's `preview` dist-tag), or null when it
-   * cannot be read. Read only when the running CLI is itself a preview.
+   * cannot be read. Read only when the running CLI is itself a preview,
+   * whether or not the latest release could be read.
    */
   previewVersion?: () => Promise<string | null>;
   stopReceiver?: (
@@ -1446,6 +1447,59 @@ export async function runMachineDoctor(
         const latest = await (
           options.latestVersion ?? (() => npmLatestVersion(fetchImpl))
         )();
+        // A preview is compared with the newest preview, whole version and
+        // all; the latest release alone would call any 3.0.0 preview current.
+        if (isPrerelease(version)) {
+          const preview = await (
+            options.previewVersion ??
+            (() => npmLatestVersion(fetchImpl, "preview"))
+          )();
+          const released = latest
+            ? compareReleaseVersions(version, latest)
+            : null;
+          if (released !== null && released < 0)
+            return check(
+              "cli.version",
+              "warn",
+              `${version} is a preview older than the latest release ${latest}. Install it with \`npm install -g primitive@latest\`.`,
+              { action: "update_cli" },
+            );
+          const previewBehind = preview
+            ? compareReleaseVersions(version, preview)
+            : null;
+          if (previewBehind !== null && previewBehind < 0)
+            return check(
+              "cli.version",
+              "warn",
+              `${version} is older than the newest preview ${preview}. Install it with \`npm install -g primitive@preview\`.`,
+              { action: "update_cli" },
+            );
+          if (previewBehind === 0)
+            return check(
+              "cli.version",
+              "ok",
+              `${version} is the newest preview.`,
+            );
+          if (previewBehind !== null)
+            return check(
+              "cli.version",
+              "ok",
+              `${version} is not older than the newest preview ${preview}.`,
+            );
+          // The preview tag could not be read, or is no version to compare.
+          const met = options.minCliVersion
+            ? ` meets the required ${options.minCliVersion};`
+            : ";";
+          return check(
+            "cli.version",
+            latest || options.minCliVersion ? "ok" : "skip",
+            preview
+              ? `${version}; the newest preview (${preview}) could not be compared with it.`
+              : latest
+                ? `${version} is not older than the latest release ${latest}; the newest preview could not be checked.`
+                : `${version}${met} neither the latest release nor the newest preview could be checked.`,
+          );
+        }
         if (!latest)
           return options.minCliVersion
             ? check(
@@ -1458,39 +1512,6 @@ export async function runMachineDoctor(
                 "skip",
                 `${version}; the latest release could not be checked.`,
               );
-        // A preview is compared with the newest preview, whole version and
-        // all; the latest release alone would call any 3.0.0 preview current.
-        if (isPrerelease(version)) {
-          const preview = await (
-            options.previewVersion ??
-            (() => npmLatestVersion(fetchImpl, "preview"))
-          )();
-          const released = compareReleaseVersions(version, latest);
-          if (released !== null && released < 0)
-            return check(
-              "cli.version",
-              "warn",
-              `${version} is a preview older than the latest release ${latest}. Install it with \`npm install -g primitive@latest\`.`,
-              { action: "update_cli" },
-            );
-          const previewBehind = preview
-            ? compareReleaseVersions(version, preview)
-            : null;
-          if (preview && previewBehind !== null && previewBehind < 0)
-            return check(
-              "cli.version",
-              "warn",
-              `${version} is older than the newest preview ${preview}. Install it with \`npm install -g primitive@preview\`.`,
-              { action: "update_cli" },
-            );
-          return preview
-            ? check("cli.version", "ok", `${version} is the newest preview.`)
-            : check(
-                "cli.version",
-                "ok",
-                `${version} is not older than the latest release ${latest}; the newest preview could not be checked.`,
-              );
-        }
         const behind = compareVersions(version, latest);
         if (behind !== null && behind < 0)
           return check(

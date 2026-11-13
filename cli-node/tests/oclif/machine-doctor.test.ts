@@ -742,6 +742,8 @@ describe("primitive machine doctor", () => {
     expect(compareReleaseVersions("3.0.0-alpha", "3.0.0-alpha.1")).toBe(-1);
     expect(compareReleaseVersions("3.0.0-1", "3.0.0-alpha")).toBe(-1);
     expect(compareReleaseVersions("v1.2.3", "1.2.3")).toBe(0);
+    // Build metadata does not count.
+    expect(compareReleaseVersions("1.2.3+build.5", "1.2.3")).toBe(0);
     expect(compareReleaseVersions("next", "1.2.3")).toBeNull();
     expect(isPrerelease("3.0.0-preview.12")).toBe(true);
     expect(isPrerelease("1.75.0")).toBe(false);
@@ -785,6 +787,36 @@ describe("primitive machine doctor", () => {
       status: "ok",
       detail: expect.stringContaining(
         "the newest preview could not be checked",
+      ),
+    });
+    // A local build ahead of the tag, and a tag that is no version.
+    expect(await preview("3.0.0-preview.14", "3.0.0-preview.13")).toMatchObject(
+      {
+        status: "ok",
+        detail:
+          "3.0.0-preview.14 is not older than the newest preview 3.0.0-preview.13.",
+      },
+    );
+    expect(await preview("3.0.0-preview.13", "next")).toMatchObject({
+      status: "ok",
+      detail: expect.stringContaining("could not be compared"),
+    });
+    // The preview tag is read even when the latest release cannot be.
+    const offline = (newest: string | null) =>
+      runMachineDoctor({
+        ...options,
+        cliVersion: "3.0.0-preview.12",
+        latestVersion: async () => null,
+        previewVersion: async () => newest,
+      }).then((report) => byId(report)["cli.version"]);
+    expect(await offline("3.0.0-preview.13")).toMatchObject({
+      status: "warn",
+      detail: expect.stringContaining("older than the newest preview"),
+    });
+    expect(await offline(null)).toMatchObject({
+      status: "skip",
+      detail: expect.stringContaining(
+        "neither the latest release nor the newest preview could be checked",
       ),
     });
     // A release build is still compared with the latest release only.

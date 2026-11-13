@@ -58,10 +58,41 @@ export const NETWORK_ERROR = {
 };
 
 /**
+ * The transport's code for a failure no retry fixes: a host name that does
+ * not resolve, or a certificate that is not trusted. Such an error is shown
+ * as it came, with its own hint, rather than retried.
+ */
+function permanentNetworkCode(error: unknown): string | null {
+  const cause =
+    error instanceof Error ? (error as { cause?: unknown }).cause : undefined;
+  const code =
+    cause && typeof cause === "object"
+      ? (cause as { code?: unknown }).code
+      : undefined;
+  if (typeof code !== "string") return null;
+  return code === "ENOTFOUND" ||
+    /^(CERT_|ERR_TLS_|UNABLE_TO_)/.test(code) ||
+    code === "DEPTH_ZERO_SELF_SIGNED_CERT" ||
+    code === "SELF_SIGNED_CERT_IN_CHAIN"
+    ? code
+    : null;
+}
+
+/** Whether a result is a network error a retry could fix. */
+function retryableNetworkError(result: SdkResult): boolean {
+  return (
+    transientFailure(result)?.reason === "network" &&
+    permanentNetworkCode(result.error) === null
+  );
+}
+
+/**
  * One page read, retried as the CLI's waits retry a read: a rate limit, a
  * 502, 503 or 504, or a network error is tried again with backoff, up to
  * ACTIVITY_ATTEMPTS times within ACTIVITY_RETRY_MS. A read that throws is
- * taken as the network error it is.
+ * taken as the network error it is. A failure no retry fixes (a host that
+ * does not resolve, an untrusted certificate), or a Retry-After longer than
+ * the time left, is returned at once instead of waited on.
  */
 async function readWithRetry(
   read: () => Promise<SdkResult>,
@@ -77,7 +108,9 @@ async function readWithRetry(
     const failure = transientFailure(result);
     if (
       !failure ||
+      (failure.reason === "network" && !retryableNetworkError(result)) ||
       attempt + 1 >= ACTIVITY_ATTEMPTS ||
+      (failure.retryAfterMs ?? 0) > deadline - Date.now() ||
       !(await pauseForTransientFailure(failure, attempt, { deadline }))
     )
       return result;
@@ -91,10 +124,7 @@ async function call(
     const result = await readWithRetry(read);
     // No answer at all: Primitive was not reached. Say so in words, not as
     // the transport's own code.
-    if (
-      result.response === undefined &&
-      transientFailure(result)?.reason === "network"
-    )
+    if (result.response === undefined && retryableNetworkError(result))
       return { ok: false, payload: NETWORK_ERROR };
     if (result.error !== undefined || !result.response?.ok) {
       return {

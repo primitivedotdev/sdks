@@ -819,6 +819,100 @@ describe("activity reads that fail on the way", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  it("does not wait out a Retry-After longer than its budget, or retry a host that does not resolve", async () => {
+    sleeps.sleep.mockClear();
+    let attempts = useFetch(
+      () =>
+        new Response(
+          JSON.stringify({
+            success: false,
+            error: { code: "rate_limit_exceeded", message: "Slow down." },
+          }),
+          {
+            status: 429,
+            headers: {
+              "content-type": "application/json",
+              "retry-after": "60",
+            },
+          },
+        ),
+    );
+    captureLog();
+    captureStderr();
+    await ActivityCreatedCommand.run([], { root });
+    expect(attempts()).toBe(1);
+    expect(sleeps.sleep).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+
+    process.exitCode = undefined;
+    attempts = useFetch(() => {
+      throw Object.assign(new TypeError("fetch failed"), {
+        cause: { code: "ENOTFOUND" },
+      });
+    });
+    const stderr = captureStderr();
+    await ActivityCreatedCommand.run([], { root });
+    expect(attempts()).toBe(1);
+    expect(process.exitCode).toBe(1);
+    // Shown as it came, since trying again would not help.
+    expect(stderr.join("")).toContain("ENOTFOUND");
+    expect(stderr.join("")).not.toContain("Try again in a moment");
+  });
+
+  it("asks for the same page again after a transient failure with --all", async () => {
+    const cursors: (string | null)[] = [];
+    let attempts = 0;
+    auth.create.mockResolvedValue({
+      apiClient: new PrimitiveApiClient({
+        apiKey: "test-key",
+        apiBaseUrl: "https://api.example.test/v1",
+        fetch: vi.fn<typeof globalThis.fetch>(async (input, init) => {
+          attempts += 1;
+          cursors.push(
+            new URL(new Request(input, init).url).searchParams.get("cursor"),
+          );
+          if (attempts === 2) throw connectTimeout();
+          const body =
+            attempts === 1
+              ? page([item()], "c1").body
+              : page([item({ name: "second page" })], null).body;
+          return new Response(JSON.stringify(body), {
+            headers: { "content-type": "application/json" },
+          });
+        }),
+      }),
+      auth: {},
+      baseUrlOverridden: false,
+    });
+    const lines = captureLog();
+    captureStderr();
+    await ActivityCreatedCommand.run(["--all"], { root });
+    expect(cursors).toEqual([null, "c1", "c1"]);
+    expect(lines.join("\n")).toContain("second page");
+  });
+
+  it("with --json, prints one document whose error is the network error", async () => {
+    useFetch(() => {
+      throw connectTimeout();
+    });
+    const lines = captureLog();
+    const stderr = captureStderr();
+    // The JSON guard prints the one document with console.log.
+    const stdout: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((line = "") => {
+      stdout.push(String(line));
+    });
+    await ActivityCreatedCommand.run(["--json"], { root });
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toBe("");
+    const document = JSON.parse(stdout.join("\n"));
+    expect(document.error).toMatchObject({ code: "network_error" });
+    const printed = [...lines, ...stdout].join("\n");
+    expect(printed).toContain("network_error");
+    expect(printed).toContain("Could not reach Primitive (network error).");
+    expect(printed).not.toContain("UND_ERR_CONNECT_TIMEOUT");
+  });
+
   it("words a network error that does not clear, without the transport's code", async () => {
     const attempts = useFetch(() => {
       throw connectTimeout();

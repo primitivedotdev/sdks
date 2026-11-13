@@ -160,39 +160,55 @@ const SAMPLE_SUBJECT_MAX = 998;
 const SAMPLE_LIST_MAX = 10;
 
 /**
- * Say on stderr that a sample carries fields this CLI does not know, which
- * are sent as they are: the API validates samples itself, so a field it
- * added after this CLI was built is not refused here.
+ * The fields of each sample read from a file that this CLI does not know
+ * (`email field "x"`, `sample field "y"`). They are sent as they are: the API
+ * validates samples itself, so a field it added after this CLI was built is
+ * not refused here. Said once per file, for the samples actually sent
+ * (unknownFieldsNote).
  */
-function noteUnknownFields(
-  at: string,
-  what: string,
-  unknown: readonly string[],
-  known: readonly string[],
-): void {
-  if (unknown.length === 0) return;
-  const named = unknown.map((key) => `"${key}"`).join(", ");
-  process.stderr.write(
-    `${at}: ${what} ${named} ${unknown.length === 1 ? "is not a field" : "are not fields"} this CLI knows (it knows ${known.join(", ")}). Sent as is, for the API to judge; if the API refuses it, take it out.\n`,
-  );
+const UNKNOWN_FIELDS = new WeakMap<ExpectationSample, string[]>();
+
+/**
+ * One line naming the fields this CLI does not know in the samples sent, with
+ * the numbers of the samples in the file that carry each; null when none do.
+ */
+export function unknownFieldsNote(
+  source: string,
+  sent: readonly ExpectationSample[],
+  all: readonly ExpectationSample[],
+): string | null {
+  const carriers = new Map<string, number[]>();
+  for (const sample of sent) {
+    const number = all.indexOf(sample) + 1;
+    for (const field of UNKNOWN_FIELDS.get(sample) ?? [])
+      carriers.set(field, [...(carriers.get(field) ?? []), number]);
+  }
+  if (carriers.size === 0) return null;
+  const named = [...carriers]
+    .map(
+      ([field, numbers]) =>
+        `${field} (sample${numbers.length === 1 ? "" : "s"} ${numbers.join(", ")})`,
+    )
+    .join(", ");
+  return `${source}: fields this CLI does not know are sent as they are, for the API to judge; if the API refuses one, take it out: ${named}.`;
 }
 
 /**
  * Refuse, naming the sample and the field, a made-up email the API would
- * refuse to keep: the bounds of the fields it takes. A field this CLI does
- * not know is noted and passed on. The API checks the rest (address forms,
- * a NUL).
+ * refuse to keep: the bounds of the fields it takes. Returns the fields this
+ * CLI does not know, which are passed on. The API checks the rest (address
+ * forms, a NUL).
  */
-function checkSampleEmail(email: Record<string, unknown>, at: string): void {
+function checkSampleEmail(
+  email: Record<string, unknown>,
+  at: string,
+): string[] {
   const fail = (what: string) => {
     throw usageError(`${at}: email ${what}.`);
   };
-  noteUnknownFields(
-    at,
-    "email field",
-    Object.keys(email).filter((key) => !SAMPLE_EMAIL_KEYS.has(key)),
-    [...SAMPLE_EMAIL_KEYS],
-  );
+  const unknown = Object.keys(email)
+    .filter((key) => !SAMPLE_EMAIL_KEYS.has(key))
+    .map((key) => `email field "${key}"`);
   if (!isRecord(email.from) || typeof email.from.address !== "string")
     fail("needs from.address");
   const list = (key: string, min: number) => {
@@ -248,6 +264,7 @@ function checkSampleEmail(email: Record<string, unknown>, at: string): void {
     (typeof email.spam_score !== "number" || !Number.isFinite(email.spam_score))
   )
     fail("spam_score must be a number");
+  return unknown;
 }
 
 /** The most made-up emails one rule keeps, and one test or write sends. */
@@ -275,7 +292,11 @@ export function samplesFromJson(
         `${source} is a generate-look-alikes answer with no look-alikes in it.`,
       );
     samples.forEach((sample, index) => {
-      checkSampleEmail(sample.email, `${source}, look-alike ${index + 1}`);
+      const unknown = checkSampleEmail(
+        sample.email,
+        `${source}, look-alike ${index + 1}`,
+      );
+      if (unknown.length > 0) UNKNOWN_FIELDS.set(sample, unknown);
     });
     return samples;
   }
@@ -287,18 +308,13 @@ export function samplesFromJson(
     const at = `${source}, sample ${index + 1}`;
     if (!isRecord(item)) throw usageError(`${at} is not an object.`);
     const unknown = Object.keys(item).filter((key) => !SAMPLE_KEYS.has(key));
-    noteUnknownFields(at, "sample field", unknown, [
-      "expected",
-      "label",
-      "email",
-    ]);
     if (item.expected !== "match" && item.expected !== "no_match")
       throw usageError(`${at}: expected must be "match" or "no_match".`);
     if (!isRecord(item.email))
       throw usageError(
         `${at}: email must be an object, as test-email-rule-on-sample takes it.`,
       );
-    checkSampleEmail(item.email, at);
+    const unknownEmail = checkSampleEmail(item.email, at);
     const label = item.label;
     if (label !== undefined && label !== null) {
       if (typeof label !== "string")
@@ -312,12 +328,18 @@ export function samplesFromJson(
           `${at}: label is longer than ${SAMPLE_LABEL_MAX} characters.`,
         );
     }
-    return {
+    const sample: ExpectationSample = {
       ...Object.fromEntries(unknown.map((key) => [key, item[key]])),
       expected: item.expected,
       ...(label !== undefined ? { label } : {}),
       email: item.email,
     };
+    const fields = [
+      ...unknown.map((key) => `sample field "${key}"`),
+      ...unknownEmail,
+    ];
+    if (fields.length > 0) UNKNOWN_FIELDS.set(sample, fields);
+    return sample;
   });
 }
 
@@ -406,6 +428,8 @@ function readSamplesFile(
     throw usageError(
       `${source} holds ${samples.length} samples, and a rule or a test takes at most ${SAMPLES_MAX}; take some with --pick.`,
     );
+  const note = unknownFieldsNote(source, samples, all);
+  if (note) process.stderr.write(`${note}\n`);
   return samples;
 }
 

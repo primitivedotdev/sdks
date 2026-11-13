@@ -273,47 +273,79 @@ describe("samplesFromJson", () => {
 });
 
 describe("samples with fields this CLI does not know", () => {
-  it("notes them on stderr and passes them on for the API to judge, instead of refusing", () => {
+  function captureStderr(): string[] {
     const said: string[] = [];
     vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
       said.push(String(chunk));
       return true;
     });
-    try {
-      const withNew = { ...email("x"), reply_to: ["r@b.example"] };
-      expect(
-        samplesFromJson(
-          [{ expected: "match", email: withNew, lable: "x" }],
-          "f",
-        ),
-      ).toEqual([{ lable: "x", expected: "match", email: withNew }]);
-      expect(said.join("")).toContain(
-        'f, sample 1: email field "reply_to" is not a field this CLI knows',
-      );
-      expect(said.join("")).toContain(
-        'f, sample 1: sample field "lable" is not a field this CLI knows (it knows expected, label, email). Sent as is, for the API to judge; if the API refuses it, take it out.',
-      );
-      // A look-alikes answer whose emails carry a field added later is not refused either.
-      said.length = 0;
-      expect(
-        samplesFromJson(
-          answer([{ kind: "medical", why: "w", email: withNew }]),
-          "--x a.json",
-        ),
-      ).toHaveLength(1);
-      expect(said.join("")).toContain('"reply_to"');
-      // Known fields say nothing; a saved sample's id and time are still left out.
-      said.length = 0;
-      expect(
-        samplesFromJson(
-          [{ expected: "match", email: email("x"), id: "s1", created_at: "t" }],
-          "f",
-        ),
-      ).toEqual([{ expected: "match", email: email("x") }]);
-      expect(said).toEqual([]);
-    } finally {
-      vi.restoreAllMocks();
-    }
+    return said;
+  }
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+  const withNew = (subject: string) => ({
+    ...email(subject),
+    reply_to: ["r@b.example"],
+  });
+
+  it("passes them on for the API to judge instead of refusing, and names them once for the samples sent", () => {
+    const said = captureStderr();
+    const samples = [
+      { expected: "match", email: withNew("one"), lable: "x" },
+      { expected: "no_match", email: email("two") },
+      { expected: "match", email: withNew("three") },
+    ];
+    const path = join(dir, "samples.json");
+    writeFileSync(path, JSON.stringify(samples));
+    const sent = expectSamples({ "expect-samples-file": path });
+    expect(sent).toEqual([
+      { lable: "x", expected: "match", email: withNew("one") },
+      { expected: "no_match", email: email("two") },
+      { expected: "match", email: withNew("three") },
+    ]);
+    expect(said).toEqual([
+      `--expect-samples-file ${path}: fields this CLI does not know are sent as they are, for the API to judge; if the API refuses one, take it out: sample field "lable" (sample 1), email field "reply_to" (samples 1, 3).\n`,
+    ]);
+    // Only what --pick sends is named, by its number in the file.
+    said.length = 0;
+    expect(
+      expectSamples({ "expect-samples-file": path, pick: "2,3" }),
+    ).toHaveLength(2);
+    expect(said).toEqual([
+      `--expect-samples-file ${path}: fields this CLI does not know are sent as they are, for the API to judge; if the API refuses one, take it out: email field "reply_to" (sample 3).\n`,
+    ]);
+    said.length = 0;
+    expectSamples({ "expect-samples-file": path, pick: "2" });
+    expect(said).toEqual([]);
+  });
+
+  it("says nothing while reading a file that is then refused, and nothing for known fields", () => {
+    const said = captureStderr();
+    expect(() =>
+      samplesFromJson(
+        [
+          { expected: "match", email: withNew("one") },
+          { expected: "maybe", email: email("two") },
+        ],
+        "f",
+      ),
+    ).toThrow("f, sample 2");
+    // A look-alikes answer whose emails carry a field added later is not refused either.
+    expect(
+      samplesFromJson(
+        answer([{ kind: "medical", why: "w", email: withNew("x") }]),
+        "--x a.json",
+      ),
+    ).toHaveLength(1);
+    // A saved sample's id and time are still left out.
+    expect(
+      samplesFromJson(
+        [{ expected: "match", email: email("x"), id: "s1", created_at: "t" }],
+        "f",
+      ),
+    ).toEqual([{ expected: "match", email: email("x") }]);
+    expect(said).toEqual([]);
   });
 });
 
