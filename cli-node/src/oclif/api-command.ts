@@ -53,6 +53,14 @@ import {
   withEventTypes,
 } from "./endpoint-event-types.js";
 import {
+  ENDPOINT_URL_OPERATIONS,
+  ENDPOINT_URL_WRITE_OPERATIONS,
+  endpointsWithQueryHidden,
+  HIDDEN_QUERY_NOTE,
+  hiddenQueryUrlRefusal,
+  SHOW_URL_FLAG_DESCRIPTION,
+} from "./endpoint-url-shown.js";
+import {
   type ListEndpointsFn,
   maybeWriteFunctionEndpointRedirect,
 } from "./endpoints-test-redirect.js";
@@ -1277,6 +1285,12 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     });
   }
 
+  if (ENDPOINT_URL_OPERATIONS.has(operation.sdkName)) {
+    flags["show-url"] = Flags.boolean({
+      description: SHOW_URL_FLAG_DESCRIPTION,
+    });
+  }
+
   if (ATTACHMENT_WAIT_OPERATIONS.has(operation.sdkName)) {
     flags.wait = Flags.boolean({
       allowNo: true,
@@ -1821,6 +1835,13 @@ export function createOperationCommand(
           } else {
             body = explicit;
           }
+        }
+
+        // A URL as these commands print it, query hidden, is never sent in
+        // place of the real one.
+        if (ENDPOINT_URL_WRITE_OPERATIONS.has(operation.sdkName)) {
+          const refusal = hiddenQueryUrlRefusal(body);
+          if (refusal) throw new Errors.CLIError(refusal, { exit: 2 });
         }
 
         if (
@@ -2376,10 +2397,26 @@ export function createOperationCommand(
               },
             };
         }
+        // A webhook URL's query string can carry a secret, so it is hidden
+        // unless --show-url asks for it, under --json too.
+        let shownEnvelope = envelope;
+        let queryHidden = false;
+        if (
+          ENDPOINT_URL_OPERATIONS.has(operation.sdkName) &&
+          parsedFlags["show-url"] !== true &&
+          envelope
+        ) {
+          const shown = endpointsWithQueryHidden(envelope.data);
+          if (shown.hidden) {
+            shownEnvelope = { ...envelope, data: shown.data };
+            queryHidden = true;
+            if (jsonOutput && withEnvelope) summary.push(HIDDEN_QUERY_NOTE);
+          }
+        }
         let printed =
           jsonOutput && withEnvelope
-            ? operationJsonDocument(envelope, summary)
-            : operationOutputPayload(envelope, withEnvelope);
+            ? operationJsonDocument(shownEnvelope, summary)
+            : operationOutputPayload(shownEnvelope, withEnvelope);
         if (
           jsonOutput &&
           report?.exitCode &&
@@ -2391,6 +2428,8 @@ export function createOperationCommand(
           printed = { ...printed, error: report.error };
         }
         this.log(JSON.stringify(printed, null, 2));
+        if (queryHidden && !jsonOutput)
+          process.stderr.write(`${HIDDEN_QUERY_NOTE}\n`);
         if (reportError !== undefined) {
           process.stderr.write(
             `Warning: ${operation.sdkName} succeeded but its report could not be built (${reportError}). The JSON above is the full answer; read it rather than the exit code.\n`,
