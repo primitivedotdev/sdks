@@ -1345,6 +1345,12 @@ parsers.
 
 #### CLI
 
+- `email-rule-oversight create-email-rule-objection --help` says the
+  message can ask the rule's author to narrow the rule or explain where its
+  matches go, and that the author accepts (turning the rule off) or
+  declines, optionally with a reason the objector sees.
+  `decline-email-rule-objection --help` says the reason can answer such a
+  request.
 - `primitive version` prints the line `primitive --version` prints (the
   CLI's name and version, platform and architecture, and Node version).
   With `--json` it prints `version`, `platform`, `arch` and `node` (Node's

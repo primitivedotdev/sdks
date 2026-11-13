@@ -1489,6 +1489,10 @@ export const OPERATION_HINTS: Record<string, string> = {
     "Tip: prefer `primitive memories delete <key> [--function <function-id>]` for the common delete path.",
   searchMemories:
     "Tip: prefer `primitive memories search [prefix] [--metadata-only] [--function <function-id>]` for the common search path.",
+  createEmailRuleObjection:
+    "Tip: say in --message (up to 500 characters) what you want. It can ask for less than turning the rule off: ask the author to narrow the rule, or to explain where its matches go (its receivers). The author accepts, which turns the rule off, or declines, optionally giving a reason, which you see in `primitive email-rule-oversight get-email-rule-objection <objection-id>`. You can withdraw it with `primitive email-rule-oversight withdraw-email-rule-objection <objection-id>`. Objecting does not change the rule.",
+  declineEmailRuleObjection:
+    "Tip: the member who objected sees --reason (up to 500 characters). When the objection asked you to narrow the rule or explain a receiver, the reason can answer that: say what you changed, or what the receiver is for.",
   startAgentSignup:
     "Tip: pass --terms-accepted. Capture the signup_token from the response and feed it to `primitive agent verify-agent-signup --signup-token <token> --verification-code <6-digit-code>` (the verify flag accepts --code as an alias). The high-level `primitive signup <email>` command walks an interactive user through both steps with friendlier prompts.",
   testEmailRule:
