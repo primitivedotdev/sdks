@@ -519,6 +519,50 @@ describe("activity concerning command", () => {
     );
   });
 
+  it("shows a stopped notice's reason in the last column, and nothing for a reason it does not know", () => {
+    const stop = (stop_reason: unknown, name: string) =>
+      item({
+        kind: "email_rule_coverage",
+        rule_id: "3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f",
+        name,
+        state: "stopped",
+        owned_now: "someone_else",
+        created_through: { kind: "member", id: "u-3", name: "Sam Rivera" },
+        stop_reason,
+      } as Partial<ActivityItem>);
+    const out = formatConcerningRows([
+      stop("deleted", "Gone"),
+      stop("turned_off", "Off"),
+      stop("no_longer_covers", "Moved"),
+      item({ kind: "email_rule_coverage", state: "started", name: "Other" }),
+    ]);
+    expect(out).toMatch(
+      /^NOTICE\s+WHEN \(UTC\)\s+RULE\s+AUTHOR\s+RULE ID\s+CHANGE$/m,
+    );
+    expect(out).toMatch(
+      /^stopped {2,}.*Gone\s+Sam Rivera\s+3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f {2}rule deleted$/m,
+    );
+    expect(out).toMatch(/Off\s+.*turned off$/m);
+    expect(out).toMatch(/Moved\s+.*no longer reaches your mailboxes$/m);
+    expect(out).toMatch(/^started {2,}.*Other/m);
+    // An older server, or a reason this CLI does not know: the state alone.
+    for (const reason of [undefined, "renamed", 3]) {
+      const bare = formatConcerningRows([stop(reason, "Bare")]);
+      expect(bare).not.toContain("CHANGE");
+      expect(bare).toMatch(/^stopped {2,}2026-/m);
+    }
+  });
+
+  it("says in its help that a rule that stops covering you is listed as stopped", () => {
+    const help = ActivityConcerningCommand.description;
+    expect(help).toContain(
+      "A rule that stops covering you is listed as stopped, with why",
+    );
+    expect(help).not.toContain(
+      "A rule that stops covering you and a rename are not listed",
+    );
+  });
+
   it("shows no CHANGE for totals that are missing or not counts, and lists every footnote together", () => {
     const odd = (receivers_change: unknown, state = "receivers_changed") =>
       item({
