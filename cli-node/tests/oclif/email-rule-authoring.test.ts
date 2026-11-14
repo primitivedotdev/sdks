@@ -4483,6 +4483,13 @@ describe("get-email-rule-share and list-email-rule-shares: whether a share made 
     ).toEqual([
       `Share ${SHARE} (Vendor receipts): whether it is working could not be read just now; try again.`,
     ]);
+    for (const disagreeing of [
+      { ...WORKING, shared_emails: 0 },
+      { ...WORKING, last_shared_at: null },
+    ])
+      expect(shareActivityLines(share(disagreeing))).toEqual([
+        `Share ${SHARE} (Vendor receipts): whether it is working could not be read just now; try again.`,
+      ]);
     const odd =
       shareActivityLines(
         share({

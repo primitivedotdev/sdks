@@ -2417,6 +2417,8 @@ export function shareActivityLines(share: unknown): string[] {
   // The hour counts the newest email shared, so it is never empty while something was shared; if it is, it was not read.
   if (typeof activity.last_decided_at !== "string" && (count > 0 || sharedAt))
     return [unread];
+  // A count and a last time that disagree were not read together either.
+  if (count > 0 !== (sharedAt !== null)) return [unread];
   const decided =
     typeof activity.last_decided_at === "string"
       ? `its rule last looked at an email in ${person}'s mailboxes in the hour starting ${minuteUtc(activity.last_decided_at)}`
