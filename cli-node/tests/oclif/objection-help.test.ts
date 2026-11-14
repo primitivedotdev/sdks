@@ -71,7 +71,7 @@ describe("the objection commands' help", () => {
   });
 });
 
-describe("the length limits in text flag help (run 14, K2)", () => {
+describe("the length limits in text flag help", () => {
   const flagHelp = (id: string, flag: string) =>
     (command(id).flags?.[flag] as { description?: string } | undefined)
       ?.description ?? "";
@@ -134,5 +134,14 @@ describe("the length limits in text flag help (run 14, K2)", () => {
       withLengthLimit("Why you are declining, up to 500 characters.", 500),
     ).toBe("Why you are declining, up to 500 characters.");
     expect(withLengthLimit("No limit here.", undefined)).toBe("No limit here.");
+    // A flag with no description of its own, and one that gives a limit in
+    // other words or units.
+    expect(withLengthLimit("", 254)).toBe("At most 254 characters.");
+    expect(
+      withLengthLimit("Function source. Up to 1 MiB UTF-8.", 1048576),
+    ).toBe("Function source. Up to 1 MiB UTF-8.");
+    expect(withLengthLimit("Its text, at most 2000 characters", 2000)).toBe(
+      "Its text, at most 2000 characters",
+    );
   });
 });

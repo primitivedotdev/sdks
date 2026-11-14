@@ -299,7 +299,10 @@ async function noDefaultFrom(
   );
   return new Errors.CLIError(`${reason} ${parts.join(" ")}`, {
     exit: 1,
-    code: NO_DEFAULT_FROM_CODE,
+    code:
+      addresses.length === 0 && domains.length === 0
+        ? NO_SEND_ADDRESS_CODE
+        : NO_DEFAULT_FROM_CODE,
   });
 }
 
@@ -349,7 +352,7 @@ function unauthorizedRefusal(
   // exit: 1 to match the unauthorized path elsewhere; oclif's CLIError
   // defaults to 2 otherwise, which breaks callers that branch on exit code.
   return new Errors.CLIError(
-    "Cannot send: CLI auth is missing or invalid (see hint above).",
+    "Cannot send: CLI auth is missing or invalid (see the hint).",
     { exit: 1 },
   );
 }

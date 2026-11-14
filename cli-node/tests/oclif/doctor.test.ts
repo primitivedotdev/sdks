@@ -377,6 +377,55 @@ describe("checkApiKey on a machine with only connected agent profiles", () => {
   });
 });
 
+describe("doctor's output", () => {
+  it("prints the checklist alone, or with --json the JSON alone, naming the failed checks in error", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "primitive-doctor-fail-"));
+    const stderr: string[] = [];
+    const write = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk: string | Uint8Array) => {
+        stderr.push(String(chunk));
+        return true;
+      });
+    const logged: string[] = [];
+    const log = vi.spyOn(console, "log").mockImplementation((line) => {
+      logged.push(String(line));
+    });
+    const previousExitCode = process.exitCode;
+    try {
+      vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
+      vi.stubEnv("PRIMITIVE_AGENT_PROFILE", undefined);
+      vi.stubEnv("PRIMITIVE_API_KEY", undefined);
+      vi.stubEnv("PRIMITIVE_KEY", undefined);
+      const root = resolve(import.meta.dirname, "../..");
+      // No login and no key: the Auth check fails.
+      await DoctorCommand.run([], { root });
+      const text = logged.join("\n");
+      expect(text).toMatch(/^\[FAIL\] Auth: /m);
+      expect(text).not.toContain('"checks"');
+      expect(stderr.join("")).toBe("");
+      expect(process.exitCode).toBe(1);
+
+      logged.length = 0;
+      process.exitCode = undefined;
+      await DoctorCommand.run(["--json"], { root });
+      const summary = JSON.parse(logged.join("\n"));
+      expect(summary).toMatchObject({
+        ok: false,
+        error: { message: "1 check failed: Auth." },
+      });
+      expect(stderr.join("")).toBe("");
+      expect(process.exitCode).toBe(1);
+    } finally {
+      process.exitCode = previousExitCode;
+      write.mockRestore();
+      log.mockRestore();
+      vi.unstubAllEnvs();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("doctor with a saved connected profile", () => {
   it("points a Claude hook receiver at agent connect --status, not listen --status", async () => {
     const directory = mkdtempSync(join(tmpdir(), "primitive-doctor-hook-"));
@@ -414,7 +463,7 @@ describe("doctor with a saved connected profile", () => {
       await DoctorCommand.run([], {
         root: resolve(import.meta.dirname, "../.."),
       });
-      // The checklist alone, on stdout, and no JSON after it (run 14, C5).
+      // The checklist alone, on stdout, and no JSON after it.
       const text = logged.join("\n");
       expect(text).toContain(
         "`primitive agent connect --profile hooked --status --json` for this profile's receiver",

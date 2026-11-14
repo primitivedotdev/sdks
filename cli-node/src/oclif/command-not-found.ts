@@ -15,11 +15,11 @@ export type CommandLookup = {
 const MOST_SUGGESTED = 3;
 
 /**
- * The commands in another group with the word typed where a subcommand was
- * expected, said as a question (`email-rules list-email-rule-objections` is
- * `email-rule-oversight list-email-rule-objections`), or "" when there are
- * none or too many to be a likely meaning. The first word that names one is
- * used, so a mistyped group still finds the command after it.
+ * The commands in another group named by the word typed where a subcommand
+ * was expected, said as a question (`email-rules list-email-rule-objections`
+ * is `email-rule-oversight list-email-rule-objections`), or "" when there are
+ * none or too many to be a likely meaning. Only those words are looked up,
+ * never a value typed after them, which can be any word at all.
  */
 function elsewhere(words: readonly string[], lookup: CommandLookup): string {
   for (const word of words) {
@@ -59,12 +59,10 @@ export function commandNotFoundMessage(
     // A topic, or a command that is also one: the word was most likely a
     // mistyped subcommand.
     if (topic || !command) {
-      const suggestion = elsewhere(parts.slice(end), lookup);
+      const suggestion = elsewhere(parts.slice(end, end + 1), lookup);
       return {
         code: "command_not_found",
-        message: suggestion
-          ? `Unknown command "${typed}".${suggestion}`
-          : `Unknown command "${typed}". Run "${shown} --help" to see the commands under it.`,
+        message: `Unknown command "${typed}".${suggestion} Run "${shown} --help" to see the commands under it.`,
       };
     }
     // Typed in the colon form (`emails:get:<id>`), which oclif does not split.
@@ -79,12 +77,11 @@ export function commandNotFoundMessage(
       message: `Unexpected argument "${rest}" for "${shown}", which takes no arguments. Run "${shown} --help" to see the flags it takes.`,
     };
   }
-  const suggestion = elsewhere(parts, lookup);
+  // A mistyped group, or a command typed without one.
+  const suggestion = elsewhere(parts.slice(0, 2), lookup);
   return {
     code: "command_not_found",
-    message: suggestion
-      ? `Unknown command "${typed}".${suggestion}`
-      : `Unknown command "${typed}". Run "primitive --help" to see the commands.`,
+    message: `Unknown command "${typed}".${suggestion} Run "primitive --help" to see the commands.`,
   };
 }
 

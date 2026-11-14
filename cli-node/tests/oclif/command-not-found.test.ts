@@ -53,7 +53,7 @@ describe("command not found", () => {
     );
   });
 
-  it("asks whether a command under another group was meant, when one has the word typed (run 14, K1)", () => {
+  it("asks whether a command under another group was meant, when one has the word typed", () => {
     const grouped: Record<string, { takesArguments: boolean }> = {
       "email-rules:list-email-rules": { takesArguments: false },
       "email-rule-oversight:list-email-rule-objections": {
@@ -83,14 +83,14 @@ describe("command not found", () => {
     ).toEqual({
       code: "command_not_found",
       message:
-        'Unknown command "primitive email-rules list-email-rule-objections". Did you mean "primitive email-rule-oversight list-email-rule-objections"?',
+        'Unknown command "primitive email-rules list-email-rule-objections". Did you mean "primitive email-rule-oversight list-email-rule-objections"? Run "primitive email-rules --help" to see the commands under it.',
     });
     // A mistyped group, or none at all, still finds it.
     expect(
       commandNotFoundMessage("email-rule:list-email-rule-objections", siblings)
         .message,
     ).toBe(
-      'Unknown command "primitive email-rule list-email-rule-objections". Did you mean "primitive email-rule-oversight list-email-rule-objections"?',
+      'Unknown command "primitive email-rule list-email-rule-objections". Did you mean "primitive email-rule-oversight list-email-rule-objections"? Run "primitive --help" to see the commands.',
     );
     expect(
       commandNotFoundMessage("list-email-rule-objections", siblings).message,
@@ -99,7 +99,13 @@ describe("command not found", () => {
     );
     // Two are both named; more than three are no likely meaning.
     expect(commandNotFoundMessage("email-rules:two", siblings).message).toBe(
-      'Unknown command "primitive email-rules two". Did you mean "primitive x two" or "primitive y two"?',
+      'Unknown command "primitive email-rules two". Did you mean "primitive x two" or "primitive y two"? Run "primitive email-rules --help" to see the commands under it.',
+    );
+    // A value typed after the unknown word is never looked up: it can be any word.
+    expect(
+      commandNotFoundMessage("email-rules:nosuch:two", siblings).message,
+    ).toBe(
+      'Unknown command "primitive email-rules nosuch two". Run "primitive email-rules --help" to see the commands under it.',
     );
     expect(commandNotFoundMessage("email-rules:dup", siblings).message).toBe(
       'Unknown command "primitive email-rules dup". Run "primitive email-rules --help" to see the commands under it.',
@@ -129,7 +135,7 @@ describe("command not found", () => {
       "list-email-rules-covering-me",
     ]) {
       expect(commandNotFoundMessage(`email-rules:${name}`, real).message).toBe(
-        `Unknown command "primitive email-rules ${name}". Did you mean "primitive email-rule-oversight ${name}"?`,
+        `Unknown command "primitive email-rules ${name}". Did you mean "primitive email-rule-oversight ${name}"? Run "primitive email-rules --help" to see the commands under it.`,
       );
     }
   });

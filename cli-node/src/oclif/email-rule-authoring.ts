@@ -394,23 +394,28 @@ type TestResult = TestEmailRuleResult["results"][number];
 type ExpectationResult = NonNullable<
   TestEmailRuleResult["expectations"]
 >["results"][number];
-// `confidence` is read before the spec this CLI was built from carries it.
+// An answer can carry `confidence` beside `probability`.
 type QuestionAnswer = NonNullable<TestResult["question_answers"]>[number] & {
   confidence?: number | null;
 };
 
+const unitInterval = (value: unknown): value is number =>
+  typeof value === "number" &&
+  Number.isFinite(value) &&
+  value >= 0 &&
+  value <= 1;
+
 /**
  * How sure an answer is, from 0 to 1: the answer's `confidence`, the number
- * a webhook payload carries for it, or from an API that does not send it yet,
- * the chance of the answer given worked out from `probability`, the chance of
- * yes (run 14, Q3). Null for an unanswered question.
+ * a webhook payload carries for it, when the answer has one; otherwise the
+ * chance of the answer given, worked out from `probability`, the chance of
+ * yes. Null for an unanswered question.
  */
 export function answerConfidence(answer: QuestionAnswer): number | null {
-  if (typeof answer.confidence === "number") return answer.confidence;
   if (typeof answer.answer !== "boolean") return null;
+  if (unitInterval(answer.confidence)) return answer.confidence;
   const p = answer.probability;
-  if (typeof p !== "number" || !Number.isFinite(p) || p < 0 || p > 1)
-    return null;
+  if (!unitInterval(p)) return null;
   return answer.answer ? p : 1 - p;
 }
 

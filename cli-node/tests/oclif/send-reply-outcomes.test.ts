@@ -777,7 +777,7 @@ describe("send outcomes", () => {
     expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 
-  it("leads a rules-only key's --json refusal with the reason, under a code (run 14, C4)", async () => {
+  it("leads a rules-only key's --json refusal with the reason, under a code", async () => {
     const reason =
       "This credential lists only email rules, and a rule gives no address to send from, so it cannot send. To send, use a separate key with mail:send and not mail:read that lists the address to send from.";
     mocks.getSendFrom.mockResolvedValue({
@@ -814,7 +814,7 @@ describe("send outcomes", () => {
     });
     expect(mocks.sendEmail).not.toHaveBeenCalled();
 
-    // Without --json the reason is the error line itself, as before.
+    // Without --json the reason is the error line itself.
     const plain = await run("send", noFromArgs);
     expect(plain.exitCode).toBe(1);
     expect(plain.error).toBe(reason);

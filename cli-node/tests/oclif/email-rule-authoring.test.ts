@@ -4412,7 +4412,7 @@ describe("email-rules test-email-rule-on-sample --with-protection", () => {
   });
 });
 
-describe("how sure a question's answer is (run 14, Q3)", () => {
+describe("how sure a question's answer is", () => {
   it("reads confidence, the number a webhook payload carries, before working it out from probability", () => {
     expect(
       answerConfidence({
@@ -4435,6 +4435,23 @@ describe("how sure a question's answer is (run 14, Q3)", () => {
         answer: null,
         probability: null,
         error_class: "deadline",
+      }),
+    ).toBeNull();
+    // A confidence it cannot read is not printed; an unanswered question has none.
+    expect(
+      answerConfidence({
+        question: "Q",
+        answer: true,
+        probability: 0.6,
+        confidence: Number.NaN,
+      }),
+    ).toBe(0.6);
+    expect(
+      answerConfidence({
+        question: "Q",
+        answer: null,
+        probability: null,
+        confidence: 0.9,
       }),
     ).toBeNull();
   });

@@ -688,9 +688,11 @@ class DoctorCommand extends Command {
 
     if (flags.json) {
       // `ok` agrees with the exit code: true unless a check failed. Warnings
-      // (an offline-only profile check, say) are counted separately.
+      // (an offline-only profile check, say) are counted separately. A failed
+      // run says which checks failed in `error`, as a failed command does.
+      const failed = rows.filter((row) => row.outcome.status === "fail");
       const summary = {
-        ok: rows.every((row) => row.outcome.status !== "fail"),
+        ok: failed.length === 0,
         warnings: rows.filter((row) => row.outcome.status === "warn").length,
         checks: rows.map(({ label, outcome }) => ({
           label,
@@ -698,11 +700,17 @@ class DoctorCommand extends Command {
           message: outcome.message,
           ...("hint" in outcome && outcome.hint ? { hint: outcome.hint } : {}),
         })),
+        ...(failed.length > 0
+          ? {
+              error: {
+                message: `${failed.length} ${failed.length === 1 ? "check" : "checks"} failed: ${failed.map((row) => row.label).join(", ")}.`,
+              },
+            }
+          : {}),
       };
       this.log(JSON.stringify(summary, null, 2));
     } else {
-      // The checklist alone, without the JSON of the same checks after it
-      // (run 14, C5).
+      // The checklist alone, without the JSON of the same checks after it.
       for (const row of rows) {
         this.log(renderRow(row));
         if ("hint" in row.outcome && row.outcome.hint) {

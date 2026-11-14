@@ -186,6 +186,12 @@ describe("resolveDefaultFrom for a key", () => {
       expect(error).toBeInstanceOf(Error);
       expect((error as Error).message).toContain("--from has no default");
       expect((error as Error).message).toContain(listed);
+      // Nothing listed to send from is a different refusal from a choice to make.
+      const nothing =
+        _case === "no addresses" || _case === "an inbound-only scope";
+      expect(error).toMatchObject({
+        code: nothing ? "no_send_address" : "no_default_from",
+      });
     },
   );
 

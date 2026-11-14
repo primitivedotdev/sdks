@@ -20,7 +20,7 @@ import {
 } from "../../src/oclif/send-outcome.js";
 
 describe("a send that threw", () => {
-  it("leads with why when it was refused before the request started (run 14, C4)", () => {
+  it("leads with why when it was refused before the request started", () => {
     const error = new Errors.CLIError(
       "This credential lists only email rules, so it cannot send.",
       { exit: 1, code: "no_send_address" },
