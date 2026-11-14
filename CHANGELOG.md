@@ -862,10 +862,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
   let the rule match mail the request left out by who it was sent to. A
   covering rule's `receivers` is also null for a rule shown in draft or
   observe that turned active or was deleted after the page was read.
-- A coverage notice can be `receivers_changed`: who receives an active
-  rule's matches changed (its keys, webhooks or share). It carries
-  `receivers_change`, the totals `before` and `after` (`keys`,
-  `reads_in_full`, `webhooks`, `shares`).
+- A coverage notice declares an optional `receivers_change`, the totals
+  `before` and `after` (`keys`, `reads_in_full`, `webhooks`, `shares`), for
+  the `receivers_changed` notice, which the API no longer sends.
 - A rule's `receivers` entries (`keys`, `webhooks` and `shares`) carry
   `newest_at`, when the newest of them was made, to the minute.
 - `getKeyBuilder` answers `mail_limits_available`, whether a key limited to
@@ -1706,12 +1705,11 @@ parsers.
   `--all` and `--json`.
 - `primitive activity concerning` lists what other members' rules did to
   your own mail, newest first: each coverage notice (`started`,
-  `new_version`, `receivers_changed`, `stopped` or `baseline`), when, the
-  rule's name then and its author. A `receivers_changed` notice, a change in
-  who receives an active rule's matches, shows what changed in its totals in
-  a CHANGE column, and a `stopped` notice, a rule that no longer covers you,
-  shows why there (rule deleted, turned off, or no longer reaching your
-  mailboxes); `primitive doctor` counts both among recent coverage notices.
+  `new_version`, `stopped` or `baseline`), when, the rule's name then and
+  its author. A `stopped` notice, a rule that no longer covers you, shows
+  why in a CHANGE column (rule deleted, turned off, or no longer reaching
+  your mailboxes), and `primitive doctor` counts it among recent coverage
+  notices.
   It takes `--limit`, `--cursor`, `--all` and `--json`. `--json` keeps the
   answer's `pending_complete`, and when that is false the text says the
   check for rules covering you with no notice yet did not finish. Its
@@ -1719,7 +1717,10 @@ parsers.
   `email-rule-oversight get-email-rule-covering-me` and
   `create-email-rule-objection --rule-id` take, and its help and empty
   listing, like `primitive doctor`'s "Asked of you" row, say only that
-  notices can lag, naming no interval.
+  notices can lag, naming no interval. The API no longer sends
+  `receivers_changed` notices, so neither command mentions or counts them:
+  the help says a change in who receives a rule's matches is not listed,
+  and that `get-email-rule-covering-me` shows who receives them now.
 - When the API lists no address and no domain a credential can send from,
   send's error no longer suggests `--from`, which cannot help then.
 - `primitive activity created` lists what you created, newest first, with

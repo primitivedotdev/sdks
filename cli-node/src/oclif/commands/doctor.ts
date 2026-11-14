@@ -515,7 +515,6 @@ export async function checkAskedOfYou(
     (item) =>
       (item.state === "started" ||
         item.state === "new_version" ||
-        item.state === "receivers_changed" ||
         item.state === "stopped") &&
       Date.parse(item.created_at) >= since,
   ).length;
