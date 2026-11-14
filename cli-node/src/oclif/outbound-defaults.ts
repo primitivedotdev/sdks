@@ -297,10 +297,13 @@ async function noDefaultFrom(
       ? `Pass the one to use with --from, for example --from ${example}.`
       : "Pass the address to send from with --from <address>.",
   );
+  // Nothing to send from only when the grant itself lists nothing: an
+  // organization-wide reach whose domains could not be read is not known to
+  // be empty, and an explicit --from can still send.
   return new Errors.CLIError(`${reason} ${parts.join(" ")}`, {
     exit: 1,
     code:
-      addresses.length === 0 && domains.length === 0
+      reach !== null && addresses.length === 0 && domains.length === 0
         ? NO_SEND_ADDRESS_CODE
         : NO_DEFAULT_FROM_CODE,
   });

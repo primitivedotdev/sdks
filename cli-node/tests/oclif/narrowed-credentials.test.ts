@@ -195,6 +195,17 @@ describe("resolveDefaultFrom for a key", () => {
     },
   );
 
+  it("gives an organization-wide key whose domains could not be read the no-default code, not the nothing-to-send-from one", async () => {
+    const client = clientAnswering((path) =>
+      path.endsWith("/whoami/grant") ? grantWithScope("org") : refusal(),
+    );
+    const error = await resolveDefaultFrom(client, authContext).catch(
+      (caught: Error) => caught,
+    );
+    expect(error).toMatchObject({ code: "no_default_from" });
+    expect((error as Error).message).toContain("--from has no default");
+  });
+
   it("asks an organization-wide key for --from, listing the sendable domains, never agent@", async () => {
     const { client, requests } = recordingClient({
       "/whoami/grant": () => grantWithScope("org"),
