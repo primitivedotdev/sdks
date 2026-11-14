@@ -995,7 +995,7 @@ export class KeysCreateCommand extends Command {
     }),
     rule: Flags.string({
       description:
-        "An email rule id whose matching mail the key reaches (repeatable). Not with --domain, nor with an --address that is another member's or a former member's mailbox, or a retired address; any other --address beside it (your own, an agent's, a shared one) is read in full, not only the rule's mail.",
+        "An email rule id whose matching mail the key reaches (repeatable). Not with --domain, nor with an --address that is another member's or a former member's mailbox, or a retired address; any other --address beside it (your own, an agent's, a shared one) is read in full, not only the rule's mail. A rule a colleague shares with you goes on a key by the share's id, from your own dashboard session only (the dashboard's API keys page), not through the CLI; your own webhooks receive what a share gives you without a key.",
       multiple: true,
     }),
     "all-mailboxes": Flags.boolean({
@@ -1170,7 +1170,7 @@ export class KeysUpdateCommand extends Command {
   static description =
     `Change an API key's permissions, email rules, name or expiry. It keeps its id and secret.
 
-  --add and --remove take permissions (repeatable, or comma-separated); \`primitive keys create --help-full\` lists the permissions a key can hold. --add-rule and --remove-rule add email rules to the key or take them off, and keep its other rules. --rule replaces every rule the key has with the ones given, so pass all the rules it should keep; it cannot be combined with --add-rule or --remove-rule. --expires-at gives it a new expiry: a later one extends it, within your organization's credential policy, and is how to keep a key working past its expiry (rotating keeps the expiry). --no-expiry removes it where the policy allows. An expired key cannot be extended. Everything else about the key stays as it is, and the output lists any rules a change took off. A rule cannot be added to a key that lists a domain. The API refuses a rule added beside a retired address or the mailbox of a member other than the key's holder (its creator, or whoever it was transferred to), a former member's included, and a permission added to a key that already lists rules beside such an address or a domain. It judges this by the key's holder, not by whoever makes the change. When the key's grant is written and it lists an address or domain beside its rules, which it reads in full, the command says so before the result: on stderr, or with --json in whole_mailbox_warning.
+  --add and --remove take permissions (repeatable, or comma-separated); \`primitive keys create --help-full\` lists the permissions a key can hold. --add-rule and --remove-rule add email rules to the key or take them off, and keep its other rules. --rule replaces every rule the key has with the ones given, so pass all the rules it should keep; it cannot be combined with --add-rule or --remove-rule. A change to the permissions or rules of a key that lists a share made with you (--add, --remove, --rule, --add-rule) is refused through the CLI unless it takes the share off; make it from your own dashboard session. --name, --expires-at and --no-expiry work as usual. --expires-at gives it a new expiry: a later one extends it, within your organization's credential policy, and is how to keep a key working past its expiry (rotating keeps the expiry). --no-expiry removes it where the policy allows. An expired key cannot be extended. Everything else about the key stays as it is, and the output lists any rules a change took off. A rule cannot be added to a key that lists a domain. The API refuses a rule added beside a retired address or the mailbox of a member other than the key's holder (its creator, or whoever it was transferred to), a former member's included, and a permission added to a key that already lists rules beside such an address or a domain. It judges this by the key's holder, not by whoever makes the change. When the key's grant is written and it lists an address or domain beside its rules, which it reads in full, the command says so before the result: on stderr, or with --json in whole_mailbox_warning.
 
   The change runs directly; if your organization requires approval, the command prints the approval link and takes --step-up-token, as for a new key. A key never holds more than you do.
 
@@ -1210,7 +1210,7 @@ export class KeysUpdateCommand extends Command {
     }),
     "add-rule": Flags.string({
       description:
-        "An email rule id to add to the key (repeatable, or comma-separated). Its other rules stay.",
+        "An email rule id to add to the key (repeatable, or comma-separated). Its other rules stay. A rule shared with you is added by its share's id from your own dashboard session only, not through the CLI.",
       multiple: true,
     }),
     "remove-rule": Flags.string({

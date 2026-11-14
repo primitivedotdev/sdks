@@ -1592,6 +1592,13 @@ parsers.
   With `--json`, the document gains a `comparison` key beside the answer's
   own, which the CLI works out from the two answers; when it cannot compare
   them, `comparison` holds only `against` and `error`.
+- `primitive keys create --rule` says in its help that a rule shared with
+  you goes on a key by the share's id from your own dashboard session only,
+  not through the CLI, and that your own webhooks receive what a share
+  gives you without a key. `keys update --add-rule` says the same, and its
+  help says a change to the permissions or rules of a key that lists a
+  share made with you is made from the dashboard, unless it takes the
+  share off.
 - `email-rules get-email-rule-share` and `list-email-rule-shares`, without
   `--json`, say for each share made with you that carries `activity`
   whether it is working: the start of the hour in which its rule last
