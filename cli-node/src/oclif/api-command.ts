@@ -117,10 +117,22 @@ export const API_ERROR_CODES = {
   forbidden: "forbidden",
   grantForbidden: "grant_forbidden",
   invalidDeviceCode: "invalid_device_code",
+  keyRevoked: "key_revoked",
   notFound: "not_found",
   slowDown: "slow_down",
   unauthorized: "unauthorized",
 } as const satisfies Record<string, ApiErrorCode>;
+
+/**
+ * Whether an error code says the credential itself is not accepted: unknown
+ * or invalid (`unauthorized`), or a full API key that was revoked
+ * (`key_revoked`, which carries its own message and gets no sign-in hint).
+ */
+export function refusesCredential(code: string | undefined): boolean {
+  return (
+    code === API_ERROR_CODES.unauthorized || code === API_ERROR_CODES.keyRevoked
+  );
+}
 
 type OperationExecutor = (options: Record<string, unknown>) => Promise<{
   data?: Blob | File | Record<string, unknown> | Record<string, unknown>[];

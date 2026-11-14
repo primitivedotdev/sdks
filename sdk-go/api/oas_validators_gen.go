@@ -30251,6 +30251,8 @@ func (s ErrorResponseErrorCode) Validate() error {
 		return nil
 	case "key_recently_created":
 		return nil
+	case "key_revoked":
+		return nil
 	case "last_owner":
 		return nil
 	case "latest_message_mismatch":
@@ -86871,6 +86873,8 @@ func (s ErrorResponseErrorCode) validateKnown() error {
 	case "key_change_superseded":
 		return nil
 	case "key_recently_created":
+		return nil
+	case "key_revoked":
 		return nil
 	case "last_owner":
 		return nil

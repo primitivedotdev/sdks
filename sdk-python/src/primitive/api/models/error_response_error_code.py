@@ -173,6 +173,7 @@ class ErrorResponseErrorCode(StrEnum):
     KEEP_REFUSED = "keep_refused"
     KEY_CHANGE_SUPERSEDED = "key_change_superseded"
     KEY_RECENTLY_CREATED = "key_recently_created"
+    KEY_REVOKED = "key_revoked"
     LAST_OWNER = "last_owner"
     LATEST_MESSAGE_MISMATCH = "latest_message_mismatch"
     LATEST_MESSAGE_THREAD_UNRESOLVED = "latest_message_thread_unresolved"

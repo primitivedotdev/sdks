@@ -315,6 +315,14 @@ describe("local webhook runner", () => {
     expect(options.sleep).not.toHaveBeenCalled();
     expect(options.handler).not.toHaveBeenCalled();
   });
+  it("tells an agent whose key was revoked to connect again, not to sign in", async () => {
+    steps["/v1/endpoints/endpoint-a/pull"] = [apiError(401, "key_revoked")];
+    const refused = runListen(options);
+    await expect(refused).rejects.toThrow("Connect the agent again");
+    await expect(refused).rejects.toThrow("signing in does not bring it back");
+    expect(options.sleep).not.toHaveBeenCalled();
+    expect(options.handler).not.toHaveBeenCalled();
+  });
   it("refreshes changed credentials and refuses a different connected credential before pulling", async () => {
     steps["/v1/endpoints"] = [
       () => {

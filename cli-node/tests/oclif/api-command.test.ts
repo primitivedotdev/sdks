@@ -304,6 +304,22 @@ describe("writeErrorWithHints", () => {
     expect(writes[1]).toContain("whoami");
   });
 
+  it("prints a revoked key's message alone, never the sign-in hint: signing in again does not bring the key back", () => {
+    const envelope = {
+      success: false,
+      error: {
+        code: "key_revoked",
+        message:
+          "This API key was revoked, so it no longer works. Create a new key, or use another one you hold.",
+      },
+    };
+    writeErrorWithHints(envelope);
+
+    expect(writes).toHaveLength(1);
+    expect(JSON.parse(writes[0] ?? "")).toEqual(envelope);
+    expect(writes.join("")).not.toContain("primitive signin");
+  });
+
   it("does not append a hint for codes without a registered message", () => {
     writeErrorWithHints({
       error: { code: "validation_error", message: "bad input" },
@@ -464,6 +480,25 @@ describe("surfaceUnauthorizedHint", () => {
     expect(loadCliCredentials(tempDir)).toEqual(credentials);
     expect(writes.join("")).toContain("saved credential is preserved");
     expect(writes.join("")).toContain("primitive config reset");
+  });
+
+  it("says nothing of the saved session for a revoked key", () => {
+    saveCliCredentials(tempDir, credentials);
+
+    surfaceUnauthorizedHint({
+      auth: {
+        apiKey: credentials.access_token,
+        apiBaseUrl: credentials.api_base_url,
+        credentials,
+        source: "stored",
+      },
+      baseUrlOverridden: false,
+      configDir: tempDir,
+      payload: { code: "key_revoked", message: "This API key was revoked." },
+    });
+
+    expect(loadCliCredentials(tempDir)).toEqual(credentials);
+    expect(writes).toEqual([]);
   });
 
   it("ignores non-auth errors", () => {

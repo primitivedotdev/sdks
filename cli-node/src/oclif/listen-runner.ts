@@ -37,11 +37,13 @@ class RequestFailure extends ListenError {
         ? AGENT_CONNECTION_REQUIRED_MESSAGE
         : code === "agent_connection_scope_forbidden"
           ? "This operation is outside the connected address grant. Use inbound email events and this credential’s own subscription."
-          : status === 401 || status === 403
-            ? "Listener authorization failed. Run primitive signin or check your API key and account permissions."
-            : status === 409 && code === "subscription_conflict"
-              ? "This subscription has different event filters. Omit --events to resume it, or use primitive listen --subscription new-subscription (add your --events selection)."
-              : `Listener API request failed (HTTP ${status || "transport"}, ${code}).`,
+          : code === "key_revoked"
+            ? "This agent's key was revoked, so it no longer works. Connect the agent again for a new one; signing in does not bring it back."
+            : status === 401 || status === 403
+              ? "Listener authorization failed. Run primitive signin or check your API key and account permissions."
+              : status === 409 && code === "subscription_conflict"
+                ? "This subscription has different event filters. Omit --events to resume it, or use primitive listen --subscription new-subscription (add your --events selection)."
+                : `Listener API request failed (HTTP ${status || "transport"}, ${code}).`,
     );
   }
 }
