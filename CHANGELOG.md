@@ -1575,6 +1575,13 @@ parsers.
   With `--json`, the document gains a `comparison` key beside the answer's
   own, which the CLI works out from the two answers; when it cannot compare
   them, `comparison` holds only `against` and `error`.
+- `email-rules get-email-rule-share` and `list-email-rule-shares`, without
+  `--json`, say for each share made with you whether it is working, from
+  the share's `activity`: the last hour in which its rule looked at an
+  email in the sharing member's mailboxes, how many emails it has shared
+  with you and when it last did, and whether the rule is active. A server
+  that does not send `activity` gets no line; the spec does not list the
+  field yet.
 - `email-rules end-email-rule-share` prints the answer's note, that ending
   a share leaves the rule itself as it was. `email-rules
   list-email-rule-requests`, `list-email-rule-shares` and

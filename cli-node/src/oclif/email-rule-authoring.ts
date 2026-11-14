@@ -2388,6 +2388,48 @@ export function endEmailRuleShareReport(data: unknown): OperationReport {
 }
 
 /**
+ * Whether a share made with you is working, from its `activity`, as one line:
+ * the last hour that has ended (or in which an email was shared with you) in
+ * which its rule looked at an email in the sharing member's mailboxes, how
+ * many emails it has shared and when it last did, and whether the rule is
+ * active. Nothing for a share without it: one you are not the person it is
+ * shared with, one not live, or a server that predates the field.
+ */
+export function shareActivityLines(share: unknown): string[] {
+  if (!isRecord(share) || !isRecord(share.activity)) return [];
+  const activity = share.activity;
+  const id = typeof share.id === "string" ? share.id : "<share-id>";
+  const rule =
+    isRecord(share.rule) && typeof share.rule.name === "string"
+      ? shownLine(share.rule.name)
+      : "";
+  const granter = isRecord(share.granter) ? share.granter : {};
+  const person =
+    shownLine(granter.name) || shownLine(granter.email) || "the member sharing";
+  const head = `Share ${id}${rule ? ` (${rule})` : ""}:`;
+  const count = activity.shared_emails;
+  if (typeof count !== "number")
+    return [
+      `${head} whether it is working could not be read just now; try again.`,
+    ];
+  const decided =
+    typeof activity.last_decided_at === "string"
+      ? `its rule last looked at an email in ${person}'s mailboxes in the hour starting ${minuteUtc(activity.last_decided_at)}`
+      : `its rule has not looked at an email in ${person}'s mailboxes in any hour that has ended since it was shared with you`;
+  const many =
+    activity.shared_emails_more === true ? `more than ${count}` : `${count}`;
+  const shared =
+    count === 0
+      ? "nothing has been shared with you yet"
+      : `it has shared ${many} ${count === 1 && activity.shared_emails_more !== true ? "email" : "emails"} with you${typeof activity.last_shared_at === "string" ? `, the last at ${minuteUtc(activity.last_shared_at)}` : ""}`;
+  const paused =
+    activity.rule_active === false
+      ? " The rule is not active, so nothing new is shared until it is."
+      : "";
+  return [`${head} ${decided}; ${shared}.${paused}`];
+}
+
+/**
  * accept-email-rule-request without --json: the answer's notice, then the
  * rule as it was agreed, since the answer's request block holds the rule as
  * it was asked and reads like what was accepted.
@@ -2574,6 +2616,16 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   endEmailRuleShare: {
     flags: {},
     report: endEmailRuleShareReport,
+  },
+  getEmailRuleShare: {
+    flags: {},
+    report: (data) => ({ lines: shareActivityLines(data) }),
+  },
+  listEmailRuleShares: {
+    flags: {},
+    report: (data) => ({
+      lines: (Array.isArray(data) ? data : []).flatMap(shareActivityLines),
+    }),
   },
   getEmailRule: {
     flags: {},

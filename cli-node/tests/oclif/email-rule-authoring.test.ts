@@ -19,6 +19,7 @@ import {
   endEmailRuleShareReport,
   formatFact,
   NOT_MATCHED_LIST_LIMIT,
+  shareActivityLines,
   testEmailRuleReport,
 } from "../../src/oclif/email-rule-authoring.js";
 import { COMMANDS } from "../../src/oclif/index.js";
@@ -4382,6 +4383,114 @@ describe("formatFact", () => {
       "tags: [] at 0.50",
     );
     expect(formatFact("tags", { value: ["a", "b"] })).toBe("tags: [a, b]");
+  });
+});
+
+describe("get-email-rule-share and list-email-rule-shares: whether a share made with you is working", () => {
+  const SHARE = "00000000-0000-4000-8000-0000000000bb";
+  const share = (activity: unknown, over: Record<string, unknown> = {}) => ({
+    id: SHARE,
+    live: true,
+    is_beneficiary: true,
+    granter: {
+      user_id: RULE,
+      name: "Ethan Byrd",
+      email: "ethan@acme.example",
+      active: true,
+    },
+    rule: { name: "Vendor receipts", state: "active" },
+    rule_id: null,
+    activity,
+    ...over,
+  });
+  const WORKING = {
+    rule_active: true,
+    last_decided_at: "2026-11-14T05:00:00.000Z",
+    shared_emails: 3,
+    last_shared_at: "2026-11-14T05:56:04.123Z",
+  };
+
+  it("says when its rule last looked, what it has shared and when, on get and on each listed share", async () => {
+    answer(share(WORKING));
+    const got = await run("email-rules:get-email-rule-share", ["--id", SHARE]);
+    expect(got.exitCode, got.stderr).toBe(0);
+    expect(stderrLines(got)).toContain(
+      `Share ${SHARE} (Vendor receipts): its rule last looked at an email in Ethan Byrd's mailboxes in the hour starting 2026-11-14 05:00 UTC; it has shared 3 emails with you, the last at 2026-11-14 05:56 UTC.`,
+    );
+    answer([share(WORKING), share(null, { id: E })]);
+    const listed = await run("email-rules:list-email-rule-shares", []);
+    expect(listed.exitCode, listed.stderr).toBe(0);
+    expect(
+      stderrLines(listed).filter((line) => line.startsWith("Share ")),
+    ).toHaveLength(1);
+    // With --json, the document is the answer alone.
+    answer(share(WORKING));
+    const json = await run("email-rules:get-email-rule-share", [
+      "--id",
+      SHARE,
+      "--json",
+    ]);
+    expect(json.stderr).not.toContain("its rule last looked");
+  });
+
+  it("tells a rule that has looked at nothing, a paused rule, one email, more than the cap, and a read that failed", () => {
+    expect(
+      shareActivityLines(
+        share({
+          ...WORKING,
+          last_decided_at: null,
+          shared_emails: 0,
+          last_shared_at: null,
+        }),
+      ),
+    ).toEqual([
+      `Share ${SHARE} (Vendor receipts): its rule has not looked at an email in Ethan Byrd's mailboxes in any hour that has ended since it was shared with you; nothing has been shared with you yet.`,
+    ]);
+    expect(
+      shareActivityLines(
+        share({ ...WORKING, rule_active: false, shared_emails: 1 }),
+      )[0],
+    ).toMatch(
+      /it has shared 1 email with you, the last at 2026-11-14 05:56 UTC\. The rule is not active, so nothing new is shared until it is\.$/,
+    );
+    expect(
+      shareActivityLines(
+        share({ ...WORKING, shared_emails: 10_000, shared_emails_more: true }),
+      )[0],
+    ).toContain("it has shared more than 10000 emails with you");
+    expect(
+      shareActivityLines(
+        share({
+          rule_active: true,
+          last_decided_at: null,
+          shared_emails: null,
+          last_shared_at: null,
+        }),
+      ),
+    ).toEqual([
+      `Share ${SHARE} (Vendor receipts): whether it is working could not be read just now; try again.`,
+    ]);
+  });
+
+  it("says nothing without activity, and strips terminal sequences from names", () => {
+    expect(shareActivityLines(share(null))).toEqual([]);
+    expect(shareActivityLines(share(undefined))).toEqual([]);
+    expect(shareActivityLines(null)).toEqual([]);
+    const line =
+      shareActivityLines(
+        share(WORKING, {
+          granter: { name: "Ethan\u001b[2J", email: null },
+          rule: { name: "Receipts\u202e" },
+        }),
+      )[0] ?? "";
+    for (const mark of ["\u001b", "\u202e"]) expect(line).not.toContain(mark);
+    expect(
+      shareActivityLines(
+        share(WORKING, { granter: { name: null, email: null }, rule: null }),
+      )[0],
+    ).toBe(
+      `Share ${SHARE}: its rule last looked at an email in the member sharing's mailboxes in the hour starting 2026-11-14 05:00 UTC; it has shared 3 emails with you, the last at 2026-11-14 05:56 UTC.`,
+    );
   });
 });
 
