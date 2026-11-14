@@ -6304,10 +6304,6 @@ export type ListActivityObjectsResult = {
          */
         rule_now?: 'deleted';
         /**
-         * For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active, reaching none of your mailboxes now).
-         */
-        stop_reason?: 'deleted' | 'turned_off' | 'no_longer_covers';
-        /**
          * For a receivers_changed notice: who received the rule's matches before and after, in totals. They can be equal when only an owner or a webhook site changed; covering-me shows them by owner. A rotated key counts once here while the old one still works; covering-me counts both.
          */
         receivers_change?: {
@@ -6330,6 +6326,10 @@ export type ListActivityObjectsResult = {
                 shares: number;
             };
         };
+        /**
+         * For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active, reaching none of your mailboxes now).
+         */
+        stop_reason?: 'deleted' | 'turned_off' | 'no_longer_covers';
     }>;
     /**
      * Kinds left out because the caller could not list them through their own routes. Nothing is said about how many there are.

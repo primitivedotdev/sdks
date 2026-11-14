@@ -65774,13 +65774,13 @@ type ListActivityObjectsResultItemsItem struct {
 	// For email_rule_coverage: deleted once the rule it is about has been deleted. Left out while it
 	// exists, or when that could not be checked.
 	RuleNow OptListActivityObjectsResultItemsItemRuleNow `json:"rule_now"`
-	// For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active,
-	// reaching none of your mailboxes now).
-	StopReason OptListActivityObjectsResultItemsItemStopReason `json:"stop_reason"`
 	// For a receivers_changed notice: who received the rule's matches before and after, in totals. They
 	// can be equal when only an owner or a webhook site changed; covering-me shows them by owner. A
 	// rotated key counts once here while the old one still works; covering-me counts both.
 	ReceiversChange OptListActivityObjectsResultItemsItemReceiversChange `json:"receivers_change"`
+	// For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active,
+	// reaching none of your mailboxes now).
+	StopReason OptListActivityObjectsResultItemsItemStopReason `json:"stop_reason"`
 }
 
 // GetKind returns the value of Kind.
@@ -65833,14 +65833,14 @@ func (s *ListActivityObjectsResultItemsItem) GetRuleNow() OptListActivityObjects
 	return s.RuleNow
 }
 
-// GetStopReason returns the value of StopReason.
-func (s *ListActivityObjectsResultItemsItem) GetStopReason() OptListActivityObjectsResultItemsItemStopReason {
-	return s.StopReason
-}
-
 // GetReceiversChange returns the value of ReceiversChange.
 func (s *ListActivityObjectsResultItemsItem) GetReceiversChange() OptListActivityObjectsResultItemsItemReceiversChange {
 	return s.ReceiversChange
+}
+
+// GetStopReason returns the value of StopReason.
+func (s *ListActivityObjectsResultItemsItem) GetStopReason() OptListActivityObjectsResultItemsItemStopReason {
+	return s.StopReason
 }
 
 // SetKind sets the value of Kind.
@@ -65893,14 +65893,14 @@ func (s *ListActivityObjectsResultItemsItem) SetRuleNow(val OptListActivityObjec
 	s.RuleNow = val
 }
 
-// SetStopReason sets the value of StopReason.
-func (s *ListActivityObjectsResultItemsItem) SetStopReason(val OptListActivityObjectsResultItemsItemStopReason) {
-	s.StopReason = val
-}
-
 // SetReceiversChange sets the value of ReceiversChange.
 func (s *ListActivityObjectsResultItemsItem) SetReceiversChange(val OptListActivityObjectsResultItemsItemReceiversChange) {
 	s.ReceiversChange = val
+}
+
+// SetStopReason sets the value of StopReason.
+func (s *ListActivityObjectsResultItemsItem) SetStopReason(val OptListActivityObjectsResultItemsItemStopReason) {
+	s.StopReason = val
 }
 
 type ListActivityObjectsResultItemsItemCreatedThrough struct {

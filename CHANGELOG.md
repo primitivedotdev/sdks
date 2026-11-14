@@ -1220,7 +1220,11 @@ date-time is kept as null and sorts last. A sync stops with an error after
   `rules_beside_personal_mailbox`, and the `last_error` of `listDeliveries`
   and `getDelivery` says how much of a webhook's answer it quotes.
 - Each field above is optional, so the clients read an answer from a
-  server that does not send it yet.
+  server that does not send it yet. In Python, the question answer models
+  of the rule test, sample judgment, look-alike and rule result answers
+  above take `confidence` before `error_class`, as the served document
+  declares it, so a fourth positional argument now lands in `confidence`:
+  pass `error_class` by keyword.
 - New error code: `sending_ip_warmup_cap`. A held scheduled send's `hold`
   `reason` can also be `sending_ip_warmup_cap`.
 - `pullWebhookEvent`'s `503` is also `service_unavailable` when the

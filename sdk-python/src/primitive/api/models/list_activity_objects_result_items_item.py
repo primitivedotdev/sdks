@@ -65,12 +65,12 @@ class ListActivityObjectsResultItemsItem:
                 you were told of is deleted.
             rule_now (ListActivityObjectsResultItemsItemRuleNow | Unset): For email_rule_coverage: deleted once the rule it
                 is about has been deleted. Left out while it exists, or when that could not be checked.
-            stop_reason (ListActivityObjectsResultItemsItemStopReason | Unset): For a stopped notice: deleted, turned_off
-                (no longer active), or no_longer_covers (active, reaching none of your mailboxes now).
             receivers_change (ListActivityObjectsResultItemsItemReceiversChange | Unset): For a receivers_changed notice:
                 who received the rule's matches before and after, in totals. They can be equal when only an owner or a webhook
                 site changed; covering-me shows them by owner. A rotated key counts once here while the old one still works;
                 covering-me counts both.
+            stop_reason (ListActivityObjectsResultItemsItemStopReason | Unset): For a stopped notice: deleted, turned_off
+                (no longer active), or no_longer_covers (active, reaching none of your mailboxes now).
      """
 
     kind: str
@@ -83,8 +83,8 @@ class ListActivityObjectsResultItemsItem:
     created_through: ListActivityObjectsResultItemsItemCreatedThrough
     rule_id: UUID | Unset = UNSET
     rule_now: ListActivityObjectsResultItemsItemRuleNow | Unset = UNSET
-    stop_reason: ListActivityObjectsResultItemsItemStopReason | Unset = UNSET
     receivers_change: ListActivityObjectsResultItemsItemReceiversChange | Unset = UNSET
+    stop_reason: ListActivityObjectsResultItemsItemStopReason | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -124,14 +124,14 @@ class ListActivityObjectsResultItemsItem:
             rule_now = self.rule_now.value
 
 
+        receivers_change: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.receivers_change, Unset):
+            receivers_change = self.receivers_change.to_dict()
+
         stop_reason: str | Unset = UNSET
         if not isinstance(self.stop_reason, Unset):
             stop_reason = self.stop_reason.value
 
-
-        receivers_change: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.receivers_change, Unset):
-            receivers_change = self.receivers_change.to_dict()
 
 
         field_dict: dict[str, Any] = {}
@@ -150,10 +150,10 @@ class ListActivityObjectsResultItemsItem:
             field_dict["rule_id"] = rule_id
         if rule_now is not UNSET:
             field_dict["rule_now"] = rule_now
-        if stop_reason is not UNSET:
-            field_dict["stop_reason"] = stop_reason
         if receivers_change is not UNSET:
             field_dict["receivers_change"] = receivers_change
+        if stop_reason is not UNSET:
+            field_dict["stop_reason"] = stop_reason
 
         return field_dict
 
@@ -231,22 +231,22 @@ class ListActivityObjectsResultItemsItem:
 
 
 
-        _stop_reason = d.pop("stop_reason", UNSET)
-        stop_reason: ListActivityObjectsResultItemsItemStopReason | Unset
-        if isinstance(_stop_reason,  Unset):
-            stop_reason = UNSET
-        else:
-            stop_reason = ListActivityObjectsResultItemsItemStopReason(_stop_reason)
-
-
-
-
         _receivers_change = d.pop("receivers_change", UNSET)
         receivers_change: ListActivityObjectsResultItemsItemReceiversChange | Unset
         if isinstance(_receivers_change,  Unset):
             receivers_change = UNSET
         else:
             receivers_change = ListActivityObjectsResultItemsItemReceiversChange.from_dict(_receivers_change)
+
+
+
+
+        _stop_reason = d.pop("stop_reason", UNSET)
+        stop_reason: ListActivityObjectsResultItemsItemStopReason | Unset
+        if isinstance(_stop_reason,  Unset):
+            stop_reason = UNSET
+        else:
+            stop_reason = ListActivityObjectsResultItemsItemStopReason(_stop_reason)
 
 
 
@@ -262,8 +262,8 @@ class ListActivityObjectsResultItemsItem:
             created_through=created_through,
             rule_id=rule_id,
             rule_now=rule_now,
-            stop_reason=stop_reason,
             receivers_change=receivers_change,
+            stop_reason=stop_reason,
         )
 
 

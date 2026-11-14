@@ -1223,15 +1223,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "deleted"
                 ]
               },
-              "stop_reason": {
-                "description": "For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active, reaching none of your mailboxes now).",
-                "type": "string",
-                "enum": [
-                  "deleted",
-                  "turned_off",
-                  "no_longer_covers"
-                ]
-              },
               "receivers_change": {
                 "description": "For a receivers_changed notice: who received the rule's matches before and after, in totals. They can be equal when only an owner or a webhook site changed; covering-me shows them by owner. A rotated key counts once here while the old one still works; covering-me counts both.",
                 "type": "object",
@@ -1296,6 +1287,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "required": [
                   "before",
                   "after"
+                ]
+              },
+              "stop_reason": {
+                "description": "For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active, reaching none of your mailboxes now).",
+                "type": "string",
+                "enum": [
+                  "deleted",
+                  "turned_off",
+                  "no_longer_covers"
                 ]
               }
             },

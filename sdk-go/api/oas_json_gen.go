@@ -142930,15 +142930,15 @@ func (s *ListActivityObjectsResultItemsItem) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.StopReason.Set {
-			e.FieldStart("stop_reason")
-			s.StopReason.Encode(e)
-		}
-	}
-	{
 		if s.ReceiversChange.Set {
 			e.FieldStart("receivers_change")
 			s.ReceiversChange.Encode(e)
+		}
+	}
+	{
+		if s.StopReason.Set {
+			e.FieldStart("stop_reason")
+			s.StopReason.Encode(e)
 		}
 	}
 }
@@ -142954,8 +142954,8 @@ var jsonFieldsNameOfListActivityObjectsResultItemsItem = [12]string{
 	7:  "created_through",
 	8:  "rule_id",
 	9:  "rule_now",
-	10: "stop_reason",
-	11: "receivers_change",
+	10: "receivers_change",
+	11: "stop_reason",
 }
 
 // Decode decodes ListActivityObjectsResultItemsItem from json.
@@ -143075,16 +143075,6 @@ func (s *ListActivityObjectsResultItemsItem) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"rule_now\"")
 			}
-		case "stop_reason":
-			if err := func() error {
-				s.StopReason.Reset()
-				if err := s.StopReason.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"stop_reason\"")
-			}
 		case "receivers_change":
 			if err := func() error {
 				s.ReceiversChange.Reset()
@@ -143094,6 +143084,16 @@ func (s *ListActivityObjectsResultItemsItem) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"receivers_change\"")
+			}
+		case "stop_reason":
+			if err := func() error {
+				s.StopReason.Reset()
+				if err := s.StopReason.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"stop_reason\"")
 			}
 		default:
 			return d.Skip()
