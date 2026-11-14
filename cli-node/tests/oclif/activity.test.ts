@@ -479,20 +479,21 @@ describe("activity concerning command", () => {
   it("says in its help that notices can lag, promising no cadence, and which id is the rule's", () => {
     const help = ActivityConcerningCommand.description;
     expect(help).toContain("Notices can lag.");
-    // receivers_changed is listed, with its totals, and no longer said to be left out.
-    expect(help).toContain(
-      "receivers_changed, with the totals before and after in the table",
-    );
-    expect(help).not.toContain(
-      "changes to its keys, webhooks or share are not listed",
-    );
     expect(help).not.toMatch(/every minute|a few minutes/);
     expect(help).toContain(
       "RULE ID, and rule_id with --json, is the rule's id",
     );
   });
 
-  it("shows a receivers_changed notice's totals before and after in a last column, and where to see who", () => {
+  it("promises no receivers_changed notices in its help, and says where to see who receives a rule's matches", () => {
+    const help = ActivityConcerningCommand.description;
+    expect(help).not.toMatch(/receivers_change/);
+    expect(help).toContain(
+      "A rename is not listed, and neither is a change in who receives the rule's matches (its keys, webhooks or share): `primitive email-rule-oversight get-email-rule-covering-me <rule-id>` shows who receives them now, while the rule covers you.",
+    );
+  });
+
+  it("still shows an older receivers_changed notice's totals in a last column, with no line under the table about it", () => {
     const changed = (
       before: unknown,
       after: unknown,
@@ -531,9 +532,9 @@ describe("activity concerning command", () => {
     // Other notices keep their state alone, and nothing is added to the NOTICE column.
     expect(out).toMatch(/^started {2,}.*Other/m);
     expect(out).not.toContain("receivers_changed (");
-    expect(out).toContain(
-      "get-email-rule-covering-me <rule-id>` shows who receives them now, by owner, while the rule covers you.",
-    );
+    // The API no longer sends these notices, so nothing under the table explains or promises them.
+    expect(out).not.toContain("receivers_changed:");
+    expect(out).not.toContain("get-email-rule-covering-me");
   });
 
   it("shows a stopped notice's reason in the last column, and nothing for a reason it does not know", () => {
@@ -587,7 +588,7 @@ describe("activity concerning command", () => {
     );
   });
 
-  it("shows no CHANGE for totals that are missing or not counts, and lists every footnote together", () => {
+  it("shows no CHANGE for totals that are missing or not counts, and lists every other footnote together", () => {
     const odd = (receivers_change: unknown, state = "receivers_changed") =>
       item({
         kind: "email_rule_coverage",
@@ -630,13 +631,8 @@ describe("activity concerning command", () => {
       false,
     );
     expect(all).toContain("pending: the rule covers you now");
-    expect(all).toContain(
-      "receivers_changed: who receives the rule's matches changed",
-    );
     expect(all).toContain("did not finish");
-    expect(formatConcerningRows([item({ state: "started" })])).not.toContain(
-      "receivers_changed:",
-    );
+    expect(all).not.toContain("receivers_changed:");
   });
 
   it("lists coverage notices with the rule's author, and asks the API for exactly that", async () => {

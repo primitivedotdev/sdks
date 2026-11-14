@@ -396,9 +396,7 @@ type ExpectationResult = NonNullable<
   TestEmailRuleResult["expectations"]
 >["results"][number];
 // An answer can carry `confidence` beside `probability`.
-type QuestionAnswer = NonNullable<TestResult["question_answers"]>[number] & {
-  confidence?: number | null;
-};
+type QuestionAnswer = NonNullable<TestResult["question_answers"]>[number];
 
 const unitInterval = (value: unknown): value is number =>
   typeof value === "number" &&

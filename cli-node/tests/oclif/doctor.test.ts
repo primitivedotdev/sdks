@@ -631,7 +631,7 @@ describe("checkAskedOfYou", () => {
     };
   }
 
-  it("warns with what is waiting, what covers your mail with no notice yet, and recent notices", async () => {
+  it("warns with what is waiting, what covers your mail with no notice yet, and recent notices, not counting an older receivers_changed one", async () => {
     const { api, urls } = client(
       {
         data: page([
@@ -644,6 +644,7 @@ describe("checkAskedOfYou", () => {
           entry("email_rule_coverage", "pending"),
           entry("email_rule_coverage", "started"),
           entry("email_rule_coverage", "new_version"),
+          // The API no longer sends these; one written before is not counted.
           entry("email_rule_coverage", "receivers_changed"),
           entry("email_rule_coverage", "stopped"),
           entry("email_rule_coverage", "baseline"),
@@ -653,7 +654,7 @@ describe("checkAskedOfYou", () => {
     );
     expect(await checkAskedOfYou(api, NOW)).toEqual({
       status: "warn",
-      message: `1 rule request and 1 objection waiting for you; 1 rule covers your mail with no notice written yet; 4 coverage notices in the last ${DAYS} days`,
+      message: `1 rule request and 1 objection waiting for you; 1 rule covers your mail with no notice written yet; 3 coverage notices in the last ${DAYS} days`,
       hint: "Run `primitive activity asked --state live` and `primitive activity concerning`.",
     });
     expect(Object.fromEntries(urls[0]?.searchParams ?? [])).toEqual({
