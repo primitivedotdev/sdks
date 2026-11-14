@@ -1195,6 +1195,32 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - New error code: `key_revoked`, a `401` for a full API key that was revoked.
   The CLI prints its message without the sign-in hint, and `listen` and the
   default From lookup of `send` and `reply` treat it as a refused credential.
+- A rule question's answer in `testEmailRule` (its results and sample
+  judgments), `testEmailRuleOnSample`, `generateLookAlikes` and
+  `listEmailRuleResults` carries `confidence`, how sure the answer is from
+  0 to 1, null when unanswered. `probability`, the chance the answer is
+  yes, is deprecated in its favour. The `question_answers` descriptions of
+  `listEmailRuleDecisions` and `listEmailRuleDecisionsOnMyMail` name the
+  fields each answer carries.
+- A rule share (`getEmailRuleShare`, `listEmailRuleShares`,
+  `listGivenEmailRuleShares` and the `share` of `acceptEmailRuleRequest`)
+  declares `activity` for the member it is shared with: `rule_active`,
+  `last_decided_at`, `shared_emails`, `shared_emails_more` and
+  `last_shared_at`, so a quiet mailbox can be told from a share that is not
+  working. Its `rule_id` description says where that member uses the share
+  instead.
+- `listActivityObjects` with `relation=concerning` declares the `stopped`
+  coverage notice and its `stop_reason` (`deleted`, `turned_off` or
+  `no_longer_covers`). Its descriptions no longer list the
+  `receivers_changed` notice, which the API no longer sends;
+  `receivers_change` stays declared, and optional.
+- The `rules` of a key's grant (`createKey`, `updateKey`,
+  `decideSuspension`) say which addresses beside them are refused, with
+  `details.reason` `rules_beside_domain` or
+  `rules_beside_personal_mailbox`, and the `last_error` of `listDeliveries`
+  and `getDelivery` says how much of a webhook's answer it quotes.
+- Each field above is optional, so the clients read an answer from a
+  server that does not send it yet.
 - New error code: `sending_ip_warmup_cap`. A held scheduled send's `hold`
   `reason` can also be `sending_ip_warmup_cap`.
 - `pullWebhookEvent`'s `503` is also `service_unavailable` when the

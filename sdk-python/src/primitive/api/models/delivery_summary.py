@@ -88,10 +88,11 @@ class DeliverySummary:
                 delivery that is not rule-granted, whose retries are passes for the email with no time reported (whether one is
                 coming is retry_scheduled).
             duration_ms (int | None | Unset):
-            last_error (None | str | Unset): Why the last attempt failed, or null. A webhook's answer is quoted after its
-                status (HTTP 404: ...) only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only
-                for a caller who reads every webhook); anyone else gets the status and a note. Text the platform writes (a
-                redirect not followed, a network error) is shown to everyone.
+            last_error (None | str | Unset): Why the last attempt failed, or null. A webhook's answer follows its status
+                (HTTP 404: ...) as plain text, at most 300 characters (response_body has more); older attempts can quote more.
+                It is quoted only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for a
+                caller who reads every webhook); anyone else gets the status and a note. Text the platform writes (a redirect
+                not followed, a network error) is shown to everyone.
             email (DeliverySummaryEmailType0 | None | Unset):
      """
 

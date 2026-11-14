@@ -10,6 +10,7 @@ from ..types import UNSET, Unset
 
 from ..models.list_activity_objects_result_items_item_owned_now import ListActivityObjectsResultItemsItemOwnedNow
 from ..models.list_activity_objects_result_items_item_rule_now import ListActivityObjectsResultItemsItemRuleNow
+from ..models.list_activity_objects_result_items_item_stop_reason import ListActivityObjectsResultItemsItemStopReason
 from typing import cast
 from uuid import UUID
 import datetime
@@ -37,17 +38,19 @@ class ListActivityObjectsResultItemsItem:
             name (None | str): The name the object is known by: an endpoint's display name, a route's or filter's pattern, a
                 Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name,
                 an agent's address, a rule's or rule request's name, and for an objection or a coverage notice the name its rule
-                had then. Never a webhook URL and never mail content.
+                had then (for a stopped notice, when you were last told of it, or while it last covered you). Never a webhook
+                URL and never mail content.
             state (str): Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or
                 disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating
                 sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed,
                 connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn
                 (rule requests and objections; an objection may also be amended), and for a coverage notice what it told:
                 started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per
-                rule, not per mailbox), new_version, receivers_changed (who receives an active rule's matches changed: its keys,
-                webhooks or share), or baseline (it already covered you when notices began). pending: a rule started covering
-                your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice
-                is recorded without a new one); its id is then the rule's, and created_at when the rule last changed.
+                rule, not per mailbox), new_version, stopped (it no longer covers you, why in stop_reason), or baseline (it
+                already covered you when notices began). pending: a rule started covering your mailbox and the notices have not
+                recorded that start yet (a restart within an hour of the last start notice, or within 5 minutes of the notices
+                finding the rule stopped, is recorded without a new one, unless you were told it stopped since); its id is then
+                the rule's, and created_at when the rule last changed.
             created_at (datetime.datetime):
             ended_at (datetime.datetime | None): When it was deleted, replaced or revoked, when an API key expired, when a
                 repeating send stopped, or when a rule request or objection was decided (accepted, declined, withdrawn or, for
@@ -62,6 +65,8 @@ class ListActivityObjectsResultItemsItem:
                 you were told of is deleted.
             rule_now (ListActivityObjectsResultItemsItemRuleNow | Unset): For email_rule_coverage: deleted once the rule it
                 is about has been deleted. Left out while it exists, or when that could not be checked.
+            stop_reason (ListActivityObjectsResultItemsItemStopReason | Unset): For a stopped notice: deleted, turned_off
+                (no longer active), or no_longer_covers (active, reaching none of your mailboxes now).
             receivers_change (ListActivityObjectsResultItemsItemReceiversChange | Unset): For a receivers_changed notice:
                 who received the rule's matches before and after, in totals. They can be equal when only an owner or a webhook
                 site changed; covering-me shows them by owner. A rotated key counts once here while the old one still works;
@@ -78,6 +83,7 @@ class ListActivityObjectsResultItemsItem:
     created_through: ListActivityObjectsResultItemsItemCreatedThrough
     rule_id: UUID | Unset = UNSET
     rule_now: ListActivityObjectsResultItemsItemRuleNow | Unset = UNSET
+    stop_reason: ListActivityObjectsResultItemsItemStopReason | Unset = UNSET
     receivers_change: ListActivityObjectsResultItemsItemReceiversChange | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -118,6 +124,11 @@ class ListActivityObjectsResultItemsItem:
             rule_now = self.rule_now.value
 
 
+        stop_reason: str | Unset = UNSET
+        if not isinstance(self.stop_reason, Unset):
+            stop_reason = self.stop_reason.value
+
+
         receivers_change: dict[str, Any] | Unset = UNSET
         if not isinstance(self.receivers_change, Unset):
             receivers_change = self.receivers_change.to_dict()
@@ -139,6 +150,8 @@ class ListActivityObjectsResultItemsItem:
             field_dict["rule_id"] = rule_id
         if rule_now is not UNSET:
             field_dict["rule_now"] = rule_now
+        if stop_reason is not UNSET:
+            field_dict["stop_reason"] = stop_reason
         if receivers_change is not UNSET:
             field_dict["receivers_change"] = receivers_change
 
@@ -218,6 +231,16 @@ class ListActivityObjectsResultItemsItem:
 
 
 
+        _stop_reason = d.pop("stop_reason", UNSET)
+        stop_reason: ListActivityObjectsResultItemsItemStopReason | Unset
+        if isinstance(_stop_reason,  Unset):
+            stop_reason = UNSET
+        else:
+            stop_reason = ListActivityObjectsResultItemsItemStopReason(_stop_reason)
+
+
+
+
         _receivers_change = d.pop("receivers_change", UNSET)
         receivers_change: ListActivityObjectsResultItemsItemReceiversChange | Unset
         if isinstance(_receivers_change,  Unset):
@@ -239,6 +262,7 @@ class ListActivityObjectsResultItemsItem:
             created_through=created_through,
             rule_id=rule_id,
             rule_now=rule_now,
+            stop_reason=stop_reason,
             receivers_change=receivers_change,
         )
 

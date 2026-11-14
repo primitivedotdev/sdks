@@ -38,7 +38,7 @@ class ListActivityObjectsResult:
                 items than limit, or none, while next_cursor is set.
             as_of (datetime.datetime | None | Unset): With relation=concerning only: about when the notices last looked at
                 your organization; null if never or unread. Coverage since may have no notice yet. They look only while one of
-                its rules could cover someone, so this stops moving while none could.
+                its rules could cover someone, or a stopped notice is still to be told, so this stops moving while neither.
             pending_complete (bool | Unset): With relation=concerning, on the first page only: whether the check for rules
                 that started covering you without their start notice (state pending, listed ahead of the notices and beyond
                 limit) was finished. false: some may be missing. Absent where there is nothing to check.

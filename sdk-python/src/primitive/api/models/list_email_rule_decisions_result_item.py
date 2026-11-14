@@ -36,7 +36,8 @@ class ListEmailRuleDecisionsResultItem:
                 several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or
                 is_false). Decisions recorded under the earlier definition counted an exclusion too.
             parts (list[Any]): How each top-level part of the rule decided.
-            question_answers (list[Any]): The answers to the rule's own questions, when they were asked.
+            question_answers (list[Any]): The answers to the rule's own questions, when they were asked: each with question,
+                answer, confidence, the deprecated probability and, when unanswered, error_class, as a test gives them.
             created_at (datetime.datetime):
             detail_withheld (bool | Unset): Present, as true, on a decision about an email whose content cannot be read
                 (withheld, failed to parse, discarded, or still awaiting sender authentication): matched still says what the

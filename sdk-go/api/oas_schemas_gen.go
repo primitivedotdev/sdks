@@ -18219,7 +18219,12 @@ type CredentialsCreateKeyInputGrant1 struct {
 	Permissions []string                                 `json:"permissions"`
 	Addresses   []string                                 `json:"addresses"`
 	Domains     []string                                 `json:"domains"`
-	Rules       []string                                 `json:"rules"`
+	// Email rule ids: the key also reads the emails these rules granted. An address listed beside them
+	// is read in full, so rules beside a domain, a retired address or the address of a member other than
+	// the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error,
+	//  details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes
+	// here by its share's id, from your dashboard session only.
+	Rules []string `json:"rules"`
 	// Deprecated: every key that reaches mail reads the full email. Ignored, except that raw still adds
 	// mail.raw:read (Raw mail) to an address preset or a custom grant.
 	Depth     OptCredentialsCreateKeyInputGrant1Depth     `json:"depth"`
@@ -24706,7 +24711,12 @@ type CredentialsUpdateKeyInputGrant1 struct {
 	Permissions []string                                 `json:"permissions"`
 	Addresses   []string                                 `json:"addresses"`
 	Domains     []string                                 `json:"domains"`
-	Rules       []string                                 `json:"rules"`
+	// Email rule ids: the key also reads the emails these rules granted. An address listed beside them
+	// is read in full, so rules beside a domain, a retired address or the address of a member other than
+	// the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error,
+	//  details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes
+	// here by its share's id, from your dashboard session only.
+	Rules []string `json:"rules"`
 	// Deprecated: every key that reaches mail reads the full email. Ignored, except that raw still adds
 	// mail.raw:read (Raw mail) to an address preset or a custom grant.
 	Depth     OptCredentialsUpdateKeyInputGrant1Depth     `json:"depth"`
@@ -26225,7 +26235,12 @@ type DecideSuspensionRequestGrant1 struct {
 	Permissions []string                               `json:"permissions"`
 	Addresses   []string                               `json:"addresses"`
 	Domains     []string                               `json:"domains"`
-	Rules       []string                               `json:"rules"`
+	// Email rule ids: the key also reads the emails these rules granted. An address listed beside them
+	// is read in full, so rules beside a domain, a retired address or the address of a member other than
+	// the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error,
+	//  details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes
+	// here by its share's id, from your dashboard session only.
+	Rules []string `json:"rules"`
 	// Deprecated: every key that reaches mail reads the full email. Ignored, except that raw still adds
 	// mail.raw:read (Raw mail) to an address preset or a custom grant.
 	Depth     OptDecideSuspensionRequestGrant1Depth     `json:"depth"`
@@ -28621,10 +28636,11 @@ type DeliverySummary struct {
 	Status       DeliverySummaryStatus `json:"status"`
 	AttemptCount int                   `json:"attempt_count"`
 	DurationMs   OptNilInt             `json:"duration_ms"`
-	// Why the last attempt failed, or null. A webhook's answer is quoted after its status (HTTP 404: ...
-	// ) only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for a
-	// caller who reads every webhook); anyone else gets the status and a note. Text the platform writes
-	// (a redirect not followed, a network error) is shown to everyone.
+	// Why the last attempt failed, or null. A webhook's answer follows its status (HTTP 404: ...) as
+	// plain text, at most 300 characters (response_body has more); older attempts can quote more. It is
+	// quoted only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for
+	// a caller who reads every webhook); anyone else gets the status and a note. Text the platform
+	// writes (a redirect not followed, a network error) is shown to everyone.
 	LastError OptNilString               `json:"last_error"`
 	CreatedAt time.Time                  `json:"created_at"`
 	UpdatedAt time.Time                  `json:"updated_at"`
@@ -37451,7 +37467,8 @@ type EmailRuleDecisionOnMyMail struct {
 	NearMiss bool `json:"near_miss"`
 	// How each top-level part of the rule decided.
 	Parts []jx.Raw `json:"parts"`
-	// The answers to the rule's own questions, when they were asked.
+	// The answers to the rule's own questions, when they were asked: each with question, answer,
+	// confidence, the deprecated probability and, when unanswered, error_class, as a test gives them.
 	QuestionAnswers []jx.Raw `json:"question_answers"`
 	// Present, as true, when the email's content cannot be read: matched still says what the rule
 	// decided, and parts and question_answers are empty.
@@ -38263,8 +38280,14 @@ func (s *EmailRuleLookAlikeOutcome) UnmarshalText(data []byte) error {
 }
 
 type EmailRuleLookAlikeQuestionAnswersItem struct {
-	Question    string     `json:"question"`
-	Answer      NilBool    `json:"answer"`
+	Question string  `json:"question"`
+	Answer   NilBool `json:"answer"`
+	// How sure the answer is, from 0 to 1: the chance of the answer given, as webhook payloads carry it.
+	// Null when unanswered.
+	Confidence OptNilFloat64 `json:"confidence"`
+	// Deprecated: read confidence. The chance the answer is yes.
+	//
+	// Deprecated: schema marks this property as deprecated.
 	Probability NilFloat64 `json:"probability"`
 	ErrorClass  OptString  `json:"error_class"`
 }
@@ -38277,6 +38300,11 @@ func (s *EmailRuleLookAlikeQuestionAnswersItem) GetQuestion() string {
 // GetAnswer returns the value of Answer.
 func (s *EmailRuleLookAlikeQuestionAnswersItem) GetAnswer() NilBool {
 	return s.Answer
+}
+
+// GetConfidence returns the value of Confidence.
+func (s *EmailRuleLookAlikeQuestionAnswersItem) GetConfidence() OptNilFloat64 {
+	return s.Confidence
 }
 
 // GetProbability returns the value of Probability.
@@ -38297,6 +38325,11 @@ func (s *EmailRuleLookAlikeQuestionAnswersItem) SetQuestion(val string) {
 // SetAnswer sets the value of Answer.
 func (s *EmailRuleLookAlikeQuestionAnswersItem) SetAnswer(val NilBool) {
 	s.Answer = val
+}
+
+// SetConfidence sets the value of Confidence.
+func (s *EmailRuleLookAlikeQuestionAnswersItem) SetConfidence(val OptNilFloat64) {
+	s.Confidence = val
 }
 
 // SetProbability sets the value of Probability.
@@ -40220,8 +40253,14 @@ func (s *EmailRuleSampleJudgmentOutcome) UnmarshalText(data []byte) error {
 }
 
 type EmailRuleSampleJudgmentQuestionAnswersItem struct {
-	Question    string     `json:"question"`
-	Answer      NilBool    `json:"answer"`
+	Question string  `json:"question"`
+	Answer   NilBool `json:"answer"`
+	// How sure the answer is, from 0 to 1: the chance of the answer given, as webhook payloads carry it.
+	// Null when unanswered.
+	Confidence OptNilFloat64 `json:"confidence"`
+	// Deprecated: read confidence. The chance the answer is yes.
+	//
+	// Deprecated: schema marks this property as deprecated.
 	Probability NilFloat64 `json:"probability"`
 	ErrorClass  OptString  `json:"error_class"`
 }
@@ -40234,6 +40273,11 @@ func (s *EmailRuleSampleJudgmentQuestionAnswersItem) GetQuestion() string {
 // GetAnswer returns the value of Answer.
 func (s *EmailRuleSampleJudgmentQuestionAnswersItem) GetAnswer() NilBool {
 	return s.Answer
+}
+
+// GetConfidence returns the value of Confidence.
+func (s *EmailRuleSampleJudgmentQuestionAnswersItem) GetConfidence() OptNilFloat64 {
+	return s.Confidence
 }
 
 // GetProbability returns the value of Probability.
@@ -40254,6 +40298,11 @@ func (s *EmailRuleSampleJudgmentQuestionAnswersItem) SetQuestion(val string) {
 // SetAnswer sets the value of Answer.
 func (s *EmailRuleSampleJudgmentQuestionAnswersItem) SetAnswer(val NilBool) {
 	s.Answer = val
+}
+
+// SetConfidence sets the value of Confidence.
+func (s *EmailRuleSampleJudgmentQuestionAnswersItem) SetConfidence(val OptNilFloat64) {
+	s.Confidence = val
 }
 
 // SetProbability sets the value of Probability.
@@ -40777,6 +40826,10 @@ type EmailRuleShare struct {
 	// shared stays visible); false when new email is shared. Null when it does not apply (share not live,
 	//  rule not active, or you are not on the share) or could not be read.
 	DeliveryPaused NilBool `json:"delivery_paused"`
+	// For the member it is shared with, on the dashboard or the Primitive CLI, while it is live and
+	// their access reads content: whether it is working, so a quiet mailbox can be told from a stopped
+	// share. Null otherwise.
+	Activity OptNilEmailRuleShareActivity `json:"activity"`
 	// Whether you are the member sharing their mail.
 	IsGranter bool `json:"is_granter"`
 	// Whether you are the member it is shared with.
@@ -40786,7 +40839,9 @@ type EmailRuleShare struct {
 	// The rule's name, state and description; null once the share is not live, except for the member
 	// sharing their mail.
 	Rule NilEmailRuleShareRule `json:"rule"`
-	// The rule itself. Only for the member sharing their mail; null for anyone else.
+	// The rule itself. Only for the member sharing their mail; null for anyone else. The member it is
+	// shared with lists this share's id in a key's grant.rules instead (from the dashboard), and their
+	// own webhooks receive what it shares.
 	RuleID NilUUID `json:"rule_id"`
 }
 
@@ -40833,6 +40888,11 @@ func (s *EmailRuleShare) GetLive() bool {
 // GetDeliveryPaused returns the value of DeliveryPaused.
 func (s *EmailRuleShare) GetDeliveryPaused() NilBool {
 	return s.DeliveryPaused
+}
+
+// GetActivity returns the value of Activity.
+func (s *EmailRuleShare) GetActivity() OptNilEmailRuleShareActivity {
+	return s.Activity
 }
 
 // GetIsGranter returns the value of IsGranter.
@@ -40910,6 +40970,11 @@ func (s *EmailRuleShare) SetDeliveryPaused(val NilBool) {
 	s.DeliveryPaused = val
 }
 
+// SetActivity sets the value of Activity.
+func (s *EmailRuleShare) SetActivity(val OptNilEmailRuleShareActivity) {
+	s.Activity = val
+}
+
 // SetIsGranter sets the value of IsGranter.
 func (s *EmailRuleShare) SetIsGranter(val bool) {
 	s.IsGranter = val
@@ -40938,6 +41003,72 @@ func (s *EmailRuleShare) SetRule(val NilEmailRuleShareRule) {
 // SetRuleID sets the value of RuleID.
 func (s *EmailRuleShare) SetRuleID(val NilUUID) {
 	s.RuleID = val
+}
+
+// Ref: #/components/schemas/EmailRuleShareActivity
+type EmailRuleShareActivity struct {
+	// Whether the rule is active now: only an active rule shares.
+	RuleActive bool `json:"rule_active"`
+	// The start of the hour in which the rule last decided on any email in the sharing member's
+	// mailboxes since the share began, counting only hours that have ended and the hour of the newest
+	// email shared; null if none, or not read.
+	LastDecidedAt NilDateTime `json:"last_decided_at"`
+	// Emails this share has shared, counted up to 10,000; null when these could not be read.
+	SharedEmails NilInt `json:"shared_emails"`
+	// Present when it has shared more than 10,000.
+	SharedEmailsMore OptBool `json:"shared_emails_more"`
+	// When it last shared one; null if it has not, or not read.
+	LastSharedAt NilDateTime `json:"last_shared_at"`
+}
+
+// GetRuleActive returns the value of RuleActive.
+func (s *EmailRuleShareActivity) GetRuleActive() bool {
+	return s.RuleActive
+}
+
+// GetLastDecidedAt returns the value of LastDecidedAt.
+func (s *EmailRuleShareActivity) GetLastDecidedAt() NilDateTime {
+	return s.LastDecidedAt
+}
+
+// GetSharedEmails returns the value of SharedEmails.
+func (s *EmailRuleShareActivity) GetSharedEmails() NilInt {
+	return s.SharedEmails
+}
+
+// GetSharedEmailsMore returns the value of SharedEmailsMore.
+func (s *EmailRuleShareActivity) GetSharedEmailsMore() OptBool {
+	return s.SharedEmailsMore
+}
+
+// GetLastSharedAt returns the value of LastSharedAt.
+func (s *EmailRuleShareActivity) GetLastSharedAt() NilDateTime {
+	return s.LastSharedAt
+}
+
+// SetRuleActive sets the value of RuleActive.
+func (s *EmailRuleShareActivity) SetRuleActive(val bool) {
+	s.RuleActive = val
+}
+
+// SetLastDecidedAt sets the value of LastDecidedAt.
+func (s *EmailRuleShareActivity) SetLastDecidedAt(val NilDateTime) {
+	s.LastDecidedAt = val
+}
+
+// SetSharedEmails sets the value of SharedEmails.
+func (s *EmailRuleShareActivity) SetSharedEmails(val NilInt) {
+	s.SharedEmails = val
+}
+
+// SetSharedEmailsMore sets the value of SharedEmailsMore.
+func (s *EmailRuleShareActivity) SetSharedEmailsMore(val OptBool) {
+	s.SharedEmailsMore = val
+}
+
+// SetLastSharedAt sets the value of LastSharedAt.
+func (s *EmailRuleShareActivity) SetLastSharedAt(val NilDateTime) {
+	s.LastSharedAt = val
 }
 
 // Ref: #/components/schemas/EmailRuleShareBeneficiary
@@ -56022,10 +56153,11 @@ type GetDeliveryResult struct {
 	Status       string `json:"status"`
 	AttemptCount int    `json:"attempt_count"`
 	DurationMs   NilInt `json:"duration_ms"`
-	// Why the last attempt failed, or null. A webhook's answer is quoted after its status (HTTP 404: ...
-	// ) only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for a
-	// caller who reads every webhook); anyone else gets the status and a note. Text the platform writes
-	// (a redirect not followed, a network error) is shown to everyone.
+	// Why the last attempt failed, or null. A webhook's answer follows its status (HTTP 404: ...) as
+	// plain text, at most 300 characters (response_body has more); older attempts can quote more. It is
+	// quoted only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for
+	// a caller who reads every webhook); anyone else gets the status and a note. Text the platform
+	// writes (a redirect not followed, a network error) is shown to everyone.
 	LastError NilString `json:"last_error"`
 	// Machine-readable code for the last failure, or null. A code the webhook chose in its answer is
 	// shown only to a caller who can read the webhook; anyone else gets handler_4xx or handler_5xx.
@@ -65462,10 +65594,10 @@ func (*ListActivityObjectsOK) listActivityObjectsRes() {}
 // Created (the default): what you created. asked: what other members asked of you, open or answered:
 // rule requests made to you, and objections to rules you wrote; kind may then name only
 // email_rule_request and email_rule_objection. concerning: what other members did that concerns your
-// own mail: an active rule that started covering one of your mailboxes, saved a new version, or
-// changed who receives its matches while covering it (email_rule_coverage, the only kind it takes).
-// A rule in draft or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and
-// concerning are for a person's own view only.
+// own mail: an active rule that started covering one of your mailboxes, saved a new version while
+// covering it, or stopped covering it (email_rule_coverage, the only kind it takes). A rule in draft
+// or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and concerning are for
+// a person's own view only.
 type ListActivityObjectsRelation string
 
 const (
@@ -65530,7 +65662,7 @@ type ListActivityObjectsResult struct {
 	NextCursor NilString `json:"next_cursor"`
 	// With relation=concerning only: about when the notices last looked at your organization; null if
 	// never or unread. Coverage since may have no notice yet. They look only while one of its rules
-	// could cover someone, so this stops moving while none could.
+	// could cover someone, or a stopped notice is still to be told, so this stops moving while neither.
 	AsOf OptNilDateTime `json:"as_of"`
 	// With relation=concerning, on the first page only: whether the check for rules that started
 	// covering you without their start notice (state pending, listed ahead of the notices and beyond
@@ -65607,7 +65739,8 @@ type ListActivityObjectsResultItemsItem struct {
 	// The name the object is known by: an endpoint's display name, a route's or filter's pattern, a
 	// Function's name, a send's From address, a wake schedule's command and the address it wakes, an API
 	// key's name, an agent's address, a rule's or rule request's name, and for an objection or a
-	// coverage notice the name its rule had then. Never a webhook URL and never mail content.
+	// coverage notice the name its rule had then (for a stopped notice, when you were last told of it,
+	// or while it last covered you). Never a webhook URL and never mail content.
 	Name NilString `json:"name"`
 	// Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or
 	// disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or
@@ -65616,11 +65749,11 @@ type ListActivityObjectsResultItemsItem struct {
 	// pending, accepted, declined or withdrawn (rule requests and objections; an objection may also be
 	// amended), and for a coverage notice what it told: started (a rule was made or turned active over
 	// your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version,
-	// receivers_changed (who receives an active rule's matches changed: its keys, webhooks or share), or
-	// baseline (it already covered you when notices began). pending: a rule started covering your
-	// mailbox and the notices have not recorded that start yet (a restart within an hour of the last
-	// start notice is recorded without a new one); its id is then the rule's, and created_at when the
-	// rule last changed.
+	// stopped (it no longer covers you, why in stop_reason), or baseline (it already covered you when
+	// notices began). pending: a rule started covering your mailbox and the notices have not recorded
+	// that start yet (a restart within an hour of the last start notice, or within 5 minutes of the
+	// notices finding the rule stopped, is recorded without a new one, unless you were told it stopped
+	// since); its id is then the rule's, and created_at when the rule last changed.
 	State     string    `json:"state"`
 	CreatedAt time.Time `json:"created_at"`
 	// When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped,
@@ -65641,6 +65774,9 @@ type ListActivityObjectsResultItemsItem struct {
 	// For email_rule_coverage: deleted once the rule it is about has been deleted. Left out while it
 	// exists, or when that could not be checked.
 	RuleNow OptListActivityObjectsResultItemsItemRuleNow `json:"rule_now"`
+	// For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active,
+	// reaching none of your mailboxes now).
+	StopReason OptListActivityObjectsResultItemsItemStopReason `json:"stop_reason"`
 	// For a receivers_changed notice: who received the rule's matches before and after, in totals. They
 	// can be equal when only an owner or a webhook site changed; covering-me shows them by owner. A
 	// rotated key counts once here while the old one still works; covering-me counts both.
@@ -65697,6 +65833,11 @@ func (s *ListActivityObjectsResultItemsItem) GetRuleNow() OptListActivityObjects
 	return s.RuleNow
 }
 
+// GetStopReason returns the value of StopReason.
+func (s *ListActivityObjectsResultItemsItem) GetStopReason() OptListActivityObjectsResultItemsItemStopReason {
+	return s.StopReason
+}
+
 // GetReceiversChange returns the value of ReceiversChange.
 func (s *ListActivityObjectsResultItemsItem) GetReceiversChange() OptListActivityObjectsResultItemsItemReceiversChange {
 	return s.ReceiversChange
@@ -65750,6 +65891,11 @@ func (s *ListActivityObjectsResultItemsItem) SetRuleID(val OptUUID) {
 // SetRuleNow sets the value of RuleNow.
 func (s *ListActivityObjectsResultItemsItem) SetRuleNow(val OptListActivityObjectsResultItemsItemRuleNow) {
 	s.RuleNow = val
+}
+
+// SetStopReason sets the value of StopReason.
+func (s *ListActivityObjectsResultItemsItem) SetStopReason(val OptListActivityObjectsResultItemsItemStopReason) {
+	s.StopReason = val
 }
 
 // SetReceiversChange sets the value of ReceiversChange.
@@ -66003,6 +66149,56 @@ func (s *ListActivityObjectsResultItemsItemRuleNow) UnmarshalText(data []byte) e
 	switch ListActivityObjectsResultItemsItemRuleNow(data) {
 	case ListActivityObjectsResultItemsItemRuleNowDeleted:
 		*s = ListActivityObjectsResultItemsItemRuleNowDeleted
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active,
+// reaching none of your mailboxes now).
+type ListActivityObjectsResultItemsItemStopReason string
+
+const (
+	ListActivityObjectsResultItemsItemStopReasonDeleted        ListActivityObjectsResultItemsItemStopReason = "deleted"
+	ListActivityObjectsResultItemsItemStopReasonTurnedOff      ListActivityObjectsResultItemsItemStopReason = "turned_off"
+	ListActivityObjectsResultItemsItemStopReasonNoLongerCovers ListActivityObjectsResultItemsItemStopReason = "no_longer_covers"
+)
+
+// AllValues returns all ListActivityObjectsResultItemsItemStopReason values.
+func (ListActivityObjectsResultItemsItemStopReason) AllValues() []ListActivityObjectsResultItemsItemStopReason {
+	return []ListActivityObjectsResultItemsItemStopReason{
+		ListActivityObjectsResultItemsItemStopReasonDeleted,
+		ListActivityObjectsResultItemsItemStopReasonTurnedOff,
+		ListActivityObjectsResultItemsItemStopReasonNoLongerCovers,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListActivityObjectsResultItemsItemStopReason) MarshalText() ([]byte, error) {
+	switch s {
+	case ListActivityObjectsResultItemsItemStopReasonDeleted:
+		return []byte(s), nil
+	case ListActivityObjectsResultItemsItemStopReasonTurnedOff:
+		return []byte(s), nil
+	case ListActivityObjectsResultItemsItemStopReasonNoLongerCovers:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListActivityObjectsResultItemsItemStopReason) UnmarshalText(data []byte) error {
+	switch ListActivityObjectsResultItemsItemStopReason(data) {
+	case ListActivityObjectsResultItemsItemStopReasonDeleted:
+		*s = ListActivityObjectsResultItemsItemStopReasonDeleted
+		return nil
+	case ListActivityObjectsResultItemsItemStopReasonTurnedOff:
+		*s = ListActivityObjectsResultItemsItemStopReasonTurnedOff
+		return nil
+	case ListActivityObjectsResultItemsItemStopReasonNoLongerCovers:
+		*s = ListActivityObjectsResultItemsItemStopReasonNoLongerCovers
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -69424,7 +69620,8 @@ type ListEmailRuleDecisionsResultItem struct {
 	NearMiss bool `json:"near_miss"`
 	// How each top-level part of the rule decided.
 	Parts []jx.Raw `json:"parts"`
-	// The answers to the rule's own questions, when they were asked.
+	// The answers to the rule's own questions, when they were asked: each with question, answer,
+	// confidence, the deprecated probability and, when unanswered, error_class, as a test gives them.
 	QuestionAnswers []jx.Raw `json:"question_answers"`
 	// Present, as true, on a decision about an email whose content cannot be read (withheld, failed to
 	// parse, discarded, or still awaiting sender authentication): matched still says what the rule
@@ -70654,8 +70851,14 @@ func (s *ListEmailRuleResultsResultRulesItemDecisionPartsItem) SetColumns(val []
 }
 
 type ListEmailRuleResultsResultRulesItemDecisionQuestionAnswersItem struct {
-	Question    string     `json:"question"`
-	Answer      NilBool    `json:"answer"`
+	Question string  `json:"question"`
+	Answer   NilBool `json:"answer"`
+	// How sure the answer is, from 0 to 1: the chance of the answer given, as webhook payloads carry it.
+	// Null when unanswered.
+	Confidence OptNilFloat64 `json:"confidence"`
+	// Deprecated: read confidence. The chance the answer is yes.
+	//
+	// Deprecated: schema marks this property as deprecated.
 	Probability NilFloat64 `json:"probability"`
 	ErrorClass  OptString  `json:"error_class"`
 }
@@ -70668,6 +70871,11 @@ func (s *ListEmailRuleResultsResultRulesItemDecisionQuestionAnswersItem) GetQues
 // GetAnswer returns the value of Answer.
 func (s *ListEmailRuleResultsResultRulesItemDecisionQuestionAnswersItem) GetAnswer() NilBool {
 	return s.Answer
+}
+
+// GetConfidence returns the value of Confidence.
+func (s *ListEmailRuleResultsResultRulesItemDecisionQuestionAnswersItem) GetConfidence() OptNilFloat64 {
+	return s.Confidence
 }
 
 // GetProbability returns the value of Probability.
@@ -70688,6 +70896,11 @@ func (s *ListEmailRuleResultsResultRulesItemDecisionQuestionAnswersItem) SetQues
 // SetAnswer sets the value of Answer.
 func (s *ListEmailRuleResultsResultRulesItemDecisionQuestionAnswersItem) SetAnswer(val NilBool) {
 	s.Answer = val
+}
+
+// SetConfidence sets the value of Confidence.
+func (s *ListEmailRuleResultsResultRulesItemDecisionQuestionAnswersItem) SetConfidence(val OptNilFloat64) {
+	s.Confidence = val
 }
 
 // SetProbability sets the value of Probability.
@@ -93113,6 +93326,52 @@ func (o OptListActivityObjectsResultItemsItemRuleNow) Or(d ListActivityObjectsRe
 	return d
 }
 
+// NewOptListActivityObjectsResultItemsItemStopReason returns new OptListActivityObjectsResultItemsItemStopReason with value set to v.
+func NewOptListActivityObjectsResultItemsItemStopReason(v ListActivityObjectsResultItemsItemStopReason) OptListActivityObjectsResultItemsItemStopReason {
+	return OptListActivityObjectsResultItemsItemStopReason{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListActivityObjectsResultItemsItemStopReason is optional ListActivityObjectsResultItemsItemStopReason.
+type OptListActivityObjectsResultItemsItemStopReason struct {
+	Value ListActivityObjectsResultItemsItemStopReason
+	Set   bool
+}
+
+// IsSet returns true if OptListActivityObjectsResultItemsItemStopReason was set.
+func (o OptListActivityObjectsResultItemsItemStopReason) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListActivityObjectsResultItemsItemStopReason) Reset() {
+	var v ListActivityObjectsResultItemsItemStopReason
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListActivityObjectsResultItemsItemStopReason) SetTo(v ListActivityObjectsResultItemsItemStopReason) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListActivityObjectsResultItemsItemStopReason) Get() (v ListActivityObjectsResultItemsItemStopReason, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListActivityObjectsResultItemsItemStopReason) Or(d ListActivityObjectsResultItemsItemStopReason) ListActivityObjectsResultItemsItemStopReason {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptListActivityObjectsState returns new OptListActivityObjectsState with value set to v.
 func NewOptListActivityObjectsState(v ListActivityObjectsState) OptListActivityObjectsState {
 	return OptListActivityObjectsState{
@@ -98515,6 +98774,69 @@ func (o OptNilEmailRuleScopeNames) Get() (v EmailRuleScopeNames, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilEmailRuleScopeNames) Or(d EmailRuleScopeNames) EmailRuleScopeNames {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEmailRuleShareActivity returns new OptNilEmailRuleShareActivity with value set to v.
+func NewOptNilEmailRuleShareActivity(v EmailRuleShareActivity) OptNilEmailRuleShareActivity {
+	return OptNilEmailRuleShareActivity{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailRuleShareActivity is optional nullable EmailRuleShareActivity.
+type OptNilEmailRuleShareActivity struct {
+	Value EmailRuleShareActivity
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailRuleShareActivity was set.
+func (o OptNilEmailRuleShareActivity) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailRuleShareActivity) Reset() {
+	var v EmailRuleShareActivity
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailRuleShareActivity) SetTo(v EmailRuleShareActivity) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailRuleShareActivity) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailRuleShareActivity) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailRuleShareActivity
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailRuleShareActivity) Get() (v EmailRuleShareActivity, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailRuleShareActivity) Or(d EmailRuleShareActivity) EmailRuleShareActivity {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -136251,8 +136573,14 @@ func (s *TestEmailRuleOnSampleResultProtectionWithheldByItemReason) UnmarshalTex
 }
 
 type TestEmailRuleOnSampleResultQuestionAnswersItem struct {
-	Question    string     `json:"question"`
-	Answer      NilBool    `json:"answer"`
+	Question string  `json:"question"`
+	Answer   NilBool `json:"answer"`
+	// How sure the answer is, from 0 to 1: the chance of the answer given, as webhook payloads carry it.
+	// Null when unanswered.
+	Confidence OptNilFloat64 `json:"confidence"`
+	// Deprecated: read confidence. The chance the answer is yes.
+	//
+	// Deprecated: schema marks this property as deprecated.
 	Probability NilFloat64 `json:"probability"`
 	ErrorClass  OptString  `json:"error_class"`
 }
@@ -136265,6 +136593,11 @@ func (s *TestEmailRuleOnSampleResultQuestionAnswersItem) GetQuestion() string {
 // GetAnswer returns the value of Answer.
 func (s *TestEmailRuleOnSampleResultQuestionAnswersItem) GetAnswer() NilBool {
 	return s.Answer
+}
+
+// GetConfidence returns the value of Confidence.
+func (s *TestEmailRuleOnSampleResultQuestionAnswersItem) GetConfidence() OptNilFloat64 {
+	return s.Confidence
 }
 
 // GetProbability returns the value of Probability.
@@ -136285,6 +136618,11 @@ func (s *TestEmailRuleOnSampleResultQuestionAnswersItem) SetQuestion(val string)
 // SetAnswer sets the value of Answer.
 func (s *TestEmailRuleOnSampleResultQuestionAnswersItem) SetAnswer(val NilBool) {
 	s.Answer = val
+}
+
+// SetConfidence sets the value of Confidence.
+func (s *TestEmailRuleOnSampleResultQuestionAnswersItem) SetConfidence(val OptNilFloat64) {
+	s.Confidence = val
 }
 
 // SetProbability sets the value of Probability.
@@ -137622,8 +137960,14 @@ func (s *TestEmailRuleResultResultsItemPartsItem) SetColumns(val []string) {
 }
 
 type TestEmailRuleResultResultsItemQuestionAnswersItem struct {
-	Question    string     `json:"question"`
-	Answer      NilBool    `json:"answer"`
+	Question string  `json:"question"`
+	Answer   NilBool `json:"answer"`
+	// How sure the answer is, from 0 to 1: the chance of the answer given, as webhook payloads carry it.
+	// Null when unanswered.
+	Confidence OptNilFloat64 `json:"confidence"`
+	// Deprecated: read confidence. The chance the answer is yes.
+	//
+	// Deprecated: schema marks this property as deprecated.
 	Probability NilFloat64 `json:"probability"`
 	ErrorClass  OptString  `json:"error_class"`
 }
@@ -137636,6 +137980,11 @@ func (s *TestEmailRuleResultResultsItemQuestionAnswersItem) GetQuestion() string
 // GetAnswer returns the value of Answer.
 func (s *TestEmailRuleResultResultsItemQuestionAnswersItem) GetAnswer() NilBool {
 	return s.Answer
+}
+
+// GetConfidence returns the value of Confidence.
+func (s *TestEmailRuleResultResultsItemQuestionAnswersItem) GetConfidence() OptNilFloat64 {
+	return s.Confidence
 }
 
 // GetProbability returns the value of Probability.
@@ -137656,6 +138005,11 @@ func (s *TestEmailRuleResultResultsItemQuestionAnswersItem) SetQuestion(val stri
 // SetAnswer sets the value of Answer.
 func (s *TestEmailRuleResultResultsItemQuestionAnswersItem) SetAnswer(val NilBool) {
 	s.Answer = val
+}
+
+// SetConfidence sets the value of Confidence.
+func (s *TestEmailRuleResultResultsItemQuestionAnswersItem) SetConfidence(val OptNilFloat64) {
+	s.Confidence = val
 }
 
 // SetProbability sets the value of Probability.

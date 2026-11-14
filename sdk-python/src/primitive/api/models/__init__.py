@@ -605,6 +605,7 @@ from .email_rule_scope_warning import EmailRuleScopeWarning
 from .email_rule_scope_warning_kind import EmailRuleScopeWarningKind
 from .email_rule_scope_warning_reason import EmailRuleScopeWarningReason
 from .email_rule_share import EmailRuleShare
+from .email_rule_share_activity import EmailRuleShareActivity
 from .email_rule_share_beneficiary import EmailRuleShareBeneficiary
 from .email_rule_share_end_reason_type_1 import EmailRuleShareEndReasonType1
 from .email_rule_share_end_reason_type_2_type_1 import EmailRuleShareEndReasonType2Type1
@@ -973,6 +974,7 @@ from .list_activity_objects_result_items_item_receivers_change import ListActivi
 from .list_activity_objects_result_items_item_receivers_change_after import ListActivityObjectsResultItemsItemReceiversChangeAfter
 from .list_activity_objects_result_items_item_receivers_change_before import ListActivityObjectsResultItemsItemReceiversChangeBefore
 from .list_activity_objects_result_items_item_rule_now import ListActivityObjectsResultItemsItemRuleNow
+from .list_activity_objects_result_items_item_stop_reason import ListActivityObjectsResultItemsItemStopReason
 from .list_activity_objects_result_withheld_item import ListActivityObjectsResultWithheldItem
 from .list_activity_objects_result_withheld_item_reason import ListActivityObjectsResultWithheldItemReason
 from .list_activity_objects_state import ListActivityObjectsState
@@ -2537,6 +2539,7 @@ __all__ = (
     "EmailRuleScopeWarningKind",
     "EmailRuleScopeWarningReason",
     "EmailRuleShare",
+    "EmailRuleShareActivity",
     "EmailRuleShareBeneficiary",
     "EmailRuleShareEndReasonType1",
     "EmailRuleShareEndReasonType2Type1",
@@ -2905,6 +2908,7 @@ __all__ = (
     "ListActivityObjectsResultItemsItemReceiversChangeAfter",
     "ListActivityObjectsResultItemsItemReceiversChangeBefore",
     "ListActivityObjectsResultItemsItemRuleNow",
+    "ListActivityObjectsResultItemsItemStopReason",
     "ListActivityObjectsResultWithheldItem",
     "ListActivityObjectsResultWithheldItemReason",
     "ListActivityObjectsState",

@@ -30835,13 +30835,15 @@ func (s *Server) handleLeaveOrganizationRequest(args [0]string, argsEscaped bool
 // each naming the member who asked or objected in created_through. A key, an app or an agent has
 // none, and gets both kinds in withheld. With relation=concerning it lists instead what other
 // members did that concerns the person's own mail: each time a rule started covering one of their
-// mailboxes, saved a new version, or changed who receives its matches while covering it, named as
-// the rule was then, naming its author in created_through, under their current membership; only on
-// the dashboard or the Primitive CLI. A key, an app or an agent has none, and gets
-// email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a periodic
-// job and can lag: until the notices record a rule starting to cover you, the first page lists that
-// rule as pending (pending_complete says whether that check finished), and as_of says about when the
-// notices last looked. For what covers you now, read GET /email-rules/covering-me.
+// mailboxes, saved a new version while covering it, or stopped covering it, named as the rule was
+// then, naming its author in created_through, under their current membership; only on the dashboard
+// or the Primitive CLI. A key, an app or an agent has none, and gets email_rule_coverage in withheld.
+//
+//	A notice never reads as ended. Notices are written by a periodic job and can lag: until the
+//
+// notices record a rule starting to cover you, the first page lists that rule as pending
+// (pending_complete says whether that check finished), and as_of says about when the notices last
+// looked. For what covers you now, read GET /email-rules/covering-me.
 //
 // GET /activity/objects
 func (s *Server) handleListActivityObjectsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

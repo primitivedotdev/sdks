@@ -34,7 +34,11 @@ class CredentialsUpdateKeyInputGrantType1:
             permissions (list[str] | Unset):
             addresses (list[str] | Unset):
             domains (list[str] | Unset):
-            rules (list[str] | Unset):
+            rules (list[str] | Unset): Email rule ids: the key also reads the emails these rules granted. An address listed
+                beside them is read in full, so rules beside a domain, a retired address or the address of a member other than
+                the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error,
+                details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its
+                share's id, from your dashboard session only.
             depth (CredentialsUpdateKeyInputGrantType1Depth | Unset): Deprecated: every key that reaches mail reads the full
                 email. Ignored, except that raw still adds mail.raw:read (Raw mail) to an address preset or a custom grant.
             resources (CredentialsUpdateKeyInputGrantType1Resources | Unset):

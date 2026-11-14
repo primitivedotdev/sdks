@@ -24659,6 +24659,24 @@ func (s *EmailRuleLookAlikeQuestionAnswersItem) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if value, ok := s.Confidence.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "confidence",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.Probability.Get(); ok {
 			if err := func() error {
 				if err := (validate.Float{}).Validate(float64(value)); err != nil {
@@ -25677,6 +25695,24 @@ func (s *EmailRuleSampleJudgmentQuestionAnswersItem) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if value, ok := s.Confidence.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "confidence",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.Probability.Get(); ok {
 			if err := func() error {
 				if err := (validate.Float{}).Validate(float64(value)); err != nil {
@@ -26511,6 +26547,24 @@ func (s *EmailRuleShare) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Activity.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "activity",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.Rule.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -26525,6 +26579,46 @@ func (s *EmailRuleShare) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "rule",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *EmailRuleShareActivity) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.SharedEmails.Get(); ok {
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           0,
+					MaxSet:        false,
+					Max:           0,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "shared_emails",
 			Error: err,
 		})
 	}
@@ -41036,6 +41130,24 @@ func (s *ListActivityObjectsResultItemsItem) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.StopReason.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "stop_reason",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.ReceiversChange.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -41300,6 +41412,20 @@ func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) Validate() err
 func (s ListActivityObjectsResultItemsItemRuleNow) Validate() error {
 	switch s {
 	case "deleted":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
+}
+
+func (s ListActivityObjectsResultItemsItemStopReason) Validate() error {
+	switch s {
+	case "deleted":
+		return nil
+	case "turned_off":
+		return nil
+	case "no_longer_covers":
 		return nil
 	default:
 		// Added to the API after this client was generated.
@@ -45146,6 +45272,24 @@ func (s *ListEmailRuleResultsResultRulesItemDecisionQuestionAnswersItem) Validat
 	}
 
 	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.Confidence.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "confidence",
+			Error: err,
+		})
+	}
 	if err := func() error {
 		if value, ok := s.Probability.Get(); ok {
 			if err := func() error {
@@ -74470,6 +74614,24 @@ func (s *TestEmailRuleOnSampleResultQuestionAnswersItem) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if value, ok := s.Confidence.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "confidence",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.Probability.Get(); ok {
 			if err := func() error {
 				if err := (validate.Float{}).Validate(float64(value)); err != nil {
@@ -75781,6 +75943,24 @@ func (s *TestEmailRuleResultResultsItemQuestionAnswersItem) Validate() error {
 	}
 
 	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.Confidence.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "confidence",
+			Error: err,
+		})
+	}
 	if err := func() error {
 		if value, ok := s.Probability.Get(); ok {
 			if err := func() error {
@@ -88157,6 +88337,19 @@ func (s ListActivityObjectsResultItemsItemOwnedNow) validateKnown() error {
 func (s ListActivityObjectsResultItemsItemRuleNow) validateKnown() error {
 	switch s {
 	case "deleted":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ListActivityObjectsResultItemsItemStopReason) validateKnown() error {
+	switch s {
+	case "deleted":
+		return nil
+	case "turned_off":
+		return nil
+	case "no_longer_covers":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)

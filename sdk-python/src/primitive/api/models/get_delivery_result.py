@@ -39,10 +39,11 @@ class GetDeliveryResult:
             status (str):
             attempt_count (int):
             duration_ms (int | None):
-            last_error (None | str): Why the last attempt failed, or null. A webhook's answer is quoted after its status
-                (HTTP 404: ...) only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for a
-                caller who reads every webhook); anyone else gets the status and a note. Text the platform writes (a redirect
-                not followed, a network error) is shown to everyone.
+            last_error (None | str): Why the last attempt failed, or null. A webhook's answer follows its status (HTTP 404:
+                ...) as plain text, at most 300 characters (response_body has more); older attempts can quote more. It is quoted
+                only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads
+                every webhook); anyone else gets the status and a note. Text the platform writes (a redirect not followed, a
+                network error) is shown to everyone.
             last_error_code (None | str): Machine-readable code for the last failure, or null. A code the webhook chose in
                 its answer is shown only to a caller who can read the webhook; anyone else gets handler_4xx or handler_5xx.
             response_status (int | None): The HTTP status the endpoint answered this attempt with: a webhook's own answer,
