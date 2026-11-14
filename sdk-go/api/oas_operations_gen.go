@@ -20,6 +20,7 @@ const (
 	AgentWorkProposeDeadlineOperation             OperationName = "AgentWorkProposeDeadline"
 	AgentWorkReportStatusOperation                OperationName = "AgentWorkReportStatus"
 	AgentWorkWithdrawDeadlineOperation            OperationName = "AgentWorkWithdrawDeadline"
+	AmendEmailRuleObjectionOperation              OperationName = "AmendEmailRuleObjection"
 	AwaitReplyOperation                           OperationName = "AwaitReply"
 	CancelSentEmailOperation                      OperationName = "CancelSentEmail"
 	CancelSentEmailByIdempotencyKeyOperation      OperationName = "CancelSentEmailByIdempotencyKey"

@@ -6269,12 +6269,12 @@ export type ListActivityObjectsResult = {
          */
         name: string | null;
         /**
-         * Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, receivers_changed (who receives an active rule's matches changed: its keys, webhooks or share), or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed.
+         * Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections; an objection may also be amended), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, receivers_changed (who receives an active rule's matches changed: its keys, webhooks or share), or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed.
          */
         state: string;
         created_at: string;
         /**
-         * When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null otherwise, as on every coverage notice (rule_now marks one whose rule was deleted).
+         * When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined, withdrawn or, for an objection, amended); null otherwise, as on every coverage notice (rule_now marks one whose rule was deleted).
          */
         ended_at: string | null;
         /**
@@ -8628,9 +8628,9 @@ export type ListEmailRuleVersionsCoveringMeResult = Array<EmailRuleCoveringMeVer
 export type EmailRuleObjection = {
     id: string;
     /**
-     * pending until the rule's author accepts it (turning the rule off) or declines it, or the member who made it withdraws it; never changes after.
+     * pending until the rule's author accepts it (turning the rule off), declines it, or answers it amended (they saved a newer version of the rule), or the member who made it withdraws it; never changes after.
      */
-    status: 'pending' | 'accepted' | 'declined' | 'withdrawn';
+    status: 'pending' | 'accepted' | 'declined' | 'withdrawn' | 'amended';
     rule: {
         /**
          * Null once the rule was deleted outright.
@@ -8640,6 +8640,14 @@ export type EmailRuleObjection = {
          * Its name when the objection was made.
          */
         name: string;
+        /**
+         * The rule's version when the objection was made; null when it could not be told for an older objection.
+         */
+        objected_version: number | null;
+        /**
+         * The rule's version when its author answered amended; null otherwise.
+         */
+        amended_version: number | null;
     };
     objector: EmailRuleObjectionPerson;
     author: EmailRuleObjectionPerson;
@@ -8659,6 +8667,10 @@ export type EmailRuleObjection = {
      * The author's answer when declining, which the objector sees; null when none was given.
      */
     decline_reason: string | null;
+    /**
+     * The author's note when answering amended, which the objector sees; null when none was given.
+     */
+    amend_note: string | null;
     created_at: string;
     decided_at: string | null;
     decided_by_user_id: string | null;
@@ -8679,7 +8691,7 @@ export type CreateEmailRuleObjectionRequest = {
      */
     rule_id: string;
     /**
-     * Why you object and what you ask, up to 500 characters: to turn the rule off, to narrow it, or to explain who receives what it matches. Null or absent for none. The rule's author and the organization's owners and admins see it while it stands; withdrawing clears it.
+     * Why you object and what you ask, up to 500 characters: to turn the rule off, to narrow it, or to explain who receives what it matches. Null or absent for none. The rule's author and the organization's owners and admins see it while it stands, and an email to the author about the objection quotes it. Withdrawing clears it from the objection, not from an email already sent or being sent.
      */
     message?: string | null;
 };
@@ -8694,7 +8706,7 @@ export type WithdrawEmailRuleObjectionResult = EmailRuleObjection;
 
 export type DeclineEmailRuleObjectionRequest = {
     /**
-     * Why you are declining, up to 500 characters; null or absent for none. The member who objected sees it: it is how to answer one that asks you to narrow the rule or explain who receives it.
+     * Why you are declining, up to 500 characters; null or absent for none. The member who objected sees it: it is how to answer one that asks you to explain who receives it. If you changed the rule instead, answer amended.
      */
     reason?: string | null;
 };
@@ -8702,6 +8714,15 @@ export type DeclineEmailRuleObjectionRequest = {
 export type DeclineEmailRuleObjectionResult = EmailRuleObjection;
 
 export type AcceptEmailRuleObjectionResult = EmailRuleObjection;
+
+export type AmendEmailRuleObjectionRequest = {
+    /**
+     * What you changed, up to 500 characters; null or absent for none. The member who objected sees it.
+     */
+    note?: string | null;
+};
+
+export type AmendEmailRuleObjectionResult = EmailRuleObjection;
 
 export type GetDomainAgentAuthorizationResult = {
     domain_id: string;
@@ -23413,6 +23434,64 @@ export type AcceptEmailRuleObjectionResponses = {
 };
 
 export type AcceptEmailRuleObjectionResponse = AcceptEmailRuleObjectionResponses[keyof AcceptEmailRuleObjectionResponses];
+
+export type AmendEmailRuleObjectionData = {
+    body?: AmendEmailRuleObjectionRequest;
+    headers?: {
+        /**
+         * Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.
+         */
+        'Idempotency-Key'?: string;
+    };
+    path: {
+        /**
+         * The objection id.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/email-rule-objections/{id}/amend';
+};
+
+export type AmendEmailRuleObjectionErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason author_only: only the rule's author can answer it.
+     */
+    403: ErrorResponse;
+    /**
+     * not_found: no objection with this id that you can see.
+     */
+    404: ErrorResponse;
+    /**
+     * not_pending: it was already decided or withdrawn (details.status). conflict with details.reason no_new_version: the rule has no version newer than details.objected_version (details.current_version is its version now); rule_deleted: the rule was deleted.
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type AmendEmailRuleObjectionError = AmendEmailRuleObjectionErrors[keyof AmendEmailRuleObjectionErrors];
+
+export type AmendEmailRuleObjectionResponses = {
+    /**
+     * Answer an objection to your rule as amended
+     */
+    200: SuccessEnvelope & {
+        data: EmailRuleObjection;
+    };
+};
+
+export type AmendEmailRuleObjectionResponse = AmendEmailRuleObjectionResponses[keyof AmendEmailRuleObjectionResponses];
 
 export type GetDomainAgentAuthorizationData = {
     body?: never;

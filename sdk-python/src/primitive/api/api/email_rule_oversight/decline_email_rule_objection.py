@@ -125,8 +125,8 @@ def sync_detailed(
     """ Decline an objection to your rule
 
      Declines a pending objection to a rule you wrote, optionally saying why (reason), which the member
-    who objected sees; the rule stays as it is. When its message asks you to narrow the rule or explain
-    who receives it, the reason is your answer; narrow it with a new version as well if you agree. Needs
+    who objected sees; the rule stays as it is. When its message asks you to explain who receives what
+    the rule matches, the reason is your answer. If you changed the rule instead, answer amended. Needs
     mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
     or narrowed token). Only on your own dashboard session or the Primitive CLI.
 
@@ -168,8 +168,8 @@ def sync(
     """ Decline an objection to your rule
 
      Declines a pending objection to a rule you wrote, optionally saying why (reason), which the member
-    who objected sees; the rule stays as it is. When its message asks you to narrow the rule or explain
-    who receives it, the reason is your answer; narrow it with a new version as well if you agree. Needs
+    who objected sees; the rule stays as it is. When its message asks you to explain who receives what
+    the rule matches, the reason is your answer. If you changed the rule instead, answer amended. Needs
     mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
     or narrowed token). Only on your own dashboard session or the Primitive CLI.
 
@@ -206,8 +206,8 @@ async def asyncio_detailed(
     """ Decline an objection to your rule
 
      Declines a pending objection to a rule you wrote, optionally saying why (reason), which the member
-    who objected sees; the rule stays as it is. When its message asks you to narrow the rule or explain
-    who receives it, the reason is your answer; narrow it with a new version as well if you agree. Needs
+    who objected sees; the rule stays as it is. When its message asks you to explain who receives what
+    the rule matches, the reason is your answer. If you changed the rule instead, answer amended. Needs
     mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
     or narrowed token). Only on your own dashboard session or the Primitive CLI.
 
@@ -249,8 +249,8 @@ async def asyncio(
     """ Decline an objection to your rule
 
      Declines a pending objection to a rule you wrote, optionally saying why (reason), which the member
-    who objected sees; the rule stays as it is. When its message asks you to narrow the rule or explain
-    who receives it, the reason is your answer; narrow it with a new version as well if you agree. Needs
+    who objected sees; the rule stays as it is. When its message asks you to explain who receives what
+    the rule matches, the reason is your answer. If you changed the rule instead, answer amended. Needs
     mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
     or narrowed token). Only on your own dashboard session or the Primitive CLI.
 

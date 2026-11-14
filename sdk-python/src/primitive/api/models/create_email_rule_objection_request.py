@@ -28,7 +28,8 @@ class CreateEmailRuleObjectionRequest:
                 another member.
             message (None | str | Unset): Why you object and what you ask, up to 500 characters: to turn the rule off, to
                 narrow it, or to explain who receives what it matches. Null or absent for none. The rule's author and the
-                organization's owners and admins see it while it stands; withdrawing clears it.
+                organization's owners and admins see it while it stands, and an email to the author about the objection quotes
+                it. Withdrawing clears it from the objection, not from an email already sent or being sent.
      """
 
     rule_id: UUID

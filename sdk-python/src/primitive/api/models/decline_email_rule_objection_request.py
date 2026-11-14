@@ -24,7 +24,8 @@ class DeclineEmailRuleObjectionRequest:
     """ 
         Attributes:
             reason (None | str | Unset): Why you are declining, up to 500 characters; null or absent for none. The member
-                who objected sees it: it is how to answer one that asks you to narrow the rule or explain who receives it.
+                who objected sees it: it is how to answer one that asks you to explain who receives it. If you changed the rule
+                instead, answer amended.
      """
 
     reason: None | str | Unset = UNSET

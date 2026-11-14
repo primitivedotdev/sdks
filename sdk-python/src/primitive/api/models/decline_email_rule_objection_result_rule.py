@@ -26,10 +26,15 @@ class DeclineEmailRuleObjectionResultRule:
         Attributes:
             id (None | UUID): Null once the rule was deleted outright.
             name (str): Its name when the objection was made.
+            objected_version (int | None): The rule's version when the objection was made; null when it could not be told
+                for an older objection.
+            amended_version (int | None): The rule's version when its author answered amended; null otherwise.
      """
 
     id: None | UUID
     name: str
+    objected_version: int | None
+    amended_version: int | None
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -45,12 +50,20 @@ class DeclineEmailRuleObjectionResultRule:
 
         name = self.name
 
+        objected_version: int | None
+        objected_version = self.objected_version
+
+        amended_version: int | None
+        amended_version = self.amended_version
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "id": id,
             "name": name,
+            "objected_version": objected_version,
+            "amended_version": amended_version,
         })
 
         return field_dict
@@ -80,9 +93,27 @@ class DeclineEmailRuleObjectionResultRule:
 
         name = d.pop("name")
 
+        def _parse_objected_version(data: object) -> int | None:
+            if data is None:
+                return data
+            return cast(int | None, data)
+
+        objected_version = _parse_objected_version(d.pop("objected_version"))
+
+
+        def _parse_amended_version(data: object) -> int | None:
+            if data is None:
+                return data
+            return cast(int | None, data)
+
+        amended_version = _parse_amended_version(d.pop("amended_version"))
+
+
         decline_email_rule_objection_result_rule = cls(
             id=id,
             name=name,
+            objected_version=objected_version,
+            amended_version=amended_version,
         )
 
 

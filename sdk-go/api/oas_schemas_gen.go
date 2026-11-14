@@ -4628,6 +4628,74 @@ type AgentWorkWithdrawDeadlineUnauthorized ErrorResponseHeaders
 
 func (*AgentWorkWithdrawDeadlineUnauthorized) agentWorkWithdrawDeadlineRes() {}
 
+type AmendEmailRuleObjectionBadRequest ErrorResponse
+
+func (*AmendEmailRuleObjectionBadRequest) amendEmailRuleObjectionRes() {}
+
+type AmendEmailRuleObjectionConflict ErrorResponse
+
+func (*AmendEmailRuleObjectionConflict) amendEmailRuleObjectionRes() {}
+
+type AmendEmailRuleObjectionForbidden ErrorResponse
+
+func (*AmendEmailRuleObjectionForbidden) amendEmailRuleObjectionRes() {}
+
+type AmendEmailRuleObjectionNotFound ErrorResponse
+
+func (*AmendEmailRuleObjectionNotFound) amendEmailRuleObjectionRes() {}
+
+// Merged schema.
+type AmendEmailRuleObjectionOK struct {
+	Success bool               `json:"success"`
+	Data    EmailRuleObjection `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *AmendEmailRuleObjectionOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *AmendEmailRuleObjectionOK) GetData() EmailRuleObjection {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *AmendEmailRuleObjectionOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *AmendEmailRuleObjectionOK) SetData(val EmailRuleObjection) {
+	s.Data = val
+}
+
+func (*AmendEmailRuleObjectionOK) amendEmailRuleObjectionRes() {}
+
+// Ref: #/components/schemas/AmendEmailRuleObjectionRequest
+type AmendEmailRuleObjectionRequest struct {
+	// What you changed, up to 500 characters; null or absent for none. The member who objected sees it.
+	Note OptNilString `json:"note"`
+}
+
+// GetNote returns the value of Note.
+func (s *AmendEmailRuleObjectionRequest) GetNote() OptNilString {
+	return s.Note
+}
+
+// SetNote sets the value of Note.
+func (s *AmendEmailRuleObjectionRequest) SetNote(val OptNilString) {
+	s.Note = val
+}
+
+type AmendEmailRuleObjectionTooManyRequests ErrorResponseHeaders
+
+func (*AmendEmailRuleObjectionTooManyRequests) amendEmailRuleObjectionRes() {}
+
+type AmendEmailRuleObjectionUnauthorized ErrorResponseHeaders
+
+func (*AmendEmailRuleObjectionUnauthorized) amendEmailRuleObjectionRes() {}
+
 // Ref: #/components/schemas/ArchiveMember
 type ArchiveMember struct {
 	// Member path inside the archive, relative, with "/" separators and no leading "./".
@@ -13302,7 +13370,9 @@ type CreateEmailRuleObjectionRequest struct {
 	RuleID uuid.UUID `json:"rule_id"`
 	// Why you object and what you ask, up to 500 characters: to turn the rule off, to narrow it, or to
 	// explain who receives what it matches. Null or absent for none. The rule's author and the
-	// organization's owners and admins see it while it stands; withdrawing clears it.
+	// organization's owners and admins see it while it stands, and an email to the author about the
+	// objection quotes it. Withdrawing clears it from the objection, not from an email already sent or
+	// being sent.
 	Message OptNilString `json:"message"`
 }
 
@@ -26753,7 +26823,8 @@ func (*DeclineEmailRuleObjectionOK) declineEmailRuleObjectionRes() {}
 // Ref: #/components/schemas/DeclineEmailRuleObjectionRequest
 type DeclineEmailRuleObjectionRequest struct {
 	// Why you are declining, up to 500 characters; null or absent for none. The member who objected sees
-	// it: it is how to answer one that asks you to narrow the rule or explain who receives it.
+	// it: it is how to answer one that asks you to explain who receives it. If you changed the rule
+	// instead, answer amended.
 	Reason OptNilString `json:"reason"`
 }
 
@@ -38293,8 +38364,9 @@ func (s *EmailRuleLookAlikeStatus) UnmarshalText(data []byte) error {
 // Ref: #/components/schemas/EmailRuleObjection
 type EmailRuleObjection struct {
 	ID uuid.UUID `json:"id"`
-	// Pending until the rule's author accepts it (turning the rule off) or declines it, or the member
-	// who made it withdraws it; never changes after.
+	// Pending until the rule's author accepts it (turning the rule off), declines it, or answers it
+	// amended (they saved a newer version of the rule), or the member who made it withdraws it; never
+	// changes after.
 	Status EmailRuleObjectionStatus `json:"status"`
 	Rule   EmailRuleObjectionRule   `json:"rule"`
 	// Who objected.
@@ -38309,7 +38381,9 @@ type EmailRuleObjection struct {
 	// null when none was given, or once withdrawn.
 	Message NilString `json:"message"`
 	// The author's answer when declining, which the objector sees; null when none was given.
-	DeclineReason   NilString   `json:"decline_reason"`
+	DeclineReason NilString `json:"decline_reason"`
+	// The author's note when answering amended, which the objector sees; null when none was given.
+	AmendNote       NilString   `json:"amend_note"`
 	CreatedAt       time.Time   `json:"created_at"`
 	DecidedAt       NilDateTime `json:"decided_at"`
 	DecidedByUserID NilUUID     `json:"decided_by_user_id"`
@@ -38358,6 +38432,11 @@ func (s *EmailRuleObjection) GetMessage() NilString {
 // GetDeclineReason returns the value of DeclineReason.
 func (s *EmailRuleObjection) GetDeclineReason() NilString {
 	return s.DeclineReason
+}
+
+// GetAmendNote returns the value of AmendNote.
+func (s *EmailRuleObjection) GetAmendNote() NilString {
+	return s.AmendNote
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -38420,6 +38499,11 @@ func (s *EmailRuleObjection) SetDeclineReason(val NilString) {
 	s.DeclineReason = val
 }
 
+// SetAmendNote sets the value of AmendNote.
+func (s *EmailRuleObjection) SetAmendNote(val NilString) {
+	s.AmendNote = val
+}
+
 // SetCreatedAt sets the value of CreatedAt.
 func (s *EmailRuleObjection) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
@@ -38478,6 +38562,11 @@ type EmailRuleObjectionRule struct {
 	ID NilUUID `json:"id"`
 	// Its name when the objection was made.
 	Name string `json:"name"`
+	// The rule's version when the objection was made; null when it could not be told for an older
+	// objection.
+	ObjectedVersion NilInt `json:"objected_version"`
+	// The rule's version when its author answered amended; null otherwise.
+	AmendedVersion NilInt `json:"amended_version"`
 }
 
 // GetID returns the value of ID.
@@ -38490,6 +38579,16 @@ func (s *EmailRuleObjectionRule) GetName() string {
 	return s.Name
 }
 
+// GetObjectedVersion returns the value of ObjectedVersion.
+func (s *EmailRuleObjectionRule) GetObjectedVersion() NilInt {
+	return s.ObjectedVersion
+}
+
+// GetAmendedVersion returns the value of AmendedVersion.
+func (s *EmailRuleObjectionRule) GetAmendedVersion() NilInt {
+	return s.AmendedVersion
+}
+
 // SetID sets the value of ID.
 func (s *EmailRuleObjectionRule) SetID(val NilUUID) {
 	s.ID = val
@@ -38500,8 +38599,19 @@ func (s *EmailRuleObjectionRule) SetName(val string) {
 	s.Name = val
 }
 
-// Pending until the rule's author accepts it (turning the rule off) or declines it, or the member
-// who made it withdraws it; never changes after.
+// SetObjectedVersion sets the value of ObjectedVersion.
+func (s *EmailRuleObjectionRule) SetObjectedVersion(val NilInt) {
+	s.ObjectedVersion = val
+}
+
+// SetAmendedVersion sets the value of AmendedVersion.
+func (s *EmailRuleObjectionRule) SetAmendedVersion(val NilInt) {
+	s.AmendedVersion = val
+}
+
+// Pending until the rule's author accepts it (turning the rule off), declines it, or answers it
+// amended (they saved a newer version of the rule), or the member who made it withdraws it; never
+// changes after.
 type EmailRuleObjectionStatus string
 
 const (
@@ -38509,6 +38619,7 @@ const (
 	EmailRuleObjectionStatusAccepted  EmailRuleObjectionStatus = "accepted"
 	EmailRuleObjectionStatusDeclined  EmailRuleObjectionStatus = "declined"
 	EmailRuleObjectionStatusWithdrawn EmailRuleObjectionStatus = "withdrawn"
+	EmailRuleObjectionStatusAmended   EmailRuleObjectionStatus = "amended"
 )
 
 // AllValues returns all EmailRuleObjectionStatus values.
@@ -38518,6 +38629,7 @@ func (EmailRuleObjectionStatus) AllValues() []EmailRuleObjectionStatus {
 		EmailRuleObjectionStatusAccepted,
 		EmailRuleObjectionStatusDeclined,
 		EmailRuleObjectionStatusWithdrawn,
+		EmailRuleObjectionStatusAmended,
 	}
 }
 
@@ -38531,6 +38643,8 @@ func (s EmailRuleObjectionStatus) MarshalText() ([]byte, error) {
 	case EmailRuleObjectionStatusDeclined:
 		return []byte(s), nil
 	case EmailRuleObjectionStatusWithdrawn:
+		return []byte(s), nil
+	case EmailRuleObjectionStatusAmended:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -38551,6 +38665,9 @@ func (s *EmailRuleObjectionStatus) UnmarshalText(data []byte) error {
 		return nil
 	case EmailRuleObjectionStatusWithdrawn:
 		*s = EmailRuleObjectionStatusWithdrawn
+		return nil
+	case EmailRuleObjectionStatusAmended:
+		*s = EmailRuleObjectionStatusAmended
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -65489,18 +65606,20 @@ type ListActivityObjectsResultItemsItem struct {
 	// disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or
 	// ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API
 	// keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules),
-	// pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice
-	// what it told: started (a rule was made or turned active over your mailboxes, or an active rule
-	// came to reach you; once per rule, not per mailbox), new_version, receivers_changed (who receives
-	// an active rule's matches changed: its keys, webhooks or share), or baseline (it already covered
-	// you when notices began). pending: a rule started covering your mailbox and the notices have not
-	// recorded that start yet (a restart within an hour of the last start notice is recorded without a
-	// new one); its id is then the rule's, and created_at when the rule last changed.
+	// pending, accepted, declined or withdrawn (rule requests and objections; an objection may also be
+	// amended), and for a coverage notice what it told: started (a rule was made or turned active over
+	// your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version,
+	// receivers_changed (who receives an active rule's matches changed: its keys, webhooks or share), or
+	// baseline (it already covered you when notices began). pending: a rule started covering your
+	// mailbox and the notices have not recorded that start yet (a restart within an hour of the last
+	// start notice is recorded without a new one); its id is then the rule's, and created_at when the
+	// rule last changed.
 	State     string    `json:"state"`
 	CreatedAt time.Time `json:"created_at"`
 	// When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped,
-	// or when a rule request or objection was decided (accepted, declined or withdrawn); null otherwise,
-	// as on every coverage notice (rule_now marks one whose rule was deleted).
+	// or when a rule request or objection was decided (accepted, declined, withdrawn or, for an
+	// objection, amended); null otherwise, as on every coverage notice (rule_now marks one whose rule
+	// was deleted).
 	EndedAt NilDateTime `json:"ended_at"`
 	// You: it is still yours: never transferred, or transferred back to you. someone_else: it was
 	// transferred and another person holds it now, or, with relation=asked or concerning, another member
@@ -85575,6 +85694,52 @@ func (o OptAgentWorkWithdrawDeadlineOKCacheControl) Get() (v AgentWorkWithdrawDe
 
 // Or returns value if set, or given parameter if does not.
 func (o OptAgentWorkWithdrawDeadlineOKCacheControl) Or(d AgentWorkWithdrawDeadlineOKCacheControl) AgentWorkWithdrawDeadlineOKCacheControl {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptAmendEmailRuleObjectionRequest returns new OptAmendEmailRuleObjectionRequest with value set to v.
+func NewOptAmendEmailRuleObjectionRequest(v AmendEmailRuleObjectionRequest) OptAmendEmailRuleObjectionRequest {
+	return OptAmendEmailRuleObjectionRequest{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptAmendEmailRuleObjectionRequest is optional AmendEmailRuleObjectionRequest.
+type OptAmendEmailRuleObjectionRequest struct {
+	Value AmendEmailRuleObjectionRequest
+	Set   bool
+}
+
+// IsSet returns true if OptAmendEmailRuleObjectionRequest was set.
+func (o OptAmendEmailRuleObjectionRequest) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptAmendEmailRuleObjectionRequest) Reset() {
+	var v AmendEmailRuleObjectionRequest
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptAmendEmailRuleObjectionRequest) SetTo(v AmendEmailRuleObjectionRequest) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptAmendEmailRuleObjectionRequest) Get() (v AmendEmailRuleObjectionRequest, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptAmendEmailRuleObjectionRequest) Or(d AmendEmailRuleObjectionRequest) AmendEmailRuleObjectionRequest {
 	if v, ok := o.Get(); ok {
 		return v
 	}

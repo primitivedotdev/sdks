@@ -1161,7 +1161,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "state": {
                 "type": "string",
-                "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, receivers_changed (who receives an active rule's matches changed: its keys, webhooks or share), or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed."
+                "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections; an objection may also be amended), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, receivers_changed (who receives an active rule's matches changed: its keys, webhooks or share), or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed."
               },
               "created_at": {
                 "type": "string",
@@ -1173,7 +1173,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "null"
                 ],
                 "format": "date-time",
-                "description": "When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined or withdrawn); null otherwise, as on every coverage notice (rule_now marks one whose rule was deleted)."
+                "description": "When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined, withdrawn or, for an objection, amended); null otherwise, as on every coverage notice (rule_now marks one whose rule was deleted)."
               },
               "owned_now": {
                 "type": "string",
@@ -17235,9 +17235,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "pending",
             "accepted",
             "declined",
-            "withdrawn"
+            "withdrawn",
+            "amended"
           ],
-          "description": "pending until the rule's author accepts it (turning the rule off) or declines it, or the member who made it withdraws it; never changes after."
+          "description": "pending until the rule's author accepts it (turning the rule off), declines it, or answers it amended (they saved a newer version of the rule), or the member who made it withdraws it; never changes after."
         },
         "rule": {
           "type": "object",
@@ -17253,11 +17254,27 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "name": {
               "type": "string",
               "description": "Its name when the objection was made."
+            },
+            "objected_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "The rule's version when the objection was made; null when it could not be told for an older objection."
+            },
+            "amended_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "The rule's version when its author answered amended; null otherwise."
             }
           },
           "required": [
             "id",
-            "name"
+            "name",
+            "objected_version",
+            "amended_version"
           ]
         },
         "objector": {
@@ -17336,6 +17353,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ]
         },
+        "amend_note": {
+          "description": "The author's note when answering amended, which the objector sees; null when none was given.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "created_at": {
           "type": "string",
           "format": "date-time"
@@ -17365,6 +17389,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "is_author",
         "message",
         "decline_reason",
+        "amend_note",
         "created_at",
         "decided_at",
         "decided_by_user_id"
@@ -17377,9 +17402,234 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "amend-email-rule-objection",
+    "description": "Answers a pending objection to a rule you wrote by saying you changed the rule: save a new version first (PATCH /email-rules/{id}), then answer amended, optionally with a note the member who objected sees. Records the version the rule has now (rule.amended_version). Refused unless the rule's current version is newer than when the objection was made (rule.objected_version). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "amendEmailRuleObjection",
+    "path": "/email-rule-objections/{id}/amend",
+    "pathParams": [
+      {
+        "description": "The objection id.",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "headerParams": [
+      {
+        "description": "Optional, and not used to deduplicate: this operation stores no result by the key, so a retry with the same key runs the request again. Operations that need a credential refuse a key that is empty, longer than 255 characters or not printable ASCII with 400 `validation_error` and echo a valid one in the Idempotency-Key response header; operations that need none ignore it.",
+        "enum": null,
+        "name": "Idempotency-Key",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "permissions": [
+      "mail:read"
+    ],
+    "access": null,
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "What you changed, up to 500 characters; null or absent for none. The member who objected sees it."
+        }
+      },
+      "additionalProperties": false
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "accepted",
+            "declined",
+            "withdrawn",
+            "amended"
+          ],
+          "description": "pending until the rule's author accepts it (turning the rule off), declines it, or answers it amended (they saved a newer version of the rule), or the member who made it withdraws it; never changes after."
+        },
+        "rule": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "Null once the rule was deleted outright."
+            },
+            "name": {
+              "type": "string",
+              "description": "Its name when the objection was made."
+            },
+            "objected_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "The rule's version when the objection was made; null when it could not be told for an older objection."
+            },
+            "amended_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "The rule's version when its author answered amended; null otherwise."
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "objected_version",
+            "amended_version"
+          ]
+        },
+        "objector": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "email": {
+              "description": "Sign-in email; null unless you can list member emails or this is you.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "user_id",
+            "name",
+            "email"
+          ]
+        },
+        "author": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "email": {
+              "description": "Sign-in email; null unless you can list member emails or this is you.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "user_id",
+            "name",
+            "email"
+          ]
+        },
+        "is_objector": {
+          "type": "boolean",
+          "description": "Whether you made it, in your current membership."
+        },
+        "is_author": {
+          "type": "boolean",
+          "description": "Whether it is to a rule you wrote, in your current membership."
+        },
+        "message": {
+          "description": "Why they object and what they ask (to turn the rule off, narrow it, or explain who receives it); null when none was given, or once withdrawn.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "decline_reason": {
+          "description": "The author's answer when declining, which the objector sees; null when none was given.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "amend_note": {
+          "description": "The author's note when answering amended, which the objector sees; null when none was given.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "decided_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "decided_by_user_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "rule",
+        "objector",
+        "author",
+        "is_objector",
+        "is_author",
+        "message",
+        "decline_reason",
+        "amend_note",
+        "created_at",
+        "decided_at",
+        "decided_by_user_id"
+      ]
+    },
+    "sdkName": "amendEmailRuleObjection",
+    "summary": "Answer an objection to your rule as amended",
+    "tag": "Email Rule Oversight",
+    "tagCommand": "email-rule-oversight"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-email-rule-objection",
-    "description": "Objects to a rule that covers one of your own mailboxes now: say in the message what you ask its author, to turn it off, narrow it, or explain who receives what it matches. The author answers by accepting, which turns it off, or by declining, optionally with a reason you see; the rule keeps running unless they accept. Only a rule that covers you now: one you see only because it once decided on your mail cannot be objected to. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it (optionally with a reason the objector sees), or the member who made it withdraws it, which clears its message. It never changes after that. You may have one pending objection per rule and 50 in all, and object to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
+    "description": "Objects to a rule that covers one of your own mailboxes now: say in the message what you ask its author, to turn it off, narrow it, or explain who receives what it matches. The author answers by accepting, which turns it off, or by declining, optionally with a reason you see; the rule keeps running unless they accept. Only a rule that covers you now: one you see only because it once decided on your mail cannot be objected to. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, declines it (optionally with a reason the objector sees), or answers it amended once they have saved a newer version of the rule, or the member who made it withdraws it, which clears its message (not from an email to the author already sent or being sent). It never changes after that. You may have one pending objection per rule and 50 in all, and object to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createEmailRuleObjection",
@@ -17414,7 +17664,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "minLength": 1,
           "maxLength": 500,
-          "description": "Why you object and what you ask, up to 500 characters: to turn the rule off, to narrow it, or to explain who receives what it matches. Null or absent for none. The rule's author and the organization's owners and admins see it while it stands; withdrawing clears it."
+          "description": "Why you object and what you ask, up to 500 characters: to turn the rule off, to narrow it, or to explain who receives what it matches. Null or absent for none. The rule's author and the organization's owners and admins see it while it stands, and an email to the author about the objection quotes it. Withdrawing clears it from the objection, not from an email already sent or being sent."
         }
       },
       "required": [
@@ -17435,9 +17685,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "pending",
             "accepted",
             "declined",
-            "withdrawn"
+            "withdrawn",
+            "amended"
           ],
-          "description": "pending until the rule's author accepts it (turning the rule off) or declines it, or the member who made it withdraws it; never changes after."
+          "description": "pending until the rule's author accepts it (turning the rule off), declines it, or answers it amended (they saved a newer version of the rule), or the member who made it withdraws it; never changes after."
         },
         "rule": {
           "type": "object",
@@ -17453,11 +17704,27 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "name": {
               "type": "string",
               "description": "Its name when the objection was made."
+            },
+            "objected_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "The rule's version when the objection was made; null when it could not be told for an older objection."
+            },
+            "amended_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "The rule's version when its author answered amended; null otherwise."
             }
           },
           "required": [
             "id",
-            "name"
+            "name",
+            "objected_version",
+            "amended_version"
           ]
         },
         "objector": {
@@ -17536,6 +17803,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ]
         },
+        "amend_note": {
+          "description": "The author's note when answering amended, which the objector sees; null when none was given.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "created_at": {
           "type": "string",
           "format": "date-time"
@@ -17565,6 +17839,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "is_author",
         "message",
         "decline_reason",
+        "amend_note",
         "created_at",
         "decided_at",
         "decided_by_user_id"
@@ -17579,7 +17854,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "decline-email-rule-objection",
-    "description": "Declines a pending objection to a rule you wrote, optionally saying why (reason), which the member who objected sees; the rule stays as it is. When its message asks you to narrow the rule or explain who receives it, the reason is your answer; narrow it with a new version as well if you agree. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
+    "description": "Declines a pending objection to a rule you wrote, optionally saying why (reason), which the member who objected sees; the rule stays as it is. When its message asks you to explain who receives what the rule matches, the reason is your answer. If you changed the rule instead, answer amended. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "declineEmailRuleObjection",
@@ -17617,7 +17892,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "minLength": 1,
           "maxLength": 500,
-          "description": "Why you are declining, up to 500 characters; null or absent for none. The member who objected sees it: it is how to answer one that asks you to narrow the rule or explain who receives it."
+          "description": "Why you are declining, up to 500 characters; null or absent for none. The member who objected sees it: it is how to answer one that asks you to explain who receives it. If you changed the rule instead, answer amended."
         }
       },
       "additionalProperties": false
@@ -17635,9 +17910,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "pending",
             "accepted",
             "declined",
-            "withdrawn"
+            "withdrawn",
+            "amended"
           ],
-          "description": "pending until the rule's author accepts it (turning the rule off) or declines it, or the member who made it withdraws it; never changes after."
+          "description": "pending until the rule's author accepts it (turning the rule off), declines it, or answers it amended (they saved a newer version of the rule), or the member who made it withdraws it; never changes after."
         },
         "rule": {
           "type": "object",
@@ -17653,11 +17929,27 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "name": {
               "type": "string",
               "description": "Its name when the objection was made."
+            },
+            "objected_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "The rule's version when the objection was made; null when it could not be told for an older objection."
+            },
+            "amended_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "The rule's version when its author answered amended; null otherwise."
             }
           },
           "required": [
             "id",
-            "name"
+            "name",
+            "objected_version",
+            "amended_version"
           ]
         },
         "objector": {
@@ -17736,6 +18028,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ]
         },
+        "amend_note": {
+          "description": "The author's note when answering amended, which the objector sees; null when none was given.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "created_at": {
           "type": "string",
           "format": "date-time"
@@ -17765,6 +18064,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "is_author",
         "message",
         "decline_reason",
+        "amend_note",
         "created_at",
         "decided_at",
         "decided_by_user_id"
@@ -18459,7 +18759,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule-objection",
-    "description": "One objection you can see. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it (optionally with a reason the objector sees), or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
+    "description": "One objection you can see. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, declines it (optionally with a reason the objector sees), or answers it amended once they have saved a newer version of the rule, or the member who made it withdraws it, which clears its message (not from an email to the author already sent or being sent). It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRuleObjection",
@@ -18493,9 +18793,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "pending",
             "accepted",
             "declined",
-            "withdrawn"
+            "withdrawn",
+            "amended"
           ],
-          "description": "pending until the rule's author accepts it (turning the rule off) or declines it, or the member who made it withdraws it; never changes after."
+          "description": "pending until the rule's author accepts it (turning the rule off), declines it, or answers it amended (they saved a newer version of the rule), or the member who made it withdraws it; never changes after."
         },
         "rule": {
           "type": "object",
@@ -18511,11 +18812,27 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "name": {
               "type": "string",
               "description": "Its name when the objection was made."
+            },
+            "objected_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "The rule's version when the objection was made; null when it could not be told for an older objection."
+            },
+            "amended_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "The rule's version when its author answered amended; null otherwise."
             }
           },
           "required": [
             "id",
-            "name"
+            "name",
+            "objected_version",
+            "amended_version"
           ]
         },
         "objector": {
@@ -18594,6 +18911,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ]
         },
+        "amend_note": {
+          "description": "The author's note when answering amended, which the objector sees; null when none was given.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "created_at": {
           "type": "string",
           "format": "date-time"
@@ -18623,6 +18947,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "is_author",
         "message",
         "decline_reason",
+        "amend_note",
         "created_at",
         "decided_at",
         "decided_by_user_id"
@@ -18780,7 +19105,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rule-objections",
-    "description": "Objections you made and objections to rules you wrote (by default), only one of the two, or every objection you can see, newest first. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, or declines it (optionally with a reason the objector sees), or the member who made it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
+    "description": "Objections you made and objections to rules you wrote (by default), only one of the two, or every objection you can see, newest first. An objection is seen by the member who made it, the rule's author and the organization's owners and admins. It stays pending until the rule's author accepts it, turning the rule off, declines it (optionally with a reason the objector sees), or answers it amended once they have saved a newer version of the rule, or the member who made it withdraws it, which clears its message (not from an email to the author already sent or being sent). It never changes after that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRuleObjections",
@@ -18851,9 +19176,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "pending",
               "accepted",
               "declined",
-              "withdrawn"
+              "withdrawn",
+              "amended"
             ],
-            "description": "pending until the rule's author accepts it (turning the rule off) or declines it, or the member who made it withdraws it; never changes after."
+            "description": "pending until the rule's author accepts it (turning the rule off), declines it, or answers it amended (they saved a newer version of the rule), or the member who made it withdraws it; never changes after."
           },
           "rule": {
             "type": "object",
@@ -18869,11 +19195,27 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "name": {
                 "type": "string",
                 "description": "Its name when the objection was made."
+              },
+              "objected_version": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "The rule's version when the objection was made; null when it could not be told for an older objection."
+              },
+              "amended_version": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "The rule's version when its author answered amended; null otherwise."
               }
             },
             "required": [
               "id",
-              "name"
+              "name",
+              "objected_version",
+              "amended_version"
             ]
           },
           "objector": {
@@ -18952,6 +19294,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "null"
             ]
           },
+          "amend_note": {
+            "description": "The author's note when answering amended, which the objector sees; null when none was given.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -18981,6 +19330,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "is_author",
           "message",
           "decline_reason",
+          "amend_note",
           "created_at",
           "decided_at",
           "decided_by_user_id"
@@ -19729,7 +20079,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "withdraw-email-rule-objection",
-    "description": "Withdraws a pending objection you made, and clears its message. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
+    "description": "Withdraws a pending objection you made, and clears its message; an email to the rule's author already sent or being sent keeps it. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.",
     "hasJsonBody": false,
     "method": "POST",
     "operationId": "withdrawEmailRuleObjection",
@@ -19771,9 +20121,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "pending",
             "accepted",
             "declined",
-            "withdrawn"
+            "withdrawn",
+            "amended"
           ],
-          "description": "pending until the rule's author accepts it (turning the rule off) or declines it, or the member who made it withdraws it; never changes after."
+          "description": "pending until the rule's author accepts it (turning the rule off), declines it, or answers it amended (they saved a newer version of the rule), or the member who made it withdraws it; never changes after."
         },
         "rule": {
           "type": "object",
@@ -19789,11 +20140,27 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "name": {
               "type": "string",
               "description": "Its name when the objection was made."
+            },
+            "objected_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "The rule's version when the objection was made; null when it could not be told for an older objection."
+            },
+            "amended_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "The rule's version when its author answered amended; null otherwise."
             }
           },
           "required": [
             "id",
-            "name"
+            "name",
+            "objected_version",
+            "amended_version"
           ]
         },
         "objector": {
@@ -19872,6 +20239,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ]
         },
+        "amend_note": {
+          "description": "The author's note when answering amended, which the objector sees; null when none was given.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "created_at": {
           "type": "string",
           "format": "date-time"
@@ -19901,6 +20275,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "is_author",
         "message",
         "decline_reason",
+        "amend_note",
         "created_at",
         "decided_at",
         "decided_by_user_id"

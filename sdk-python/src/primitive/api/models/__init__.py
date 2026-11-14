@@ -69,6 +69,11 @@ from .agent_work_report_status_body_status import AgentWorkReportStatusBodyStatu
 from .agent_work_report_status_response_200 import AgentWorkReportStatusResponse200
 from .agent_work_withdraw_deadline_body import AgentWorkWithdrawDeadlineBody
 from .agent_work_withdraw_deadline_response_200 import AgentWorkWithdrawDeadlineResponse200
+from .amend_email_rule_objection_request import AmendEmailRuleObjectionRequest
+from .amend_email_rule_objection_response_200 import AmendEmailRuleObjectionResponse200
+from .amend_email_rule_objection_result import AmendEmailRuleObjectionResult
+from .amend_email_rule_objection_result_rule import AmendEmailRuleObjectionResultRule
+from .amend_email_rule_objection_result_status import AmendEmailRuleObjectionResultStatus
 from .archive_member import ArchiveMember
 from .archive_members import ArchiveMembers
 from .archive_members_format import ArchiveMembersFormat
@@ -1996,6 +2001,11 @@ __all__ = (
     "AgentWorkReportStatusResponse200",
     "AgentWorkWithdrawDeadlineBody",
     "AgentWorkWithdrawDeadlineResponse200",
+    "AmendEmailRuleObjectionRequest",
+    "AmendEmailRuleObjectionResponse200",
+    "AmendEmailRuleObjectionResult",
+    "AmendEmailRuleObjectionResultRule",
+    "AmendEmailRuleObjectionResultStatus",
     "ArchiveMember",
     "ArchiveMembers",
     "ArchiveMembersFormat",
