@@ -1394,7 +1394,9 @@ downgrading, or sign in again afterwards.
   still made or changed as asked, and the exit code is unchanged. `keys
   create` refuses `--domain` beside `--rule`, and `keys update` refuses a
   rule added to a key that lists a domain, both with exit code 2 and
-  nothing sent. `keys list` marks such a key with what it reads in full, and
+  nothing sent. The help says which addresses the API refuses beside a
+  rule: another member's mailbox, a former member's included, or a retired
+  address; the key holder's own may be listed. `keys list` marks such a key with what it reads in full, and
   `keys get` shows it in an `In full:` line.
 
 #### Rule request and objection webhook events
