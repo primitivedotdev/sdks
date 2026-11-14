@@ -2492,7 +2492,9 @@ export function createOperationCommand(
           printed = {
             ...answer,
             ...Object.fromEntries(
-              Object.entries(report.json).filter(([key]) => !(key in answer)),
+              Object.entries(report.json).filter(
+                ([key]) => !Object.hasOwn(answer, key),
+              ),
             ),
           };
         }

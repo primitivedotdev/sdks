@@ -1148,12 +1148,12 @@ describe("email-rules test-email-rule: which mail was tested (--same-emails-as)"
 });
 
 describe("email-rules test-email-rule: what changed against the earlier answer (--same-emails-as)", () => {
-  type Parts = [boolean, boolean];
   const result = (
     email_id: string,
     outcome: string,
-    held: Parts | null,
+    held: boolean[] | null,
     subject: string | null = `Subject ${email_id.slice(-1)}`,
+    extra: Record<string, unknown> = {},
   ) => ({
     email_id,
     outcome,
@@ -1167,10 +1167,13 @@ describe("email-rules test-email-rule: what changed against the earlier answer (
           })),
         }
       : {}),
+    ...extra,
   });
+  const SENDER = "The sender is billing@kestruvo.example";
+  const NOT_RECEIPT = "It is not a receipt";
   const answerWith = (
     results: ReturnType<typeof result>[],
-    texts = ["The sender is billing@kestruvo.example", "It is not a receipt"],
+    texts = [SENDER, NOT_RECEIPT],
   ) => ({
     ...testResult(),
     window: { mode: "ids", since: null, limit: 200 },
@@ -1186,41 +1189,58 @@ describe("email-rules test-email-rule: what changed against the earlier answer (
       })),
     },
   });
-  // The evaluation's case: a personal bill passes the sender condition and is held out only by the next one.
+  // A personal bill passes the sender condition and is held out only by the next one.
   const earlier = answerWith([
     result(A, "matched", [true, true], "Invoice NV-1"),
     result(B, "near_miss", [true, false], "Personal storage payment"),
     result(C, "no_match", [false, false]),
     result(D, "matched", [true, true], "Invoice NV-2"),
   ]);
-  const comparedRun = async (now: unknown, extra: string[] = []) => {
+  const comparedRun = async (
+    now: unknown,
+    extra: string[] = [],
+    saved: unknown = earlier,
+  ) => {
     answer(now);
     return run("email-rules:test-email-rule", [
       "--rule-id",
       RULE,
       "--same-emails-as",
-      tempFile("earlier.json", JSON.stringify(earlier)),
+      tempFile("earlier.json", JSON.stringify(saved)),
       ...extra,
     ]);
   };
   const tail = (lines: string[]) =>
     lines.slice(lines.findIndex((line) => line.startsWith("Compared with ")));
+  type Printed = Record<string, unknown> & {
+    comparison: Record<string, unknown>;
+  };
 
-  it("says plainly that a narrowing narrowed nothing", async () => {
-    const result = await comparedRun(earlier);
+  it("says plainly that an edit which took nothing out narrowed nothing", async () => {
+    // The sender condition is rewritten, and admits exactly the emails it did.
+    const rewritten = answerWith(earlier.results, [
+      "The sender's domain is kestruvo.example",
+      NOT_RECEIPT,
+    ]);
+    const result = await comparedRun(rewritten);
     expect(result.exitCode, result.stderr).toBe(0);
     const lines = tail(stderrLines(result));
     expect(lines[0]).toMatch(
       /^Compared with .*earlier\.json, over the 4 emails both tested:$/,
     );
     expect(lines.slice(1)).toEqual([
-      "  Nothing changed: every email has the same outcome, and each condition holds on the same emails as before.",
+      "  Nothing changed on these emails: the tree changed, but every email has the same outcome and each condition holds on the same emails as before.",
       "  Outcomes, earlier -> now: matched 2 -> 2, near_miss 1 -> 1, no_match 1 -> 1.",
-      "  Conditions, emails each held on, earlier -> now:",
-      "    0. The sender is billing@kestruvo.example: 3 -> 3 (the same emails)",
-      "    1. It is not a receipt: 2 -> 2 (the same emails)",
+      "  Conditions, how many of the 4 emails decided in both each held on, earlier -> now:",
+      `    0. earlier "${SENDER}", now "The sender's domain is kestruvo.example": 3 -> 3 (the same emails)`,
+      `    1. ${NOT_RECEIPT}: 2 -> 2 (the same emails)`,
       '  Matched before and still matched: 2, such as "Invoice NV-1", "Invoice NV-2".',
     ]);
+    // The same tree again says only that nothing changed.
+    const same = tail(stderrLines(await comparedRun(earlier)));
+    expect(same[1]).toBe(
+      "  Nothing changed: every email has the same outcome, and each condition holds on the same emails as before.",
+    );
   });
 
   it("names what a narrowing took out, condition by condition and email by email", async () => {
@@ -1231,54 +1251,108 @@ describe("email-rules test-email-rule: what changed against the earlier answer (
         result(C, "no_match", [false, false]),
         result(D, "matched", [true, true], "Invoice NV-2"),
       ],
-      ["The sender's domain is nuvrindle.example", "It is not a receipt"],
+      ["The sender's domain is nuvrindle.example", NOT_RECEIPT],
     );
     const lines = tail(stderrLines(await comparedRun(now)));
     expect(lines.slice(1)).toEqual([
       "  1 email changed outcome.",
       "  Outcomes, earlier -> now: matched 2 -> 2, near_miss 1 -> 0, no_match 1 -> 2.",
-      "  Conditions, emails each held on, earlier -> now:",
-      '    0. earlier "The sender is billing@kestruvo.example", now "The sender\'s domain is nuvrindle.example": 3 -> 2 (lost 1, gained 0)',
-      "    1. It is not a receipt: 2 -> 2 (the same emails)",
+      "  Conditions, how many of the 4 emails decided in both each held on, earlier -> now:",
+      `    0. earlier "${SENDER}", now "The sender's domain is nuvrindle.example": 3 -> 2 (lost 1, gained 0)`,
+      `    1. ${NOT_RECEIPT}: 2 -> 2 (the same emails)`,
       "  Changed outcome (1):",
       `    ${B} "Personal storage payment": near_miss -> no_match`,
       '  Matched before and still matched: 2, such as "Invoice NV-1", "Invoice NV-2".',
     ]);
   });
 
-  it("puts the comparison beside the answer with --json, and nothing on stderr", async () => {
+  it("shows a condition added that takes nothing out as added, never as nothing changed", async () => {
+    const now = answerWith(
+      [
+        result(A, "matched", [true, true, true], "Invoice NV-1"),
+        result(B, "near_miss", [true, false, true], "Personal storage payment"),
+        result(C, "no_match", [false, false, true]),
+        result(D, "matched", [true, true, true], "Invoice NV-2"),
+      ],
+      [SENDER, NOT_RECEIPT, "It is not personal"],
+    );
+    const lines = tail(stderrLines(await comparedRun(now)));
+    expect(lines.slice(1, 7)).toEqual([
+      "  No email changed outcome.",
+      "  Outcomes, earlier -> now: matched 2 -> 2, near_miss 1 -> 1, no_match 1 -> 1.",
+      "  Conditions, how many of the 4 emails decided in both each held on, earlier -> now:",
+      `    0. ${SENDER}: 3 -> 3 (the same emails)`,
+      `    1. ${NOT_RECEIPT}: 2 -> 2 (the same emails)`,
+      "    added, now 2. It is not personal: holds on 4",
+    ]);
+  });
+
+  it("puts the comparison beside the answer with --json, after any error, and beside data with --envelope", async () => {
     const result = await comparedRun(earlier, ["--json"]);
     expect(result.exitCode, result.stderr).toBe(0);
     expect(result.stderr).not.toContain("Compared with");
-    const printed = JSON.parse(result.stdout) as Record<string, unknown> & {
-      comparison: Record<string, unknown>;
-    };
+    const printed = JSON.parse(result.stdout) as Printed;
     expect(printed.results).toEqual(earlier.results);
     expect(Object.keys(printed).at(-1)).toBe("comparison");
     expect(printed.comparison).toMatchObject({
       emails: 4,
       only_earlier: 0,
       only_now: 0,
+      decided: 4,
       unchanged: true,
+      tree_changed: false,
       changed: [],
-      still_matched: { count: 2, subjects: ["Invoice NV-1", "Invoice NV-2"] },
+      still_matched: {
+        count: 2,
+        emails: [
+          { email_id: A, subject: "Invoice NV-1" },
+          { email_id: D, subject: "Invoice NV-2" },
+        ],
+      },
       conditions: [
         {
-          index: 0,
-          earlier: { held: 3 },
-          now: { held: 3 },
+          earlier: { index: 0, held: 3 },
+          now: { index: 0, held: 3 },
           lost: 0,
           gained: 0,
         },
         {
-          index: 1,
-          earlier: { held: 2 },
-          now: { held: 2 },
+          earlier: { index: 1, held: 2 },
+          now: { index: 1, held: 2 },
           lost: 0,
           gained: 0,
         },
       ],
     });
+    // A failed expectation keeps its error and exit code, and the comparison goes after it.
+    const failing = {
+      ...earlier,
+      expectations: {
+        passed: false,
+        counts: { passed: 0, failed: 1, undecided: 0 },
+        results: [
+          {
+            email_id: B,
+            expected: "match",
+            outcome: "near_miss",
+            status: "failed",
+          },
+        ],
+      },
+    };
+    const failed = await comparedRun(failing, ["--json"]);
+    expect(failed.exitCode).toBe(1);
+    const failedDoc = JSON.parse(failed.stdout) as Printed & {
+      error: { code: string };
+    };
+    expect(failedDoc.error.code).toBe("expectations_failed");
+    const keys = Object.keys(failedDoc);
+    expect(keys.indexOf("error")).toBeLessThan(keys.indexOf("comparison"));
+    const enveloped = JSON.parse(
+      (await comparedRun(earlier, ["--json", "--envelope"])).stdout,
+    ) as Printed & { data: Record<string, unknown> };
+    expect(enveloped.data).not.toHaveProperty("comparison");
+    expect(enveloped.comparison).toMatchObject({ emails: 4, unchanged: true });
     // Without --same-emails-as, the document is the answer alone.
     answer(earlier);
     const plain = await run("email-rules:test-email-rule", [
@@ -1289,12 +1363,28 @@ describe("email-rules test-email-rule: what changed against the earlier answer (
     expect(JSON.parse(plain.stdout)).not.toHaveProperty("comparison");
   });
 
-  it("compares only the emails both tested, and does not pair conditions of trees that differ in how many", () => {
+  it("reads the earlier answer once, so a file gone or rewritten by the time the answer arrives is still compared as sent", async () => {
+    const path = tempFile("once.json", JSON.stringify(earlier));
+    responder = () => {
+      rmSync(path);
+      return jsonResponse(200, { success: true, data: earlier });
+    };
+    const result = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+      "--same-emails-as",
+      path,
+    ]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(tail(stderrLines(result))[1]).toMatch(/^ {2}Nothing changed: /);
+  });
+
+  it("lists conditions that cannot pair as removed and added, and counts only the emails both tested", () => {
     const now = answerWith(
       [
-        result(A, "matched", [true, true]),
-        result(C, "matched", [true, true]),
-        result(E, "no_match", [false, false]),
+        result(A, "matched", [true, true, true]),
+        result(C, "matched", [true, true, true]),
+        result(E, "no_match", [false, false, false]),
       ],
       ["One", "Two", "Three"],
     );
@@ -1303,27 +1393,22 @@ describe("email-rules test-email-rule: what changed against the earlier answer (
       emails: 2,
       only_earlier: 2,
       only_now: 1,
+      decided: 2,
       unchanged: false,
+      tree_changed: true,
     });
-    expect(
-      compared?.conditions.map((c) => [c.index, c.lost, c.gained]),
-    ).toEqual([
-      [0, null, null],
-      [1, null, null],
-      [2, null, null],
-    ]);
     if (!compared) throw new Error("expected a comparison");
     expect(comparisonLines(compared)).toEqual([
       "Compared with v1.json, over the 2 emails both tested (left out: 2 only in the earlier answer, 1 only in this one):",
       "  1 email changed outcome.",
       "  Outcomes, earlier -> now: matched 1 -> 2, no_match 1 -> 0.",
-      "  Conditions, emails each held on (the trees have different numbers of conditions, so they are not paired):",
-      "    earlier 0. The sender is billing@kestruvo.example: 1",
-      "    now 0. One: 2",
-      "    earlier 1. It is not a receipt: 1",
-      "    now 1. Two: 2",
-      "    now 2. Three: 0",
-      `  Changed outcome (1):`,
+      "  Conditions, how many of the 2 emails decided in both each held on, earlier -> now:",
+      `    removed, earlier 0. ${SENDER}: held on 1`,
+      `    removed, earlier 1. ${NOT_RECEIPT}: held on 1`,
+      "    added, now 0. One: holds on 2",
+      "    added, now 1. Two: holds on 2",
+      "    added, now 2. Three: holds on 2",
+      "  Changed outcome (1):",
       `    ${C} "Subject c": no_match -> matched`,
       '  Matched before and still matched: 1, such as "Subject a".',
     ]);
@@ -1335,26 +1420,117 @@ describe("email-rules test-email-rule: what changed against the earlier answer (
       (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
     );
     const many = answerWith(
-      ids.map((id) =>
-        result(id, "matched", [true, true], `Invoice ${id.slice(-1)}`),
+      ids.map((id, i) =>
+        result(id, "matched", [true, true], i === 1 ? null : `Invoice ${i}`),
       ),
     );
     const compared = compareSameEmails({ data: many }, many, "env.json");
-    expect(compared?.still_matched).toEqual({
-      count: 7,
-      subjects: [
-        "Invoice 0",
-        "Invoice 1",
-        "Invoice 2",
-        "Invoice 3",
-        "Invoice 4",
-      ],
-    });
+    expect(compared?.still_matched.count).toBe(7);
+    expect(compared?.still_matched.emails.map((x) => x.subject)).toEqual([
+      "Invoice 0",
+      null,
+      "Invoice 2",
+      "Invoice 3",
+      "Invoice 4",
+    ]);
     if (!compared) throw new Error("expected a comparison");
     expect(comparisonLines(compared).at(-1)).toBe(
-      '  Matched before and still matched: 7, such as "Invoice 0", "Invoice 1", "Invoice 2", "Invoice 3", "Invoice 4", and 2 more.',
+      '  Matched before and still matched: 7, such as "Invoice 0", (no subject), "Invoice 2", "Invoice 3", "Invoice 4", and 2 more.',
     );
     expect(compareSameEmails({ rules: [] }, many, "x.json")).toBeNull();
+  });
+
+  it("counts conditions only over emails decided in both with no fact missing, and calls an outcome it does not know unknown", () => {
+    const before = answerWith([
+      result(A, "matched", [true, true]),
+      result(B, "no_match", [true, false], null, {
+        missing_facts: ["doc_type"],
+      }),
+      result(C, "unclassified", null),
+      result(D, "weird\u001b[2J", [true, true]),
+    ]);
+    const now = answerWith([
+      result(A, "matched", [true, true]),
+      result(B, "no_match", [false, false], null, {
+        missing_facts: ["doc_type"],
+      }),
+      result(C, "skipped", null),
+      result(D, "matched", [true, true]),
+    ]);
+    const compared = compareSameEmails(before, now, "v1.json");
+    expect(compared).toMatchObject({
+      emails: 4,
+      decided: 1,
+      outcomes: {
+        earlier: { matched: 1, no_match: 1, unclassified: 1, unknown: 1 },
+        now: { matched: 2, no_match: 1, skipped: 1 },
+      },
+    });
+    expect(
+      compared?.conditions.map((c) => [c.earlier?.held, c.now?.held]),
+    ).toEqual([
+      [1, 1],
+      [1, 1],
+    ]);
+    expect(
+      compared?.changed.map((c) => [c.email_id, c.earlier, c.now]),
+    ).toEqual([
+      [C, "unclassified", "skipped"],
+      [D, "unknown", "matched"],
+    ]);
+    if (!compared) throw new Error("expected a comparison");
+    expect(comparisonLines(compared).join("\n")).not.toContain("\u001b");
+  });
+
+  it("says there is nothing to compare, and never that nothing changed, when no email is in both or none was decided in both", () => {
+    const apart = compareSameEmails(
+      earlier,
+      answerWith([result(E, "matched", [true, true])]),
+      "v1.json",
+    );
+    expect(apart).toMatchObject({ emails: 0, unchanged: false });
+    if (!apart) throw new Error("expected a comparison");
+    expect(comparisonLines(apart)).toEqual([
+      "Compared with v1.json, over the 0 emails both tested (left out: 4 only in the earlier answer, 1 only in this one):",
+      "  None to compare.",
+    ]);
+    const undecided = answerWith([
+      result(A, "unclassified", null),
+      result(B, "unclassified", null),
+    ]);
+    const none = compareSameEmails(undecided, undecided, "v1.json");
+    expect(none).toMatchObject({ emails: 2, decided: 0, unchanged: false });
+    if (!none) throw new Error("expected a comparison");
+    expect(comparisonLines(none).slice(1)).toEqual([
+      "  No email changed outcome.",
+      "  Outcomes, earlier -> now: unclassified 2 -> 2.",
+      "  Conditions: no email was decided on its conditions in both answers, so they are not compared.",
+      "  Matched before and still matched: none.",
+    ]);
+  });
+
+  it("strips terminal control sequences and reordering marks from what the two answers say", () => {
+    const hostile = answerWith(
+      [
+        result(
+          A,
+          "matched",
+          [true, true],
+          "Invoice\u001b]0;owned\u0007 \u202eNV-9",
+        ),
+      ],
+      ["Sender\u001b[31m is known", NOT_RECEIPT],
+    );
+    const compared = compareSameEmails(earlier, hostile, "v1\u001b[2J.json");
+    if (!compared) throw new Error("expected a comparison");
+    const text = comparisonLines(compared).join("\n");
+    for (const mark of ["\u001b", "\u0007", "\u202e"])
+      expect(text).not.toContain(mark);
+    expect(text).toContain("Invoice");
+    // The JSON keeps what the answers said, for a script to read.
+    expect(compared.still_matched.emails[0]?.subject).toBe(
+      "Invoice\u001b]0;owned\u0007 \u202eNV-9",
+    );
   });
 });
 
