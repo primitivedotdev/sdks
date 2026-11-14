@@ -4394,8 +4394,8 @@ describe("get-email-rule-share and list-email-rule-shares: whether a share made 
     is_beneficiary: true,
     granter: {
       user_id: RULE,
-      name: "Ethan Byrd",
-      email: "ethan@acme.example",
+      name: "Pat Example",
+      email: "pat@acme.example",
       active: true,
     },
     rule: { name: "Vendor receipts", state: "active" },
@@ -4415,7 +4415,7 @@ describe("get-email-rule-share and list-email-rule-shares: whether a share made 
     const got = await run("email-rules:get-email-rule-share", ["--id", SHARE]);
     expect(got.exitCode, got.stderr).toBe(0);
     expect(stderrLines(got)).toContain(
-      `Share ${SHARE} (Vendor receipts): its rule last looked at an email in Ethan Byrd's mailboxes in the hour starting 2026-11-14 05:00 UTC; it has shared 3 emails with you, the last at 2026-11-14 05:56 UTC.`,
+      `Share ${SHARE} (Vendor receipts): its rule last looked at an email in Pat Example's mailboxes in the hour starting 2026-11-14 05:00 UTC; it has shared 3 emails with you, the last at 2026-11-14 05:56 UTC.`,
     );
     answer([share(WORKING), share(null, { id: E })]);
     const listed = await run("email-rules:list-email-rule-shares", []);
@@ -4444,7 +4444,7 @@ describe("get-email-rule-share and list-email-rule-shares: whether a share made 
         }),
       ),
     ).toEqual([
-      `Share ${SHARE} (Vendor receipts): its rule has not looked at an email in Ethan Byrd's mailboxes in any hour that has ended since it was shared with you; nothing has been shared with you yet.`,
+      `Share ${SHARE} (Vendor receipts): its rule has not looked at an email in Pat Example's mailboxes in any hour that has ended since it was shared with you; nothing has been shared with you yet.`,
     ]);
     expect(
       shareActivityLines(
@@ -4457,7 +4457,7 @@ describe("get-email-rule-share and list-email-rule-shares: whether a share made 
       shareActivityLines(
         share({ ...WORKING, shared_emails: 10_000, shared_emails_more: true }),
       )[0],
-    ).toContain("it has shared more than 10000 emails with you");
+    ).toContain("it has shared more than 10,000 emails with you");
     expect(
       shareActivityLines(
         share({
@@ -4472,6 +4472,28 @@ describe("get-email-rule-share and list-email-rule-shares: whether a share made 
     ]);
   });
 
+  it("says new email is not being shared when delivery is paused, and never claims a rule looked at nothing beside what it shared", () => {
+    expect(
+      shareActivityLines(share(WORKING, { delivery_paused: true }))[0],
+    ).toMatch(
+      /the last at 2026-11-14 05:56 UTC\. New email is not being shared with you right now; what was shared stays visible\.$/,
+    );
+    expect(
+      shareActivityLines(share({ ...WORKING, last_decided_at: null })),
+    ).toEqual([
+      `Share ${SHARE} (Vendor receipts): whether it is working could not be read just now; try again.`,
+    ]);
+    const odd =
+      shareActivityLines(
+        share({
+          ...WORKING,
+          last_decided_at: "x\u001b[2Jy",
+          last_shared_at: "z\u001b[2Jw",
+        }),
+      )[0] ?? "";
+    expect(odd).not.toContain("\u001b");
+  });
+
   it("says nothing without activity, and strips terminal sequences from names", () => {
     expect(shareActivityLines(share(null))).toEqual([]);
     expect(shareActivityLines(share(undefined))).toEqual([]);
@@ -4479,7 +4501,7 @@ describe("get-email-rule-share and list-email-rule-shares: whether a share made 
     const line =
       shareActivityLines(
         share(WORKING, {
-          granter: { name: "Ethan\u001b[2J", email: null },
+          granter: { name: "Pat\u001b[2J", email: null },
           rule: { name: "Receipts\u202e" },
         }),
       )[0] ?? "";

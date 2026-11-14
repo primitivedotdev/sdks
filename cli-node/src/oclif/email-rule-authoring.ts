@@ -917,7 +917,7 @@ export function expectationsOutcome(
 function minuteUtc(value: string): string {
   const at = new Date(value);
   return Number.isNaN(at.getTime())
-    ? value
+    ? shownLine(value)
     : `${at.toISOString().slice(0, 16).replace("T", " ")} UTC`;
 }
 
@@ -2408,24 +2408,31 @@ export function shareActivityLines(share: unknown): string[] {
     shownLine(granter.name) || shownLine(granter.email) || "the member sharing";
   const head = `Share ${id}${rule ? ` (${rule})` : ""}:`;
   const count = activity.shared_emails;
-  if (typeof count !== "number")
-    return [
-      `${head} whether it is working could not be read just now; try again.`,
-    ];
+  const sharedAt =
+    typeof activity.last_shared_at === "string"
+      ? activity.last_shared_at
+      : null;
+  const unread = `${head} whether it is working could not be read just now; try again.`;
+  if (typeof count !== "number") return [unread];
+  // The hour counts the newest email shared, so it is never empty while something was shared; if it is, it was not read.
+  if (typeof activity.last_decided_at !== "string" && (count > 0 || sharedAt))
+    return [unread];
   const decided =
     typeof activity.last_decided_at === "string"
       ? `its rule last looked at an email in ${person}'s mailboxes in the hour starting ${minuteUtc(activity.last_decided_at)}`
       : `its rule has not looked at an email in ${person}'s mailboxes in any hour that has ended since it was shared with you`;
-  const many =
-    activity.shared_emails_more === true ? `more than ${count}` : `${count}`;
+  const more = activity.shared_emails_more === true;
+  const many = `${more ? "more than " : ""}${count.toLocaleString("en-US")}`;
   const shared =
     count === 0
       ? "nothing has been shared with you yet"
-      : `it has shared ${many} ${count === 1 && activity.shared_emails_more !== true ? "email" : "emails"} with you${typeof activity.last_shared_at === "string" ? `, the last at ${minuteUtc(activity.last_shared_at)}` : ""}`;
+      : `it has shared ${many} ${count === 1 && !more ? "email" : "emails"} with you${sharedAt ? `, the last at ${minuteUtc(sharedAt)}` : ""}`;
   const paused =
     activity.rule_active === false
       ? " The rule is not active, so nothing new is shared until it is."
-      : "";
+      : share.delivery_paused === true
+        ? " New email is not being shared with you right now; what was shared stays visible."
+        : "";
   return [`${head} ${decided}; ${shared}.${paused}`];
 }
 
