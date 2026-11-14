@@ -1570,10 +1570,11 @@ parsers.
   on, earlier and now, with how many it lost and gained (conditions pair by
   their text, then in order, and one left over shows as added or removed);
   and how many emails matched before and still match, naming up to five by
-  subject. When nothing changed it says so first, and says so apart when
-  the tree changed but no email did. The earlier file is read once. With
-  `--json`, the document gains a `comparison` key beside the answer's own,
-  which the CLI works out from the two answers.
+  subject. When nothing changed it says so first, and says so separately
+  when the tree changed but no email did. The earlier file is read once.
+  With `--json`, the document gains a `comparison` key beside the answer's
+  own, which the CLI works out from the two answers; when it cannot compare
+  them, `comparison` holds only `against` and `error`.
 - `email-rules end-email-rule-share` prints the answer's note, that ending
   a share leaves the rule itself as it was. `email-rules
   list-email-rule-requests`, `list-email-rule-shares` and

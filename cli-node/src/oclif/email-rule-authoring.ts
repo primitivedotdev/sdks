@@ -963,7 +963,8 @@ type ComparedCondition = { index: number; text: string; held: number };
  * What changed between an earlier test-email-rule answer and this one, over
  * the emails both tested, worked out by the CLI from the two answers, so a
  * narrowing that narrowed nothing reads as such rather than as a fresh set of
- * counts.
+ * counts. When there can be none (the earlier file could not be read, or holds
+ * no results), a --json document's comparison is { against, error } instead.
  */
 export type SameEmailsComparison = {
   against: string;
@@ -1042,12 +1043,17 @@ function heldParts(result: TestResult | undefined): Map<number, boolean> {
   );
 }
 
-/** Decided on its conditions, with no fact the rule reads left out: what the summary's own counts cover. */
+/**
+ * Decided on its conditions, with the parts that say how, and no fact the rule
+ * reads left out: what the summary's own counts cover.
+ */
 function decidedOnConditions(result: TestResult | undefined): boolean {
   const missing: unknown = (result as { missing_facts?: unknown } | undefined)
     ?.missing_facts;
   return (
     DECIDED.has(outcomeOf(result)) &&
+    Array.isArray(result?.parts) &&
+    result.parts.length > 0 &&
     !(Array.isArray(missing) && missing.length > 0)
   );
 }
@@ -1250,7 +1256,9 @@ export function comparisonLines(c: SameEmailsComparison): string[] {
     c.unchanged
       ? c.tree_changed
         ? "  Nothing changed on these emails: the tree changed, but every email has the same outcome and each condition holds on the same emails as before."
-        : "  Nothing changed: every email has the same outcome, and each condition holds on the same emails as before."
+        : c.conditions.length === 0
+          ? "  Nothing changed: every email has the same outcome."
+          : "  Nothing changed: every email has the same outcome, and each condition holds on the same emails as before."
       : c.changed.length === 0
         ? "  No email changed outcome."
         : `  ${plural(c.changed.length, "email changed outcome", "emails changed outcome")}.`,
@@ -2441,7 +2449,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
         description: pickFlagHelp([EXPECT_SAMPLES_FILE_FLAG]),
       }),
       [SAME_EMAILS_FLAG]: Flags.string({
-        description: `Test the same emails as an earlier test: a file holding what test-email-rule --json printed. Sets email_ids to its results' email_id, over any in --body-file or --raw-body, so two trees are compared over the same mail; a test of recent mail covers the newest emails, which move on as mail arrives. At most ${EMAIL_IDS_MAX} emails, counting the expected ones a test adds (a saved rule's own, with --rule-id). The report then ends with what changed against that answer, over the emails both tested: the emails whose outcome changed; each top-level condition's count, earlier and now, of the emails both decided on their conditions that it held on, with how many it lost and gained (conditions pair by their text, then in order; one left over shows as added or removed); and the emails matched before and still matched. It says so when nothing changed. With --json, the document gains a comparison key beside the answer's own, which the CLI works out from the two answers.`,
+        description: `Test the same emails as an earlier test: a file holding what test-email-rule --json printed. Sets email_ids to its results' email_id, over any in --body-file or --raw-body, so two trees are compared over the same mail; a test of recent mail covers the newest emails, which move on as mail arrives. At most ${EMAIL_IDS_MAX} emails, counting the expected ones a test adds (a saved rule's own, with --rule-id). The report then ends with what changed against that answer, over the emails both tested: the emails whose outcome changed; each top-level condition's count, earlier and now, of the emails both decided on their conditions that it held on, with how many it lost and gained (conditions pair by their text, then in order; one left over shows as added or removed); and the emails matched before and still matched. It says so when nothing changed. With --json, the document gains a comparison key beside the answer's own, which the CLI works out from the two answers; when it cannot compare them, comparison holds only against and error.`,
       }),
       ...scopeSelectionFlags(),
     },

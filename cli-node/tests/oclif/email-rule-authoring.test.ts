@@ -1509,6 +1509,59 @@ describe("email-rules test-email-rule: what changed against the earlier answer (
     ]);
   });
 
+  it("answers against and error when it cannot compare, and a malformed earlier answer costs the report nothing", () => {
+    const missing = testEmailRuleReport(earlier, {
+      flags: { "same-emails-as": join(tempHome, "no-such.json") },
+    });
+    expect(missing.json).toEqual({
+      comparison: {
+        against: join(tempHome, "no-such.json"),
+        error: expect.stringContaining("Could not read --same-emails-as"),
+      },
+    });
+    expect(missing.lines.at(-1)).toMatch(
+      /^Not compared with .*no-such\.json: Could not read /,
+    );
+    const path = tempFile(
+      "malformed.json",
+      JSON.stringify({
+        results: [
+          { email_id: A, outcome: "matched", parts: [null, 5, { index: "0" }] },
+        ],
+      }),
+    );
+    const report = testEmailRuleReport(earlier, {
+      flags: { "same-emails-as": path },
+    });
+    expect(report.json?.comparison).toMatchObject({
+      emails: 1,
+      decided: 1,
+      unchanged: false,
+    });
+    expect(report.lines.some((line) => line.startsWith("Matched ("))).toBe(
+      true,
+    );
+  });
+
+  it("claims nothing about conditions when neither answer names any", () => {
+    const bare = {
+      results: [
+        { email_id: A, outcome: "matched" },
+        { email_id: B, outcome: "no_match" },
+      ],
+    };
+    const compared = compareSameEmails(bare, bare, "v1.json");
+    expect(compared).toMatchObject({
+      decided: 0,
+      conditions: [],
+      unchanged: true,
+    });
+    if (!compared) throw new Error("expected a comparison");
+    expect(comparisonLines(compared)[1]).toBe(
+      "  Nothing changed: every email has the same outcome.",
+    );
+  });
+
   it("strips terminal control sequences and reordering marks from what the two answers say", () => {
     const hostile = answerWith(
       [
