@@ -186,8 +186,25 @@ describe("resolveDefaultFrom for a key", () => {
       expect(error).toBeInstanceOf(Error);
       expect((error as Error).message).toContain("--from has no default");
       expect((error as Error).message).toContain(listed);
+      // Nothing listed to send from is a different refusal from a choice to make.
+      const nothing =
+        _case === "no addresses" || _case === "an inbound-only scope";
+      expect(error).toMatchObject({
+        code: nothing ? "no_send_address" : "no_default_from",
+      });
     },
   );
+
+  it("gives an organization-wide key whose domains could not be read the no-default code, not the nothing-to-send-from one", async () => {
+    const client = clientAnswering((path) =>
+      path.endsWith("/whoami/grant") ? grantWithScope("org") : refusal(),
+    );
+    const error = await resolveDefaultFrom(client, authContext).catch(
+      (caught: Error) => caught,
+    );
+    expect(error).toMatchObject({ code: "no_default_from" });
+    expect((error as Error).message).toContain("--from has no default");
+  });
 
   it("asks an organization-wide key for --from, listing the sendable domains, never agent@", async () => {
     const { client, requests } = recordingClient({
@@ -552,6 +569,9 @@ describe("resolveDefaultFrom from the API's own answer", () => {
     await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
       "This credential may send from more than one address, so there is no default From. Name the address to send from. Addresses you may send from: a@acme.example, b@acme.example. Also any address at: acme.example. Pass the address to use with --from <address>.",
     );
+    await expect(resolveDefaultFrom(client, authContext)).rejects.toMatchObject(
+      { code: "no_default_from" },
+    );
   });
 
   it("refuses with the reason alone, and a claim hint, and no --from line, when nothing can be sent from", async () => {
@@ -580,6 +600,9 @@ describe("resolveDefaultFrom from the API's own answer", () => {
     });
     await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
       /^This credential lists no address or domain it can send from, so it cannot send\.$/,
+    );
+    await expect(resolveDefaultFrom(client, authContext)).rejects.toMatchObject(
+      { code: "no_send_address" },
     );
   });
 

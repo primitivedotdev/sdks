@@ -377,6 +377,55 @@ describe("checkApiKey on a machine with only connected agent profiles", () => {
   });
 });
 
+describe("doctor's output", () => {
+  it("prints the checklist alone, or with --json the JSON alone, naming the failed checks in error", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "primitive-doctor-fail-"));
+    const stderr: string[] = [];
+    const write = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk: string | Uint8Array) => {
+        stderr.push(String(chunk));
+        return true;
+      });
+    const logged: string[] = [];
+    const log = vi.spyOn(console, "log").mockImplementation((line) => {
+      logged.push(String(line));
+    });
+    const previousExitCode = process.exitCode;
+    try {
+      vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
+      vi.stubEnv("PRIMITIVE_AGENT_PROFILE", undefined);
+      vi.stubEnv("PRIMITIVE_API_KEY", undefined);
+      vi.stubEnv("PRIMITIVE_KEY", undefined);
+      const root = resolve(import.meta.dirname, "../..");
+      // No login and no key: the Auth check fails.
+      await DoctorCommand.run([], { root });
+      const text = logged.join("\n");
+      expect(text).toMatch(/^\[FAIL\] Auth: /m);
+      expect(text).not.toContain('"checks"');
+      expect(stderr.join("")).toBe("");
+      expect(process.exitCode).toBe(1);
+
+      logged.length = 0;
+      process.exitCode = undefined;
+      await DoctorCommand.run(["--json"], { root });
+      const summary = JSON.parse(logged.join("\n"));
+      expect(summary).toMatchObject({
+        ok: false,
+        error: { message: "1 check failed: Auth." },
+      });
+      expect(stderr.join("")).toBe("");
+      expect(process.exitCode).toBe(1);
+    } finally {
+      process.exitCode = previousExitCode;
+      write.mockRestore();
+      log.mockRestore();
+      vi.unstubAllEnvs();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("doctor with a saved connected profile", () => {
   it("points a Claude hook receiver at agent connect --status, not listen --status", async () => {
     const directory = mkdtempSync(join(tmpdir(), "primitive-doctor-hook-"));
@@ -414,7 +463,8 @@ describe("doctor with a saved connected profile", () => {
       await DoctorCommand.run([], {
         root: resolve(import.meta.dirname, "../.."),
       });
-      const text = stderr.join("");
+      // The checklist alone, on stdout, and no JSON after it.
+      const text = logged.join("\n");
       expect(text).toContain(
         "`primitive agent connect --profile hooked --status --json` for this profile's receiver",
       );
@@ -423,17 +473,19 @@ describe("doctor with a saved connected profile", () => {
       expect(text).toContain(
         "`PRIMITIVE_AGENT_PROFILE=hooked primitive whoami --json` for saved identity",
       );
-      // A warning is not a failure: `ok` agrees with the zero exit code.
-      const summary = JSON.parse(logged.join("\n"));
-      expect(summary.ok).toBe(true);
-      expect(summary.warnings).toBeGreaterThanOrEqual(1);
+      expect(text).not.toContain('"checks"');
+      expect(stderr.join("")).toBe("");
       expect(process.exitCode ?? 0).toBe(0);
-      // --json is accepted; stdout is the same JSON summary.
+      // --json: the same checks as one JSON document, and no checklist.
       logged.length = 0;
       await DoctorCommand.run(["--json"], {
         root: resolve(import.meta.dirname, "../.."),
       });
-      expect(JSON.parse(logged.join("\n")).ok).toBe(true);
+      // A warning is not a failure: `ok` agrees with the zero exit code.
+      const summary = JSON.parse(logged.join("\n"));
+      expect(summary.ok).toBe(true);
+      expect(summary.warnings).toBeGreaterThanOrEqual(1);
+      expect(stderr.join("")).toBe("");
     } finally {
       write.mockRestore();
       log.mockRestore();
@@ -478,7 +530,7 @@ describe("doctor with a saved connected profile", () => {
       );
       const root = resolve(import.meta.dirname, "../..");
       // A healthy or never-started receiver adds no row.
-      await DoctorCommand.run([], { root });
+      await DoctorCommand.run(["--json"], { root });
       expect(JSON.parse(logged.join("\n")).checks).not.toContainEqual(
         expect.objectContaining({ label: "Receiver" }),
       );
@@ -496,7 +548,7 @@ describe("doctor with a saved connected profile", () => {
       ).rejects.toThrow("did not become ready");
       logged.length = 0;
       stderr.length = 0;
-      await DoctorCommand.run([], { root });
+      await DoctorCommand.run(["--json"], { root });
       const receiver = JSON.parse(logged.join("\n")).checks.find(
         (check: { label: string }) => check.label === "Receiver",
       );
@@ -510,7 +562,9 @@ describe("doctor with a saved connected profile", () => {
       expect(receiver.hint).toContain(
         `listen --status --notify-session ${session}`,
       );
-      expect(stderr.join("")).toContain("[WARN] Receiver:");
+      logged.length = 0;
+      await DoctorCommand.run([], { root });
+      expect(logged.join("\n")).toContain("[WARN] Receiver:");
       // A warning only: doctor still exits 0.
       expect(process.exitCode ?? 0).toBe(0);
     } finally {
@@ -850,19 +904,21 @@ describe("checkAskedOfYou", () => {
     try {
       vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
       vi.stubEnv("PRIMITIVE_AGENT_PROFILE", undefined);
-      await DoctorCommand.run(
-        [
-          "--api-key",
-          "prim_test_key",
-          "--api-base-url",
-          "https://api.example.test/v1",
-        ],
-        { root: resolve(import.meta.dirname, "../..") },
-      );
-      const text = stderr.join("");
+      const args = [
+        "--api-key",
+        "prim_test_key",
+        "--api-base-url",
+        "https://api.example.test/v1",
+      ];
+      const root = resolve(import.meta.dirname, "../..");
+      await DoctorCommand.run(args, { root });
+      const text = `${logged.join("\n")}\n`;
       expect(text).toMatch(
         /\[OK\]\s+Domains: .*\n\[WARN\] Asked of you: 1 rule request waiting for you\n/,
       );
+      logged.length = 0;
+      await DoctorCommand.run([...args, "--json"], { root });
+      expect(stderr.join("")).toBe("");
       const summary = JSON.parse(logged.join("\n"));
       expect(summary.ok).toBe(true);
       expect(summary.checks.at(-1)).toMatchObject({

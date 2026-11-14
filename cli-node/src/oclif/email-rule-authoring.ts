@@ -394,7 +394,30 @@ type TestResult = TestEmailRuleResult["results"][number];
 type ExpectationResult = NonNullable<
   TestEmailRuleResult["expectations"]
 >["results"][number];
-type QuestionAnswer = NonNullable<TestResult["question_answers"]>[number];
+// An answer can carry `confidence` beside `probability`.
+type QuestionAnswer = NonNullable<TestResult["question_answers"]>[number] & {
+  confidence?: number | null;
+};
+
+const unitInterval = (value: unknown): value is number =>
+  typeof value === "number" &&
+  Number.isFinite(value) &&
+  value >= 0 &&
+  value <= 1;
+
+/**
+ * How sure an answer is, from 0 to 1: the answer's `confidence`, the number
+ * a webhook payload carries for it, when the answer has one; otherwise the
+ * chance of the answer given, worked out from `probability`, the chance of
+ * yes. Null for an unanswered question.
+ */
+export function answerConfidence(answer: QuestionAnswer): number | null {
+  if (typeof answer.answer !== "boolean") return null;
+  if (unitInterval(answer.confidence)) return answer.confidence;
+  const p = answer.probability;
+  if (!unitInterval(p)) return null;
+  return answer.answer ? p : 1 - p;
+}
 
 type UndecidedReason = {
   why: string;
@@ -466,12 +489,10 @@ function answerText(answer: QuestionAnswer): string {
       : answer.answer === false
         ? "no"
         : "unanswered";
-  const probability =
-    typeof answer.probability === "number"
-      ? ` at ${confidence(answer.probability)}`
-      : "";
+  const sure = answerConfidence(answer);
+  const at = sure === null ? "" : ` at ${confidence(sure)}`;
   const error = answer.error_class ? ` (${answer.error_class})` : "";
-  return `"${answer.question}" ${verdict}${probability}${error}`;
+  return `"${answer.question}" ${verdict}${at}${error}`;
 }
 
 function conditionLines(summary: TestEmailRuleResult["summary"]): string[] {

@@ -885,7 +885,16 @@ export function buildThrownSendFailureEnvelope(params: {
     exit_code: params.requestStarted
       ? sendOutcomeExitCode("uncertain")
       : thrownErrorExitCode(params.error),
-    outcome_message: formatSendFailureSummary(params.noun, outcome, undefined),
+    // Refused before the request started: the reason leads, as for an API
+    // refusal, rather than sitting only under error.message.
+    outcome_message: formatSendFailureSummary(
+      params.noun,
+      outcome,
+      undefined,
+      params.requestStarted
+        ? undefined
+        : sendErrorMessage(thrownErrorBody(params.error)),
+    ),
     ...sendIdentityFields({
       idempotencyKey: params.idempotencyKey,
       sent: null,

@@ -245,6 +245,19 @@ async function sendableDomains(
 }
 
 /**
+ * The code on a refusal for a send with no --from that has no default From
+ * (several addresses it may send from, say), so a caller reading --json can
+ * tell it from a failed request.
+ */
+export const NO_DEFAULT_FROM_CODE = "no_default_from";
+
+/**
+ * The code on a refusal for a credential that lists no address or domain it
+ * can send from (one that lists only email rules, say): no --from helps.
+ */
+export const NO_SEND_ADDRESS_CODE = "no_send_address";
+
+/**
  * The refusal for a credential with no From to default to: why, the
  * addresses and domains it may send from as far as the CLI can tell, and how
  * to pass --from. Never a guess: the CLI does not pick one of them.
@@ -258,7 +271,7 @@ async function noDefaultFrom(
   if (!grantSends(grant))
     return new Errors.CLIError(
       "This credential cannot send mail from any address, so --from has no default.",
-      { exit: 1 },
+      { exit: 1, code: NO_SEND_ADDRESS_CODE },
     );
   const { exclude } = options;
   const reach = grantSendReach(grant);
@@ -284,7 +297,16 @@ async function noDefaultFrom(
       ? `Pass the one to use with --from, for example --from ${example}.`
       : "Pass the address to send from with --from <address>.",
   );
-  return new Errors.CLIError(`${reason} ${parts.join(" ")}`, { exit: 1 });
+  // Nothing to send from only when the grant itself lists nothing: an
+  // organization-wide reach whose domains could not be read is not known to
+  // be empty, and an explicit --from can still send.
+  return new Errors.CLIError(`${reason} ${parts.join(" ")}`, {
+    exit: 1,
+    code:
+      reach !== null && addresses.length === 0 && domains.length === 0
+        ? NO_SEND_ADDRESS_CODE
+        : NO_DEFAULT_FROM_CODE,
+  });
 }
 
 /**
@@ -333,7 +355,7 @@ function unauthorizedRefusal(
   // exit: 1 to match the unauthorized path elsewhere; oclif's CLIError
   // defaults to 2 otherwise, which breaks callers that branch on exit code.
   return new Errors.CLIError(
-    "Cannot send: CLI auth is missing or invalid (see hint above).",
+    "Cannot send: CLI auth is missing or invalid (see the hint).",
     { exit: 1 },
   );
 }
@@ -371,7 +393,7 @@ export async function resolveDefaultFrom(
   if (isConnectedChatCredential(authFailureContext.auth.apiKey)) {
     throw new Errors.CLIError(
       "Connected agents must pass --from with their connected email address.",
-      { exit: 1 },
+      { exit: 1, code: NO_DEFAULT_FROM_CODE },
     );
   }
   const answered = await sendFromAnswer(
@@ -679,6 +701,7 @@ async function sendFromAnswer(
     parts.push("Pass the address to use with --from <address>.");
   throw new Errors.CLIError(parts.filter((part) => part).join(" "), {
     exit: 1,
+    code: nothingListed ? NO_SEND_ADDRESS_CODE : NO_DEFAULT_FROM_CODE,
   });
 }
 
