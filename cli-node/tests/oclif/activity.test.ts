@@ -489,7 +489,7 @@ describe("activity concerning command", () => {
     const help = ActivityConcerningCommand.description;
     expect(help).not.toMatch(/receivers_change/);
     expect(help).toContain(
-      "A rename is not listed, and neither is a change in who receives the rule's matches (its keys, webhooks or share): `primitive email-rule-oversight get-email-rule-covering-me <rule-id>` shows who receives them now, while the rule covers you.",
+      "A rename is not listed, and neither is a change in who receives the rule's matches (its keys, webhooks or share): `primitive email-rule-oversight get-email-rule-covering-me <rule-id>` shows who receives them now, by owner, while the rule covers you.",
     );
   });
 
@@ -588,7 +588,7 @@ describe("activity concerning command", () => {
     );
   });
 
-  it("shows no CHANGE for totals that are missing or not counts, and lists every other footnote together", () => {
+  it("shows no CHANGE for totals that are missing or not counts, and lists the pending and unfinished footnotes together", () => {
     const odd = (receivers_change: unknown, state = "receivers_changed") =>
       item({
         kind: "email_rule_coverage",

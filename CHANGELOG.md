@@ -862,10 +862,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
   let the rule match mail the request left out by who it was sent to. A
   covering rule's `receivers` is also null for a rule shown in draft or
   observe that turned active or was deleted after the page was read.
-- A coverage notice can be `receivers_changed`: who receives an active
-  rule's matches changed (its keys, webhooks or share). It carries
-  `receivers_change`, the totals `before` and `after` (`keys`,
-  `reads_in_full`, `webhooks`, `shares`).
+- A coverage notice declares an optional `receivers_change`, the totals
+  `before` and `after` (`keys`, `reads_in_full`, `webhooks`, `shares`), for
+  the `receivers_changed` notice, which the API no longer sends.
 - A rule's `receivers` entries (`keys`, `webhooks` and `shares`) carry
   `newest_at`, when the newest of them was made, to the minute.
 - `getKeyBuilder` answers `mail_limits_available`, whether a key limited to
