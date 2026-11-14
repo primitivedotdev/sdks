@@ -936,6 +936,312 @@ function windowLine(data: Record<string, unknown>, tested: number): string[] {
     : [span];
 }
 
+/** How many subjects the comparison names among the emails still matched. */
+const STILL_MATCHED_NAMED = 5;
+/** Outcomes decided on a rule's conditions: only these carry parts. */
+const DECIDED = new Set(["matched", "near_miss", "no_match"]);
+
+/** One top-level condition of a tree, as a comparison shows it. */
+type ComparedCondition = { text: string; held: number };
+
+/**
+ * What changed between an earlier test-email-rule answer and this one, over
+ * the emails both tested: the CLI works it out from the two answers, so a
+ * narrowing that narrowed nothing reads as unchanged rather than as a fresh
+ * set of counts.
+ */
+export type SameEmailsComparison = {
+  against: string;
+  /** Emails both answers tested; the rest are left out. */
+  emails: number;
+  only_earlier: number;
+  only_now: number;
+  /** No email changed outcome, and each condition holds on the same emails. */
+  unchanged: boolean;
+  outcomes: { earlier: Record<string, number>; now: Record<string, number> };
+  /**
+   * Each top-level condition (its parts index), with how many of the emails
+   * both answers decided it held on in each. Paired by index only when the two
+   * trees have as many conditions: lost and gained are then the emails it held
+   * on before and fails on now, and the other way round, else null.
+   */
+  conditions: Array<{
+    index: number;
+    earlier: ComparedCondition | null;
+    now: ComparedCondition | null;
+    lost: number | null;
+    gained: number | null;
+  }>;
+  changed: Array<{
+    email_id: string;
+    subject: string | null;
+    earlier: string;
+    now: string;
+  }>;
+  still_matched: { count: number; subjects: string[] };
+};
+
+/** The results an answer holds by email id, as --json printed it or with --envelope. */
+function resultsById(saved: unknown): Map<string, TestResult> | null {
+  const answer = isRecord(saved) && isRecord(saved.data) ? saved.data : saved;
+  if (!isRecord(answer) || !Array.isArray(answer.results)) return null;
+  const byId = new Map<string, TestResult>();
+  for (const result of answer.results) {
+    if (isRecord(result) && typeof result.email_id === "string")
+      byId.set(result.email_id.toLowerCase(), result as TestResult);
+  }
+  return byId;
+}
+
+/** Each condition's text, by index, from an answer's summary. */
+function conditionTexts(saved: unknown): Map<number, string> {
+  const answer = isRecord(saved) && isRecord(saved.data) ? saved.data : saved;
+  const summary = isRecord(answer) ? answer.summary : undefined;
+  const conditions =
+    isRecord(summary) && Array.isArray(summary.conditions)
+      ? summary.conditions
+      : [];
+  return new Map(
+    conditions.flatMap((c) =>
+      isRecord(c) && typeof c.index === "number" && typeof c.text === "string"
+        ? [[c.index, c.text] as const]
+        : [],
+    ),
+  );
+}
+
+/** Which conditions held on each email, by parts index. */
+function heldParts(result: TestResult | undefined): Map<number, boolean> {
+  return new Map(
+    (Array.isArray(result?.parts) ? result.parts : []).map((part) => [
+      part.index,
+      part.matched === true,
+    ]),
+  );
+}
+
+/**
+ * The comparison of `now` with `earlier`, the answer --same-emails-as named
+ * (saved at `against`). Null when the saved answer holds no results.
+ */
+export function compareSameEmails(
+  earlier: unknown,
+  now: unknown,
+  against: string,
+): SameEmailsComparison | null {
+  const before = resultsById(earlier);
+  const after = resultsById(now);
+  if (!before || !after) return null;
+  const both = [...after.keys()].filter((id) => before.has(id));
+  const tally = (byId: Map<string, TestResult>) => {
+    const counts: Record<string, number> = {};
+    for (const id of both) {
+      const outcome = byId.get(id)?.outcome ?? "unknown";
+      counts[outcome] = (counts[outcome] ?? 0) + 1;
+    }
+    return counts;
+  };
+  // Conditions are counted over the emails both decided on their conditions.
+  const decided = both.filter(
+    (id) =>
+      DECIDED.has(String(before.get(id)?.outcome)) &&
+      DECIDED.has(String(after.get(id)?.outcome)),
+  );
+  const partsBefore = new Map(
+    decided.map((id) => [id, heldParts(before.get(id))]),
+  );
+  const partsAfter = new Map(
+    decided.map((id) => [id, heldParts(after.get(id))]),
+  );
+  const indexes = (parts: Map<string, Map<number, boolean>>) =>
+    new Set([...parts.values()].flatMap((held) => [...held.keys()]));
+  const beforeIndexes = indexes(partsBefore);
+  const afterIndexes = indexes(partsAfter);
+  const textsBefore = conditionTexts(earlier);
+  const textsAfter = conditionTexts(now);
+  // Conditions pair by index only when the two trees have as many.
+  const paired =
+    Math.max(beforeIndexes.size, textsBefore.size) ===
+    Math.max(afterIndexes.size, textsAfter.size);
+  const all = [
+    ...new Set([
+      ...beforeIndexes,
+      ...afterIndexes,
+      ...textsBefore.keys(),
+      ...textsAfter.keys(),
+    ]),
+  ].sort((a, b) => a - b);
+  const condition = (
+    index: number,
+    parts: Map<string, Map<number, boolean>>,
+    present: Set<number>,
+    texts: Map<number, string>,
+  ): ComparedCondition | null =>
+    present.has(index) || texts.has(index)
+      ? {
+          text: texts.get(index) ?? `condition ${index}`,
+          held: decided.filter((id) => parts.get(id)?.get(index) === true)
+            .length,
+        }
+      : null;
+  const conditions = all.map((index) => {
+    const pairs = decided.map((id) => [
+      partsBefore.get(id)?.get(index) === true,
+      partsAfter.get(id)?.get(index) === true,
+    ]);
+    return {
+      index,
+      earlier: condition(index, partsBefore, beforeIndexes, textsBefore),
+      now: condition(index, partsAfter, afterIndexes, textsAfter),
+      lost: paired ? pairs.filter(([was, is]) => was && !is).length : null,
+      gained: paired ? pairs.filter(([was, is]) => !was && is).length : null,
+    };
+  });
+  const changed = both
+    .filter((id) => before.get(id)?.outcome !== after.get(id)?.outcome)
+    .map((id) => ({
+      email_id: id,
+      subject: after.get(id)?.subject ?? before.get(id)?.subject ?? null,
+      earlier: String(before.get(id)?.outcome ?? "unknown"),
+      now: String(after.get(id)?.outcome ?? "unknown"),
+    }));
+  const still = both.filter(
+    (id) =>
+      before.get(id)?.outcome === "matched" &&
+      after.get(id)?.outcome === "matched",
+  );
+  return {
+    against,
+    emails: both.length,
+    only_earlier: [...before.keys()].filter((id) => !after.has(id)).length,
+    only_now: [...after.keys()].filter((id) => !before.has(id)).length,
+    unchanged:
+      changed.length === 0 &&
+      paired &&
+      conditions.every((c) => c.lost === 0 && c.gained === 0),
+    outcomes: { earlier: tally(before), now: tally(after) },
+    conditions,
+    changed,
+    still_matched: {
+      count: still.length,
+      subjects: still
+        .slice(0, STILL_MATCHED_NAMED)
+        .map((id) => shownText(after.get(id)?.subject) || "(no subject)"),
+    },
+  };
+}
+
+const OUTCOME_ORDER = [
+  "matched",
+  "near_miss",
+  "no_match",
+  "unclassified",
+  "skipped",
+  "not_found",
+];
+
+/** The comparison as report lines, after the rest of the report. */
+export function comparisonLines(c: SameEmailsComparison): string[] {
+  const left = [
+    c.only_earlier > 0 ? `${c.only_earlier} only in the earlier answer` : "",
+    c.only_now > 0 ? `${c.only_now} only in this one` : "",
+  ].filter(Boolean);
+  const lines = [
+    `Compared with ${c.against}, over the ${plural(c.emails, "email", "emails")} both tested${left.length > 0 ? ` (left out: ${left.join(", ")})` : ""}:`,
+  ];
+  if (c.emails === 0) return [...lines, "  None to compare."];
+  lines.push(
+    c.unchanged
+      ? "  Nothing changed: every email has the same outcome, and each condition holds on the same emails as before."
+      : `  ${plural(c.changed.length, "email changed outcome", "emails changed outcome")}.`,
+  );
+  const outcomes = [
+    ...new Set([
+      ...OUTCOME_ORDER,
+      ...Object.keys(c.outcomes.earlier),
+      ...Object.keys(c.outcomes.now),
+    ]),
+  ]
+    .filter((o) => (c.outcomes.earlier[o] ?? 0) + (c.outcomes.now[o] ?? 0) > 0)
+    .map(
+      (o) => `${o} ${c.outcomes.earlier[o] ?? 0} -> ${c.outcomes.now[o] ?? 0}`,
+    );
+  lines.push(`  Outcomes, earlier -> now: ${outcomes.join(", ")}.`);
+  if (c.conditions.length > 0) {
+    const paired = c.conditions.every((x) => x.lost !== null);
+    lines.push(
+      paired
+        ? "  Conditions, emails each held on, earlier -> now:"
+        : "  Conditions, emails each held on (the trees have different numbers of conditions, so they are not paired):",
+    );
+    for (const x of c.conditions) {
+      if (paired) {
+        const same = x.earlier?.text === x.now?.text;
+        const text = same
+          ? (x.now?.text ?? "")
+          : `earlier ${x.earlier ? `"${x.earlier.text}"` : "none"}, now ${x.now ? `"${x.now.text}"` : "none"}`;
+        const moved =
+          x.lost === 0 && x.gained === 0
+            ? "the same emails"
+            : `lost ${x.lost}, gained ${x.gained}`;
+        lines.push(
+          `    ${x.index}. ${text}: ${x.earlier?.held ?? 0} -> ${x.now?.held ?? 0} (${moved})`,
+        );
+      } else {
+        if (x.earlier)
+          lines.push(
+            `    earlier ${x.index}. ${x.earlier.text}: ${x.earlier.held}`,
+          );
+        if (x.now)
+          lines.push(`    now ${x.index}. ${x.now.text}: ${x.now.held}`);
+      }
+    }
+  }
+  if (c.changed.length > 0) {
+    const shown = c.changed.slice(0, NOT_MATCHED_LIST_LIMIT);
+    lines.push(
+      shown.length < c.changed.length
+        ? `  Changed outcome (${shown.length} of ${c.changed.length} shown; with --json, comparison.changed has every one):`
+        : `  Changed outcome (${c.changed.length}):`,
+      ...shown.map((x) => {
+        const subject = shownText(x.subject);
+        return `    ${x.email_id}${subject ? ` "${subject}"` : ""}: ${x.earlier} -> ${x.now}`;
+      }),
+    );
+  }
+  const named = c.still_matched.subjects.map((s) => `"${s}"`);
+  const more = c.still_matched.count - named.length;
+  lines.push(
+    c.still_matched.count === 0
+      ? "  Matched before and still matched: none."
+      : `  Matched before and still matched: ${c.still_matched.count}, such as ${named.join(", ")}${more > 0 ? `, and ${more} more` : ""}.`,
+  );
+  return lines;
+}
+
+/** The comparison --same-emails-as asks for, or a line saying why there is none. */
+function sameEmailsComparison(
+  data: unknown,
+  flags: Record<string, unknown> | undefined,
+): { comparison?: SameEmailsComparison; lines: string[] } {
+  const file = flags?.[SAME_EMAILS_FLAG];
+  if (typeof file !== "string") return { lines: [] };
+  let earlier: unknown;
+  try {
+    earlier = readJsonFileFlag(file, `--${SAME_EMAILS_FLAG}`);
+  } catch (error) {
+    return {
+      lines: [
+        `Not compared with ${file}: ${error instanceof Error ? error.message : String(error)}`,
+      ],
+    };
+  }
+  const comparison = compareSameEmails(earlier, data, file);
+  return comparison
+    ? { comparison, lines: comparisonLines(comparison) }
+    : { lines: [`Not compared with ${file}: it holds no results.`] };
+}
+
 /** The stderr report and exit code of a test-email-rule answer. */
 export function testEmailRuleReport(
   data: unknown,
@@ -963,8 +1269,13 @@ export function testEmailRuleReport(
     ...matchedLines(results, result.expectations),
     ...notMatchedLines(results, result.expectations),
   ];
+  // Last, so it is what a terminal shows: what changed against the earlier answer.
+  const compared = sameEmailsComparison(data, request?.flags);
   return {
-    lines,
+    lines: [...lines, ...compared.lines],
+    ...(compared.comparison
+      ? { json: { comparison: compared.comparison } }
+      : {}),
     ...expectationsOutcome(result.expectations, results, name),
   };
 }
@@ -2048,7 +2359,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
         description: pickFlagHelp([EXPECT_SAMPLES_FILE_FLAG]),
       }),
       [SAME_EMAILS_FLAG]: Flags.string({
-        description: `Test the same emails as an earlier test: a file holding what test-email-rule --json printed. Sets email_ids to its results' email_id, over any in --body-file or --raw-body, so two trees are compared over the same mail; a test of recent mail covers the newest emails, which move on as mail arrives. At most ${EMAIL_IDS_MAX} emails, counting the expected ones a test adds (a saved rule's own, with --rule-id).`,
+        description: `Test the same emails as an earlier test: a file holding what test-email-rule --json printed. Sets email_ids to its results' email_id, over any in --body-file or --raw-body, so two trees are compared over the same mail; a test of recent mail covers the newest emails, which move on as mail arrives. At most ${EMAIL_IDS_MAX} emails, counting the expected ones a test adds (a saved rule's own, with --rule-id). The report then ends with what changed against that answer, over the emails both tested: each top-level condition's count of emails it held on, earlier and now, with how many it lost and gained when the two trees have as many conditions; the emails whose outcome changed; and the emails matched before and still matched. With --json, the document carries the same as comparison, which the CLI works out from the two answers.`,
       }),
       ...scopeSelectionFlags(),
     },

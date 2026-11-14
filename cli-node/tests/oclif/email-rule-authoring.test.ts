@@ -14,6 +14,8 @@ import {
 import {
   affectsLine,
   answerConfidence,
+  compareSameEmails,
+  comparisonLines,
   endEmailRuleShareReport,
   formatFact,
   NOT_MATCHED_LIST_LIMIT,
@@ -1142,6 +1144,217 @@ describe("email-rules test-email-rule: which mail was tested (--same-emails-as)"
       "is not a saved test-email-rule answer: it has no results",
     );
     expect(calls).toEqual([]);
+  });
+});
+
+describe("email-rules test-email-rule: what changed against the earlier answer (--same-emails-as)", () => {
+  type Parts = [boolean, boolean];
+  const result = (
+    email_id: string,
+    outcome: string,
+    held: Parts | null,
+    subject: string | null = `Subject ${email_id.slice(-1)}`,
+  ) => ({
+    email_id,
+    outcome,
+    subject,
+    ...(held
+      ? {
+          parts: held.map((matched, index) => ({
+            index,
+            matched,
+            columns: [],
+          })),
+        }
+      : {}),
+  });
+  const answerWith = (
+    results: ReturnType<typeof result>[],
+    texts = ["The sender is billing@kestruvo.example", "It is not a receipt"],
+  ) => ({
+    ...testResult(),
+    window: { mode: "ids", since: null, limit: 200 },
+    results,
+    summary: {
+      ...testResult().summary,
+      conditions: texts.map((text, index) => ({
+        index,
+        text,
+        held: 0,
+        failed: 0,
+        only_failure: 0,
+      })),
+    },
+  });
+  // The evaluation's case: a personal bill passes the sender condition and is held out only by the next one.
+  const earlier = answerWith([
+    result(A, "matched", [true, true], "Invoice NV-1"),
+    result(B, "near_miss", [true, false], "Personal storage payment"),
+    result(C, "no_match", [false, false]),
+    result(D, "matched", [true, true], "Invoice NV-2"),
+  ]);
+  const comparedRun = async (now: unknown, extra: string[] = []) => {
+    answer(now);
+    return run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+      "--same-emails-as",
+      tempFile("earlier.json", JSON.stringify(earlier)),
+      ...extra,
+    ]);
+  };
+  const tail = (lines: string[]) =>
+    lines.slice(lines.findIndex((line) => line.startsWith("Compared with ")));
+
+  it("says plainly that a narrowing narrowed nothing", async () => {
+    const result = await comparedRun(earlier);
+    expect(result.exitCode, result.stderr).toBe(0);
+    const lines = tail(stderrLines(result));
+    expect(lines[0]).toMatch(
+      /^Compared with .*earlier\.json, over the 4 emails both tested:$/,
+    );
+    expect(lines.slice(1)).toEqual([
+      "  Nothing changed: every email has the same outcome, and each condition holds on the same emails as before.",
+      "  Outcomes, earlier -> now: matched 2 -> 2, near_miss 1 -> 1, no_match 1 -> 1.",
+      "  Conditions, emails each held on, earlier -> now:",
+      "    0. The sender is billing@kestruvo.example: 3 -> 3 (the same emails)",
+      "    1. It is not a receipt: 2 -> 2 (the same emails)",
+      '  Matched before and still matched: 2, such as "Invoice NV-1", "Invoice NV-2".',
+    ]);
+  });
+
+  it("names what a narrowing took out, condition by condition and email by email", async () => {
+    const now = answerWith(
+      [
+        result(A, "matched", [true, true], "Invoice NV-1"),
+        result(B, "no_match", [false, false], "Personal storage payment"),
+        result(C, "no_match", [false, false]),
+        result(D, "matched", [true, true], "Invoice NV-2"),
+      ],
+      ["The sender's domain is nuvrindle.example", "It is not a receipt"],
+    );
+    const lines = tail(stderrLines(await comparedRun(now)));
+    expect(lines.slice(1)).toEqual([
+      "  1 email changed outcome.",
+      "  Outcomes, earlier -> now: matched 2 -> 2, near_miss 1 -> 0, no_match 1 -> 2.",
+      "  Conditions, emails each held on, earlier -> now:",
+      '    0. earlier "The sender is billing@kestruvo.example", now "The sender\'s domain is nuvrindle.example": 3 -> 2 (lost 1, gained 0)',
+      "    1. It is not a receipt: 2 -> 2 (the same emails)",
+      "  Changed outcome (1):",
+      `    ${B} "Personal storage payment": near_miss -> no_match`,
+      '  Matched before and still matched: 2, such as "Invoice NV-1", "Invoice NV-2".',
+    ]);
+  });
+
+  it("puts the comparison beside the answer with --json, and nothing on stderr", async () => {
+    const result = await comparedRun(earlier, ["--json"]);
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(result.stderr).not.toContain("Compared with");
+    const printed = JSON.parse(result.stdout) as Record<string, unknown> & {
+      comparison: Record<string, unknown>;
+    };
+    expect(printed.results).toEqual(earlier.results);
+    expect(Object.keys(printed).at(-1)).toBe("comparison");
+    expect(printed.comparison).toMatchObject({
+      emails: 4,
+      only_earlier: 0,
+      only_now: 0,
+      unchanged: true,
+      changed: [],
+      still_matched: { count: 2, subjects: ["Invoice NV-1", "Invoice NV-2"] },
+      conditions: [
+        {
+          index: 0,
+          earlier: { held: 3 },
+          now: { held: 3 },
+          lost: 0,
+          gained: 0,
+        },
+        {
+          index: 1,
+          earlier: { held: 2 },
+          now: { held: 2 },
+          lost: 0,
+          gained: 0,
+        },
+      ],
+    });
+    // Without --same-emails-as, the document is the answer alone.
+    answer(earlier);
+    const plain = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+      "--json",
+    ]);
+    expect(JSON.parse(plain.stdout)).not.toHaveProperty("comparison");
+  });
+
+  it("compares only the emails both tested, and does not pair conditions of trees that differ in how many", () => {
+    const now = answerWith(
+      [
+        result(A, "matched", [true, true]),
+        result(C, "matched", [true, true]),
+        result(E, "no_match", [false, false]),
+      ],
+      ["One", "Two", "Three"],
+    );
+    const compared = compareSameEmails(earlier, now, "v1.json");
+    expect(compared).toMatchObject({
+      emails: 2,
+      only_earlier: 2,
+      only_now: 1,
+      unchanged: false,
+    });
+    expect(
+      compared?.conditions.map((c) => [c.index, c.lost, c.gained]),
+    ).toEqual([
+      [0, null, null],
+      [1, null, null],
+      [2, null, null],
+    ]);
+    if (!compared) throw new Error("expected a comparison");
+    expect(comparisonLines(compared)).toEqual([
+      "Compared with v1.json, over the 2 emails both tested (left out: 2 only in the earlier answer, 1 only in this one):",
+      "  1 email changed outcome.",
+      "  Outcomes, earlier -> now: matched 1 -> 2, no_match 1 -> 0.",
+      "  Conditions, emails each held on (the trees have different numbers of conditions, so they are not paired):",
+      "    earlier 0. The sender is billing@kestruvo.example: 1",
+      "    now 0. One: 2",
+      "    earlier 1. It is not a receipt: 1",
+      "    now 1. Two: 2",
+      "    now 2. Three: 0",
+      `  Changed outcome (1):`,
+      `    ${C} "Subject c": no_match -> matched`,
+      '  Matched before and still matched: 1, such as "Subject a".',
+    ]);
+  });
+
+  it("names five of the emails still matched, and counts the rest", () => {
+    const ids = Array.from(
+      { length: 7 },
+      (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+    );
+    const many = answerWith(
+      ids.map((id) =>
+        result(id, "matched", [true, true], `Invoice ${id.slice(-1)}`),
+      ),
+    );
+    const compared = compareSameEmails({ data: many }, many, "env.json");
+    expect(compared?.still_matched).toEqual({
+      count: 7,
+      subjects: [
+        "Invoice 0",
+        "Invoice 1",
+        "Invoice 2",
+        "Invoice 3",
+        "Invoice 4",
+      ],
+    });
+    if (!compared) throw new Error("expected a comparison");
+    expect(comparisonLines(compared).at(-1)).toBe(
+      '  Matched before and still matched: 7, such as "Invoice 0", "Invoice 1", "Invoice 2", "Invoice 3", "Invoice 4", and 2 more.',
+    );
+    expect(compareSameEmails({ rules: [] }, many, "x.json")).toBeNull();
   });
 });
 

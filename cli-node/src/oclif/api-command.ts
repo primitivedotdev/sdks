@@ -2481,6 +2481,21 @@ export function createOperationCommand(
         ) {
           printed = { ...printed, error: report.error };
         }
+        if (
+          jsonOutput &&
+          report?.json &&
+          printed !== null &&
+          typeof printed === "object" &&
+          !Array.isArray(printed)
+        ) {
+          const answer = printed as Record<string, unknown>;
+          printed = {
+            ...answer,
+            ...Object.fromEntries(
+              Object.entries(report.json).filter(([key]) => !(key in answer)),
+            ),
+          };
+        }
         this.log(JSON.stringify(printed, null, 2));
         if (reportError !== undefined) {
           process.stderr.write(

@@ -1563,6 +1563,15 @@ parsers.
   pass: by its number in the samples file, or as `saved sample N` for the
   rule's own. With or without `--json`, its exit code counts them: 1 when
   one failed or may stay undecided, 3 when a later test can decide it.
+- `email-rules test-email-rule --same-emails-as <file>` ends its report
+  with what changed against that earlier answer, over the emails both
+  tested: each top-level condition's count of emails it held on, earlier and
+  now, with how many it lost and gained when the two trees have as many
+  conditions; the emails whose outcome changed; and how many emails matched
+  before and still match, naming up to five by subject. When nothing
+  changed it says so first. With `--json`, the document carries the same as
+  `comparison`, beside the answer, which the CLI works out from the two
+  answers.
 - `email-rules end-email-rule-share` prints the answer's note, that ending
   a share leaves the rule itself as it was. `email-rules
   list-email-rule-requests`, `list-email-rule-shares` and

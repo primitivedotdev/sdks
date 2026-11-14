@@ -24,6 +24,12 @@ export type OperationReport = {
    * document says why the command exited non-zero.
    */
   error?: { code: string; message: string };
+  /**
+   * Keys the CLI worked out from the answer, added beside it in a --json
+   * document (and never over a key the answer has), such as the comparison
+   * test-email-rule makes with --same-emails-as.
+   */
+  json?: Record<string, unknown>;
 };
 
 /**
