@@ -32,7 +32,8 @@ class EmailRuleDecisionOnMyMail:
             matched (bool):
             near_miss (bool): Not matched, but nearly. False when detail_withheld is true.
             parts (list[Any]): How each top-level part of the rule decided.
-            question_answers (list[Any]): The answers to the rule's own questions, when they were asked.
+            question_answers (list[Any]): The answers to the rule's own questions, when they were asked: each with question,
+                answer, confidence, the deprecated probability and, when unanswered, error_class, as a test gives them.
             created_at (datetime.datetime):
             from_address (None | str): The email's sender address, as GET /v1/emails/{id} shows it.
             subject (None | str):

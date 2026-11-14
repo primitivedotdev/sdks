@@ -25,13 +25,16 @@ class EmailRuleSampleJudgmentQuestionAnswersItem:
         Attributes:
             question (str):
             answer (bool | None):
-            probability (float | None):
+            probability (float | None): Deprecated: read confidence. The chance the answer is yes.
+            confidence (float | None | Unset): How sure the answer is, from 0 to 1: the chance of the answer given, as
+                webhook payloads carry it. Null when unanswered.
             error_class (str | Unset):
      """
 
     question: str
     answer: bool | None
     probability: float | None
+    confidence: float | None | Unset = UNSET
     error_class: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -48,6 +51,12 @@ class EmailRuleSampleJudgmentQuestionAnswersItem:
         probability: float | None
         probability = self.probability
 
+        confidence: float | None | Unset
+        if isinstance(self.confidence, Unset):
+            confidence = UNSET
+        else:
+            confidence = self.confidence
+
         error_class = self.error_class
 
 
@@ -58,6 +67,8 @@ class EmailRuleSampleJudgmentQuestionAnswersItem:
             "answer": answer,
             "probability": probability,
         })
+        if confidence is not UNSET:
+            field_dict["confidence"] = confidence
         if error_class is not UNSET:
             field_dict["error_class"] = error_class
 
@@ -86,12 +97,23 @@ class EmailRuleSampleJudgmentQuestionAnswersItem:
         probability = _parse_probability(d.pop("probability"))
 
 
+        def _parse_confidence(data: object) -> float | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(float | None | Unset, data)
+
+        confidence = _parse_confidence(d.pop("confidence", UNSET))
+
+
         error_class = d.pop("error_class", UNSET)
 
         email_rule_sample_judgment_question_answers_item = cls(
             question=question,
             answer=answer,
             probability=probability,
+            confidence=confidence,
             error_class=error_class,
         )
 

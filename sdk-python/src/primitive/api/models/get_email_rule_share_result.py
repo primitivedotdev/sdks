@@ -16,6 +16,7 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.email_rule_share_activity import EmailRuleShareActivity
   from ..models.email_rule_share_beneficiary import EmailRuleShareBeneficiary
   from ..models.email_rule_share_granter import EmailRuleShareGranter
   from ..models.get_email_rule_share_result_rule_type_0 import GetEmailRuleShareResultRuleType0
@@ -55,7 +56,12 @@ class GetEmailRuleShareResult:
             beneficiary (EmailRuleShareBeneficiary):
             rule (GetEmailRuleShareResultRuleType0 | None): The rule's name, state and description; null once the share is
                 not live, except for the member sharing their mail.
-            rule_id (None | UUID): The rule itself. Only for the member sharing their mail; null for anyone else.
+            rule_id (None | UUID): The rule itself. Only for the member sharing their mail; null for anyone else. The member
+                it is shared with lists this share's id in a key's grant.rules instead (from the dashboard), and their own
+                webhooks receive what it shares.
+            activity (EmailRuleShareActivity | None | Unset): For the member it is shared with, on the dashboard or the
+                Primitive CLI, while it is live and their access reads content: whether it is working, so a quiet mailbox can be
+                told from a stopped share. Null otherwise.
      """
 
     id: UUID
@@ -73,6 +79,7 @@ class GetEmailRuleShareResult:
     beneficiary: EmailRuleShareBeneficiary
     rule: GetEmailRuleShareResultRuleType0 | None
     rule_id: None | UUID
+    activity: EmailRuleShareActivity | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -80,6 +87,7 @@ class GetEmailRuleShareResult:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_rule_share_activity import EmailRuleShareActivity # noqa: PLC0415
         from ..models.email_rule_share_beneficiary import EmailRuleShareBeneficiary # noqa: PLC0415
         from ..models.email_rule_share_granter import EmailRuleShareGranter # noqa: PLC0415
         from ..models.get_email_rule_share_result_rule_type_0 import GetEmailRuleShareResultRuleType0 # noqa: PLC0415
@@ -134,6 +142,14 @@ class GetEmailRuleShareResult:
         else:
             rule_id = self.rule_id
 
+        activity: dict[str, Any] | None | Unset
+        if isinstance(self.activity, Unset):
+            activity = UNSET
+        elif isinstance(self.activity, EmailRuleShareActivity):
+            activity = self.activity.to_dict()
+        else:
+            activity = self.activity
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -154,6 +170,8 @@ class GetEmailRuleShareResult:
             "rule": rule,
             "rule_id": rule_id,
         })
+        if activity is not UNSET:
+            field_dict["activity"] = activity
 
         return field_dict
 
@@ -161,6 +179,7 @@ class GetEmailRuleShareResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_rule_share_activity import EmailRuleShareActivity # noqa: PLC0415
         from ..models.email_rule_share_beneficiary import EmailRuleShareBeneficiary # noqa: PLC0415
         from ..models.email_rule_share_granter import EmailRuleShareGranter # noqa: PLC0415
         from ..models.get_email_rule_share_result_rule_type_0 import GetEmailRuleShareResultRuleType0 # noqa: PLC0415
@@ -300,6 +319,26 @@ class GetEmailRuleShareResult:
         rule_id = _parse_rule_id(d.pop("rule_id"))
 
 
+        def _parse_activity(data: object) -> EmailRuleShareActivity | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                activity_type_1 = EmailRuleShareActivity.from_dict(data)
+
+
+
+                return activity_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleShareActivity | None | Unset, data)
+
+        activity = _parse_activity(d.pop("activity", UNSET))
+
+
         get_email_rule_share_result = cls(
             id=id,
             request_id=request_id,
@@ -316,6 +355,7 @@ class GetEmailRuleShareResult:
             beneficiary=beneficiary,
             rule=rule,
             rule_id=rule_id,
+            activity=activity,
         )
 
 

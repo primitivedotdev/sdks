@@ -4832,7 +4832,7 @@ export type DeliverySummary = {
     attempt_count: number;
     duration_ms?: number | null;
     /**
-     * Why the last attempt failed, or null. A webhook's answer is quoted after its status (HTTP 404: ...) only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook); anyone else gets the status and a note. Text the platform writes (a redirect not followed, a network error) is shown to everyone.
+     * Why the last attempt failed, or null. A webhook's answer follows its status (HTTP 404: ...) as plain text, at most 300 characters (response_body has more); older attempts can quote more. It is quoted only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook); anyone else gets the status and a note. Text the platform writes (a redirect not followed, a network error) is shown to everyone.
      */
     last_error?: string | null;
     created_at: string;
@@ -6265,11 +6265,11 @@ export type ListActivityObjectsResult = {
         kind: string;
         id: string;
         /**
-         * The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name, and for an objection or a coverage notice the name its rule had then. Never a webhook URL and never mail content.
+         * The name the object is known by: an endpoint's display name, a route's or filter's pattern, a Function's name, a send's From address, a wake schedule's command and the address it wakes, an API key's name, an agent's address, a rule's or rule request's name, and for an objection or a coverage notice the name its rule had then (for a stopped notice, when you were last told of it, or while it last covered you). Never a webhook URL and never mail content.
          */
         name: string | null;
         /**
-         * Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections; an objection may also be amended), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, receivers_changed (who receives an active rule's matches changed: its keys, webhooks or share), or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice is recorded without a new one); its id is then the rule's, and created_at when the rule last changed.
+         * Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections; an objection may also be amended), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, stopped (it no longer covers you, why in stop_reason), or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice, or within 5 minutes of the notices finding the rule stopped, is recorded without a new one, unless you were told it stopped since); its id is then the rule's, and created_at when the rule last changed.
          */
         state: string;
         created_at: string;
@@ -6326,6 +6326,10 @@ export type ListActivityObjectsResult = {
                 shares: number;
             };
         };
+        /**
+         * For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active, reaching none of your mailboxes now).
+         */
+        stop_reason?: 'deleted' | 'turned_off' | 'no_longer_covers';
     }>;
     /**
      * Kinds left out because the caller could not list them through their own routes. Nothing is said about how many there are.
@@ -6343,7 +6347,7 @@ export type ListActivityObjectsResult = {
      */
     next_cursor: string | null;
     /**
-     * With relation=concerning only: about when the notices last looked at your organization; null if never or unread. Coverage since may have no notice yet. They look only while one of its rules could cover someone, so this stops moving while none could.
+     * With relation=concerning only: about when the notices last looked at your organization; null if never or unread. Coverage since may have no notice yet. They look only while one of its rules could cover someone, or a stopped notice is still to be told, so this stops moving while neither.
      */
     as_of?: string | null;
     /**
@@ -6549,6 +6553,15 @@ export type EmailRuleSampleJudgment = {
     question_answers: Array<{
         question: string;
         answer: boolean | null;
+        /**
+         * How sure the answer is, from 0 to 1: the chance of the answer given, as webhook payloads carry it. Null when unanswered.
+         */
+        confidence?: number | null;
+        /**
+         * Deprecated: read confidence. The chance the answer is yes.
+         *
+         * @deprecated
+         */
         probability: number | null;
         error_class?: string;
     }>;
@@ -6747,6 +6760,15 @@ export type TestEmailRuleResult = {
         question_answers?: Array<{
             question: string;
             answer: boolean | null;
+            /**
+             * How sure the answer is, from 0 to 1: the chance of the answer given, as webhook payloads carry it. Null when unanswered.
+             */
+            confidence?: number | null;
+            /**
+             * Deprecated: read confidence. The chance the answer is yes.
+             *
+             * @deprecated
+             */
             probability: number | null;
             error_class?: string;
         }>;
@@ -6864,6 +6886,15 @@ export type EmailRuleLookAlike = {
     question_answers: Array<{
         question: string;
         answer: boolean | null;
+        /**
+         * How sure the answer is, from 0 to 1: the chance of the answer given, as webhook payloads carry it. Null when unanswered.
+         */
+        confidence?: number | null;
+        /**
+         * Deprecated: read confidence. The chance the answer is yes.
+         *
+         * @deprecated
+         */
         probability: number | null;
         error_class?: string;
     }>;
@@ -7032,6 +7063,15 @@ export type TestEmailRuleOnSampleResult = {
     question_answers: Array<{
         question: string;
         answer: boolean | null;
+        /**
+         * How sure the answer is, from 0 to 1: the chance of the answer given, as webhook payloads carry it. Null when unanswered.
+         */
+        confidence?: number | null;
+        /**
+         * Deprecated: read confidence. The chance the answer is yes.
+         *
+         * @deprecated
+         */
         probability: number | null;
         error_class?: string;
     }>;
@@ -7582,7 +7622,7 @@ export type ListEmailRuleDecisionsResult = Array<{
      */
     parts: Array<unknown>;
     /**
-     * The answers to the rule's own questions, when they were asked.
+     * The answers to the rule's own questions, when they were asked: each with question, answer, confidence, the deprecated probability and, when unanswered, error_class, as a test gives them.
      */
     question_answers: Array<unknown>;
     /**
@@ -7760,6 +7800,15 @@ export type ListEmailRuleResultsResult = {
             question_answers: Array<{
                 question: string;
                 answer: boolean | null;
+                /**
+                 * How sure the answer is, from 0 to 1: the chance of the answer given, as webhook payloads carry it. Null when unanswered.
+                 */
+                confidence?: number | null;
+                /**
+                 * Deprecated: read confidence. The chance the answer is yes.
+                 *
+                 * @deprecated
+                 */
                 probability: number | null;
                 error_class?: string;
             }>;
@@ -8240,6 +8289,10 @@ export type EmailRuleShare = {
      */
     delivery_paused: boolean | null;
     /**
+     * For the member it is shared with, on the dashboard or the Primitive CLI, while it is live and their access reads content: whether it is working, so a quiet mailbox can be told from a stopped share. Null otherwise.
+     */
+    activity?: EmailRuleShareActivity | null;
+    /**
      * Whether you are the member sharing their mail.
      */
     is_granter: boolean;
@@ -8261,9 +8314,32 @@ export type EmailRuleShare = {
         updated_at: string;
     } | null;
     /**
-     * The rule itself. Only for the member sharing their mail; null for anyone else.
+     * The rule itself. Only for the member sharing their mail; null for anyone else. The member it is shared with lists this share's id in a key's grant.rules instead (from the dashboard), and their own webhooks receive what it shares.
      */
     rule_id: string | null;
+};
+
+export type EmailRuleShareActivity = {
+    /**
+     * Whether the rule is active now: only an active rule shares.
+     */
+    rule_active: boolean;
+    /**
+     * The start of the hour in which the rule last decided on any email in the sharing member's mailboxes since the share began, counting only hours that have ended and the hour of the newest email shared; null if none, or not read.
+     */
+    last_decided_at: string | null;
+    /**
+     * Emails this share has shared, counted up to 10,000; null when these could not be read.
+     */
+    shared_emails: number | null;
+    /**
+     * Present when it has shared more than 10,000.
+     */
+    shared_emails_more?: boolean;
+    /**
+     * When it last shared one; null if it has not, or not read.
+     */
+    last_shared_at: string | null;
 };
 
 export type EmailRuleShareGranter = {
@@ -8602,7 +8678,7 @@ export type EmailRuleDecisionOnMyMail = {
      */
     parts: Array<unknown>;
     /**
-     * The answers to the rule's own questions, when they were asked.
+     * The answers to the rule's own questions, when they were asked: each with question, answer, confidence, the deprecated probability and, when unanswered, error_class, as a test gives them.
      */
     question_answers: Array<unknown>;
     /**
@@ -9510,7 +9586,7 @@ export type GetDeliveryResult = {
     attempt_count: number;
     duration_ms: number | null;
     /**
-     * Why the last attempt failed, or null. A webhook's answer is quoted after its status (HTTP 404: ...) only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook); anyone else gets the status and a note. Text the platform writes (a redirect not followed, a network error) is shown to everyone.
+     * Why the last attempt failed, or null. A webhook's answer follows its status (HTTP 404: ...) as plain text, at most 300 characters (response_body has more); older attempts can quote more. It is quoted only for a caller who can read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook); anyone else gets the status and a note. Text the platform writes (a redirect not followed, a network error) is shown to everyone.
      */
     last_error: string | null;
     /**
@@ -10278,6 +10354,9 @@ export type CredentialsCreateKeyInput = {
         permissions?: Array<string>;
         addresses?: Array<string>;
         domains?: Array<string>;
+        /**
+         * Email rule ids: the key also reads the emails these rules granted. An address listed beside them is read in full, so rules beside a domain, a retired address or the address of a member other than the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error, details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its share's id, from your dashboard session only.
+         */
         rules?: Array<string>;
         /**
          * Deprecated: every key that reaches mail reads the full email. Ignored, except that raw still adds mail.raw:read (Raw mail) to an address preset or a custom grant.
@@ -10386,6 +10465,9 @@ export type CredentialsUpdateKeyInput = {
         permissions?: Array<string>;
         addresses?: Array<string>;
         domains?: Array<string>;
+        /**
+         * Email rule ids: the key also reads the emails these rules granted. An address listed beside them is read in full, so rules beside a domain, a retired address or the address of a member other than the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error, details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its share's id, from your dashboard session only.
+         */
         rules?: Array<string>;
         /**
          * Deprecated: every key that reaches mail reads the full email. Ignored, except that raw still adds mail.raw:read (Raw mail) to an address preset or a custom grant.
@@ -11106,6 +11188,9 @@ export type DecideSuspensionRequest = {
         permissions?: Array<string>;
         addresses?: Array<string>;
         domains?: Array<string>;
+        /**
+         * Email rule ids: the key also reads the emails these rules granted. An address listed beside them is read in full, so rules beside a domain, a retired address or the address of a member other than the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error, details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its share's id, from your dashboard session only.
+         */
         rules?: Array<string>;
         /**
          * Deprecated: every key that reaches mail reads the full email. Ignored, except that raw still adds mail.raw:read (Raw mail) to an address preset or a custom grant.
@@ -21354,7 +21439,7 @@ export type ListActivityObjectsData = {
     path?: never;
     query?: {
         /**
-         * created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote; kind may then name only email_rule_request and email_rule_objection. concerning: what other members did that concerns your own mail: an active rule that started covering one of your mailboxes, saved a new version, or changed who receives its matches while covering it (email_rule_coverage, the only kind it takes). A rule in draft or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and concerning are for a person's own view only.
+         * created (the default): what you created. asked: what other members asked of you, open or answered: rule requests made to you, and objections to rules you wrote; kind may then name only email_rule_request and email_rule_objection. concerning: what other members did that concerns your own mail: an active rule that started covering one of your mailboxes, saved a new version while covering it, or stopped covering it (email_rule_coverage, the only kind it takes). A rule in draft or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and concerning are for a person's own view only.
          */
         relation?: 'created' | 'asked' | 'concerning';
         /**
