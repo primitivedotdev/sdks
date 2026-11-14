@@ -403,6 +403,58 @@ describe("keys helpers", () => {
     ).toBe(false);
   });
 
+  it("refuses a domain beside a rule before sending, for every way of asking, and leaves an address to the API", () => {
+    const none = {
+      permissions: [],
+      addresses: [],
+      domains: [],
+      rules: [],
+      allMailboxes: false,
+    };
+    for (const choice of [
+      { permissions: ["mail:read"] },
+      { preset: "own_addresses_read_only" },
+      { preset: "own_addresses" },
+    ]) {
+      const refused = buildCreateGrant({
+        ...none,
+        ...choice,
+        rules: [RULE_ID],
+        domains: ["acme.example"],
+        addresses: ["bot@acme.example"],
+      });
+      expect(refused).toEqual({
+        ok: false,
+        message:
+          "--rule cannot be combined with --domain: the key would read every email on acme.example, not only what the rules granted. Create a key with --rule alone, or one with --domain alone.",
+      });
+    }
+    // Each alone, and an address beside a rule (an agent's or a shared one may be listed; the API refuses a member's).
+    expect(
+      buildCreateGrant({
+        ...none,
+        permissions: ["mail:read"],
+        domains: ["acme.example"],
+      }).ok,
+    ).toBe(true);
+    expect(
+      buildCreateGrant({
+        ...none,
+        permissions: ["mail:read"],
+        rules: [RULE_ID],
+        addresses: ["bot@acme.example"],
+      }),
+    ).toEqual({
+      ok: true,
+      grant: {
+        preset: "custom",
+        permissions: ["mail:read"],
+        addresses: ["bot@acme.example"],
+        rules: [RULE_ID],
+      },
+    });
+  });
+
   it("restates a key's grant with permissions added or removed, and refuses what it cannot restate", () => {
     expect(
       buildUpdatedGrant(READER.grant, {
@@ -893,6 +945,29 @@ describe("keys commands", () => {
     expect(requests).toHaveLength(0);
   });
 
+  it("create refuses --domain beside --rule with exit 2 and sends nothing, with or without --json", async () => {
+    const requests = useServer(() => Response.json({}, { status: 500 }));
+    const args = [
+      "--name",
+      "x",
+      "--permission",
+      "mail:read",
+      "--rule",
+      RULE_ID,
+      "--domain",
+      "acme.example",
+    ];
+    const result = await run(KeysCreateCommand, args);
+    expect(String(result.error)).toContain(
+      "--rule cannot be combined with --domain",
+    );
+    expect(result.exitCode).toBe(2);
+    const json = await run(KeysCreateCommand, [...args, "--json"]);
+    expect(json.stderr).toBe("");
+    expect(JSON.parse(json.stdout)).toMatchObject({ exit_code: 2 });
+    expect(requests).toHaveLength(0);
+  });
+
   it("create without a terminal prints the approval link and makes nothing", async () => {
     const url =
       "https://app.example.test/app/settings/step-up?purpose=keys.create&client=primitive-cli";
@@ -1031,9 +1106,9 @@ describe("keys commands", () => {
     ]);
     expect(result.exitCode).toBeUndefined();
     expect(result.stderr).toContain(`Note: ${member.description}`);
-    // Said once, as the warning, last, after the key's secret.
+    // Said once, as the warning, first, before anything else.
     expect(result.stderr).not.toContain(`Note: ${whole.description}`);
-    expect(result.stderr.trimEnd().endsWith(`Warning: ${warning}`)).toBe(true);
+    expect(result.stderr.startsWith(`Warning: ${warning}\n`)).toBe(true);
     const json = await run(KeysCreateCommand, [
       "--name",
       "orders",
@@ -1047,13 +1122,21 @@ describe("keys commands", () => {
       "pstep_x",
       "--json",
     ]);
-    // With --json stderr stays empty and the server's warnings stay as they
-    // came: the warning has a field of its own.
+    // With --json stderr stays empty: the warning is the document's first
+    // field, and the first of its warnings, before the server's own.
     expect(json.exitCode).toBeUndefined();
     expect(json.stderr).toBe("");
     const document = JSON.parse(json.stdout);
+    expect(Object.keys(document)[0]).toBe("whole_mailbox_warning");
     expect(document.whole_mailbox_warning).toBe(warning);
-    expect(document.warnings).toEqual([permissionWarning]);
+    expect(document.warnings).toEqual([
+      {
+        reason: "whole_mailbox",
+        addresses: ["ops@acme.example"],
+        description: warning,
+      },
+      permissionWarning,
+    ]);
     expect(document).toMatchObject({ address_warnings: [whole, member] });
   });
 
@@ -1235,7 +1318,7 @@ describe("keys commands", () => {
     expect(result.exitCode).toBeUndefined();
     expect(reads).toBeGreaterThan(0);
     expect(result.stderr).not.toContain(`Note: ${description}`);
-    expect(result.stderr.trimEnd().endsWith(`Warning: ${warning}`)).toBe(true);
+    expect(result.stderr.startsWith(`Warning: ${warning}\n`)).toBe(true);
     const json = await run(KeysUpdateCommand, [
       KEY_ID,
       "--add",
@@ -1247,11 +1330,43 @@ describe("keys commands", () => {
     expect(json.exitCode).toBeUndefined();
     expect(json.stderr).toBe("");
     const document = JSON.parse(json.stdout);
+    expect(Object.keys(document)[0]).toBe("whole_mailbox_warning");
     expect(document.whole_mailbox_warning).toBe(warning);
-    expect(document.warnings).toEqual([]);
+    expect(document.warnings).toEqual([
+      {
+        reason: "whole_mailbox",
+        addresses: ["acme.example"],
+        description: warning,
+      },
+    ]);
     expect(document.address_warnings).toEqual([
       { address: "acme.example", reason: "whole_mailbox", description },
     ]);
+  });
+
+  it("update refuses a rule added to a key that lists a domain, before asking anything, and sends no change", async () => {
+    const onDomain = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: {
+        addresses: [],
+        domains: ["acme.example"],
+        depth: "content",
+      },
+    });
+    const requests = useServer(() =>
+      Response.json({ success: true, data: onDomain }),
+    );
+    const result = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add-rule",
+      RULE_ID,
+    ]);
+    expect(result.exitCode).toBe(2);
+    expect(String(result.error)).toContain(
+      "lists acme.example, so a rule cannot be added to it",
+    );
+    expect(requests.every((r) => r.method === "GET")).toBe(true);
   });
 
   it("update adds permissions to a read-only key, guarded by the grant it read, and says what happens to held requests", async () => {
