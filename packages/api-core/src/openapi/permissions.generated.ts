@@ -135,6 +135,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   "agentWorkWithdrawDeadline": [
     "agent_work:manage"
   ],
+  "amendEmailRuleObjection": [
+    "mail:read"
+  ],
   "awaitReply": [
     "mail:read"
   ],

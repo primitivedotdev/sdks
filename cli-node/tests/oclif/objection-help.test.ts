@@ -33,7 +33,7 @@ describe("the objection commands' help", () => {
       "ask the author to narrow the rule, or to explain where its matches go (its receivers)",
     );
     expect(hint).toContain(
-      "declines, optionally giving a reason, which you see",
+      "declines, optionally giving a reason; or answers amended once they have saved a new version of the rule",
     );
     expect(hint).toContain("Objecting does not change the rule.");
     // The flag, its limit and the commands the tip names are real.
@@ -54,20 +54,37 @@ describe("the objection commands' help", () => {
     }
   });
 
-  it("says to decline with a reason when narrowing the rule, and that the reason can explain a receiver", () => {
+  it("says a reason can explain a receiver, and to answer amended rather than decline after changing the rule", () => {
     const hint = OPERATION_HINTS.declineEmailRuleObjection;
     const decline = command(
       "email-rule-oversight:decline-email-rule-objection",
     );
     expect(decline.description).toContain(hint);
     expect(hint).toContain(
-      "If you narrow the rule instead of turning it off, decline with a reason saying what you changed: accepting turns the rule off, and the member sees the reason on the objection.",
+      "If you changed the rule instead of turning it off, do not decline",
+    );
+    expect(hint).toContain(
+      "`primitive email-rule-oversight amend-email-rule-objection <objection-id>`",
     );
     expect(hint).toContain("the reason can say what the receiver is for");
     expect(decline.flags).toHaveProperty("reason");
     expect(hint).toContain(
       `--reason (up to ${maxLength("declineEmailRuleObjection", "reason")} characters)`,
     );
+  });
+
+  it("gives the author an amend command that takes the objection id and a note, after a new version", () => {
+    const hint = OPERATION_HINTS.amendEmailRuleObjection;
+    const amend = command("email-rule-oversight:amend-email-rule-objection");
+    expect(amend.description).toContain(hint);
+    expect(amend.flags).toHaveProperty("id");
+    expect(amend.flags).toHaveProperty("note");
+    expect(hint).toContain("`primitive email-rules update-email-rule`");
+    expect(hint).toContain("409 no_new_version");
+    expect(hint).toContain(
+      `--note (up to ${maxLength("amendEmailRuleObjection", "note")} characters)`,
+    );
+    expect(command("email-rules:update-email-rule")).toBeDefined();
   });
 });
 

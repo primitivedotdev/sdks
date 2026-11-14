@@ -172,6 +172,20 @@ func (UnimplementedHandler) AgentWorkWithdrawDeadline(ctx context.Context, req *
 	return r, ht.ErrNotImplemented
 }
 
+// AmendEmailRuleObjection implements amendEmailRuleObjection operation.
+//
+// Answers a pending objection to a rule you wrote by saying you changed the rule: save a new version
+// first (PATCH /email-rules/{id}), then answer amended, optionally with a note the member who
+// objected sees. Records the version the rule has now (rule.amended_version). Refused unless the
+// rule's current version is newer than when the objection was made (rule.objected_version). Needs
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+//
+// POST /email-rule-objections/{id}/amend
+func (UnimplementedHandler) AmendEmailRuleObjection(ctx context.Context, req OptAmendEmailRuleObjectionRequest, params AmendEmailRuleObjectionParams) (r AmendEmailRuleObjectionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // AwaitReply implements awaitReply operation.
 //
 // Returns the first threaded inbound reply to a send, keyed by
@@ -475,12 +489,13 @@ func (UnimplementedHandler) CreateEmailRule(ctx context.Context, req *CreateEmai
 // running unless they accept. Only a rule that covers you now: one you see only because it once
 // decided on your mail cannot be objected to. An objection is seen by the member who made it, the
 // rule's author and the organization's owners and admins. It stays pending until the rule's author
-// accepts it, turning the rule off, or declines it (optionally with a reason the objector sees), or
-// the member who made it withdraws it, which clears its message. It never changes after that. You
-// may have one pending objection per rule and 50 in all, and object to the same rule again only 10
-// minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a
-// member's own full-access credential (no API key, agent key or narrowed token). Only on your own
-// dashboard session or the Primitive CLI.
+// accepts it, turning the rule off, declines it (optionally with a reason the objector sees), or
+// answers it amended once they have saved a newer version of the rule, or the member who made it
+// withdraws it, which clears its message (not from an email to the author already sent or being
+// sent). It never changes after that. You may have one pending objection per rule and 50 in all, and
+// object to the same rule again only 10 minutes after you last did, whatever became of it. Needs
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 //
 // POST /email-rule-objections
 func (UnimplementedHandler) CreateEmailRuleObjection(ctx context.Context, req *CreateEmailRuleObjectionRequest, params CreateEmailRuleObjectionParams) (r CreateEmailRuleObjectionRes, _ error) {
@@ -811,10 +826,10 @@ func (UnimplementedHandler) DecideSuspension(ctx context.Context, req *DecideSus
 // DeclineEmailRuleObjection implements declineEmailRuleObjection operation.
 //
 // Declines a pending objection to a rule you wrote, optionally saying why (reason), which the member
-// who objected sees; the rule stays as it is. When its message asks you to narrow the rule or
-// explain who receives it, the reason is your answer; narrow it with a new version as well if you
-// agree. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
-// key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+// who objected sees; the rule stays as it is. When its message asks you to explain who receives what
+// the rule matches, the reason is your answer. If you changed the rule instead, answer amended.
+// Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+// agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 //
 // POST /email-rule-objections/{id}/decline
 func (UnimplementedHandler) DeclineEmailRuleObjection(ctx context.Context, req OptDeclineEmailRuleObjectionRequest, params DeclineEmailRuleObjectionParams) (r DeclineEmailRuleObjectionRes, _ error) {
@@ -1701,11 +1716,11 @@ func (UnimplementedHandler) GetEmailRuleCoveringMe(ctx context.Context, params G
 //
 // One objection you can see. An objection is seen by the member who made it, the rule's author and
 // the organization's owners and admins. It stays pending until the rule's author accepts it, turning
-// the rule off, or declines it (optionally with a reason the objector sees), or the member who made
-// it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email
-// rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
-//
-//	Only on your own dashboard session or the Primitive CLI.
+// the rule off, declines it (optionally with a reason the objector sees), or answers it amended once
+// they have saved a newer version of the rule, or the member who made it withdraws it, which clears
+// its message (not from an email to the author already sent or being sent). It never changes after
+// that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
+// key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 //
 // GET /email-rule-objections/{id}
 func (UnimplementedHandler) GetEmailRuleObjection(ctx context.Context, params GetEmailRuleObjectionParams) (r GetEmailRuleObjectionRes, _ error) {
@@ -2743,10 +2758,12 @@ func (UnimplementedHandler) ListEmailRuleDecisionsOnMyMail(ctx context.Context, 
 // Objections you made and objections to rules you wrote (by default), only one of the two, or every
 // objection you can see, newest first. An objection is seen by the member who made it, the rule's
 // author and the organization's owners and admins. It stays pending until the rule's author accepts
-// it, turning the rule off, or declines it (optionally with a reason the objector sees), or the
-// member who made it withdraws it, which clears its message. It never changes after that. Needs
-// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
-// key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+// it, turning the rule off, declines it (optionally with a reason the objector sees), or answers it
+// amended once they have saved a newer version of the rule, or the member who made it withdraws it,
+// which clears its message (not from an email to the author already sent or being sent). It never
+// changes after that. Needs mail:read, the email rules feature, and a member's own full-access
+// credential (no API key, agent key or narrowed token). Only on your own dashboard session or the
+// Primitive CLI.
 //
 // GET /email-rule-objections
 func (UnimplementedHandler) ListEmailRuleObjections(ctx context.Context, params ListEmailRuleObjectionsParams) (r ListEmailRuleObjectionsRes, _ error) {
@@ -5148,9 +5165,10 @@ func (UnimplementedHandler) Whoami(ctx context.Context, params WhoamiParams) (r 
 
 // WithdrawEmailRuleObjection implements withdrawEmailRuleObjection operation.
 //
-// Withdraws a pending objection you made, and clears its message. Needs mail:read, the email rules
-// feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only
-// on your own dashboard session or the Primitive CLI.
+// Withdraws a pending objection you made, and clears its message; an email to the rule's author
+// already sent or being sent keeps it. Needs mail:read, the email rules feature, and a member's own
+// full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+// session or the Primitive CLI.
 //
 // POST /email-rule-objections/{id}/withdraw
 func (UnimplementedHandler) WithdrawEmailRuleObjection(ctx context.Context, params WithdrawEmailRuleObjectionParams) (r WithdrawEmailRuleObjectionRes, _ error) {

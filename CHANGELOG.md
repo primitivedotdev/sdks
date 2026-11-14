@@ -696,9 +696,14 @@ date-time is kept as null and sorts last. A sync stops with an error after
   objection's `is_objector` and `is_author` saying which side you are on;
   `status` `pending`, the default, `decided` or `any`),
   `getEmailRuleObjection`, `withdrawEmailRuleObjection` (by the member who
-  objected), and `declineEmailRuleObjection` (with an optional `reason`)
-  and `acceptEmailRuleObjection` (which turns the rule off, state `draft`)
-  by the rule's author. A decided or withdrawn objection answers `409`
+  objected), and `declineEmailRuleObjection` (with an optional `reason`),
+  `acceptEmailRuleObjection` (which turns the rule off, state `draft`) and
+  `amendEmailRuleObjection` (status `amended`, with an optional `note`,
+  once the author has saved a newer version of the rule; until then it
+  answers `409` `conflict` with `details.reason` `no_new_version`,
+  `details.objected_version` and `details.current_version`) by the rule's
+  author. An objection carries `rule.objected_version`,
+  `rule.amended_version` and `amend_note`. A decided or withdrawn objection answers `409`
   `not_pending`; a second pending objection to the same rule, or one more
   while you have 50 pending, answers `409` `conflict` with `details.reason`
   `objection_pending` or `objection_limit`; accepting an objection to a
@@ -707,7 +712,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
   as the reads above. In the CLI: `email-rule-oversight
   create-email-rule-objection`, `list-email-rule-objections`,
   `get-email-rule-objection`, `withdraw-email-rule-objection`,
-  `decline-email-rule-objection` and `accept-email-rule-objection`.
+  `decline-email-rule-objection`, `accept-email-rule-objection` and
+  `amend-email-rule-objection --id <objection-id> --note <text>`.
 - Email notifications: `getEmailNotificationPreferences` and
   `updateEmailNotificationPreferences`, the notification emails the calling
   member gets and turning a kind on or off where the organization lets
@@ -1485,8 +1491,9 @@ parsers.
   message can ask the rule's author to narrow the rule or explain where its
   matches go, and that the author accepts (turning the rule off) or
   declines, optionally with a reason the objector sees.
-  `decline-email-rule-objection --help` says the reason can answer such a
-  request.
+  `decline-email-rule-objection --help` says the reason can explain a
+  receiver, and that an author who changed the rule answers with
+  `amend-email-rule-objection` after saving the new version.
 - `primitive version` prints the line `primitive --version` prints (the
   CLI's name and version, platform and architecture, and Node version).
   With `--json` it prints `version`, `platform`, `arch` and `node` (Node's

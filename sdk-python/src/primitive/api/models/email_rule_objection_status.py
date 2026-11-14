@@ -2,6 +2,7 @@ from enum import StrEnum
 
 class EmailRuleObjectionStatus(StrEnum):
     ACCEPTED = "accepted"
+    AMENDED = "amended"
     DECLINED = "declined"
     PENDING = "pending"
     WITHDRAWN = "withdrawn"

@@ -2726,6 +2726,217 @@ func (s *Server) handleAgentWorkWithdrawDeadlineRequest(args [2]string, argsEsca
 	}
 }
 
+// handleAmendEmailRuleObjectionRequest handles amendEmailRuleObjection operation.
+//
+// Answers a pending objection to a rule you wrote by saying you changed the rule: save a new version
+// first (PATCH /email-rules/{id}), then answer amended, optionally with a note the member who
+// objected sees. Records the version the rule has now (rule.amended_version). Refused unless the
+// rule's current version is newer than when the objection was made (rule.objected_version). Needs
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+//
+// POST /email-rule-objections/{id}/amend
+func (s *Server) handleAmendEmailRuleObjectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("amendEmailRuleObjection"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/email-rule-objections/{id}/amend"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), AmendEmailRuleObjectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: AmendEmailRuleObjectionOperation,
+			ID:   "amendEmailRuleObjection",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, AmendEmailRuleObjectionOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeAmendEmailRuleObjectionParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeAmendEmailRuleObjectionRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response AmendEmailRuleObjectionRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    AmendEmailRuleObjectionOperation,
+			OperationSummary: "Answer an objection to your rule as amended",
+			OperationID:      "amendEmailRuleObjection",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = OptAmendEmailRuleObjectionRequest
+			Params   = AmendEmailRuleObjectionParams
+			Response = AmendEmailRuleObjectionRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackAmendEmailRuleObjectionParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.AmendEmailRuleObjection(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.AmendEmailRuleObjection(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeAmendEmailRuleObjectionResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleAwaitReplyRequest handles awaitReply operation.
 //
 // Returns the first threaded inbound reply to a send, keyed by
@@ -6171,12 +6382,13 @@ func (s *Server) handleCreateEmailRuleRequest(args [0]string, argsEscaped bool, 
 // running unless they accept. Only a rule that covers you now: one you see only because it once
 // decided on your mail cannot be objected to. An objection is seen by the member who made it, the
 // rule's author and the organization's owners and admins. It stays pending until the rule's author
-// accepts it, turning the rule off, or declines it (optionally with a reason the objector sees), or
-// the member who made it withdraws it, which clears its message. It never changes after that. You
-// may have one pending objection per rule and 50 in all, and object to the same rule again only 10
-// minutes after you last did, whatever became of it. Needs mail:read, the email rules feature, and a
-// member's own full-access credential (no API key, agent key or narrowed token). Only on your own
-// dashboard session or the Primitive CLI.
+// accepts it, turning the rule off, declines it (optionally with a reason the objector sees), or
+// answers it amended once they have saved a newer version of the rule, or the member who made it
+// withdraws it, which clears its message (not from an email to the author already sent or being
+// sent). It never changes after that. You may have one pending objection per rule and 50 in all, and
+// object to the same rule again only 10 minutes after you last did, whatever became of it. Needs
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 //
 // POST /email-rule-objections
 func (s *Server) handleCreateEmailRuleObjectionRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -9631,10 +9843,10 @@ func (s *Server) handleDecideSuspensionRequest(args [1]string, argsEscaped bool,
 // handleDeclineEmailRuleObjectionRequest handles declineEmailRuleObjection operation.
 //
 // Declines a pending objection to a rule you wrote, optionally saying why (reason), which the member
-// who objected sees; the rule stays as it is. When its message asks you to narrow the rule or
-// explain who receives it, the reason is your answer; narrow it with a new version as well if you
-// agree. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
-// key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+// who objected sees; the rule stays as it is. When its message asks you to explain who receives what
+// the rule matches, the reason is your answer. If you changed the rule instead, answer amended.
+// Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+// agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 //
 // POST /email-rule-objections/{id}/decline
 func (s *Server) handleDeclineEmailRuleObjectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -20636,11 +20848,11 @@ func (s *Server) handleGetEmailRuleCoveringMeRequest(args [1]string, argsEscaped
 //
 // One objection you can see. An objection is seen by the member who made it, the rule's author and
 // the organization's owners and admins. It stays pending until the rule's author accepts it, turning
-// the rule off, or declines it (optionally with a reason the objector sees), or the member who made
-// it withdraws it, which clears its message. It never changes after that. Needs mail:read, the email
-// rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
-//
-//	Only on your own dashboard session or the Primitive CLI.
+// the rule off, declines it (optionally with a reason the objector sees), or answers it amended once
+// they have saved a newer version of the rule, or the member who made it withdraws it, which clears
+// its message (not from an email to the author already sent or being sent). It never changes after
+// that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
+// key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
 //
 // GET /email-rule-objections/{id}
 func (s *Server) handleGetEmailRuleObjectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -34456,10 +34668,12 @@ func (s *Server) handleListEmailRuleDecisionsOnMyMailRequest(args [1]string, arg
 // Objections you made and objections to rules you wrote (by default), only one of the two, or every
 // objection you can see, newest first. An objection is seen by the member who made it, the rule's
 // author and the organization's owners and admins. It stays pending until the rule's author accepts
-// it, turning the rule off, or declines it (optionally with a reason the objector sees), or the
-// member who made it withdraws it, which clears its message. It never changes after that. Needs
-// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
-// key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+// it, turning the rule off, declines it (optionally with a reason the objector sees), or answers it
+// amended once they have saved a newer version of the rule, or the member who made it withdraws it,
+// which clears its message (not from an email to the author already sent or being sent). It never
+// changes after that. Needs mail:read, the email rules feature, and a member's own full-access
+// credential (no API key, agent key or narrowed token). Only on your own dashboard session or the
+// Primitive CLI.
 //
 // GET /email-rule-objections
 func (s *Server) handleListEmailRuleObjectionsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -66437,9 +66651,10 @@ func (s *Server) handleWhoamiRequest(args [0]string, argsEscaped bool, w http.Re
 
 // handleWithdrawEmailRuleObjectionRequest handles withdrawEmailRuleObjection operation.
 //
-// Withdraws a pending objection you made, and clears its message. Needs mail:read, the email rules
-// feature, and a member's own full-access credential (no API key, agent key or narrowed token). Only
-// on your own dashboard session or the Primitive CLI.
+// Withdraws a pending objection you made, and clears its message; an email to the rule's author
+// already sent or being sent keeps it. Needs mail:read, the email rules feature, and a member's own
+// full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
+// session or the Primitive CLI.
 //
 // POST /email-rule-objections/{id}/withdraw
 func (s *Server) handleWithdrawEmailRuleObjectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

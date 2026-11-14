@@ -53,6 +53,10 @@ type AgentWorkWithdrawDeadlineRes interface {
 	agentWorkWithdrawDeadlineRes()
 }
 
+type AmendEmailRuleObjectionRes interface {
+	amendEmailRuleObjectionRes()
+}
+
 type AwaitReplyRes interface {
 	awaitReplyRes()
 }

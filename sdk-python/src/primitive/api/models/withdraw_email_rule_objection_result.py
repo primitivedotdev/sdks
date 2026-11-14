@@ -31,7 +31,8 @@ class WithdrawEmailRuleObjectionResult:
         Attributes:
             id (UUID):
             status (WithdrawEmailRuleObjectionResultStatus): pending until the rule's author accepts it (turning the rule
-                off) or declines it, or the member who made it withdraws it; never changes after.
+                off), declines it, or answers it amended (they saved a newer version of the rule), or the member who made it
+                withdraws it; never changes after.
             rule (WithdrawEmailRuleObjectionResultRule):
             objector (EmailRuleObjectionPerson):
             author (EmailRuleObjectionPerson):
@@ -40,6 +41,8 @@ class WithdrawEmailRuleObjectionResult:
             message (None | str): Why they object and what they ask (to turn the rule off, narrow it, or explain who
                 receives it); null when none was given, or once withdrawn.
             decline_reason (None | str): The author's answer when declining, which the objector sees; null when none was
+                given.
+            amend_note (None | str): The author's note when answering amended, which the objector sees; null when none was
                 given.
             created_at (datetime.datetime):
             decided_at (datetime.datetime | None):
@@ -55,6 +58,7 @@ class WithdrawEmailRuleObjectionResult:
     is_author: bool
     message: None | str
     decline_reason: None | str
+    amend_note: None | str
     created_at: datetime.datetime
     decided_at: datetime.datetime | None
     decided_by_user_id: None | UUID
@@ -87,6 +91,9 @@ class WithdrawEmailRuleObjectionResult:
         decline_reason: None | str
         decline_reason = self.decline_reason
 
+        amend_note: None | str
+        amend_note = self.amend_note
+
         created_at = self.created_at.isoformat()
 
         decided_at: None | str
@@ -114,6 +121,7 @@ class WithdrawEmailRuleObjectionResult:
             "is_author": is_author,
             "message": message,
             "decline_reason": decline_reason,
+            "amend_note": amend_note,
             "created_at": created_at,
             "decided_at": decided_at,
             "decided_by_user_id": decided_by_user_id,
@@ -173,6 +181,14 @@ class WithdrawEmailRuleObjectionResult:
         decline_reason = _parse_decline_reason(d.pop("decline_reason"))
 
 
+        def _parse_amend_note(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        amend_note = _parse_amend_note(d.pop("amend_note"))
+
+
         created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
@@ -224,6 +240,7 @@ class WithdrawEmailRuleObjectionResult:
             is_author=is_author,
             message=message,
             decline_reason=decline_reason,
+            amend_note=amend_note,
             created_at=created_at,
             decided_at=decided_at,
             decided_by_user_id=decided_by_user_id,

@@ -58,6 +58,7 @@ var operationRolesBearerAuth = map[string][]string{
 	AgentWorkProposeDeadlineOperation:             []string{},
 	AgentWorkReportStatusOperation:                []string{},
 	AgentWorkWithdrawDeadlineOperation:            []string{},
+	AmendEmailRuleObjectionOperation:              []string{},
 	AwaitReplyOperation:                           []string{},
 	CancelSentEmailOperation:                      []string{},
 	CancelSentEmailByIdempotencyKeyOperation:      []string{},
