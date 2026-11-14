@@ -13,6 +13,7 @@ import {
 } from "../../src/oclif/api-command.js";
 import {
   affectsLine,
+  answerConfidence,
   endEmailRuleShareReport,
   formatFact,
   NOT_MATCHED_LIST_LIMIT,
@@ -260,7 +261,8 @@ function testResult(
           {
             question: "Is it a sales pitch?",
             answer: false,
-            probability: 0.81,
+            // An API that does not send confidence yet: worked out as 1 - 0.19.
+            probability: 0.19,
           },
         ],
         question_answers_source: "stored",
@@ -4407,5 +4409,33 @@ describe("email-rules test-email-rule-on-sample --with-protection", () => {
     ]);
     expect(created.exitCode, created.stderr).toBe(0);
     expect(stderrLines(created)).toContain(note);
+  });
+});
+
+describe("how sure a question's answer is (run 14, Q3)", () => {
+  it("reads confidence, the number a webhook payload carries, before working it out from probability", () => {
+    expect(
+      answerConfidence({
+        question: "Q",
+        answer: false,
+        probability: 0.25,
+        confidence: 0.75,
+      }),
+    ).toBe(0.75);
+    // From an API that does not send confidence: the chance of the answer given.
+    expect(
+      answerConfidence({ question: "Q", answer: false, probability: 0.2 }),
+    ).toBeCloseTo(0.8);
+    expect(
+      answerConfidence({ question: "Q", answer: true, probability: 0.57 }),
+    ).toBe(0.57);
+    expect(
+      answerConfidence({
+        question: "Q",
+        answer: null,
+        probability: null,
+        error_class: "deadline",
+      }),
+    ).toBeNull();
   });
 });

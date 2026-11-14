@@ -70,3 +70,69 @@ describe("the objection commands' help", () => {
     );
   });
 });
+
+describe("the length limits in text flag help (run 14, K2)", () => {
+  const flagHelp = (id: string, flag: string) =>
+    (command(id).flags?.[flag] as { description?: string } | undefined)
+      ?.description ?? "";
+
+  it("gives every rule request and objection text flag's limit, once", () => {
+    for (const [id, sdkName, field] of [
+      [
+        "email-rule-oversight:decline-email-rule-objection",
+        "declineEmailRuleObjection",
+        "reason",
+      ],
+      [
+        "email-rule-oversight:create-email-rule-objection",
+        "createEmailRuleObjection",
+        "message",
+      ],
+      [
+        "email-rules:decline-email-rule-request",
+        "declineEmailRuleRequest",
+        "reason",
+      ],
+      [
+        "email-rules:create-email-rule-request",
+        "createEmailRuleRequest",
+        "message",
+      ],
+      [
+        "email-rules:create-email-rule-request",
+        "createEmailRuleRequest",
+        "name",
+      ],
+      [
+        "email-rules:create-email-rule-request",
+        "createEmailRuleRequest",
+        "english",
+      ],
+      [
+        "email-rules:accept-email-rule-request",
+        "acceptEmailRuleRequest",
+        "name",
+      ],
+    ] as const) {
+      const max = maxLength(sdkName, field);
+      expect(max, `${sdkName}.${field}`).toBeTypeOf("number");
+      const help = flagHelp(id, field);
+      const said = help.match(new RegExp(`\\b${max}\\b`, "g")) ?? [];
+      expect(said, `${id} --${field}: ${help}`).toHaveLength(1);
+    }
+  });
+
+  it("adds the limit only where the description does not give it", async () => {
+    const { withLengthLimit } = await import("../../src/oclif/api-command.js");
+    expect(withLengthLimit("A short name for the rule.", 200)).toBe(
+      "A short name for the rule. At most 200 characters.",
+    );
+    expect(withLengthLimit("A short name", 200)).toBe(
+      "A short name. At most 200 characters.",
+    );
+    expect(
+      withLengthLimit("Why you are declining, up to 500 characters.", 500),
+    ).toBe("Why you are declining, up to 500 characters.");
+    expect(withLengthLimit("No limit here.", undefined)).toBe("No limit here.");
+  });
+});

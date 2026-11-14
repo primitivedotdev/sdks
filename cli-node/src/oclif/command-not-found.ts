@@ -7,7 +7,30 @@ export type CommandLookup = {
   find(id: string): { takesArguments: boolean } | undefined;
   /** Whether any command id starts with `${id}:`. */
   hasSubcommands(id: string): boolean;
+  /** The ids of the commands shown in help whose last word is `word`. */
+  named?(word: string): readonly string[];
 };
+
+/** At most this many commands are suggested for one word. */
+const MOST_SUGGESTED = 3;
+
+/**
+ * The commands in another group with the word typed where a subcommand was
+ * expected, said as a question (`email-rules list-email-rule-objections` is
+ * `email-rule-oversight list-email-rule-objections`), or "" when there are
+ * none or too many to be a likely meaning. The first word that names one is
+ * used, so a mistyped group still finds the command after it.
+ */
+function elsewhere(words: readonly string[], lookup: CommandLookup): string {
+  for (const word of words) {
+    const ids = lookup.named?.(word) ?? [];
+    if (ids.length === 0) continue;
+    if (ids.length > MOST_SUGGESTED) return "";
+    const shown = ids.map((id) => `"primitive ${id.split(":").join(" ")}"`);
+    return ` Did you mean ${shown.join(" or ")}?`;
+  }
+  return "";
+}
 
 export type CommandNotFound = {
   code: "unexpected_argument" | "command_not_found";
@@ -36,9 +59,12 @@ export function commandNotFoundMessage(
     // A topic, or a command that is also one: the word was most likely a
     // mistyped subcommand.
     if (topic || !command) {
+      const suggestion = elsewhere(parts.slice(end), lookup);
       return {
         code: "command_not_found",
-        message: `Unknown command "${typed}". Run "${shown} --help" to see the commands under it.`,
+        message: suggestion
+          ? `Unknown command "${typed}".${suggestion}`
+          : `Unknown command "${typed}". Run "${shown} --help" to see the commands under it.`,
       };
     }
     // Typed in the colon form (`emails:get:<id>`), which oclif does not split.
@@ -53,9 +79,12 @@ export function commandNotFoundMessage(
       message: `Unexpected argument "${rest}" for "${shown}", which takes no arguments. Run "${shown} --help" to see the flags it takes.`,
     };
   }
+  const suggestion = elsewhere(parts, lookup);
   return {
     code: "command_not_found",
-    message: `Unknown command "${typed}". Run "primitive --help" to see the commands.`,
+    message: suggestion
+      ? `Unknown command "${typed}".${suggestion}`
+      : `Unknown command "${typed}". Run "primitive --help" to see the commands.`,
   };
 }
 
@@ -75,6 +104,13 @@ const hook: Hook<"command_not_found"> = async (options) => {
     },
     hasSubcommands: (id) =>
       config.commandIDs.some((other) => other.startsWith(`${id}:`)),
+    named: (word) =>
+      config.commands
+        .filter(
+          (command) => !command.hidden && command.id.split(":").at(-1) === word,
+        )
+        .map((command) => command.id)
+        .sort(),
   });
   if (
     jsonOutputRequested([...process.argv.slice(2), ...(options.argv ?? [])])

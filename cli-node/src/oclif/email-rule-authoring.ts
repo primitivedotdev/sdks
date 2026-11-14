@@ -394,7 +394,25 @@ type TestResult = TestEmailRuleResult["results"][number];
 type ExpectationResult = NonNullable<
   TestEmailRuleResult["expectations"]
 >["results"][number];
-type QuestionAnswer = NonNullable<TestResult["question_answers"]>[number];
+// `confidence` is read before the spec this CLI was built from carries it.
+type QuestionAnswer = NonNullable<TestResult["question_answers"]>[number] & {
+  confidence?: number | null;
+};
+
+/**
+ * How sure an answer is, from 0 to 1: the answer's `confidence`, the number
+ * a webhook payload carries for it, or from an API that does not send it yet,
+ * the chance of the answer given worked out from `probability`, the chance of
+ * yes (run 14, Q3). Null for an unanswered question.
+ */
+export function answerConfidence(answer: QuestionAnswer): number | null {
+  if (typeof answer.confidence === "number") return answer.confidence;
+  if (typeof answer.answer !== "boolean") return null;
+  const p = answer.probability;
+  if (typeof p !== "number" || !Number.isFinite(p) || p < 0 || p > 1)
+    return null;
+  return answer.answer ? p : 1 - p;
+}
 
 type UndecidedReason = {
   why: string;
@@ -466,12 +484,10 @@ function answerText(answer: QuestionAnswer): string {
       : answer.answer === false
         ? "no"
         : "unanswered";
-  const probability =
-    typeof answer.probability === "number"
-      ? ` at ${confidence(answer.probability)}`
-      : "";
+  const sure = answerConfidence(answer);
+  const at = sure === null ? "" : ` at ${confidence(sure)}`;
   const error = answer.error_class ? ` (${answer.error_class})` : "";
-  return `"${answer.question}" ${verdict}${probability}${error}`;
+  return `"${answer.question}" ${verdict}${at}${error}`;
 }
 
 function conditionLines(summary: TestEmailRuleResult["summary"]): string[] {

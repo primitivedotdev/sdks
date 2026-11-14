@@ -34,10 +34,10 @@ import { minute } from "./activity.js";
 // proxy env we don't pick up, a missing/wrong API key, and an org
 // with no verified domain.
 //
-// Designed as an interactive checklist on stderr (so a piped invocation
-// keeps the structured JSON on stdout). Each check prints its label,
-// runs, and reports OK/WARN/FAIL with a one-line hint when not OK. The
-// command exits 1 if any FAIL check fires; WARN doesn't fail the run.
+// Prints one thing: the readable checklist, or with --json the same checks
+// as one JSON document. Each check reports OK/WARN/FAIL with a one-line hint
+// when not OK. The command exits 1 if any FAIL check fires; WARN doesn't
+// fail the run.
 
 const MIN_NODE_MAJOR = 22;
 
@@ -622,7 +622,7 @@ class DoctorCommand extends Command {
     }),
     json: Flags.boolean({
       description:
-        "Accepted for consistency: stdout is always the JSON summary, and the readable checklist goes to stderr",
+        "Print the checks as one JSON document on stdout (ok, warnings and each check's label, status, message and hint) instead of the readable checklist",
     }),
   };
 
@@ -686,28 +686,30 @@ class DoctorCommand extends Command {
       }
     }
 
-    for (const row of rows) {
-      process.stderr.write(`${renderRow(row)}\n`);
-      if ("hint" in row.outcome && row.outcome.hint) {
-        process.stderr.write(`       hint: ${row.outcome.hint}\n`);
+    if (flags.json) {
+      // `ok` agrees with the exit code: true unless a check failed. Warnings
+      // (an offline-only profile check, say) are counted separately.
+      const summary = {
+        ok: rows.every((row) => row.outcome.status !== "fail"),
+        warnings: rows.filter((row) => row.outcome.status === "warn").length,
+        checks: rows.map(({ label, outcome }) => ({
+          label,
+          status: outcome.status,
+          message: outcome.message,
+          ...("hint" in outcome && outcome.hint ? { hint: outcome.hint } : {}),
+        })),
+      };
+      this.log(JSON.stringify(summary, null, 2));
+    } else {
+      // The checklist alone, without the JSON of the same checks after it
+      // (run 14, C5).
+      for (const row of rows) {
+        this.log(renderRow(row));
+        if ("hint" in row.outcome && row.outcome.hint) {
+          this.log(`       hint: ${row.outcome.hint}`);
+        }
       }
     }
-
-    // Structured stdout for piping. Keep stderr human-readable;
-    // stdout JSON is what `primitive doctor | jq` consumers parse.
-    // `ok` agrees with the exit code: true unless a check failed. Warnings
-    // (an offline-only profile check, say) are counted separately.
-    const summary = {
-      ok: rows.every((row) => row.outcome.status !== "fail"),
-      warnings: rows.filter((row) => row.outcome.status === "warn").length,
-      checks: rows.map(({ label, outcome }) => ({
-        label,
-        status: outcome.status,
-        message: outcome.message,
-        ...("hint" in outcome && outcome.hint ? { hint: outcome.hint } : {}),
-      })),
-    };
-    this.log(JSON.stringify(summary, null, 2));
 
     if (rows.some((row) => row.outcome.status === "fail")) {
       process.exitCode = 1;

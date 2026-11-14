@@ -3,6 +3,7 @@ import hook, {
   type CommandLookup,
   commandNotFoundMessage,
 } from "../../src/oclif/command-not-found.js";
+import { COMMANDS } from "../../src/oclif/index.js";
 
 // `emails list` takes no arguments, `emails get` takes one, and `network` is
 // a command with subcommands of its own.
@@ -50,6 +51,87 @@ describe("command not found", () => {
     expect(commandNotFoundMessage("emails:get-it:now", lookup).message).toBe(
       'Unknown command "primitive emails get-it now". Run "primitive emails --help" to see the commands under it.',
     );
+  });
+
+  it("asks whether a command under another group was meant, when one has the word typed (run 14, K1)", () => {
+    const grouped: Record<string, { takesArguments: boolean }> = {
+      "email-rules:list-email-rules": { takesArguments: false },
+      "email-rule-oversight:list-email-rule-objections": {
+        takesArguments: false,
+      },
+      "a:dup": { takesArguments: false },
+      "b:dup": { takesArguments: false },
+      "c:dup": { takesArguments: false },
+      "d:dup": { takesArguments: false },
+      "x:two": { takesArguments: false },
+      "y:two": { takesArguments: false },
+    };
+    const siblings: CommandLookup = {
+      find: (id) => grouped[id],
+      hasSubcommands: (id) =>
+        Object.keys(grouped).some((other) => other.startsWith(`${id}:`)),
+      named: (word) =>
+        Object.keys(grouped)
+          .filter((id) => id.split(":").at(-1) === word)
+          .sort(),
+    };
+    expect(
+      commandNotFoundMessage(
+        "email-rules:list-email-rule-objections",
+        siblings,
+      ),
+    ).toEqual({
+      code: "command_not_found",
+      message:
+        'Unknown command "primitive email-rules list-email-rule-objections". Did you mean "primitive email-rule-oversight list-email-rule-objections"?',
+    });
+    // A mistyped group, or none at all, still finds it.
+    expect(
+      commandNotFoundMessage("email-rule:list-email-rule-objections", siblings)
+        .message,
+    ).toBe(
+      'Unknown command "primitive email-rule list-email-rule-objections". Did you mean "primitive email-rule-oversight list-email-rule-objections"?',
+    );
+    expect(
+      commandNotFoundMessage("list-email-rule-objections", siblings).message,
+    ).toContain(
+      'Did you mean "primitive email-rule-oversight list-email-rule-objections"?',
+    );
+    // Two are both named; more than three are no likely meaning.
+    expect(commandNotFoundMessage("email-rules:two", siblings).message).toBe(
+      'Unknown command "primitive email-rules two". Did you mean "primitive x two" or "primitive y two"?',
+    );
+    expect(commandNotFoundMessage("email-rules:dup", siblings).message).toBe(
+      'Unknown command "primitive email-rules dup". Run "primitive email-rules --help" to see the commands under it.',
+    );
+    // A word no command has keeps the pointer to help.
+    expect(commandNotFoundMessage("email-rules:nosuch", siblings).message).toBe(
+      'Unknown command "primitive email-rules nosuch". Run "primitive email-rules --help" to see the commands under it.',
+    );
+  });
+
+  it("finds the objection commands from the email rules group in the real command list", () => {
+    const registered = COMMANDS as Record<string, { hidden?: boolean }>;
+    const ids = Object.keys(registered);
+    const real: CommandLookup = {
+      find: (id) => (registered[id] ? { takesArguments: false } : undefined),
+      hasSubcommands: (id) => ids.some((other) => other.startsWith(`${id}:`)),
+      named: (word) =>
+        ids
+          .filter(
+            (id) => !registered[id]?.hidden && id.split(":").at(-1) === word,
+          )
+          .sort(),
+    };
+    for (const name of [
+      "list-email-rule-objections",
+      "decline-email-rule-objection",
+      "list-email-rules-covering-me",
+    ]) {
+      expect(commandNotFoundMessage(`email-rules:${name}`, real).message).toBe(
+        `Unknown command "primitive email-rules ${name}". Did you mean "primitive email-rule-oversight ${name}"?`,
+      );
+    }
   });
 
   it("shows the spaced form for an id typed with colons on a command that takes an argument", () => {

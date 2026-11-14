@@ -777,6 +777,49 @@ describe("send outcomes", () => {
     expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 
+  it("leads a rules-only key's --json refusal with the reason, under a code (run 14, C4)", async () => {
+    const reason =
+      "This credential lists only email rules, and a rule gives no address to send from, so it cannot send. To send, use a separate key with mail:send and not mail:read that lists the address to send from.";
+    mocks.getSendFrom.mockResolvedValue({
+      data: {
+        data: {
+          default_from: null,
+          default_source: null,
+          addresses: [],
+          domains: [],
+          reason,
+        },
+      },
+    });
+    mocks.getOwnGrant.mockResolvedValue({
+      data: {
+        data: {
+          key_id: "key-1",
+          grant: {
+            credential_kind: "org_key",
+            permissions: ["mail:read", "mail:send"],
+          },
+        },
+      },
+    });
+
+    const json = await run("send", [...noFromArgs, "--json"]);
+    expect(json.exitCode).toBe(1);
+    expect(json.stderr).toBe("");
+    expect(JSON.parse(json.stdout)).toMatchObject({
+      outcome: "not_sent",
+      outcome_message: `Message not sent: ${reason} Nothing went out; fix the problem before retrying.`,
+      http_status: null,
+      error: { message: reason, code: "no_send_address" },
+    });
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+
+    // Without --json the reason is the error line itself, as before.
+    const plain = await run("send", noFromArgs);
+    expect(plain.exitCode).toBe(1);
+    expect(plain.error).toBe(reason);
+  });
+
   it("keeps stdout byte-compatible and summarises the send on stderr", async () => {
     const result = await run("send", sendArgs());
 

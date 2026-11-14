@@ -1,6 +1,8 @@
+import { Errors } from "@oclif/core";
 import { describe, expect, it } from "vitest";
 import {
   buildFollowUpCommand,
+  buildThrownSendFailureEnvelope,
   classifySendError,
   DEFINITIVE_SEND_REJECTION_STATUSES,
   followUpCommandPrefix,
@@ -16,6 +18,44 @@ import {
   sentHistoryWindowStart,
   successfulSendOutcome,
 } from "../../src/oclif/send-outcome.js";
+
+describe("a send that threw", () => {
+  it("leads with why when it was refused before the request started (run 14, C4)", () => {
+    const error = new Errors.CLIError(
+      "This credential lists only email rules, so it cannot send.",
+      { exit: 1, code: "no_send_address" },
+    );
+    expect(
+      buildThrownSendFailureEnvelope({
+        error,
+        noun: "Message",
+        requestStarted: false,
+      }),
+    ).toMatchObject({
+      outcome: "not_sent",
+      exit_code: 1,
+      outcome_message:
+        "Message not sent: This credential lists only email rules, so it cannot send. Nothing went out; fix the problem before retrying.",
+      http_status: null,
+      error: {
+        message: "This credential lists only email rules, so it cannot send.",
+        code: "no_send_address",
+      },
+    });
+  });
+
+  it("keeps the uncertain line once the request started, whatever the error says", () => {
+    expect(
+      buildThrownSendFailureEnvelope({
+        error: new TypeError("network down"),
+        noun: "Message",
+        requestStarted: true,
+      }).outcome_message,
+    ).toBe(
+      "Message send outcome uncertain (no response from the API): it may or may not have gone out. Do not resend blindly; check sent history first.",
+    );
+  });
+});
 
 describe("the line that says a send failed", () => {
   it("leads with the API's own words when it gave some, on one line", () => {

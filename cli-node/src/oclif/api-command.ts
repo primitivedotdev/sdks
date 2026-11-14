@@ -415,6 +415,8 @@ interface BodyFieldDescriptor {
   kind: "string" | "integer" | "number" | "boolean" | "complex";
   maximum?: number;
   minimum?: number;
+  // The most characters a text field takes, when the schema says.
+  maxLength?: number;
   // Restricted-string enum, when the schema had `enum: [...]` and
   // the type is string. Used to bound the generated flag.
   enumValues?: readonly string[];
@@ -517,6 +519,9 @@ function extractBodyFields(
         : {}),
       ...(typeof propSchema.minimum === "number"
         ? { minimum: propSchema.minimum }
+        : {}),
+      ...(typeof propSchema.maxLength === "number"
+        ? { maxLength: propSchema.maxLength }
         : {}),
     });
   }
@@ -1129,7 +1134,21 @@ function bodyFieldFlag(
   if (field.enumValues) {
     return Flags.string({ ...common, options: field.enumValues });
   }
-  return Flags.string(common);
+  return Flags.string({
+    ...common,
+    description: withLengthLimit(common.description, field.maxLength),
+  });
+}
+
+/**
+ * A text flag's help with the most characters it takes, when the schema has
+ * a limit its description does not already give (run 14, K2), so a long
+ * message is cut to fit before it is written rather than refused after.
+ */
+export function withLengthLimit(description: string, max?: number): string {
+  if (max === undefined || new RegExp(`\\b${max}\\b`).test(description))
+    return description;
+  return `${sentence(description)} At most ${max} characters.`;
 }
 
 function buildFlags(operation: PrimitiveOperationManifest): {

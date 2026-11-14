@@ -552,6 +552,9 @@ describe("resolveDefaultFrom from the API's own answer", () => {
     await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
       "This credential may send from more than one address, so there is no default From. Name the address to send from. Addresses you may send from: a@acme.example, b@acme.example. Also any address at: acme.example. Pass the address to use with --from <address>.",
     );
+    await expect(resolveDefaultFrom(client, authContext)).rejects.toMatchObject(
+      { code: "no_default_from" },
+    );
   });
 
   it("refuses with the reason alone, and a claim hint, and no --from line, when nothing can be sent from", async () => {
@@ -580,6 +583,9 @@ describe("resolveDefaultFrom from the API's own answer", () => {
     });
     await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
       /^This credential lists no address or domain it can send from, so it cannot send\.$/,
+    );
+    await expect(resolveDefaultFrom(client, authContext)).rejects.toMatchObject(
+      { code: "no_send_address" },
     );
   });
 
