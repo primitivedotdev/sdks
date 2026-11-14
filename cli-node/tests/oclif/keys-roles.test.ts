@@ -945,6 +945,29 @@ describe("keys commands", () => {
     expect(requests).toHaveLength(0);
   });
 
+  it("create refuses --domain beside --rule with exit 2 and sends nothing, with or without --json", async () => {
+    const requests = useServer(() => Response.json({}, { status: 500 }));
+    const args = [
+      "--name",
+      "x",
+      "--permission",
+      "mail:read",
+      "--rule",
+      RULE_ID,
+      "--domain",
+      "acme.example",
+    ];
+    const result = await run(KeysCreateCommand, args);
+    expect(String(result.error)).toContain(
+      "--rule cannot be combined with --domain",
+    );
+    expect(result.exitCode).toBe(2);
+    const json = await run(KeysCreateCommand, [...args, "--json"]);
+    expect(json.stderr).toBe("");
+    expect(JSON.parse(json.stdout)).toMatchObject({ exit_code: 2 });
+    expect(requests).toHaveLength(0);
+  });
+
   it("create without a terminal prints the approval link and makes nothing", async () => {
     const url =
       "https://app.example.test/app/settings/step-up?purpose=keys.create&client=primitive-cli";
@@ -1107,7 +1130,11 @@ describe("keys commands", () => {
     expect(Object.keys(document)[0]).toBe("whole_mailbox_warning");
     expect(document.whole_mailbox_warning).toBe(warning);
     expect(document.warnings).toEqual([
-      `Warning: ${warning}`,
+      {
+        reason: "whole_mailbox",
+        addresses: ["ops@acme.example"],
+        description: warning,
+      },
       permissionWarning,
     ]);
     expect(document).toMatchObject({ address_warnings: [whole, member] });
@@ -1305,10 +1332,41 @@ describe("keys commands", () => {
     const document = JSON.parse(json.stdout);
     expect(Object.keys(document)[0]).toBe("whole_mailbox_warning");
     expect(document.whole_mailbox_warning).toBe(warning);
-    expect(document.warnings).toEqual([`Warning: ${warning}`]);
+    expect(document.warnings).toEqual([
+      {
+        reason: "whole_mailbox",
+        addresses: ["acme.example"],
+        description: warning,
+      },
+    ]);
     expect(document.address_warnings).toEqual([
       { address: "acme.example", reason: "whole_mailbox", description },
     ]);
+  });
+
+  it("update refuses a rule added to a key that lists a domain, before asking anything, and sends no change", async () => {
+    const onDomain = keyRow({
+      template: null,
+      permissions: ["mail:read"],
+      mail_scope: {
+        addresses: [],
+        domains: ["acme.example"],
+        depth: "content",
+      },
+    });
+    const requests = useServer(() =>
+      Response.json({ success: true, data: onDomain }),
+    );
+    const result = await run(KeysUpdateCommand, [
+      KEY_ID,
+      "--add-rule",
+      RULE_ID,
+    ]);
+    expect(result.exitCode).toBe(2);
+    expect(String(result.error)).toContain(
+      "lists acme.example, so a rule cannot be added to it",
+    );
+    expect(requests.every((r) => r.method === "GET")).toBe(true);
   });
 
   it("update adds permissions to a read-only key, guarded by the grant it read, and says what happens to held requests", async () => {

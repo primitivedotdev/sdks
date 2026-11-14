@@ -297,11 +297,14 @@ export function wholeMailboxWarning(
 /**
  * A --json document led by the whole-mailbox warning: whole_mailbox_warning
  * as its first field, and the warning first in its warnings, before the
- * server's own. Unchanged when there is no warning.
+ * server's own, as an object with a description as theirs have (reason
+ * whole_mailbox, with the addresses and domains read in full). Unchanged when
+ * there is no warning.
  */
 export function ledByWholeMailboxWarning(
   document: Record<string, unknown>,
   whole: string | null,
+  notes: unknown,
 ): Record<string, unknown> {
   if (!whole) return document;
   const { whole_mailbox_warning: _shown, ...rest } = document;
@@ -309,7 +312,14 @@ export function ledByWholeMailboxWarning(
   return {
     whole_mailbox_warning: whole,
     ...rest,
-    warnings: [`Warning: ${whole}`, ...warnings],
+    warnings: [
+      {
+        reason: "whole_mailbox",
+        addresses: wholeMailboxAddresses(notes),
+        description: whole,
+      },
+      ...warnings,
+    ],
   };
 }
 
@@ -447,12 +457,13 @@ export function buildCreateGrant(
   };
   // A key reads every email on a domain it lists, so a domain beside a rule
   // would read far more than the rule's emails. The API refuses it too.
-  if (choice.rules.length > 0 && choice.domains.length > 0) {
-    return {
-      ok: false,
-      message: `--rule cannot be combined with --domain: the key would read every email on ${choice.domains.join(", ")}, not only what the rules granted. Create a key with --rule alone, or one with --domain alone.`,
-    };
-  }
+  const domainBesideRule =
+    choice.rules.length > 0 && choice.domains.length > 0
+      ? {
+          ok: false as const,
+          message: `--rule cannot be combined with --domain: the key would read every email on ${choice.domains.join(", ")}, not only what the rules granted. Create a key with --rule alone, or one with --domain alone.`,
+        }
+      : null;
   if (choice.permissions.length > 0) {
     if (choice.preset) {
       return {
@@ -468,6 +479,7 @@ export function buildCreateGrant(
           : "Say which mail the key reaches: --address, --domain or --rule (each repeatable), or --all-mailboxes.",
       };
     }
+    if (domainBesideRule) return domainBesideRule;
     return {
       ok: true,
       grant: {
@@ -506,6 +518,7 @@ export function buildCreateGrant(
         message: `${choice.preset} needs --address, --domain or --rule.`,
       };
     }
+    if (domainBesideRule) return domainBesideRule;
     return {
       ok: true,
       grant: {
@@ -946,7 +959,7 @@ export class KeysCreateCommand extends Command {
 
   The secret is printed once, on its own line on stdout (in the JSON with --json). Store it right away: it is not shown again and the CLI does not save it.
 
-  A key limited to email rules (--rule, repeatable) reaches only the mail those rules match. Give it mail:read with --permission, or use --preset own_addresses_read_only. A key reads every email at an address or domain it lists, not only what the rules match, so --domain cannot be given beside --rule, and the API refuses an --address beside it that is a member's own mailbox. An agent's or a shared address may be given beside --rule, for example for the key to reply from; it is read in full, and the command says so first: on stderr, or with --json in whole_mailbox_warning.
+  A key limited to email rules (--rule, repeatable) reaches only the mail those rules match. Give it mail:read with --permission, or use --preset own_addresses_read_only. A key reads every email at an address or domain it lists, not only what the rules match, so --domain cannot be given beside --rule, and the API refuses an --address beside it that is another member's mailbox, a former member's included, or a retired address. Your own address, an agent's or a shared one may be given beside --rule, for example for the key to reply from; it is read in full, and the command says so first: on stderr, or with --json in whole_mailbox_warning.
 
   ${keyPermissionsHelp()}`;
 
@@ -982,7 +995,7 @@ export class KeysCreateCommand extends Command {
     }),
     rule: Flags.string({
       description:
-        "An email rule id whose matching mail the key reaches (repeatable). Not with --domain, nor with an --address that is a member's own mailbox; another --address beside it is read in full, not only the rule's mail.",
+        "An email rule id whose matching mail the key reaches (repeatable). Not with --domain, nor with an --address that is another member's mailbox or a retired address; any other --address beside it is read in full, not only the rule's mail.",
       multiple: true,
     }),
     "all-mailboxes": Flags.boolean({
@@ -1058,10 +1071,7 @@ export class KeysCreateCommand extends Command {
     printSecret(
       this,
       Boolean(flags.json),
-      ledByWholeMailboxWarning(
-        key as unknown as Record<string, unknown>,
-        whole,
-      ),
+      ledByWholeMailboxWarning(key, whole, key.address_warnings),
       key.key,
       [
         `Created API key ${key.name ?? "(unnamed)"} (${key.id}), prefix ${key.key_prefix}.`,
@@ -1160,7 +1170,7 @@ export class KeysUpdateCommand extends Command {
   static description =
     `Change an API key's permissions, email rules, name or expiry. It keeps its id and secret.
 
-  --add and --remove take permissions (repeatable, or comma-separated); \`primitive keys create --help-full\` lists the permissions a key can hold. --add-rule and --remove-rule add email rules to the key or take them off, and keep its other rules. --rule replaces every rule the key has with the ones given, so pass all the rules it should keep; it cannot be combined with --add-rule or --remove-rule. --expires-at gives it a new expiry: a later one extends it, within your organization's credential policy, and is how to keep a key working past its expiry (rotating keeps the expiry). --no-expiry removes it where the policy allows. An expired key cannot be extended. Everything else about the key stays as it is, and the output lists any rules a change took off. The API refuses a change that adds a rule beside a domain or a member's own address, or adds one of those beside a rule. When the key's grant is written and it lists an address or domain beside its rules, which it reads in full, the command says so first: on stderr, or with --json in whole_mailbox_warning.
+  --add and --remove take permissions (repeatable, or comma-separated); \`primitive keys create --help-full\` lists the permissions a key can hold. --add-rule and --remove-rule add email rules to the key or take them off, and keep its other rules. --rule replaces every rule the key has with the ones given, so pass all the rules it should keep; it cannot be combined with --add-rule or --remove-rule. --expires-at gives it a new expiry: a later one extends it, within your organization's credential policy, and is how to keep a key working past its expiry (rotating keeps the expiry). --no-expiry removes it where the policy allows. An expired key cannot be extended. Everything else about the key stays as it is, and the output lists any rules a change took off. A rule cannot be added to a key that lists a domain, and the API refuses one added beside another member's mailbox or a retired address. When the key's grant is written and it lists an address or domain beside its rules, which it reads in full, the command says so before the result: on stderr, or with --json in whole_mailbox_warning.
 
   The change runs directly; if your organization requires approval, the command prints the approval link and takes --step-up-token, as for a new key. A key never holds more than you do.
 
@@ -1297,6 +1307,22 @@ export class KeysUpdateCommand extends Command {
       if (!next.ok) {
         this.error(next.message.replace("<key-id>", args.id), { exit: 2 });
       }
+      // A rule added to a key that lists a domain would read every email on
+      // it, not only the rule's; the API refuses it too, so it is refused here
+      // before any approval is asked for.
+      const listedDomains =
+        stringList((next.grant as { domains?: unknown }).domains ?? []) ?? [];
+      const addedRules = (
+        stringList((next.grant as { rules?: unknown }).rules ?? []) ?? []
+      ).filter(
+        (r) => !rulesBefore.some((k) => k.toLowerCase() === r.toLowerCase()),
+      );
+      if (addedRules.length > 0 && listedDomains.length > 0) {
+        this.error(
+          `Key ${args.id} lists ${listedDomains.join(", ")}, so a rule cannot be added to it: the key would read every email on that domain, not only what the rule granted. Create a key with --rule alone for the rule's mail.`,
+          { exit: 2 },
+        );
+      }
       rulesNotOnKey = removeRules.filter(
         (r) => !rulesBefore.some((k) => k.toLowerCase() === r.toLowerCase()),
       );
@@ -1413,6 +1439,7 @@ export class KeysUpdateCommand extends Command {
               ...(after && !after.ok ? { key_error: after.payload } : {}),
             },
             whole,
+            result.data.address_warnings,
           ),
           null,
           2,
@@ -1422,7 +1449,7 @@ export class KeysUpdateCommand extends Command {
     }
     if (whole) process.stderr.write(`Warning: ${whole}\n\n`);
     writeWarnings(result.data.warnings);
-    // A note the warning below does not say is printed as it came.
+    // A note the warning above does not say is printed as it came.
     writeWarnings(
       whole
         ? otherNotes(result.data.address_warnings)

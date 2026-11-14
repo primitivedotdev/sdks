@@ -1378,10 +1378,14 @@ downgrading, or sign in again afterwards.
 - A key that lists an address or domain beside its email rules reads every
   email there, not only the rules' emails (the `whole_mailbox` note in
   `address_warnings`). `keys create`, and `keys update` when it writes the
-  grant, then print a warning on stderr after the key, naming the addresses
-  and saying how to make a key limited to the rules; with `--json` the same
-  text is in the document's `whole_mailbox_warning`. The key is still made or
-  changed as asked, and the exit code is unchanged. `keys list` marks such a key with what it reads in full, and
+  grant, then print a warning on stderr before the result, naming the
+  addresses and saying how to make a key limited to the rules; with `--json`
+  the same text is the document's first field, `whole_mailbox_warning`, and
+  the first entry of its `warnings` (reason `whole_mailbox`). The key is
+  still made or changed as asked, and the exit code is unchanged. `keys
+  create` refuses `--domain` beside `--rule`, and `keys update` refuses a
+  rule added to a key that lists a domain, both with exit code 2 and
+  nothing sent. `keys list` marks such a key with what it reads in full, and
   `keys get` shows it in an `In full:` line.
 
 #### Rule request and objection webhook events
