@@ -32,6 +32,8 @@ import {
   AGENT_CONNECTION_REQUIRED,
   AGENT_CONNECTION_REQUIRED_MESSAGE,
   isConnectedAgentKey,
+  KEY_REVOKED,
+  KEY_REVOKED_MESSAGE,
 } from "../listen-credential.js";
 import { createListenHandler } from "../listen-handlers.js";
 import {
@@ -890,7 +892,9 @@ export default class ListenCommand extends Command {
           : (error as { code?: unknown } | null)?.code ===
               AGENT_CONNECTION_REQUIRED
             ? AGENT_CONNECTION_REQUIRED_MESSAGE
-            : "The listener stopped because of a local state or connection error.",
+            : (error as { code?: unknown } | null)?.code === KEY_REVOKED
+              ? KEY_REVOKED_MESSAGE
+              : "The listener stopped because of a local state or connection error.",
       );
     } finally {
       await wake?.close();

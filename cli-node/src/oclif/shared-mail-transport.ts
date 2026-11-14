@@ -7,6 +7,8 @@ import { EventConnection, EventReceiverError } from "@primitivedotdev/sdk/api";
 import {
   AGENT_CONNECTION_REQUIRED,
   AGENT_CONNECTION_REQUIRED_MESSAGE,
+  KEY_REVOKED,
+  KEY_REVOKED_MESSAGE,
 } from "./listen-credential.js";
 
 export interface SharedMailTransportOptions {
@@ -60,6 +62,8 @@ export async function ensureSharedMailSubscription(options: {
         AGENT_CONNECTION_REQUIRED,
         403,
       );
+    if (error?.error?.code === KEY_REVOKED)
+      throw new EventReceiverError(KEY_REVOKED_MESSAGE, KEY_REVOKED, 401);
     throw new EventReceiverError(
       "Could not open the shared inbound subscription.",
       "subscription_failed",
