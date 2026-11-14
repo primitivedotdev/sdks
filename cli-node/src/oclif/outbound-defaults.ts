@@ -21,6 +21,7 @@ import {
   extractErrorPayload,
   formatErrorPayload,
   isGrantRefusal,
+  refusesCredential,
   surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "./api-command.js";
@@ -354,8 +355,11 @@ function unauthorizedRefusal(
   surfaceUnauthorizedHint({ ...authFailureContext, payload: errorPayload });
   // exit: 1 to match the unauthorized path elsewhere; oclif's CLIError
   // defaults to 2 otherwise, which breaks callers that branch on exit code.
+  // A revoked key's answer says what to do itself, and gets no hint.
   return new Errors.CLIError(
-    "Cannot send: CLI auth is missing or invalid (see the hint).",
+    extractErrorCode(errorPayload) === API_ERROR_CODES.keyRevoked
+      ? "Cannot send: this API key was revoked (see the message above)."
+      : "Cannot send: CLI auth is missing or invalid (see the hint).",
     { exit: 1 },
   );
 }
@@ -408,7 +412,7 @@ export async function resolveDefaultFrom(
   });
   if (own.error) {
     const errorPayload = extractErrorPayload(own.error);
-    if (extractErrorCode(errorPayload) === API_ERROR_CODES.unauthorized)
+    if (refusesCredential(extractErrorCode(errorPayload)))
       throw unauthorizedRefusal(errorPayload, authFailureContext);
     throw new Errors.CLIError(
       `Could not tell which addresses this credential may send from, so --from has no default. Pass --from <address>. Underlying error: ${formatErrorPayload(errorPayload)}`,
@@ -620,7 +624,7 @@ async function sendFromAnswer(
   if (result.error) {
     const errorPayload = extractErrorPayload(result.error);
     const code = extractErrorCode(errorPayload);
-    if (code === API_ERROR_CODES.unauthorized)
+    if (refusesCredential(code))
       throw unauthorizedRefusal(errorPayload, authFailureContext);
     if (code === "not_found" || code === "function_scope_forbidden")
       return undefined;
@@ -756,7 +760,7 @@ export async function legacyDefaultFromAddress(
     });
     if (result.error) {
       const payload = extractErrorPayload(result.error);
-      if (extractErrorCode(payload) === API_ERROR_CODES.unauthorized)
+      if (refusesCredential(extractErrorCode(payload)))
         return { kind: "unauthorized" };
       if (!isGrantRefusal(payload)) return { kind: "unknown" };
       const own = await getOwnGrant({

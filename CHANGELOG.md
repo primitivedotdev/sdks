@@ -1192,6 +1192,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - In Go, an optional field with a fixed value (such as `detail_withheld`
   on a decision about your own mail) is encoded only when it is set, so
   re-encoding a decoded response no longer adds it.
+- New error code: `key_revoked`, a `401` for a full API key that was revoked.
+  The CLI prints its message without the sign-in hint, and `listen` and the
+  default From lookup of `send` and `reply` treat it as a refused credential.
 - New error code: `sending_ip_warmup_cap`. A held scheduled send's `hold`
   `reason` can also be `sending_ip_warmup_cap`.
 - `pullWebhookEvent`'s `503` is also `service_unavailable` when the

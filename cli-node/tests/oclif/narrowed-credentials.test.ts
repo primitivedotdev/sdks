@@ -854,6 +854,31 @@ describe("resolveDefaultFrom from the API's own answer", () => {
       "/v1/whoami/send-from",
     ]);
   });
+
+  it("stops on a revoked key the same way, with the server's message and no sign-in hint", async () => {
+    const writes: string[] = [];
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+      writes.push(String(chunk));
+      return true;
+    });
+    const message =
+      "This API key was revoked, so it no longer works. Create a new key, or use another one you hold.";
+    const { client, requests } = recordingClient({
+      "/whoami/send-from": () =>
+        Response.json(
+          { success: false, error: { code: "key_revoked", message } },
+          { status: 401 },
+        ),
+    });
+    await expect(resolveDefaultFrom(client, authContext)).rejects.toThrow(
+      "Cannot send: this API key was revoked (see the message above).",
+    );
+    expect(requests.map((request) => request.path)).toEqual([
+      "/v1/whoami/send-from",
+    ]);
+    expect(writes.join("")).toContain(message);
+    expect(writes.join("")).not.toContain("primitive signin");
+  });
 });
 
 describe("legacyDefaultFromAddress, as earlier versions worked it out", () => {

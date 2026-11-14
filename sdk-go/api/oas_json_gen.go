@@ -103967,6 +103967,8 @@ func (s *ErrorResponseErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorResponseErrorCodeKeyChangeSuperseded
 	case ErrorResponseErrorCodeKeyRecentlyCreated:
 		*s = ErrorResponseErrorCodeKeyRecentlyCreated
+	case ErrorResponseErrorCodeKeyRevoked:
+		*s = ErrorResponseErrorCodeKeyRevoked
 	case ErrorResponseErrorCodeLastOwner:
 		*s = ErrorResponseErrorCodeLastOwner
 	case ErrorResponseErrorCodeLatestMessageMismatch:

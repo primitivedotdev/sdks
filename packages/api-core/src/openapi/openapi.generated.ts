@@ -66547,6 +66547,7 @@ export const openapiDocument: Record<string, unknown> = {
                   "keep_refused",
                   "key_change_superseded",
                   "key_recently_created",
+                  "key_revoked",
                   "last_owner",
                   "latest_message_mismatch",
                   "latest_message_thread_unresolved",

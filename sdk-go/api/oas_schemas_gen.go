@@ -48021,6 +48021,7 @@ const (
 	ErrorResponseErrorCodeKeepRefused                              ErrorResponseErrorCode = "keep_refused"
 	ErrorResponseErrorCodeKeyChangeSuperseded                      ErrorResponseErrorCode = "key_change_superseded"
 	ErrorResponseErrorCodeKeyRecentlyCreated                       ErrorResponseErrorCode = "key_recently_created"
+	ErrorResponseErrorCodeKeyRevoked                               ErrorResponseErrorCode = "key_revoked"
 	ErrorResponseErrorCodeLastOwner                                ErrorResponseErrorCode = "last_owner"
 	ErrorResponseErrorCodeLatestMessageMismatch                    ErrorResponseErrorCode = "latest_message_mismatch"
 	ErrorResponseErrorCodeLatestMessageThreadUnresolved            ErrorResponseErrorCode = "latest_message_thread_unresolved"
@@ -48386,6 +48387,7 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeKeepRefused,
 		ErrorResponseErrorCodeKeyChangeSuperseded,
 		ErrorResponseErrorCodeKeyRecentlyCreated,
+		ErrorResponseErrorCodeKeyRevoked,
 		ErrorResponseErrorCodeLastOwner,
 		ErrorResponseErrorCodeLatestMessageMismatch,
 		ErrorResponseErrorCodeLatestMessageThreadUnresolved,
@@ -48968,6 +48970,8 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeKeyChangeSuperseded:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeKeyRecentlyCreated:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeKeyRevoked:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeLastOwner:
 		return []byte(s), nil
@@ -49913,6 +49917,9 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeKeyRecentlyCreated:
 		*s = ErrorResponseErrorCodeKeyRecentlyCreated
+		return nil
+	case ErrorResponseErrorCodeKeyRevoked:
+		*s = ErrorResponseErrorCodeKeyRevoked
 		return nil
 	case ErrorResponseErrorCodeLastOwner:
 		*s = ErrorResponseErrorCodeLastOwner

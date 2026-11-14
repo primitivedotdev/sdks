@@ -14,6 +14,8 @@ import {
   AGENT_CONNECTION_REQUIRED,
   AGENT_CONNECTION_REQUIRED_MESSAGE,
   isConnectedAgentKey,
+  KEY_REVOKED,
+  KEY_REVOKED_MESSAGE,
 } from "./listen-credential.js";
 import { runSharedNotificationListen } from "./listen-notifications.js";
 import {
@@ -37,11 +39,13 @@ class RequestFailure extends ListenError {
         ? AGENT_CONNECTION_REQUIRED_MESSAGE
         : code === "agent_connection_scope_forbidden"
           ? "This operation is outside the connected address grant. Use inbound email events and this credential’s own subscription."
-          : status === 401 || status === 403
-            ? "Listener authorization failed. Run primitive signin or check your API key and account permissions."
-            : status === 409 && code === "subscription_conflict"
-              ? "This subscription has different event filters. Omit --events to resume it, or use primitive listen --subscription new-subscription (add your --events selection)."
-              : `Listener API request failed (HTTP ${status || "transport"}, ${code}).`,
+          : code === KEY_REVOKED
+            ? KEY_REVOKED_MESSAGE
+            : status === 401 || status === 403
+              ? "Listener authorization failed. Run primitive signin or check your API key and account permissions."
+              : status === 409 && code === "subscription_conflict"
+                ? "This subscription has different event filters. Omit --events to resume it, or use primitive listen --subscription new-subscription (add your --events selection)."
+                : `Listener API request failed (HTTP ${status || "transport"}, ${code}).`,
     );
   }
 }
