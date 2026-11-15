@@ -1392,3 +1392,15 @@ def test_create_client_rejects_legacy_base_url_kwarg() -> None:
 
     with pytest.raises(TypeError, match=r"api_base_url_1"):
         create_client("prim_test", base_url="https://example.test/api/v1")  # pyright: ignore[reportCallIssue]
+
+
+def test_requests_have_no_default_timeout() -> None:
+    """A rule write the expectations gate judges can take about 100 s, so no
+    request is cut short unless the caller sets a timeout."""
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
+    for api in (client.api_client, client.api_send_client):
+        timeout = api.get_httpx_client().timeout
+        assert timeout.connect is None
+        assert timeout.read is None
+        assert timeout.write is None
+        assert timeout.pool is None
