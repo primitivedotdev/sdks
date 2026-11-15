@@ -238,6 +238,26 @@ describe("keys helpers", () => {
     expect(detail).not.toContain("Revoked:");
   });
 
+  it("names the key a key was rotated to and from, in the list and the detail", () => {
+    const rotated = keyRow(
+      { template: "super_admin", permissions: null, mail_scope: null },
+      { rotated_to: "key-new", rotated_from: "key-old" },
+    );
+    expect(formatKeyRows([rotated])).toMatch(
+      / \[rotated to key-new\] \[rotated from key-old\]$/,
+    );
+    expect(formatKeyDetail(rotated)).toContain(
+      "Rotated to:   key-new\nRotated from: key-old",
+    );
+    const plain = keyRow({
+      template: "super_admin",
+      permissions: null,
+      mail_scope: null,
+    });
+    expect(formatKeyRows([plain])).not.toContain("rotated");
+    expect(formatKeyDetail(plain)).not.toContain("Rotated");
+  });
+
   it("shows the notes the server gives on a key's grant, in the detail and as a count in the list", () => {
     const note =
       "This key also lists email rules, but it reads every email at desk@example.com, not only what the rules granted.";

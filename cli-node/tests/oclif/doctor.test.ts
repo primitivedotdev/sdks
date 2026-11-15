@@ -365,7 +365,7 @@ describe("checkApiKey on a machine with only connected agent profiles", () => {
         env: {},
       });
       expect(outcome.status).toBe("warn");
-      if (outcome.status === "ok") return;
+      if (outcome.status !== "warn") return;
       expect(outcome.message).toContain("session-a, session-b");
       expect(outcome.hint).toBe(
         "Select one to check it: PRIMITIVE_AGENT_PROFILE=session-a primitive doctor",
@@ -928,6 +928,78 @@ describe("checkAskedOfYou", () => {
         message: "1 rule request waiting for you",
       });
       expect(process.exitCode ?? 0).toBe(0);
+    } finally {
+      write.mockRestore();
+      log.mockRestore();
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("doctor's domains row", () => {
+  it("skips the row, without a warning, for a credential that cannot list domains", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "primitive-doctor-domains-"));
+    const logged: string[] = [];
+    const log = vi.spyOn(console, "log").mockImplementation((line) => {
+      logged.push(String(line));
+    });
+    const write = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+    const json = (status: number, body: unknown) =>
+      new Response(JSON.stringify(body), {
+        headers: { "content-type": "application/json" },
+        status,
+      });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof globalThis.fetch>(async (input, init) => {
+        const url = new URL(new Request(input, init).url);
+        if (url.pathname.endsWith("/account"))
+          return json(200, {
+            success: true,
+            data: { id: "acct", email: "me@example.test", plan: "free" },
+          });
+        if (url.pathname.endsWith("/domains"))
+          return json(403, {
+            success: false,
+            error: { code: "forbidden", message: "Insufficient permissions" },
+          });
+        return json(200, {
+          success: true,
+          data: { covers: "you", items: [], withheld: [], next_cursor: null },
+        });
+      }),
+    );
+    try {
+      vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
+      vi.stubEnv("PRIMITIVE_AGENT_PROFILE", undefined);
+      const args = [
+        "--api-key",
+        "prim_test_key",
+        "--api-base-url",
+        "https://api.example.test/v1",
+      ];
+      const root = resolve(import.meta.dirname, "../..");
+      await DoctorCommand.run(args, { root });
+      expect(logged.join("\n")).toContain(
+        "[SKIP] Domains: not checked: this credential cannot list domains (forbidden)",
+      );
+      logged.length = 0;
+      await DoctorCommand.run([...args, "--json"], { root });
+      const summary = JSON.parse(logged.join("\n"));
+      expect(summary.ok).toBe(true);
+      expect(
+        summary.checks.find(
+          (check: { label: string }) => check.label === "Domains",
+        ),
+      ).toEqual({
+        label: "Domains",
+        status: "skip",
+        message: "not checked: this credential cannot list domains (forbidden)",
+      });
     } finally {
       write.mockRestore();
       log.mockRestore();

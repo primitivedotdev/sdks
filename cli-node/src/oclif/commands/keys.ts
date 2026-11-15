@@ -362,7 +362,11 @@ export function formatKeyRows(
         inFull.length > 0
           ? ` [reads all mail at ${inFull.join(", ")}, not only its rules' emails]`
           : "";
-      return `${row.id}  ${row.key_prefix}  ${row.name ?? "(unnamed)"}  ${describePermissions(row.grant)}  mail: ${describeMailScope(row.grant)}  expires ${row.expires_at ?? "never"}  last used ${row.last_used_at ?? "never"}${suspended}${revoked}${whole}${notes}`;
+      const rotated = [
+        row.rotated_to ? ` [rotated to ${row.rotated_to}]` : "",
+        row.rotated_from ? ` [rotated from ${row.rotated_from}]` : "",
+      ].join("");
+      return `${row.id}  ${row.key_prefix}  ${row.name ?? "(unnamed)"}  ${describePermissions(row.grant)}  mail: ${describeMailScope(row.grant)}  expires ${row.expires_at ?? "never"}  last used ${row.last_used_at ?? "never"}${suspended}${revoked}${rotated}${whole}${notes}`;
     })
     .join("\n");
 }
@@ -397,6 +401,8 @@ export function formatKeyDetail(key: KeyView): string {
     const by = key.revoked_by ? ` by user ${key.revoked_by}` : "";
     lines.push(`Revoked:      ${key.revoked_at ?? "yes"}${by}`);
   }
+  if (key.rotated_to) lines.push(`Rotated to:   ${key.rotated_to}`);
+  if (key.rotated_from) lines.push(`Rotated from: ${key.rotated_from}`);
   if (key.agent_address) lines.push(`Agent:        ${key.agent_address}`);
   if (key.grant.template) {
     lines.push(`Permissions:  ${describePermissions(key.grant)}`);

@@ -35,7 +35,7 @@ import { minute } from "./activity.js";
 // with no verified domain.
 //
 // Prints one thing: the readable checklist, or with --json the same checks
-// as one JSON document. Each check reports OK/WARN/FAIL with a one-line hint
+// as one JSON document. Each check reports OK/SKIP/WARN/FAIL with a one-line hint
 // when not OK. The command exits 1 if any FAIL check fires; WARN doesn't
 // fail the run.
 
@@ -43,6 +43,7 @@ const MIN_NODE_MAJOR = 22;
 
 type CheckOutcome =
   | { status: "ok"; message: string }
+  | { status: "skip"; message: string }
   | { status: "warn"; message: string; hint?: string }
   | { status: "fail"; message: string; hint?: string };
 
@@ -55,9 +56,11 @@ function renderRow({ label, outcome }: CheckRow): string {
   const tag =
     outcome.status === "ok"
       ? "[OK]  "
-      : outcome.status === "warn"
-        ? "[WARN]"
-        : "[FAIL]";
+      : outcome.status === "skip"
+        ? "[SKIP]"
+        : outcome.status === "warn"
+          ? "[WARN]"
+          : "[FAIL]";
   return `${tag} ${label}: ${outcome.message}`;
 }
 
@@ -336,6 +339,15 @@ async function checkDomains(client: PrimitiveApiClient): Promise<CheckOutcome> {
       responseStyle: "fields",
     });
     if (result.error) {
+      const status = result.response?.status;
+      if (status === 401 || status === 403) {
+        const code = (result.error as { error?: { code?: unknown } }).error
+          ?.code;
+        return {
+          status: "skip",
+          message: `not checked: this credential cannot list domains (${typeof code === "string" ? code : status})`,
+        };
+      }
       return {
         status: "warn",
         message: "could not list domains",
