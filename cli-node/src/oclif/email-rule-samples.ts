@@ -39,7 +39,7 @@ function shellWord(value: string): string {
     : `'${value.replaceAll("'", "'\\''")}'`;
 }
 
-/** A JSON file a flag names, parsed, or an exit-1 error saying why not. */
+/** A JSON file a flag names, parsed, or a usage error (exit 2) saying why not. */
 export function readJsonFileFlag(path: string, flag: string): unknown {
   let text: string;
   try {
@@ -47,7 +47,7 @@ export function readJsonFileFlag(path: string, flag: string): unknown {
   } catch (error) {
     throw new Errors.CLIError(
       `Could not read ${flag} ${path}: ${errorDetail(error)}`,
-      { exit: 1 },
+      { exit: 2 },
     );
   }
   try {
@@ -55,7 +55,7 @@ export function readJsonFileFlag(path: string, flag: string): unknown {
   } catch (error) {
     throw new Errors.CLIError(
       `${flag} ${path} is not valid JSON: ${errorDetail(error)}`,
-      { exit: 1 },
+      { exit: 2 },
     );
   }
 }

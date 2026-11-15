@@ -1590,10 +1590,8 @@ export function overLongBodyField(
 /** What a write that takes a compile answer reads from --body-file, said beside the generic help. */
 const COMPILE_ANSWER =
   "the answer `compile-email-rule --json` printed (without --include-sql), unchanged: save it to a file";
-const SCOPE_AGAIN =
-  "The answer carries no scope: pass --evaluation-scope again if you compiled with one.";
 export const BODY_FILE_HELP: Record<string, string> = {
-  createEmailRule: `For this command, ${COMPILE_ANSWER}, and add --english with the description you compiled, and --name. ${SCOPE_AGAIN}`,
+  createEmailRule: `For this command, ${COMPILE_ANSWER}, and add --english with the description you compiled, and --name.`,
   updateEmailRule: `For a new version, ${COMPILE_ANSWER}, and add --english with the description you compiled (required with a new tree); --name only to rename it.`,
   createEmailRuleRequest: `For this command, ${COMPILE_ANSWER}, and add --english with the description you compiled, --name and --target-email.`,
   acceptEmailRuleRequest: `To change the rule as you accept it, ${COMPILE_ANSWER}, and add --english with the description you compiled.`,

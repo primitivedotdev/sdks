@@ -560,7 +560,7 @@ describe("email-rules test-email-rule: expectations from flags", () => {
     expect(calls).toEqual([]);
   });
 
-  it("refuses an unreadable or invalid JSON --expect-file with exit 1", async () => {
+  it("refuses an unreadable or invalid JSON --expect-file as a usage error", async () => {
     for (const [path, message] of [
       [join(tempHome, "missing.json"), "Could not read --expect-file"],
       [tempFile("bad.json", "{"), "is not valid JSON"],
@@ -571,7 +571,7 @@ describe("email-rules test-email-rule: expectations from flags", () => {
         "--expect-file",
         path,
       ]);
-      expect(result.exitCode, path).toBe(1);
+      expect(result.exitCode, path).toBe(2);
       expect(result.stderr, path).toContain(message);
     }
     expect(calls).toEqual([]);

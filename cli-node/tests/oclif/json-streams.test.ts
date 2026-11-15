@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -360,9 +360,54 @@ describe("composeJsonDocument", () => {
         thrown: { error },
       }),
     ).toEqual({
-      error: { message: "Missing required flag to" },
+      error: { message: "Missing required flag to", code: "usage_error" },
       exit_code: 2,
     });
+  });
+
+  it("gives a thrown error with no code and no usage exit the code cli_error", () => {
+    expect(
+      composeJsonDocument({
+        exitCode: 1,
+        stderr: [],
+        stdout: "",
+        thrown: { error: new Error("Something broke") },
+      }),
+    ).toEqual({
+      error: { message: "Something broke", code: "cli_error" },
+      exit_code: 1,
+    });
+  });
+
+  it("does not call a usage error what a command set as its exit code", () => {
+    expect(
+      composeJsonDocument({
+        exitCode: 2,
+        stderr: ["The deploy did not finish in time\n"],
+        stdout: "",
+      }),
+    ).toEqual({
+      error: { message: "The deploy did not finish in time" },
+      exit_code: 2,
+      warnings: ["The deploy did not finish in time"],
+    });
+  });
+
+  it("puts the CLI's notes beside a document's own warnings, never in them", () => {
+    expect(
+      composeJsonDocument({
+        exitCode: 0,
+        stderr: ["note\n"],
+        stdout: '{"warnings":["server"]}',
+      }),
+    ).toEqual({ warnings: ["server"], cli_warnings: ["note"] });
+    expect(
+      composeJsonDocument({
+        exitCode: 0,
+        stderr: ["note\n"],
+        stdout: '{"warnings":"not a list"}',
+      }),
+    ).toEqual({ warnings: "not a list", cli_warnings: ["note"] });
   });
 
   it("keeps a thrown refusal's code and details", () => {
@@ -1149,6 +1194,32 @@ describe("generated commands with --json", () => {
     expect(templates.cursor?.description).not.toContain("--envelope");
   });
 
+  it("calls a rules file it cannot read or parse a usage error, before sending", async () => {
+    const bad = join(tempHome, "bad.json");
+    writeFileSync(bad, "{");
+    const rule = "00000000-0000-4000-8000-0000000000aa";
+    for (const [id, argv] of [
+      [
+        "email-rules:create-email-rule",
+        ["--name", "n", "--expectations-file", join(tempHome, "missing.json")],
+      ],
+      [
+        "email-rules:test-email-rule",
+        ["--rule-id", rule, "--expect-samples-file", bad],
+      ],
+    ] as const) {
+      const result = await runMerged(id, [...argv, "--json"]);
+      expect(result.exitCode, result.merged).toBe(2);
+      expect(parseOne(result.merged)).toMatchObject({
+        error: { code: "usage_error" },
+        exit_code: 2,
+      });
+    }
+    expect(
+      fetchCalls.some((call) => call.url.pathname.includes("/email-rules")),
+    ).toBe(false);
+  });
+
   it("takes the only path parameter as the first argument", async () => {
     const ruleId = "00000000-0000-4000-8000-0000000000aa";
     responder = () =>
@@ -1176,9 +1247,13 @@ describe("generated commands with --json", () => {
     ).toContain("not both with different values");
     const none = await runMerged("email-rules:get-email-rule", ["--json"]);
     expect(none.exitCode).toBe(2);
-    expect(
-      (parseOne(none.merged) as { error: { message: string } }).error.message,
-    ).toBe("Missing the id: pass it as the first argument or with --id.");
+    expect(parseOne(none.merged)).toMatchObject({
+      error: {
+        code: "usage_error",
+        message: "Missing the id: pass it as the first argument or with --id.",
+      },
+      exit_code: 2,
+    });
     // A renamed path flag names its argument the same way.
     const results = COMMANDS[
       "email-rules:list-email-rule-results"
