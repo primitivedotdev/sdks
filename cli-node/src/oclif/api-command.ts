@@ -83,10 +83,6 @@ import {
   replyStateSurfaceForOperation,
 } from "./reply-state.js";
 import {
-  emptyRuleListHint,
-  ruleListDefaultsNote,
-} from "./rule-list-defaults.js";
-import {
   createEndpointRuleRequestHint,
   updateEndpointRuleRequestHint,
 } from "./rule-request-webhooks.js";
@@ -94,7 +90,6 @@ import { sentListOtherSendersNote } from "./sent-list-labels.js";
 import {
   approveThenRerunHint,
   BROWSER_FLAG_DESCRIPTION,
-  promptLine,
   STEP_UP_HEADER,
   STEP_UP_TOKEN_FLAG_DESCRIPTION,
   terminalApprovalIo,
@@ -1333,11 +1328,6 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   // A flag an extension adds would change meaning if the spec gained a
   // parameter of the same name; refuse to build rather than guess.
   const extension = OPERATION_EXTENSIONS[operation.sdkName];
-  // A confirmation is skipped only by --yes, so the command must have it.
-  if (extension?.confirm && !("yes" in extension.flags))
-    throw new Error(
-      `${operation.sdkName}: a CLI extension that asks for confirmation must add --yes`,
-    );
   for (const [name, flag] of Object.entries(extension?.flags ?? {})) {
     if (flags[name] !== undefined)
       throw new Error(
@@ -1491,7 +1481,7 @@ export function domainVerificationFailedHint(payload: unknown): string {
 
 // Discoverability hints for generated commands: a hand-rolled ergonomic
 // shortcut, or a behaviour of the command an agent should know before it
-// runs it (deleteEmailRule asks for confirmation). Keyed by the manifest's
+// runs it. Keyed by the manifest's
 // `sdkName` (camelCase, matches the generated SDK function). The
 // hint is appended to the operation's --help description so an
 // agent reading `<command> --help` finds the shortcut without
@@ -1504,8 +1494,6 @@ export function domainVerificationFailedHint(payload: unknown): string {
 // generated operation; the COMMANDS map in `index.ts` is the
 // authoritative list of shortcuts.
 export const OPERATION_HINTS: Record<string, string> = {
-  deleteEmailRule:
-    "Asks for confirmation first in a terminal. Pass --yes (-y) to delete without a prompt; without a terminal, or with --json, it is required.",
   addDomain:
     "Tip: after this returns a domain id, run `primitive domains zone-file --id <domain-id> --output <domain>.zone` when the user wants an importable DNS zone file.",
   verifyDomain:
@@ -1627,8 +1615,8 @@ export const OPERATION_EXTRA_BODY_FLAGS: Record<
 };
 
 // CLI additions to generated commands keyed by operation.sdkName: flags that
-// set request body fields, a confirmation asked before the request, and a
-// stderr report and exit code read from the answer. See operation-extension.ts.
+// set request body fields, and a stderr report and exit code read from the
+// answer. See operation-extension.ts.
 export const OPERATION_EXTENSIONS: Record<string, OperationExtension> = {
   ...EMAIL_RULE_OPERATION_EXTENSIONS,
   ...ANSWER_REPORT_EXTENSIONS,
@@ -1817,23 +1805,6 @@ export function createOperationCommand(
           );
         }
         parsedFlags[positionalFlag] = value;
-      }
-      // A request that cannot be undone is confirmed first, before any
-      // credential is read: in a terminal by asking, otherwise only by --yes.
-      const confirm = extension?.confirm;
-      if (confirm && parsedFlags.yes !== true) {
-        if (
-          parsedFlags.json === true ||
-          !(process.stdin.isTTY && process.stderr.isTTY)
-        ) {
-          throw new Errors.CLIError(confirm.noTerminal, { exit: 2 });
-        }
-        const answer = await promptLine(confirm.question(parsedFlags));
-        if (!/^y(es)?$/i.test(answer.trim())) {
-          process.stderr.write(`${confirm.cancelled}\n`);
-          process.exitCode = 1;
-          return;
-        }
       }
       const headers = collectHeaderFlags(parsedFlags, headerFlagToName);
       if (
@@ -2280,9 +2251,6 @@ export function createOperationCommand(
         }
         if (pagingNote && !jsonOutput) process.stderr.write(`${pagingNote}\n`);
         const summary: string[] = [];
-        // Set when the empty-result hint below said what a rule list's
-        // defaults left out, so the line is not said twice.
-        let ruleListHintSaid = false;
 
         // Empty-result hint. When a list-style operation returns
         // an empty array, emit an operation-specific note to
@@ -2308,8 +2276,6 @@ export function createOperationCommand(
           // the grant too, and nor does a page with more to read.
           const tail = query.since !== undefined;
           const more = envelope?.meta?.cursor ?? null;
-          const ruleListHint = emptyRuleListHint(operation.sdkName, query);
-          ruleListHintSaid = ruleListHint !== undefined;
           const hint =
             operation.sdkName === "listEmails"
               ? emptyEmailListHint({
@@ -2328,23 +2294,10 @@ export function createOperationCommand(
                       ? null
                       : await readCallerMailFor(auth, apiClient.client),
                 })
-              : (ruleListHint ??
-                emptyDeliveriesHint(operation.sdkName, query) ??
+              : (emptyDeliveriesHint(operation.sdkName, query) ??
                 EMPTY_RESULT_HINTS[operation.sdkName]);
           if (hint && jsonOutput) summary.push(hint);
           else if (hint) process.stderr.write(`${hint}\n`);
-        }
-
-        // A rule list read with a default left in place says what that
-        // default leaves out on every page, not only an empty first one:
-        // one live share of seven reads as all there is. An empty first page
-        // said it above, after "(no results)".
-        if (Array.isArray(envelope?.data) && (!jsonOutput || withEnvelope)) {
-          const note = ruleListHintSaid
-            ? undefined
-            : ruleListDefaultsNote(operation.sdkName, query);
-          if (note && jsonOutput) summary.push(note);
-          else if (note) process.stderr.write(`${note}\n`);
         }
 
         // What the answer's meta says about the data, such as a --recipient
@@ -2497,6 +2450,14 @@ export const EMPTY_RESULT_HINTS: Record<string, string> = {
   listDomains:
     "(no results) No domains on this account. Add one with `primitive domains add --domain <yourdomain.example>`.",
   listFilters: "(no results) No filter rules configured.",
+  listEmailRuleRequests:
+    "(no results) No rule requests match. By default only pending requests made to you are listed: `--box all --status any` lists every one you can see.",
+  listEmailRuleShares:
+    "(no results) No shares match. By default only live shares made with you are listed: `--box all --live any` lists every one you can see.",
+  listGivenEmailRuleShares:
+    "(no results) No shares match. By default only live shares of your mail are listed: `--live any` lists ended ones too.",
+  listEmailRuleObjections:
+    "(no results) No objections match. By default only pending objections you made and those to rules you wrote are listed: `--box all --status any` lists every one you can see.",
   listFunctions:
     "(no results) No Functions configured yet. Start with `primitive functions templates`, then `primitive functions init --template <template>` and `primitive functions deploy --name <name> --file <bundle>`.",
 };

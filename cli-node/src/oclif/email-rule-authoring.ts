@@ -1402,12 +1402,6 @@ export function emailRuleScopeReport(data: unknown): OperationReport {
 
 // delete-email-rule
 
-/** The delete-email-rule question, naming the rule. */
-function deleteEmailRuleQuestion(flags: Record<string, unknown>): string {
-  const id = typeof flags.id === "string" ? flags.id : "this rule";
-  return `Delete email rule ${id}? Its versions and decisions are deleted with it. [y/N] `;
-}
-
 /**
  * What a rule's delete left behind, read from the answer: the shares it
  * ended, and the keys that still list the rule and now read nothing through
@@ -2214,19 +2208,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
     report: emailRuleScopeReport,
   },
   deleteEmailRule: {
-    flags: {
-      yes: Flags.boolean({
-        char: "y",
-        description:
-          "Delete without asking for confirmation. Needed without a terminal, and with --json.",
-      }),
-    },
-    confirm: {
-      question: deleteEmailRuleQuestion,
-      noTerminal:
-        "Not deleting: no terminal to confirm in. Pass --yes to delete the rule without a prompt.",
-      cancelled: "Cancelled. The rule was not deleted.",
-    },
+    flags: {},
     report: deleteEmailRuleReport,
   },
 };

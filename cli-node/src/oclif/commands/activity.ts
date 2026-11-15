@@ -2,7 +2,6 @@ import { Command, Flags } from "@oclif/core";
 import {
   type ListActivityObjectsResult,
   listActivityObjects,
-  listEmailRulesCoveringMe,
 } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
@@ -394,67 +393,6 @@ export function formatConcerningRows(
   ].join("\n");
 }
 
-/**
- * Rules in observe that another member wrote over your mail, counted from the
- * first page of the rules over your mail (which a member can already list),
- * since `activity concerning` tells only of rules turned active: `count`, with
- * `more` when that page had a cursor; "refused" when this credential may not
- * list them (nothing is said then); or null when the list could not be read
- * for another reason.
- */
-export type ObservingRules =
-  | { count: number; more: boolean }
-  | "refused"
-  | null;
-
-async function observingRules(
-  client: Awaited<
-    ReturnType<typeof createAuthenticatedCliApiClient>
-  >["apiClient"]["client"],
-): Promise<ObservingRules> {
-  try {
-    const result = await listEmailRulesCoveringMe({
-      client,
-      query: { limit: 100 },
-    });
-    const page = result.data as
-      | {
-          data?: Array<{ state?: unknown; is_author?: unknown }>;
-          meta?: { cursor?: unknown };
-        }
-      | undefined;
-    const status = result.response?.status;
-    if (status === 401 || status === 403) return "refused";
-    if (result.error !== undefined || !Array.isArray(page?.data)) return null;
-    return {
-      count: page.data.filter(
-        (rule) => rule.state === "observe" && rule.is_author === false,
-      ).length,
-      more: typeof page.meta?.cursor === "string",
-    };
-  } catch {
-    return null;
-  }
-}
-
-const OBSERVE_SAYS =
-  "a rule in observe records a decision on every email it reads and shares or blocks nothing until it is turned active, which is listed here as started. `primitive email-rule-oversight list-email-rules-covering-me` lists them.";
-
-/** The footer under `activity concerning` for rules in observe over your mail, or null with none to tell of. */
-export function formatObservingFooter(
-  observing: ObservingRules,
-): string | null {
-  if (observing === "refused") return null;
-  if (observing === null)
-    return `Rules in observe can also cover your mail: ${OBSERVE_SAYS}`;
-  if (observing.count === 0)
-    return observing.more
-      ? `Rules in observe can also cover your mail: ${OBSERVE_SAYS}`
-      : null;
-  const counted = `${observing.more ? "At least " : ""}${observing.count} ${observing.count === 1 ? "rule" : "rules"} in observe also ${observing.count === 1 ? "covers" : "cover"} your mail`;
-  return `${counted}: ${OBSERVE_SAYS}`;
-}
-
 /** What was left out, and why: no counts, only the kinds and what would show them. */
 export function formatWithheld(
   withheld: readonly WithheldKind[],
@@ -607,18 +545,6 @@ async function runActivityList(
         ? formatConcerningRows(items, complete, asOf, pendingComplete)
         : formatActivityRows(covers, items),
   );
-  // On the first page only, and only for a credential that has coverage notices at all (a key, an app or an agent
-  // gets email_rule_coverage in withheld, and cannot read the rules over a member's mail either).
-  if (
-    relation === "concerning" &&
-    !flags.cursor &&
-    !withheld.some((w) => w.kind === "email_rule_coverage")
-  ) {
-    const observing = formatObservingFooter(
-      await observingRules(auth.apiClient.client),
-    );
-    if (observing) command.log(`\n${observing}`);
-  }
   const notShown = formatWithheld(withheld);
   if (notShown) command.log(`\n${notShown}`);
   if (cursor)

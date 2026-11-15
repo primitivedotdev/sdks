@@ -266,55 +266,13 @@ describe("commands that would prompt, run without a terminal", () => {
       run: (argv: string[], opts: { root: string }) => Promise<unknown>;
     };
 
-    it("without --yes and no terminal exits 2 before reading the login", async () => {
-      const error = await runFails(DeleteEmailRule, [RULE]);
-
-      expect(error.oclif.exit).toBe(2);
-      expect(error.message).toBe(
-        "Not deleting: no terminal to confirm in. Pass --yes to delete the rule without a prompt.",
-      );
-      expectNothingTouched();
-    });
-
-    it.each([
-      ["only stdin", true, undefined],
-      ["only stderr", undefined, true],
-    ])(
-      "without --yes and a terminal on %s still refuses",
-      async (_case, stdin, stderr) => {
-        setTerminals(stdin, stderr);
-
-        const error = await runFails(DeleteEmailRule, [RULE]);
-
-        expect(error.oclif.exit).toBe(2);
-        expectNothingTouched();
-      },
-    );
-
-    it("with --json and no --yes refuses at a terminal too, before reading the login", async () => {
-      setTerminals(true, true);
-
-      const error = await runFails(DeleteEmailRule, [RULE, "--json"]);
-
-      expect(error.oclif.exit).toBe(2);
-      expect(mocks.question).not.toHaveBeenCalled();
-      expectNothingTouched();
-    });
-
-    it.each([
-      ["--yes and no terminal", ["--yes"], false],
-      ["no --yes at a terminal, answered yes", [], true],
-    ])("with %s goes on to read the login", async (_case, argv, terminal) => {
-      if (terminal) {
-        setTerminals(true, true);
-        mocks.question.mockResolvedValueOnce("y");
+    it("asks nothing and goes on to read the login, with or without a terminal", async () => {
+      for (const terminal of [false, true]) {
+        if (terminal) setTerminals(true, true);
+        await DeleteEmailRule.run([RULE], { root }).catch(() => undefined);
       }
-
-      await DeleteEmailRule.run([RULE, ...argv], { root }).catch(
-        () => undefined,
-      );
-
-      expect(mocks.auth).toHaveBeenCalledOnce();
+      expect(mocks.question).not.toHaveBeenCalled();
+      expect(mocks.auth).toHaveBeenCalledTimes(2);
     });
   });
 

@@ -4098,23 +4098,16 @@ describe("end-email-rule-share", () => {
   });
 });
 
-describe("an empty rule request or share list", () => {
-  it("says on stderr which default filters hid the rest, nothing under --json, and nothing once they are given", async () => {
+describe("an empty rule request list", () => {
+  it("says once on stderr what the list leaves out by default, and nothing under --json", async () => {
     answer([]);
     const empty = await run("email-rules:list-email-rule-requests", []);
     expect(empty.exitCode).toBe(0);
     expect(stderrLines(empty)).toEqual([
-      "(no results) No requests match. By default this lists only pending requests made to you: add `--box all --status any` to widen it.",
+      "(no results) No rule requests match. By default only pending requests made to you are listed: `--box all --status any` lists every one you can see.",
     ]);
     const quiet = await run("email-rules:list-email-rule-requests", ["--json"]);
     expect(quiet.stderr).toBe("");
-    const widened = await run("email-rules:list-email-rule-requests", [
-      "--box",
-      "all",
-      "--status",
-      "any",
-    ]);
-    expect(widened.stderr).toBe("");
   });
 });
 

@@ -155,61 +155,19 @@ async function run(
 
 const deletes = () => calls.filter((call) => call.method === "DELETE");
 
-describe("delete-email-rule asks before it deletes", () => {
-  it("without a terminal, sends nothing and exits 2, naming --yes", async () => {
-    const result = await run([RULE]);
-    expect(result.exitCode).toBe(2);
-    expect(result.stderr).toContain(
-      "Pass --yes to delete the rule without a prompt.",
-    );
-    expect(calls).toEqual([]);
+describe("delete-email-rule", () => {
+  it("deletes without asking, in a terminal or not, and refuses --yes", async () => {
+    for (const terminal of [false, true]) {
+      setTerminals(terminal);
+      const result = await run([RULE]);
+      expect(result.exitCode, result.stderr).toBe(0);
+      expect(JSON.parse(result.stdout)).toEqual({ deleted: true });
+    }
     expect(prompt.question).not.toHaveBeenCalled();
-  });
-
-  it("with --json, sends nothing without --yes even in a terminal", async () => {
-    setTerminals(true);
-    const result = await run([RULE, "--json"]);
-    expect(result.exitCode).toBe(2);
-    expect(calls).toEqual([]);
-    expect(prompt.question).not.toHaveBeenCalled();
-  });
-
-  it("names the rule in the question when it is given with --id", async () => {
-    setTerminals(true);
-    prompt.question.mockResolvedValueOnce("n");
-    const kept = await run(["--id", RULE]);
-    expect(kept.exitCode).toBe(1);
-    expect(prompt.question).toHaveBeenCalledWith(
-      `Delete email rule ${RULE}? Its versions and decisions are deleted with it. [y/N] `,
-    );
-    expect(calls).toEqual([]);
-  });
-
-  it("in a terminal, deletes only on yes", async () => {
-    setTerminals(true);
-    prompt.question.mockResolvedValueOnce("n");
-    const kept = await run([RULE]);
-    expect(kept.exitCode).toBe(1);
-    expect(kept.stderr).toContain("Cancelled. The rule was not deleted.");
-    expect(calls).toEqual([]);
-    expect(prompt.question).toHaveBeenCalledWith(
-      `Delete email rule ${RULE}? Its versions and decisions are deleted with it. [y/N] `,
-    );
-
-    prompt.question.mockResolvedValueOnce("yes");
-    const removed = await run([RULE]);
-    expect(removed.exitCode).toBe(0);
-    expect(deletes().map((call) => call.url.pathname)).toEqual([
-      `/v1/email-rules/${RULE}`,
-    ]);
-  });
-
-  it("with --yes, deletes without asking", async () => {
-    const result = await run([RULE, "--yes"]);
-    expect(result.exitCode).toBe(0);
-    expect(prompt.question).not.toHaveBeenCalled();
-    expect(deletes()).toHaveLength(1);
-    expect(JSON.parse(result.stdout)).toEqual({ deleted: true });
+    expect(deletes()).toHaveLength(2);
+    const refused = await run([RULE, "--yes"]);
+    expect(refused.exitCode).toBe(2);
+    expect(deletes()).toHaveLength(2);
   });
 });
 
@@ -219,12 +177,12 @@ describe("delete-email-rule asks before it deletes", () => {
 describe("delete-email-rule against a server that answers only deleted", () => {
   it("prints the answer and no report, with or without --json", async () => {
     answer = { deleted: true };
-    const plain = await run([RULE, "--yes"]);
+    const plain = await run([RULE]);
     expect(plain.exitCode).toBe(0);
     expect(JSON.parse(plain.stdout)).toEqual({ deleted: true });
     expect(plain.stderr).toBe("");
 
-    const json = await run([RULE, "--yes", "--json"]);
+    const json = await run([RULE, "--json"]);
     expect(json.exitCode).toBe(0);
     expect(JSON.parse(json.stdout)).toEqual({ deleted: true });
     expect(json.stderr).toBe("");
@@ -240,7 +198,7 @@ describe("delete-email-rule says what the delete left", () => {
       keys: [{ id: KEY, name: "Support reader", key_prefix: "prim_abc123" }],
       other_keys: 2,
     };
-    const result = await run([RULE, "-y"]);
+    const result = await run([RULE]);
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual(answer);
     expect(result.stderr).toContain(
