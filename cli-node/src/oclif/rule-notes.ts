@@ -40,6 +40,7 @@ const NOTE_KEYS = [
   "notice",
   "share_notice",
   "do_not_share_note",
+  "protection_note",
   "objection_notice",
 ] as const;
 

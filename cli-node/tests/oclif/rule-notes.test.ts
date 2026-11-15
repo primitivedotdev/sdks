@@ -39,7 +39,10 @@ describe("ruleNotesLines", () => {
         notice: "The share goes on under the new version.",
         share_notice: "Shared with Sam.",
         restored_from: { version: 2, note: "Version 2 was restored." },
-        rule: { do_not_share_note: "Do-not-share rules run first." },
+        rule: {
+          do_not_share_note: "Do-not-share rules run first.",
+          protection_note: "It protects nothing yet.",
+        },
         objection_notice: "1 objection is waiting.",
       }),
     ).toEqual([
@@ -47,6 +50,7 @@ describe("ruleNotesLines", () => {
       "Shared with Sam.",
       "1 objection is waiting.",
       "Do-not-share rules run first.",
+      "It protects nothing yet.",
       "Version 2 was restored.",
     ]);
   });

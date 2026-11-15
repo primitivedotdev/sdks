@@ -14,7 +14,7 @@ function command(id: string): Described {
 }
 
 describe("where the help points a reader of email rules", () => {
-  it("says --body-file takes the compile answer unchanged on the writes that take one", () => {
+  it("says --body-file takes the data of a saved compile answer on the writes that take one", () => {
     for (const [id, sdkName] of [
       ["email-rules:create-email-rule", "createEmailRule"],
       ["email-rules:update-email-rule", "updateEmailRule"],
@@ -23,7 +23,7 @@ describe("where the help points a reader of email rules", () => {
     ] as const) {
       const help = command(id).flags?.["body-file"]?.description ?? "";
       expect(help, id).toContain(
-        "the answer `compile-email-rule --json` printed (without --include-sql), unchanged",
+        "the data of the answer `compile-email-rule --json` printed (without --include-sql), saved to a file: `compile-email-rule ... --json | jq .data > rule.json`",
       );
       expect(help, id).toContain(BODY_FILE_HELP[sdkName]);
     }

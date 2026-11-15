@@ -1561,7 +1561,7 @@ export function overLongBodyField(
 
 /** What a write that takes a compile answer reads from --body-file, said beside the generic help. */
 const COMPILE_ANSWER =
-  "the answer `compile-email-rule --json` printed (without --include-sql), unchanged: save it to a file";
+  "the data of the answer `compile-email-rule --json` printed (without --include-sql), saved to a file: `compile-email-rule ... --json | jq .data > rule.json`";
 export const BODY_FILE_HELP: Record<string, string> = {
   createEmailRule: `For this command, ${COMPILE_ANSWER}, and add --english with the description you compiled, and --name.`,
   updateEmailRule: `For a new version, ${COMPILE_ANSWER}, and add --english with the description you compiled (required with a new tree); --name only to rename it.`,

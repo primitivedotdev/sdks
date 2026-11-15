@@ -3080,3 +3080,35 @@ describe("the test report prints server text safely", () => {
       expect(result.stderr).not.toContain(control);
   });
 });
+
+describe("a saved compile answer as a write body", () => {
+  it("creates the compiled rule from the data of the --json answer, as the help says", async () => {
+    const tree = { version: 1, vocabulary: "v1", when: { all: [] } };
+    answer({ tree, english: "bills", explanation: "Bills." });
+    const compiled = await run("email-rules:compile-email-rule", [
+      "--raw-body",
+      JSON.stringify({ english: "bills" }),
+      "--json",
+    ]);
+    const file = tempFile(
+      "compiled.json",
+      JSON.stringify(JSON.parse(compiled.stdout).data),
+    );
+    calls = [];
+    answer({ id: RULE, name: "Bills" });
+    const created = await run("email-rules:create-email-rule", [
+      "--body-file",
+      file,
+      "--name",
+      "Bills",
+      "--english",
+      "bills",
+    ]);
+    expect(created.exitCode, created.stderr).toBe(0);
+    expect(calls[0]?.body).toMatchObject({
+      tree,
+      name: "Bills",
+      english: "bills",
+    });
+  });
+});
