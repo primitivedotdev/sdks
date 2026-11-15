@@ -493,16 +493,20 @@ With `--json`, stdout is exactly one JSON document, on success and on failure,
 and stderr stays empty. Output merged with `2>&1` therefore still parses:
 
 - Notices the command would otherwise print on stderr (hints, progress, prior
-  reply warnings) go in the document's `warnings` array.
+  reply warnings) go in the document's `warnings` array, or in `cli_warnings`
+  when the document already has a `warnings` of its own.
 - A failure adds `error` and `exit_code`. If the command printed no document of
-  its own, the CLI prints `{ "error": ..., "exit_code": ... }`.
+  its own, the CLI prints `{ "error": ..., "exit_code": ... }`. An error the
+  CLI raises itself carries a `code`: `usage_error` (exit 2) when it refused
+  before sending anything, such as a bad flag or an unreadable file, and
+  `cli_error` otherwise.
 - Generated API commands (`primitive sent list`, `primitive emails list`, ...)
   print the API's response body with `--json`: `data`, and `meta` with
   `meta.cursor` for the next page where the route sends it, plus the CLI's own
   `summary` (such as an empty-result hint). Read a list as `.data[]` and an
   object's fields as `.data.<field>`. Without `--json`, stdout is the data
   payload and the `next cursor: <cursor>` line goes to stderr.
-- Commands whose `--json` output is a bare array keep that shape.
+- Hand-written commands whose `--json` output is a bare array keep that shape.
 - `primitive listen` streams JSONL and is not covered by this rule.
 
 ## Searching mail
@@ -1156,8 +1160,9 @@ primitive skills install --runtime claude
 primitive skills install primitive-connect --runtime codex --json
 ```
 
-It installs every bundled skill, or only the one named, into
-`~/.claude/skills` or `$CODEX_HOME/skills` (`--project` uses `.claude/skills`
+It installs every bundled skill, or only the one named, into the runtime's
+`skills` folder (`$CLAUDE_CONFIG_DIR` or `~/.claude` for Claude, `$CODEX_HOME`
+or `~/.codex` for Codex; `--project` uses `.claude/skills`
 or `.agents/skills` in the current directory), and reports each skill's path,
 state (`installed`, `updated`, `unchanged` or `failed`) and content version.
 A copy already at the bundled version is left unchanged, and a symlinked copy

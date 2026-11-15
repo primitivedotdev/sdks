@@ -34,14 +34,23 @@ function scopeWarningLine(warning: Record<string, unknown>): string {
     : `Scope warning: ${name}: ${message}`;
 }
 
+/** The keys an answer, or its rule, carries a note in, in the order printed. */
+const NOTE_KEYS = [
+  "note",
+  "notice",
+  "share_notice",
+  "do_not_share_note",
+  "objection_notice",
+] as const;
+
 function list(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
 /**
  * The notes an answer carries, in order: each scope warning, each warning
- * (the answer's own or its summary's), then the answer's note, its rule's
- * note and its expectations check's note, each once.
+ * (the answer's own or its summary's), then the answer's notes, its rule's,
+ * a restore's and its expectations check's, each once.
  */
 export function ruleNotesLines(answer: unknown): string[] {
   if (!isRecord(answer)) return [];
@@ -50,13 +59,18 @@ export function ruleNotesLines(answer: unknown): string[] {
   const check = isRecord(answer.expectations_check)
     ? answer.expectations_check
     : {};
+  const restored = isRecord(answer.restored_from) ? answer.restored_from : {};
+  const notes = (from: Record<string, unknown>) =>
+    NOTE_KEYS.map((key) => from[key]);
   const lines = [
     ...list(answer.scope_warnings).filter(isRecord).map(scopeWarningLine),
     ...[...list(answer.warnings), ...list(summary.warnings)]
       .map(shown)
       .filter(Boolean)
       .map((text) => `Warning: ${text}`),
-    ...[answer.note, rule.note, check.note].map(shown).filter(Boolean),
+    ...[...notes(answer), ...notes(rule), restored.note, check.note]
+      .map(shown)
+      .filter(Boolean),
   ];
   return lines.filter((line, i) => lines.indexOf(line) === i);
 }

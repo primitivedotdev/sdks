@@ -38,7 +38,7 @@ import type {
   OperationReport,
 } from "./operation-extension.js";
 import { ruleNotesLines, ruleNotesReport } from "./rule-notes.js";
-import { shownLine, shownText } from "./terminal-text.js";
+import { shownLine, shownText, terminalLine } from "./terminal-text.js";
 
 const EMAIL_ID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
@@ -245,16 +245,16 @@ export function formatFactValue(fact: FactValue | null | undefined): string {
         const name = String(item);
         const score = per?.[name];
         return typeof score === "number"
-          ? `${name} ${confidence(score)}`
-          : name;
+          ? `${shownLine(name)} ${confidence(score)}`
+          : shownLine(name);
       })
       .join(", ")}]`;
   } else if (value === null || value === undefined) {
     text = "null";
   } else if (typeof value === "object") {
-    text = JSON.stringify(value);
+    text = shownLine(JSON.stringify(value));
   } else {
-    text = String(value);
+    text = shownLine(String(value));
   }
   return typeof fact?.confidence === "number"
     ? `${text} at ${confidence(fact.confidence)}`
@@ -266,7 +266,7 @@ export function formatFact(
   name: string,
   fact: FactValue | null | undefined,
 ): string {
-  return `${name}: ${formatFactValue(fact)}`;
+  return `${shownLine(name)}: ${formatFactValue(fact)}`;
 }
 
 // test-email-rule
@@ -751,7 +751,7 @@ export function testEmailRuleReport(data: unknown): OperationReport {
     ...notMatchedLines(results, result.expectations),
   ];
   return {
-    lines,
+    lines: lines.map(terminalLine),
     ...expectationsOutcome(result.expectations, results, name),
   };
 }
@@ -862,7 +862,7 @@ function readByText(details: Record<string, unknown>): string | undefined {
   const readBy = details.read_by;
   if (!isRecord(readBy)) return undefined;
   const { keys, webhooks, shares } = readBy;
-  // Null when not counted in time; an older server sends no shares at all.
+  // Null when not counted in time.
   if (
     typeof keys !== "number" ||
     typeof webhooks !== "number" ||
@@ -880,7 +880,7 @@ function readByText(details: Record<string, unknown>): string | undefined {
 }
 
 /** How to save a write the default check refused, without the check. */
-function saveUncheckedText(_flags?: Record<string, unknown>): string {
+function saveUncheckedText(): string {
   return "send it again with --no-if-expectations-pass";
 }
 
@@ -898,7 +898,6 @@ export function updateEmailRuleErrorHint(
   payload: unknown,
   ruleId: unknown,
   body?: unknown,
-  flags?: Record<string, unknown>,
 ): string | undefined {
   const id = typeof ruleId === "string" && ruleId ? ruleId : "<rule-id>";
   const details = errorDetails(payload);
@@ -910,7 +909,7 @@ export function updateEmailRuleErrorHint(
     ? "was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys, webhooks or a share read it, and nothing was saved"
     : "was judged against its expectations before saving (if_expectations_pass), and nothing was saved";
   const unchecked = readBy
-    ? ` The rule is active and ${readBy}; to save the write without the check, ${saveUncheckedText(flags)}.`
+    ? ` The rule is active and ${readBy}; to save the write without the check, ${saveUncheckedText()}.`
     : "";
   if (code === "email_rule_conflict") {
     switch (details.reason) {
@@ -984,7 +983,7 @@ export function updateEmailRuleErrorHint(
   }
   if (code === "expectations_unreadable") {
     // Emails the rule cannot read (deleted, or outside its scope or its
-    // author's mail): no later write decides them, so it exits 1, not 3.
+    // author's mail): no later write decides them.
     const unreadable = Array.isArray(details.unreadable)
       ? details.unreadable
           .filter(
@@ -999,7 +998,7 @@ export function updateEmailRuleErrorHint(
   }
   if (code === "no_expectations")
     return readBy
-      ? `Hint: nothing was saved: this write removes the rule's expectations, and the rule is active and ${readBy}, so a write that changes what it grants is checked against them first. Keep some with --expectations-file, --expectation-samples-file or --add-expectation-samples-file, or, to save the write without the check, ${saveUncheckedText(flags)}.`
+      ? `Hint: nothing was saved: this write removes the rule's expectations, and the rule is active and ${readBy}, so a write that changes what it grants is checked against them first. Keep some with --expectations-file, --expectation-samples-file or --add-expectation-samples-file, or, to save the write without the check, ${saveUncheckedText()}.`
       : "Hint: nothing was saved. Give the rule expectations with --expectations-file or made-up emails with --expectation-samples-file or --add-expectation-samples-file (in this write or before it), or send the write without if_expectations_pass.";
   return undefined;
 }
@@ -1050,7 +1049,7 @@ const UNDECIDED_NEXT_STEP: Readonly<Record<string, string>> = {
 /**
  * Whether a guard's undecided made-up emails may stay undecided: some are,
  * and the answer gives no reason that sending the write again can change
- * (author_unresolvable has its own advice and exit code).
+ * (author_unresolvable has its own advice).
  */
 function undecidedSamplesMayStay(count: number, reason: string): boolean {
   return (

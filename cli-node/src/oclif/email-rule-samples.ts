@@ -16,7 +16,7 @@ import type {
   OperationReport,
 } from "./operation-extension.js";
 import { ruleNotesLines } from "./rule-notes.js";
-import { shownLine, shownText } from "./terminal-text.js";
+import { shownLine, shownText, terminalLine } from "./terminal-text.js";
 
 function errorDetail(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -335,5 +335,5 @@ export function lookAlikesReport(data: unknown): OperationReport {
     `Counts: ${count("passed")} passed, ${count("failed")} failed, ${count("undecided")} undecided${dropped > 0 ? `; ${dropped} asked for did not come back` : ""}.`,
     ...ruleNotesLines(data),
   );
-  return { lines };
+  return { lines: lines.map(terminalLine) };
 }

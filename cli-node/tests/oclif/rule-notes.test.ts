@@ -32,6 +32,25 @@ describe("ruleNotesLines", () => {
     ]);
   });
 
+  it("prints the notices a rule write, accept or read carries", () => {
+    expect(
+      ruleNotesLines({
+        id: "r",
+        notice: "The share goes on under the new version.",
+        share_notice: "Shared with Sam.",
+        restored_from: { version: 2, note: "Version 2 was restored." },
+        rule: { do_not_share_note: "Do-not-share rules run first." },
+        objection_notice: "1 objection is waiting.",
+      }),
+    ).toEqual([
+      "The share goes on under the new version.",
+      "Shared with Sam.",
+      "1 objection is waiting.",
+      "Do-not-share rules run first.",
+      "Version 2 was restored.",
+    ]);
+  });
+
   it("keeps a note whole on one line, without terminal controls, naming the CLI command for a route", () => {
     const [line] = ruleNotesLines({
       note: "See\nGET /v1/email-rule-scope-options \u001b[31mnow\u001b[0m ‮ok",

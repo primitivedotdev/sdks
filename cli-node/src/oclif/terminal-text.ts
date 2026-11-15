@@ -76,3 +76,13 @@ export function shownText(value: unknown): string {
     ? `${line.slice(0, SHOWN_TEXT_MAX - 3)}...`
     : line;
 }
+
+/**
+ * A report line the CLI built around server text: no terminal control
+ * sequences or reordering marks, and on one line, with its indentation kept.
+ */
+export function terminalLine(line: string): string {
+  return sanitizeForTerminal(line)
+    .replace(BIDI_CONTROLS, "")
+    .replaceAll(/[\r\n\t]+/g, " ");
+}

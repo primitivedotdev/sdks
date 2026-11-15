@@ -651,7 +651,7 @@ export class ActivityAskedCommand extends Command {
 
 export class ActivityConcerningCommand extends Command {
   static description =
-    `List what other members' rules did that concerns your own mail, newest first: started (a rule began covering your mailboxes), new_version (it saved a new version while covering them), stopped (it stopped, with why), and baseline (it covered you when these notices began). Notices can lag, and a rule in draft or observe gets none: \`primitive email-rule-oversight list-email-rules-covering-me\` lists what covers you now. RULE ID, and rule_id with --json, is the rule's id, which \`primitive email-rule-oversight get-email-rule-covering-me <rule-id>\` and create-email-rule-objection --rule-id take.`;
+    `List what other members' rules did that concerns your own mail, newest first: started (a rule began covering your mailboxes), new_version (it saved a new version while covering them), stopped (it stopped, with why), baseline (it covered you when these notices began), and pending (it covers you now and its notice is not written yet). Notices can lag, and a rule in draft or observe gets none: \`primitive email-rule-oversight list-email-rules-covering-me\` lists what covers you now. RULE ID, and rule_id with --json, is the rule's id, which \`primitive email-rule-oversight get-email-rule-covering-me <rule-id>\` and create-email-rule-objection --rule-id take.`;
 
   static summary =
     "List rules that started covering your mail, changed or stopped";

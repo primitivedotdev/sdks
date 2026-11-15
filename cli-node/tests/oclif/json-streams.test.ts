@@ -1184,6 +1184,24 @@ describe("generated commands with --json", () => {
     );
   });
 
+  it("calls a --body-file it cannot read or parse a usage error, before sending", async () => {
+    const bad = join(tempHome, "bad-body.json");
+    writeFileSync(bad, "{");
+    for (const file of [bad, join(tempHome, "missing-body.json")]) {
+      const result = await runMerged("email-rules:create-email-rule", [
+        "--body-file",
+        file,
+        "--json",
+      ]);
+      expect(result.exitCode, result.merged).toBe(2);
+      expect(parseOne(result.merged)).toMatchObject({
+        error: { code: "usage_error" },
+        exit_code: 2,
+      });
+    }
+    expect(fetchCalls).toHaveLength(0);
+  });
+
   it("calls a rules file it cannot read or parse a usage error, before sending", async () => {
     const bad = join(tempHome, "bad.json");
     writeFileSync(bad, "{");

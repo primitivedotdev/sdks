@@ -2603,7 +2603,7 @@ describe("an empty rule request list", () => {
     const empty = await run("email-rules:list-email-rule-requests", []);
     expect(empty.exitCode).toBe(0);
     expect(stderrLines(empty)).toEqual([
-      "(no results) No rule requests match. By default only pending requests made to you are listed: `--box all --status any` lists every one you can see.",
+      "(no results) No rule requests match. Without --box and --status only pending requests made to you are listed; `--box all --status any` lists every one you can see.",
     ]);
     const quiet = await run("email-rules:list-email-rule-requests", ["--json"]);
     expect(quiet.stderr).toBe("");
@@ -3040,5 +3040,43 @@ describe("the notes printer on a rules answer", () => {
     answer([{ id: RULE, note: "On a row." }]);
     const listed = await run("email-rules:list-email-rules", []);
     expect(listed.stderr).not.toContain("On a row.");
+  });
+});
+
+describe("the test report prints server text safely", () => {
+  it("strips terminal controls from condition and question text and fact values", async () => {
+    const data = testResult();
+    answer({
+      ...data,
+      summary: {
+        ...data.summary,
+        conditions: [
+          {
+            index: 0,
+            text: "Sender \u001b[2Jis \u202eknown",
+            held: 1,
+            failed: 0,
+            only_failure: 0,
+          },
+        ],
+      },
+      results: [
+        {
+          email_id: B,
+          outcome: "no_match",
+          values: {
+            topic: { value: "bill\u001b]0;x\u0007ing", confidence: 0.5 },
+          },
+        },
+      ],
+    });
+    const result = await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+    ]);
+    expect(result.stderr).toContain("0. Sender is known: held on 1");
+    expect(result.stderr).toContain(`${B} no_match: topic: billing at 0.50`);
+    for (const control of ["\u001b", "\u0007", "\u202e"])
+      expect(result.stderr).not.toContain(control);
   });
 });

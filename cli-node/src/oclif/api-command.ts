@@ -96,6 +96,7 @@ import {
   terminalApprovalIo,
   withApproval,
 } from "./step-up-approval.js";
+import { terminalLine } from "./terminal-text.js";
 import { parseRetryAfter } from "./transient-retry.js";
 
 type OperationName = keyof typeof operations;
@@ -654,8 +655,9 @@ function coerceParameterValue(
   throw new Errors.CLIError(`Unsupported flag value for --${parameter.name}`);
 }
 
+/** A refusal before anything is sent: exit 2, and usage_error under --json. */
 function cliError(message: string): Errors.CLIError {
-  return new Errors.CLIError(message, { exit: 1 });
+  return new Errors.CLIError(message, { exit: 2 });
 }
 
 function parseJson(source: string, flagLabel: string): unknown {
@@ -1524,7 +1526,7 @@ export const OPERATION_HINTS: Record<string, string> = {
   startAgentSignup:
     "Tip: pass --terms-accepted. Capture the signup_token from the response and feed it to `primitive agent verify-agent-signup --signup-token <token> --verification-code <6-digit-code>` (the verify flag accepts --code as an alias). The high-level `primitive signup <email>` command walks an interactive user through both steps with friendlier prompts.",
   testEmailRule:
-    "Tip: --expect-match and --expect-no-match (or --expect-file) set expect; without it, a saved rule's own expectations are judged. Exit 0 when every expectation passed, 1 when one failed or is undecided for good (or the request failed), and 3 when the only ones not passed can be decided by testing again later; with --json, error.code is expectations_failed or expectations_undecided.",
+    "Tip: --expect-match and --expect-no-match (or --expect-file) set expect; without it, a saved rule's own expectations are judged. Exit 0 when every expectation passed, 1 when one failed or is undecided for good (or the request failed), and 3 when the only ones not passed can be decided by testing again later; with --json, error.code is expectations_failed or expectations_undecided, and exit_code and error, not the API's success, say whether the expectations passed.",
   verifyAgentSignup:
     "Tip: pass --verification-code <code> (or --code; both work). The response carries OAuth tokens but not your assigned inbox domain; run `primitive domains list` (or `primitive whoami`) after success to see the managed *.primitive.email address that routes to this account.",
 };
@@ -1636,8 +1638,10 @@ export const OPERATION_ERROR_HINTS: Record<
     createEndpointRuleRequestHint(code, body, payload),
   updateEndpoint: (code, body, payload) =>
     updateEndpointRuleRequestHint(code, body, payload),
-  updateEmailRule: (code, body, payload, path, flags) =>
-    updateEmailRuleErrorHint(code, payload, path?.id, body, flags),
+  updateEmailRule: (code, body, payload, path) => {
+    const hint = updateEmailRuleErrorHint(code, payload, path?.id, body);
+    return hint === undefined ? undefined : terminalLine(hint);
+  },
   verifyDomain: (code, _body, payload) =>
     code === "dns_verification_failed"
       ? domainVerificationFailedHint(payload)
@@ -2443,13 +2447,13 @@ export const EMPTY_RESULT_HINTS: Record<string, string> = {
     "(no results) No domains on this account. Add one with `primitive domains add --domain <yourdomain.example>`.",
   listFilters: "(no results) No filter rules configured.",
   listEmailRuleRequests:
-    "(no results) No rule requests match. By default only pending requests made to you are listed: `--box all --status any` lists every one you can see.",
+    "(no results) No rule requests match. Without --box and --status only pending requests made to you are listed; `--box all --status any` lists every one you can see.",
   listEmailRuleShares:
-    "(no results) No shares match. By default only live shares made with you are listed: `--box all --live any` lists every one you can see.",
+    "(no results) No shares match. Without --box and --live only live shares made with you are listed; `--box all --live any` lists every one you can see.",
   listGivenEmailRuleShares:
-    "(no results) No shares match. By default only live shares of your mail are listed: `--live any` lists ended ones too.",
+    "(no results) No shares match. Without --live only live shares of your mail are listed; `--live any` lists ended ones too.",
   listEmailRuleObjections:
-    "(no results) No objections match. By default only pending objections you made and those to rules you wrote are listed: `--box all --status any` lists every one you can see.",
+    "(no results) No objections match. Without --box and --status only pending objections you made and those to rules you wrote are listed; `--box all --status any` lists every one you can see.",
   listFunctions:
     "(no results) No Functions configured yet. Start with `primitive functions templates`, then `primitive functions init --template <template>` and `primitive functions deploy --name <name> --file <bundle>`.",
 };

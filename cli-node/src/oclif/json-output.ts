@@ -226,7 +226,8 @@ export function composeJsonDocument(input: ComposeJsonDocumentInput): unknown {
       // Every error the CLI throws carries a code. Exit 2 from a throw is
       // always a refusal before anything was sent.
       if (body.code === undefined) {
-        body.code = input.exitCode === 2 ? "usage_error" : "cli_error";
+        body.code =
+          errorExitCode(input.thrown.error) === 2 ? "usage_error" : "cli_error";
       }
       return body;
     }

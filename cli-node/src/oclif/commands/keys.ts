@@ -732,7 +732,7 @@ function writeWarnings(
 ): void {
   for (const warning of warnings ?? []) {
     if (typeof warning.description === "string") {
-      process.stderr.write(`Note: ${warning.description}\n`);
+      process.stderr.write(`Note: ${shownLine(warning.description)}\n`);
     }
   }
 }
