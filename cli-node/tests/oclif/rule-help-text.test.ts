@@ -28,6 +28,15 @@ describe("where the help points a reader of email rules", () => {
       expect(help, id).toContain(BODY_FILE_HELP[sdkName]);
     }
     expect(BODY_FILE_HELP.createEmailRuleRequest).toContain("--target-email");
+    // The two request writes take no scope fields, so the rule is compiled
+    // without any of the scope flags.
+    for (const sdkName of [
+      "createEmailRuleRequest",
+      "acceptEmailRuleRequest",
+    ] as const)
+      expect(BODY_FILE_HELP[sdkName]).toContain(
+        "compiled without a scope (--evaluation-scope, --scope-address or --scope-domain)",
+      );
     // Any other command keeps the plain help.
     expect(
       command("email-rules:test-email-rule").flags?.["body-file"]?.description,

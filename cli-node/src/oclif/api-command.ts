@@ -1562,8 +1562,8 @@ const COMPILE_RULE =
 export const BODY_FILE_HELP: Record<string, string> = {
   createEmailRule: `For this command, ${COMPILE_RULE}, with --name.`,
   updateEmailRule: `For a new version, ${COMPILE_RULE}; --name only to rename it.`,
-  createEmailRuleRequest: `For this command, ${COMPILE_RULE}, compiled without --evaluation-scope, with --name and --target-email.`,
-  acceptEmailRuleRequest: `To change the rule as you accept it, ${COMPILE_RULE}, compiled without --evaluation-scope.`,
+  createEmailRuleRequest: `For this command, ${COMPILE_RULE}, compiled without a scope (--evaluation-scope, --scope-address or --scope-domain), with --name and --target-email.`,
+  acceptEmailRuleRequest: `To change the rule as you accept it, ${COMPILE_RULE}, compiled without a scope (--evaluation-scope, --scope-address or --scope-domain).`,
 };
 
 // Per-operation flag aliases keyed by operation.sdkName and body
