@@ -30,26 +30,16 @@ describe("ruleNotesLines", () => {
     ]);
   });
 
-  it("prints the notices a rule write, accept or read carries", () => {
+  it("prints a rule's protection note and the answer's note", () => {
     expect(
       ruleNotesLines({
         id: "r",
-        notice: "The share goes on under the new version.",
-        share_notice: "Shared with Sam.",
-        restored_from: { version: 2, note: "Version 2 was restored." },
-        rule: {
-          do_not_share_note: "Do-not-share rules run first.",
-          protection_note: "It protects nothing yet.",
-        },
-        objection_notice: "1 objection is waiting.",
+        note: "The share goes on under the new version.",
+        rule: { protection_note: "It protects nothing yet." },
       }),
     ).toEqual([
       "The share goes on under the new version.",
-      "Shared with Sam.",
-      "1 objection is waiting.",
-      "Do-not-share rules run first.",
       "It protects nothing yet.",
-      "Version 2 was restored.",
     ]);
   });
 
@@ -57,6 +47,18 @@ describe("ruleNotesLines", () => {
     expect(
       ruleNotesLines({ rule: { warnings: ["The tree reads no question."] } }),
     ).toEqual(["Warning: The tree reads no question."]);
+  });
+
+  it("prints a rule request's share terms and a target check's warning", () => {
+    expect(
+      ruleNotesLines({
+        id: "q",
+        share_terms: "Accepting shares mail from now on.",
+      }),
+    ).toEqual(["Accepting shares mail from now on."]);
+    expect(
+      ruleNotesLines({ warning: "That member has no mailbox here." }),
+    ).toEqual(["Warning: That member has no mailbox here."]);
   });
 
   it("keeps a note whole on one line, without terminal controls, naming the CLI command for a route", () => {
