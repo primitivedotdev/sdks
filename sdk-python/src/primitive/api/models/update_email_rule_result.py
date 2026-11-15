@@ -24,7 +24,6 @@ if TYPE_CHECKING:
   from ..models.email_rule_version import EmailRuleVersion
   from ..models.update_email_rule_result_affects import UpdateEmailRuleResultAffects
   from ..models.update_email_rule_result_expectations import UpdateEmailRuleResultExpectations
-  from ..models.update_email_rule_result_restored_from import UpdateEmailRuleResultRestoredFrom
 
 
 
@@ -41,8 +40,12 @@ class UpdateEmailRuleResult:
             id (UUID):
             name (str):
             state (UpdateEmailRuleResultState):
+            evaluation_scope (UpdateEmailRuleResultEvaluationScope): Whose mail it runs over, as stored (GET /email-
+                rules/{id}/scope: what that is now).
+            scope_selection (EmailRuleScopeNames | None): What a selected rule names; null for any other scope.
             current_version (int | None):
-            author_user_id (UUID):
+            revision (int): Moves on by one with every update. Send it as if_revision.
+            author (EmailRuleAuthor):
             is_author (bool): Whether you are its author, in your current membership. Only its author edits it.
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
@@ -52,63 +55,41 @@ class UpdateEmailRuleResult:
                 what it matches.
             protection_note (str | Unset): On a do_not_share rule only: it protects nothing yet (not active), a classifier
                 fact narrows it, or its several questions are alternatives.
-            evaluation_scope (UpdateEmailRuleResultEvaluationScope | Unset): Whose mail it runs over, as stored (GET /email-
-                rules/{id}/scope: what that is now).
-            scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.
-            revision (int | Unset): Moves on by one with every update. Send it as if_revision.
-            author (EmailRuleAuthor | Unset):
-            pending_objections (int | Unset): To its author, on the dashboard or the Primitive CLI: objections to it waiting
-                for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time:
-                absent is not 0.
-            objection_notice (str | Unset): With pending_objections above 0: that members objected (each message says what
-                they ask: to turn it off, narrow it or explain it), and how to answer.
+            pending_objections (int | Unset): To its author, on the dashboard or the Primitive CLI, on GET, the list and a
+                create: objections to it waiting for their answer (GET /email-rule-objections).
             scope_warnings (list[EmailRuleScopeWarning] | Unset): Names in scope_selection that match nothing this
                 organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
-            do_not_share_note (str | Unset): On a grant rule's create answer: that active do-not-share rules reaching an
-                email run first: one that matches it keeps it from being shared through this rule, and one that cannot decide it
-                holds it back while it is decided again for up to a day; it is shared through this rule only if none of them
-                then matches it.
             expectations (UpdateEmailRuleResultExpectations | Unset): Its saved expectations, each list by email id, as
                 stored: on every create, and on an update that set or removed them.
             expectation_samples (list[EmailRuleExpectationSample] | Unset): Its saved made-up emails, when this write set or
                 added some.
             expectations_check (EmailRuleExpectationsCheck | Unset):
-            restored_from (UpdateEmailRuleResultRestoredFrom | Unset): When this write saved an earlier version again
-                (restore_version): which, and that the scope is not part of a version.
             affects (UpdateEmailRuleResultAffects | Unset): After an update that saved a version, or turned a grant rule
-                active: API keys listing the rule and the webhooks they own, which read and receive what a grant rule grants
-                from now on. shares_ended is always 0: a new version keeps the rule's share (share_notice says so). Saving a
-                version does not by itself change the rule's state. Absent after any other write, and if not read.
-            share_notice (str | Unset): After a write that saved a version of a rule with a live share: that the share goes
-                on under it, given even when affects is not, with whom it is and the version they accepted when those can be
-                read.
+                active: your own keys and webhooks that receive what it grants from now on, counted as receivers counts them,
+                and how many live shares it has. Nothing about a colleague it is shared with is counted. All zero for a rule
+                that is not an active grant rule. Absent after any other write, and if not read.
      """
 
     id: UUID
     name: str
     state: UpdateEmailRuleResultState
+    evaluation_scope: UpdateEmailRuleResultEvaluationScope
+    scope_selection: EmailRuleScopeNames | None
     current_version: int | None
-    author_user_id: UUID
+    revision: int
+    author: EmailRuleAuthor
     is_author: bool
     created_at: datetime.datetime
     updated_at: datetime.datetime
     current: EmailRuleVersion | None
     kind: UpdateEmailRuleResultKind | Unset = UNSET
     protection_note: str | Unset = UNSET
-    evaluation_scope: UpdateEmailRuleResultEvaluationScope | Unset = UNSET
-    scope_selection: EmailRuleScopeNames | None | Unset = UNSET
-    revision: int | Unset = UNSET
-    author: EmailRuleAuthor | Unset = UNSET
     pending_objections: int | Unset = UNSET
-    objection_notice: str | Unset = UNSET
     scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
-    do_not_share_note: str | Unset = UNSET
     expectations: UpdateEmailRuleResultExpectations | Unset = UNSET
     expectation_samples: list[EmailRuleExpectationSample] | Unset = UNSET
     expectations_check: EmailRuleExpectationsCheck | Unset = UNSET
-    restored_from: UpdateEmailRuleResultRestoredFrom | Unset = UNSET
     affects: UpdateEmailRuleResultAffects | Unset = UNSET
-    share_notice: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -124,17 +105,26 @@ class UpdateEmailRuleResult:
         from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
         from ..models.update_email_rule_result_affects import UpdateEmailRuleResultAffects # noqa: PLC0415
         from ..models.update_email_rule_result_expectations import UpdateEmailRuleResultExpectations # noqa: PLC0415
-        from ..models.update_email_rule_result_restored_from import UpdateEmailRuleResultRestoredFrom # noqa: PLC0415
         id = str(self.id)
 
         name = self.name
 
         state = self.state.value
 
+        evaluation_scope = self.evaluation_scope.value
+
+        scope_selection: dict[str, Any] | None
+        if isinstance(self.scope_selection, EmailRuleScopeNames):
+            scope_selection = self.scope_selection.to_dict()
+        else:
+            scope_selection = self.scope_selection
+
         current_version: int | None
         current_version = self.current_version
 
-        author_user_id = str(self.author_user_id)
+        revision = self.revision
+
+        author = self.author.to_dict()
 
         is_author = self.is_author
 
@@ -155,28 +145,7 @@ class UpdateEmailRuleResult:
 
         protection_note = self.protection_note
 
-        evaluation_scope: str | Unset = UNSET
-        if not isinstance(self.evaluation_scope, Unset):
-            evaluation_scope = self.evaluation_scope.value
-
-
-        scope_selection: dict[str, Any] | None | Unset
-        if isinstance(self.scope_selection, Unset):
-            scope_selection = UNSET
-        elif isinstance(self.scope_selection, EmailRuleScopeNames):
-            scope_selection = self.scope_selection.to_dict()
-        else:
-            scope_selection = self.scope_selection
-
-        revision = self.revision
-
-        author: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.author, Unset):
-            author = self.author.to_dict()
-
         pending_objections = self.pending_objections
-
-        objection_notice = self.objection_notice
 
         scope_warnings: list[dict[str, Any]] | Unset = UNSET
         if not isinstance(self.scope_warnings, Unset):
@@ -186,8 +155,6 @@ class UpdateEmailRuleResult:
                 scope_warnings.append(scope_warnings_item)
 
 
-
-        do_not_share_note = self.do_not_share_note
 
         expectations: dict[str, Any] | Unset = UNSET
         if not isinstance(self.expectations, Unset):
@@ -206,15 +173,9 @@ class UpdateEmailRuleResult:
         if not isinstance(self.expectations_check, Unset):
             expectations_check = self.expectations_check.to_dict()
 
-        restored_from: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.restored_from, Unset):
-            restored_from = self.restored_from.to_dict()
-
         affects: dict[str, Any] | Unset = UNSET
         if not isinstance(self.affects, Unset):
             affects = self.affects.to_dict()
-
-        share_notice = self.share_notice
 
 
         field_dict: dict[str, Any] = {}
@@ -223,8 +184,11 @@ class UpdateEmailRuleResult:
             "id": id,
             "name": name,
             "state": state,
+            "evaluation_scope": evaluation_scope,
+            "scope_selection": scope_selection,
             "current_version": current_version,
-            "author_user_id": author_user_id,
+            "revision": revision,
+            "author": author,
             "is_author": is_author,
             "created_at": created_at,
             "updated_at": updated_at,
@@ -234,34 +198,18 @@ class UpdateEmailRuleResult:
             field_dict["kind"] = kind
         if protection_note is not UNSET:
             field_dict["protection_note"] = protection_note
-        if evaluation_scope is not UNSET:
-            field_dict["evaluation_scope"] = evaluation_scope
-        if scope_selection is not UNSET:
-            field_dict["scope_selection"] = scope_selection
-        if revision is not UNSET:
-            field_dict["revision"] = revision
-        if author is not UNSET:
-            field_dict["author"] = author
         if pending_objections is not UNSET:
             field_dict["pending_objections"] = pending_objections
-        if objection_notice is not UNSET:
-            field_dict["objection_notice"] = objection_notice
         if scope_warnings is not UNSET:
             field_dict["scope_warnings"] = scope_warnings
-        if do_not_share_note is not UNSET:
-            field_dict["do_not_share_note"] = do_not_share_note
         if expectations is not UNSET:
             field_dict["expectations"] = expectations
         if expectation_samples is not UNSET:
             field_dict["expectation_samples"] = expectation_samples
         if expectations_check is not UNSET:
             field_dict["expectations_check"] = expectations_check
-        if restored_from is not UNSET:
-            field_dict["restored_from"] = restored_from
         if affects is not UNSET:
             field_dict["affects"] = affects
-        if share_notice is not UNSET:
-            field_dict["share_notice"] = share_notice
 
         return field_dict
 
@@ -277,7 +225,6 @@ class UpdateEmailRuleResult:
         from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
         from ..models.update_email_rule_result_affects import UpdateEmailRuleResultAffects # noqa: PLC0415
         from ..models.update_email_rule_result_expectations import UpdateEmailRuleResultExpectations # noqa: PLC0415
-        from ..models.update_email_rule_result_restored_from import UpdateEmailRuleResultRestoredFrom # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -291,6 +238,29 @@ class UpdateEmailRuleResult:
 
 
 
+        evaluation_scope = UpdateEmailRuleResultEvaluationScope(d.pop("evaluation_scope"))
+
+
+
+
+        def _parse_scope_selection(data: object) -> EmailRuleScopeNames | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                scope_selection_type_1 = EmailRuleScopeNames.from_dict(data)
+
+
+
+                return scope_selection_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleScopeNames | None, data)
+
+        scope_selection = _parse_scope_selection(d.pop("scope_selection"))
+
+
         def _parse_current_version(data: object) -> int | None:
             if data is None:
                 return data
@@ -299,7 +269,9 @@ class UpdateEmailRuleResult:
         current_version = _parse_current_version(d.pop("current_version"))
 
 
-        author_user_id = UUID(d.pop("author_user_id"))
+        revision = d.pop("revision")
+
+        author = EmailRuleAuthor.from_dict(d.pop("author"))
 
 
 
@@ -346,51 +318,7 @@ class UpdateEmailRuleResult:
 
         protection_note = d.pop("protection_note", UNSET)
 
-        _evaluation_scope = d.pop("evaluation_scope", UNSET)
-        evaluation_scope: UpdateEmailRuleResultEvaluationScope | Unset
-        if isinstance(_evaluation_scope,  Unset):
-            evaluation_scope = UNSET
-        else:
-            evaluation_scope = UpdateEmailRuleResultEvaluationScope(_evaluation_scope)
-
-
-
-
-        def _parse_scope_selection(data: object) -> EmailRuleScopeNames | None | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                scope_selection_type_1 = EmailRuleScopeNames.from_dict(data)
-
-
-
-                return scope_selection_type_1
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(EmailRuleScopeNames | None | Unset, data)
-
-        scope_selection = _parse_scope_selection(d.pop("scope_selection", UNSET))
-
-
-        revision = d.pop("revision", UNSET)
-
-        _author = d.pop("author", UNSET)
-        author: EmailRuleAuthor | Unset
-        if isinstance(_author,  Unset):
-            author = UNSET
-        else:
-            author = EmailRuleAuthor.from_dict(_author)
-
-
-
-
         pending_objections = d.pop("pending_objections", UNSET)
-
-        objection_notice = d.pop("objection_notice", UNSET)
 
         _scope_warnings = d.pop("scope_warnings", UNSET)
         scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
@@ -403,8 +331,6 @@ class UpdateEmailRuleResult:
 
                 scope_warnings.append(scope_warnings_item)
 
-
-        do_not_share_note = d.pop("do_not_share_note", UNSET)
 
         _expectations = d.pop("expectations", UNSET)
         expectations: UpdateEmailRuleResultExpectations | Unset
@@ -438,16 +364,6 @@ class UpdateEmailRuleResult:
 
 
 
-        _restored_from = d.pop("restored_from", UNSET)
-        restored_from: UpdateEmailRuleResultRestoredFrom | Unset
-        if isinstance(_restored_from,  Unset):
-            restored_from = UNSET
-        else:
-            restored_from = UpdateEmailRuleResultRestoredFrom.from_dict(_restored_from)
-
-
-
-
         _affects = d.pop("affects", UNSET)
         affects: UpdateEmailRuleResultAffects | Unset
         if isinstance(_affects,  Unset):
@@ -458,34 +374,27 @@ class UpdateEmailRuleResult:
 
 
 
-        share_notice = d.pop("share_notice", UNSET)
-
         update_email_rule_result = cls(
             id=id,
             name=name,
             state=state,
+            evaluation_scope=evaluation_scope,
+            scope_selection=scope_selection,
             current_version=current_version,
-            author_user_id=author_user_id,
+            revision=revision,
+            author=author,
             is_author=is_author,
             created_at=created_at,
             updated_at=updated_at,
             current=current,
             kind=kind,
             protection_note=protection_note,
-            evaluation_scope=evaluation_scope,
-            scope_selection=scope_selection,
-            revision=revision,
-            author=author,
             pending_objections=pending_objections,
-            objection_notice=objection_notice,
             scope_warnings=scope_warnings,
-            do_not_share_note=do_not_share_note,
             expectations=expectations,
             expectation_samples=expectation_samples,
             expectations_check=expectations_check,
-            restored_from=restored_from,
             affects=affects,
-            share_notice=share_notice,
         )
 
 

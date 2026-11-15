@@ -41,20 +41,14 @@ class EmailRuleCoveringMe:
             is_author (bool): Whether you wrote it.
             covers (EmailRuleCoverage):
             current_version (int | None):
-            receivers (EmailRuleReceivers | None): Null when it could not be read in time, or for a rule shown in draft or
-                observe that turned active or was deleted after the page was read; try again.
-            receivers_once_active (EmailRuleReceivers | None): For a grant rule in draft or observe: who would receive what
-                it matches once it is turned active. None of them receives anything yet. Null for any other rule, and as
-                receivers is null.
+            receivers (EmailRuleReceivers | None): Who receives what it matches now (empty lists for a rule in draft or
+                observe). Null when it could not be read in time; try again.
             created_at (datetime.datetime):
             english (None | str): What its author asked for, in their words, at its current version. Null when it has no
                 version, was deleted after the page was read, or the words could not be read in time; GET /v1/email-
                 rules/covering-me/{id} shows them with its tree.
             explanation (None | str): What its current version matches, Primitive's reading of its tree. Null as english is,
                 or when the tree no longer reads as one.
-            do_not_share_note (str | Unset): On a grant rule: that the active do-not-share rules over an email run first,
-                keeping from it what they match and holding back what they cannot decide, which is decided again for up to a day
-                and shared only if none of them then matches it.
      """
 
     id: UUID
@@ -66,11 +60,9 @@ class EmailRuleCoveringMe:
     covers: EmailRuleCoverage
     current_version: int | None
     receivers: EmailRuleReceivers | None
-    receivers_once_active: EmailRuleReceivers | None
     created_at: datetime.datetime
     english: None | str
     explanation: None | str
-    do_not_share_note: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -104,12 +96,6 @@ class EmailRuleCoveringMe:
         else:
             receivers = self.receivers
 
-        receivers_once_active: dict[str, Any] | None
-        if isinstance(self.receivers_once_active, EmailRuleReceivers):
-            receivers_once_active = self.receivers_once_active.to_dict()
-        else:
-            receivers_once_active = self.receivers_once_active
-
         created_at = self.created_at.isoformat()
 
         english: None | str
@@ -117,8 +103,6 @@ class EmailRuleCoveringMe:
 
         explanation: None | str
         explanation = self.explanation
-
-        do_not_share_note = self.do_not_share_note
 
 
         field_dict: dict[str, Any] = {}
@@ -133,13 +117,10 @@ class EmailRuleCoveringMe:
             "covers": covers,
             "current_version": current_version,
             "receivers": receivers,
-            "receivers_once_active": receivers_once_active,
             "created_at": created_at,
             "english": english,
             "explanation": explanation,
         })
-        if do_not_share_note is not UNSET:
-            field_dict["do_not_share_note"] = do_not_share_note
 
         return field_dict
 
@@ -206,24 +187,6 @@ class EmailRuleCoveringMe:
         receivers = _parse_receivers(d.pop("receivers"))
 
 
-        def _parse_receivers_once_active(data: object) -> EmailRuleReceivers | None:
-            if data is None:
-                return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                receivers_once_active_type_1 = EmailRuleReceivers.from_dict(data)
-
-
-
-                return receivers_once_active_type_1
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(EmailRuleReceivers | None, data)
-
-        receivers_once_active = _parse_receivers_once_active(d.pop("receivers_once_active"))
-
-
         created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
@@ -245,8 +208,6 @@ class EmailRuleCoveringMe:
         explanation = _parse_explanation(d.pop("explanation"))
 
 
-        do_not_share_note = d.pop("do_not_share_note", UNSET)
-
         email_rule_covering_me = cls(
             id=id,
             name=name,
@@ -257,11 +218,9 @@ class EmailRuleCoveringMe:
             covers=covers,
             current_version=current_version,
             receivers=receivers,
-            receivers_once_active=receivers_once_active,
             created_at=created_at,
             english=english,
             explanation=explanation,
-            do_not_share_note=do_not_share_note,
         )
 
 

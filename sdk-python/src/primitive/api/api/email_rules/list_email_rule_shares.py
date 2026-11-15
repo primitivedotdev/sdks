@@ -124,13 +124,15 @@ def sync_detailed(
 ) -> Response[ErrorResponse | ListEmailRuleSharesResponse200]:
     """ List rule shares
 
-     Lists rules shared with you, rules you share, or every share you can see. A share is visible to its
-    two people and the organization's owners and admins. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+     Lists rules shared with you (box=received), or, for an owner or admin acting as themselves, every
+    share in the organization (box=all); rules you share are listed at /email-rule-shares/given. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
-        box (ListEmailRuleSharesBox | Unset): received: rules shared with you; given: rules you
-            share; all: every share you can see (owners and admins see the organization's). Default:
+        box (ListEmailRuleSharesBox | Unset): received: rules shared with you; all: every share in
+            the organization, for owners and admins acting as themselves only (403 with details.reason
+            owner_or_admin_only otherwise). Rules you share: GET /email-rule-shares/given. Default:
             ListEmailRuleSharesBox.RECEIVED.
         live (ListEmailRuleSharesLive | Unset): Whether to list live shares, ended ones, or both.
             Default: ListEmailRuleSharesLive.TRUE.
@@ -171,13 +173,15 @@ def sync(
 ) -> ErrorResponse | ListEmailRuleSharesResponse200 | None:
     """ List rule shares
 
-     Lists rules shared with you, rules you share, or every share you can see. A share is visible to its
-    two people and the organization's owners and admins. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+     Lists rules shared with you (box=received), or, for an owner or admin acting as themselves, every
+    share in the organization (box=all); rules you share are listed at /email-rule-shares/given. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
-        box (ListEmailRuleSharesBox | Unset): received: rules shared with you; given: rules you
-            share; all: every share you can see (owners and admins see the organization's). Default:
+        box (ListEmailRuleSharesBox | Unset): received: rules shared with you; all: every share in
+            the organization, for owners and admins acting as themselves only (403 with details.reason
+            owner_or_admin_only otherwise). Rules you share: GET /email-rule-shares/given. Default:
             ListEmailRuleSharesBox.RECEIVED.
         live (ListEmailRuleSharesLive | Unset): Whether to list live shares, ended ones, or both.
             Default: ListEmailRuleSharesLive.TRUE.
@@ -213,13 +217,15 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | ListEmailRuleSharesResponse200]:
     """ List rule shares
 
-     Lists rules shared with you, rules you share, or every share you can see. A share is visible to its
-    two people and the organization's owners and admins. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+     Lists rules shared with you (box=received), or, for an owner or admin acting as themselves, every
+    share in the organization (box=all); rules you share are listed at /email-rule-shares/given. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
-        box (ListEmailRuleSharesBox | Unset): received: rules shared with you; given: rules you
-            share; all: every share you can see (owners and admins see the organization's). Default:
+        box (ListEmailRuleSharesBox | Unset): received: rules shared with you; all: every share in
+            the organization, for owners and admins acting as themselves only (403 with details.reason
+            owner_or_admin_only otherwise). Rules you share: GET /email-rule-shares/given. Default:
             ListEmailRuleSharesBox.RECEIVED.
         live (ListEmailRuleSharesLive | Unset): Whether to list live shares, ended ones, or both.
             Default: ListEmailRuleSharesLive.TRUE.
@@ -260,13 +266,15 @@ async def asyncio(
 ) -> ErrorResponse | ListEmailRuleSharesResponse200 | None:
     """ List rule shares
 
-     Lists rules shared with you, rules you share, or every share you can see. A share is visible to its
-    two people and the organization's owners and admins. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+     Lists rules shared with you (box=received), or, for an owner or admin acting as themselves, every
+    share in the organization (box=all); rules you share are listed at /email-rule-shares/given. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
-        box (ListEmailRuleSharesBox | Unset): received: rules shared with you; given: rules you
-            share; all: every share you can see (owners and admins see the organization's). Default:
+        box (ListEmailRuleSharesBox | Unset): received: rules shared with you; all: every share in
+            the organization, for owners and admins acting as themselves only (403 with details.reason
+            owner_or_admin_only otherwise). Rules you share: GET /email-rule-shares/given. Default:
             ListEmailRuleSharesBox.RECEIVED.
         live (ListEmailRuleSharesLive | Unset): Whether to list live shares, ended ones, or both.
             Default: ListEmailRuleSharesLive.TRUE.

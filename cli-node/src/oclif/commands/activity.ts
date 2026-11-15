@@ -306,44 +306,20 @@ const COVERING_NOW = `\`primitive email-rule-oversight list-email-rules-covering
 /**
  * One line per coverage notice: what it told (started, new_version, stopped,
  * or baseline for a rule that already covered you when notices began), when,
- * the rule's name then, and its author; and, first, each rule that covers you
- * now whose notice is not written yet (pending, dated when the rule last
- * changed), then the rule's id (rule_id; a pending row's own id is the
- * rule's), never the notice's own id, which no command takes; and, when any
- * row is a stopped notice with its reason, what changed (CHANGE).
- * `complete` says the listing is the whole of it (from the first page to the
- * last, nothing withheld). Even then an empty one is no promise that nothing
- * covers you: notices can lag, so it
- * says how far they go (`asOf`, when the server says) and where to look now.
+ * the rule's name then, its author and the rule's id (rule_id, never the
+ * notice's own id, which no command takes); and, when any row is a stopped
+ * notice with its reason, what changed (CHANGE). An empty listing is no
+ * promise that nothing covers you, so it says where to look now.
  */
-export function formatConcerningRows(
-  items: readonly ActivityItem[],
-  complete = false,
-  asOf?: string | null,
-  pendingComplete?: boolean,
-): string {
-  // The server's check for rules covering you with no notice yet ran out of
-  // time: some may be missing from the list, so say so rather than imply the
-  // list is whole.
-  const unfinished =
-    pendingComplete === false
-      ? "The check for rules that cover you with no notice written yet did not finish, so some may be missing: run this again in a moment."
-      : null;
-  if (items.length === 0)
-    return complete
-      ? `${asOf ? `Nothing recorded for you as of ${minute(asOf)} UTC.` : "Nothing recorded for you yet."} Notices can lag, so a rule that starts covering your mail may not appear here yet. ${COVERING_NOW}`
-      : unfinished
-        ? `${unfinished} ${COVERING_NOW}`
-        : "Nothing to show.";
+export function formatConcerningRows(items: readonly ActivityItem[]): string {
+  if (items.length === 0) return `No coverage notices to show. ${COVERING_NOW}`;
   const rows = items
     .map((item) => [
       item.state,
       minute(item.created_at),
-      // The rule's name then; marked once the rule has been deleted.
-      `${item.name ?? "(unnamed)"}${item.rule_now === "deleted" ? " (deleted)" : ""}`,
+      item.name ?? "(unnamed)",
       item.created_through.name ?? item.created_through.id ?? "",
-      // A pending row's own id is the rule's.
-      item.rule_id ?? (item.state === "pending" ? item.id : ""),
+      item.rule_id ?? "",
     ])
     .map(shownCells);
   // Last, so it widens no other column, and only when a row has one.
@@ -369,28 +345,13 @@ export function formatConcerningRows(
       )
       .join("  ")
       .trimEnd();
-  const pending = items.some((item) => item.state === "pending")
-    ? [
-        "",
-        `pending: the rule covers you now and its notice is not written yet. ${COVERING_NOW}`,
-      ]
-    : [];
   const baseline = items.some((item) => item.state === "baseline")
     ? [
         "",
         "baseline: the rule already covered you when these notices began, so its start was never told as news.",
       ]
     : [];
-  return [
-    line(header),
-    ...rows.map(line),
-    ...pending,
-    ...baseline,
-    // The pending line already says where to see what covers you now.
-    ...(unfinished
-      ? ["", pending.length > 0 ? unfinished : `${unfinished} ${COVERING_NOW}`]
-      : []),
-  ].join("\n");
+  return [line(header), ...rows.map(line), ...baseline].join("\n");
 }
 
 /** What was left out, and why: no counts, only the kinds and what would show them. */
@@ -458,11 +419,6 @@ async function runActivityList(
   const items: ActivityItem[] = [];
   let covers = "";
   let withheld: WithheldKind[] = [];
-  // With relation=concerning, when the notices last looked, and whether the
-  // check for rules covering you with no notice yet finished (both the first
-  // page's).
-  let asOf: string | null | undefined;
-  let pendingComplete: boolean | undefined;
   let cursor = flags.cursor;
   for (let page = 0; page < (flags.all ? ALL_PAGES_LIMIT : 1); page += 1) {
     const result = await call(() =>
@@ -499,14 +455,6 @@ async function runActivityList(
     }
     covers = result.data.covers;
     withheld = result.data.withheld;
-    if (page === 0) {
-      const first = result.data as Page & {
-        as_of?: string | null;
-        pending_complete?: boolean;
-      };
-      asOf = first.as_of;
-      pendingComplete = first.pending_complete;
-    }
     items.push(...result.data.items);
     cursor = result.data.next_cursor ?? undefined;
     if (!cursor) break;
@@ -519,10 +467,6 @@ async function runActivityList(
           items,
           withheld,
           next_cursor: cursor ?? null,
-          ...(asOf !== undefined ? { as_of: asOf } : {}),
-          ...(pendingComplete !== undefined
-            ? { pending_complete: pendingComplete }
-            : {}),
         },
         null,
         2,
@@ -530,19 +474,14 @@ async function runActivityList(
     );
     return;
   }
-  // Every state, from the first page to the last, with nothing withheld, and
-  // for relation=concerning the check for pending rows finished.
+  // Every state, from the first page to the last, with nothing withheld.
   const complete =
-    flags.state === "all" &&
-    !flags.cursor &&
-    !cursor &&
-    withheld.length === 0 &&
-    pendingComplete !== false;
+    flags.state === "all" && !flags.cursor && !cursor && withheld.length === 0;
   command.log(
     relation === "asked"
       ? formatAskedRows(items, complete)
       : relation === "concerning"
-        ? formatConcerningRows(items, complete, asOf, pendingComplete)
+        ? formatConcerningRows(items)
         : formatActivityRows(covers, items),
   );
   const notShown = formatWithheld(withheld);
@@ -609,7 +548,7 @@ export class ActivityAskedCommand extends Command {
 
   Signed in with \`primitive login\`, you see what was asked of you under your current membership. A key, an app or an agent is asked nothing. Read a request (email_rule_request) with \`primitive email-rules get-email-rule-request --id <id>\`, and an objection (email_rule_objection) with \`primitive email-rule-oversight get-email-rule-objection --id <id>\`, then accept or decline it.
 
-  Requests and objections you made are not here: \`primitive activity created --kind email_rule_request,email_rule_objection\` lists them with where each stands (pending, accepted, declined or withdrawn, and for an objection also amended; with --json, ended_at says when it was decided).`;
+  Requests and objections you made are not here: \`primitive activity created --kind email_rule_request,email_rule_objection\` lists them with where each stands (pending, accepted, declined or withdrawn, and for an objection also amended or closed; with --json, ended_at says when it was decided).`;
 
   static summary = "List what other members asked of you";
 
@@ -651,7 +590,7 @@ export class ActivityAskedCommand extends Command {
 
 export class ActivityConcerningCommand extends Command {
   static description =
-    `List what other members' rules did that concerns your own mail, newest first: started (a rule began covering your mailboxes), new_version (it saved a new version while covering them), stopped (it stopped, with why), baseline (it covered you when these notices began), and pending (it covers you now and its notice is not written yet). Notices can lag, and a rule in draft or observe gets none: \`primitive email-rule-oversight list-email-rules-covering-me\` lists what covers you now. RULE ID, and rule_id with --json, is the rule's id, which \`primitive email-rule-oversight get-email-rule-covering-me <rule-id>\` and create-email-rule-objection --rule-id take.`;
+    `List what other members' rules did that concerns your own mail, newest first: started (a rule began covering your mailboxes), new_version (it saved a new version while covering them), stopped (it stopped, with why), and baseline (it covered you when these notices began). Notices can lag, and a rule in draft or observe gets none: \`primitive email-rule-oversight list-email-rules-covering-me\` lists what covers you now. RULE ID, and rule_id with --json, is the rule's id, which \`primitive email-rule-oversight get-email-rule-covering-me <rule-id>\` and create-email-rule-objection --rule-id take.`;
 
   static summary =
     "List rules that started covering your mail, changed or stopped";

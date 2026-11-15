@@ -30,19 +30,19 @@ class TestEmailRuleResultWindow:
             mode (TestEmailRuleResultWindowMode):
             since (datetime.datetime | None): The oldest arrival the recent window reaches; null when email_ids were given.
             limit (int): The most emails the recent window holds: 200, less one place per expected email.
-            scope (EmailRuleScopeUsed | Unset):
-            oldest_at (datetime.datetime | None | Unset): When the oldest email tested arrived, expected ones included; null
-                when none was. The window is the newest 200 the scope reaches, so a narrower scope reaches further back: compare
+            oldest_at (datetime.datetime | None): When the oldest email tested arrived, expected ones included; null when
+                none was. The window is the newest 200 the scope reaches, so a narrower scope reaches further back: compare
                 counts only over the same scope and span.
-            newest_at (datetime.datetime | None | Unset): When the newest email tested arrived; null when none was.
+            newest_at (datetime.datetime | None): When the newest email tested arrived; null when none was.
+            scope (EmailRuleScopeUsed | Unset):
      """
 
     mode: TestEmailRuleResultWindowMode
     since: datetime.datetime | None
     limit: int
+    oldest_at: datetime.datetime | None
+    newest_at: datetime.datetime | None
     scope: EmailRuleScopeUsed | Unset = UNSET
-    oldest_at: datetime.datetime | None | Unset = UNSET
-    newest_at: datetime.datetime | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -61,25 +61,21 @@ class TestEmailRuleResultWindow:
 
         limit = self.limit
 
-        scope: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.scope, Unset):
-            scope = self.scope.to_dict()
-
-        oldest_at: None | str | Unset
-        if isinstance(self.oldest_at, Unset):
-            oldest_at = UNSET
-        elif isinstance(self.oldest_at, datetime.datetime):
+        oldest_at: None | str
+        if isinstance(self.oldest_at, datetime.datetime):
             oldest_at = self.oldest_at.isoformat()
         else:
             oldest_at = self.oldest_at
 
-        newest_at: None | str | Unset
-        if isinstance(self.newest_at, Unset):
-            newest_at = UNSET
-        elif isinstance(self.newest_at, datetime.datetime):
+        newest_at: None | str
+        if isinstance(self.newest_at, datetime.datetime):
             newest_at = self.newest_at.isoformat()
         else:
             newest_at = self.newest_at
+
+        scope: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.scope, Unset):
+            scope = self.scope.to_dict()
 
 
         field_dict: dict[str, Any] = {}
@@ -88,13 +84,11 @@ class TestEmailRuleResultWindow:
             "mode": mode,
             "since": since,
             "limit": limit,
+            "oldest_at": oldest_at,
+            "newest_at": newest_at,
         })
         if scope is not UNSET:
             field_dict["scope"] = scope
-        if oldest_at is not UNSET:
-            field_dict["oldest_at"] = oldest_at
-        if newest_at is not UNSET:
-            field_dict["newest_at"] = newest_at
 
         return field_dict
 
@@ -129,20 +123,8 @@ class TestEmailRuleResultWindow:
 
         limit = d.pop("limit")
 
-        _scope = d.pop("scope", UNSET)
-        scope: EmailRuleScopeUsed | Unset
-        if isinstance(_scope,  Unset):
-            scope = UNSET
-        else:
-            scope = EmailRuleScopeUsed.from_dict(_scope)
-
-
-
-
-        def _parse_oldest_at(data: object) -> datetime.datetime | None | Unset:
+        def _parse_oldest_at(data: object) -> datetime.datetime | None:
             if data is None:
-                return data
-            if isinstance(data, Unset):
                 return data
             try:
                 if not isinstance(data, str):
@@ -154,15 +136,13 @@ class TestEmailRuleResultWindow:
                 return oldest_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(datetime.datetime | None | Unset, data)
+            return cast(datetime.datetime | None, data)
 
-        oldest_at = _parse_oldest_at(d.pop("oldest_at", UNSET))
+        oldest_at = _parse_oldest_at(d.pop("oldest_at"))
 
 
-        def _parse_newest_at(data: object) -> datetime.datetime | None | Unset:
+        def _parse_newest_at(data: object) -> datetime.datetime | None:
             if data is None:
-                return data
-            if isinstance(data, Unset):
                 return data
             try:
                 if not isinstance(data, str):
@@ -174,18 +154,28 @@ class TestEmailRuleResultWindow:
                 return newest_at_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(datetime.datetime | None | Unset, data)
+            return cast(datetime.datetime | None, data)
 
-        newest_at = _parse_newest_at(d.pop("newest_at", UNSET))
+        newest_at = _parse_newest_at(d.pop("newest_at"))
+
+
+        _scope = d.pop("scope", UNSET)
+        scope: EmailRuleScopeUsed | Unset
+        if isinstance(_scope,  Unset):
+            scope = UNSET
+        else:
+            scope = EmailRuleScopeUsed.from_dict(_scope)
+
+
 
 
         test_email_rule_result_window = cls(
             mode=mode,
             since=since,
             limit=limit,
-            scope=scope,
             oldest_at=oldest_at,
             newest_at=newest_at,
+            scope=scope,
         )
 
 

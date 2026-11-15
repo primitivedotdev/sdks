@@ -25,16 +25,14 @@ class TestEmailRuleResultResultsItemQuestionAnswersItem:
         Attributes:
             question (str):
             answer (bool | None):
-            probability (float | None): Deprecated: read confidence. The chance the answer is yes.
-            confidence (float | None | Unset): How sure the answer is, from 0 to 1: the chance of the answer given, as
-                webhook payloads carry it. Null when unanswered.
+            confidence (float | None): How sure the answer is, from 0 to 1: the chance of the answer given, as webhook
+                payloads carry it. Null when unanswered.
             error_class (str | Unset):
      """
 
     question: str
     answer: bool | None
-    probability: float | None
-    confidence: float | None | Unset = UNSET
+    confidence: float | None
     error_class: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -48,14 +46,8 @@ class TestEmailRuleResultResultsItemQuestionAnswersItem:
         answer: bool | None
         answer = self.answer
 
-        probability: float | None
-        probability = self.probability
-
-        confidence: float | None | Unset
-        if isinstance(self.confidence, Unset):
-            confidence = UNSET
-        else:
-            confidence = self.confidence
+        confidence: float | None
+        confidence = self.confidence
 
         error_class = self.error_class
 
@@ -65,10 +57,8 @@ class TestEmailRuleResultResultsItemQuestionAnswersItem:
         field_dict.update({
             "question": question,
             "answer": answer,
-            "probability": probability,
+            "confidence": confidence,
         })
-        if confidence is not UNSET:
-            field_dict["confidence"] = confidence
         if error_class is not UNSET:
             field_dict["error_class"] = error_class
 
@@ -89,22 +79,12 @@ class TestEmailRuleResultResultsItemQuestionAnswersItem:
         answer = _parse_answer(d.pop("answer"))
 
 
-        def _parse_probability(data: object) -> float | None:
+        def _parse_confidence(data: object) -> float | None:
             if data is None:
                 return data
             return cast(float | None, data)
 
-        probability = _parse_probability(d.pop("probability"))
-
-
-        def _parse_confidence(data: object) -> float | None | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            return cast(float | None | Unset, data)
-
-        confidence = _parse_confidence(d.pop("confidence", UNSET))
+        confidence = _parse_confidence(d.pop("confidence"))
 
 
         error_class = d.pop("error_class", UNSET)
@@ -112,7 +92,6 @@ class TestEmailRuleResultResultsItemQuestionAnswersItem:
         test_email_rule_result_results_item_question_answers_item = cls(
             question=question,
             answer=answer,
-            probability=probability,
             confidence=confidence,
             error_class=error_class,
         )

@@ -30,13 +30,11 @@ class GenerateLookAlikesResult:
             rule (EmailRuleTested):
             look_alikes (list[EmailRuleLookAlike]):
             counts (GenerateLookAlikesResultCounts):
-            note (str): That the emails are made up and were never sent or stored.
      """
 
     rule: EmailRuleTested
     look_alikes: list[EmailRuleLookAlike]
     counts: GenerateLookAlikesResultCounts
-    note: str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -58,8 +56,6 @@ class GenerateLookAlikesResult:
 
         counts = self.counts.to_dict()
 
-        note = self.note
-
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -67,7 +63,6 @@ class GenerateLookAlikesResult:
             "rule": rule,
             "look_alikes": look_alikes,
             "counts": counts,
-            "note": note,
         })
 
         return field_dict
@@ -100,13 +95,10 @@ class GenerateLookAlikesResult:
 
 
 
-        note = d.pop("note")
-
         generate_look_alikes_result = cls(
             rule=rule,
             look_alikes=look_alikes,
             counts=counts,
-            note=note,
         )
 
 

@@ -11,7 +11,6 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.email_rule_request import EmailRuleRequest
   from ..models.email_rule_share import EmailRuleShare
   from ..models.email_rule_with_version import EmailRuleWithVersion
 
@@ -29,17 +28,10 @@ class AcceptEmailRuleRequestResult:
         Attributes:
             rule (EmailRuleWithVersion):
             share (EmailRuleShare):
-            request (EmailRuleRequest):
-            notice (str | Unset): What is now shared, in words. When you changed the rule and it can now match mail the
-                request left out by who it was sent to (such as mail where an address is only copied), that comes first; when
-                you changed its english or tree (edited_on_accept; a new name alone is no change), that rule.current is what you
-                agreed to and request what was asked.
      """
 
     rule: EmailRuleWithVersion
     share: EmailRuleShare
-    request: EmailRuleRequest
-    notice: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -47,16 +39,11 @@ class AcceptEmailRuleRequestResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.email_rule_request import EmailRuleRequest # noqa: PLC0415
         from ..models.email_rule_share import EmailRuleShare # noqa: PLC0415
         from ..models.email_rule_with_version import EmailRuleWithVersion # noqa: PLC0415
         rule = self.rule.to_dict()
 
         share = self.share.to_dict()
-
-        request = self.request.to_dict()
-
-        notice = self.notice
 
 
         field_dict: dict[str, Any] = {}
@@ -64,10 +51,7 @@ class AcceptEmailRuleRequestResult:
         field_dict.update({
             "rule": rule,
             "share": share,
-            "request": request,
         })
-        if notice is not UNSET:
-            field_dict["notice"] = notice
 
         return field_dict
 
@@ -75,7 +59,6 @@ class AcceptEmailRuleRequestResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.email_rule_request import EmailRuleRequest # noqa: PLC0415
         from ..models.email_rule_share import EmailRuleShare # noqa: PLC0415
         from ..models.email_rule_with_version import EmailRuleWithVersion # noqa: PLC0415
         d = dict(src_dict)
@@ -89,18 +72,9 @@ class AcceptEmailRuleRequestResult:
 
 
 
-        request = EmailRuleRequest.from_dict(d.pop("request"))
-
-
-
-
-        notice = d.pop("notice", UNSET)
-
         accept_email_rule_request_result = cls(
             rule=rule,
             share=share,
-            request=request,
-            notice=notice,
         )
 
 

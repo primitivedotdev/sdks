@@ -43,18 +43,13 @@ class GetEmailRuleCoveringMeResult:
             covers (EmailRuleCoverage | None): Null when it no longer covers your mailboxes and you see it because it
                 decided on your mail.
             current_version (int | None): Null when covers_now is false.
-            receivers (EmailRuleReceivers | None): Null when covers_now is false (who receives it now is not about your
-                mail), when it could not be read in time, or for a rule shown in draft or observe that turned active or was
-                deleted after it was read; try again.
-            receivers_once_active (EmailRuleReceivers | None): As on the list; also null when covers_now is false.
+            receivers (EmailRuleReceivers | None): As on the list; also null when covers_now is false (who receives it now
+                is not about your mail).
             created_at (datetime.datetime):
             covers_now (bool): Whether it covers one of your own mailboxes now. False for a rule you see only because it
                 decided on mail at your own mailbox before.
             current (EmailRuleCoveringMeVersion | None): Its current version: what it asks of each email. When covers_now is
                 false, the newest version that decided on your mail instead.
-            do_not_share_note (str | Unset): On a grant rule: that the active do-not-share rules over an email run first,
-                keeping from it what they match and holding back what they cannot decide, which is decided again for up to a day
-                and shared only if none of them then matches it.
             note (str | Unset): Present when covers_now is false: what is withheld, and why.
      """
 
@@ -67,11 +62,9 @@ class GetEmailRuleCoveringMeResult:
     covers: EmailRuleCoverage | None
     current_version: int | None
     receivers: EmailRuleReceivers | None
-    receivers_once_active: EmailRuleReceivers | None
     created_at: datetime.datetime
     covers_now: bool
     current: EmailRuleCoveringMeVersion | None
-    do_not_share_note: str | Unset = UNSET
     note: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -112,12 +105,6 @@ class GetEmailRuleCoveringMeResult:
         else:
             receivers = self.receivers
 
-        receivers_once_active: dict[str, Any] | None
-        if isinstance(self.receivers_once_active, EmailRuleReceivers):
-            receivers_once_active = self.receivers_once_active.to_dict()
-        else:
-            receivers_once_active = self.receivers_once_active
-
         created_at = self.created_at.isoformat()
 
         covers_now = self.covers_now
@@ -127,8 +114,6 @@ class GetEmailRuleCoveringMeResult:
             current = self.current.to_dict()
         else:
             current = self.current
-
-        do_not_share_note = self.do_not_share_note
 
         note = self.note
 
@@ -145,13 +130,10 @@ class GetEmailRuleCoveringMeResult:
             "covers": covers,
             "current_version": current_version,
             "receivers": receivers,
-            "receivers_once_active": receivers_once_active,
             "created_at": created_at,
             "covers_now": covers_now,
             "current": current,
         })
-        if do_not_share_note is not UNSET:
-            field_dict["do_not_share_note"] = do_not_share_note
         if note is not UNSET:
             field_dict["note"] = note
 
@@ -240,24 +222,6 @@ class GetEmailRuleCoveringMeResult:
         receivers = _parse_receivers(d.pop("receivers"))
 
 
-        def _parse_receivers_once_active(data: object) -> EmailRuleReceivers | None:
-            if data is None:
-                return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                receivers_once_active_type_1 = EmailRuleReceivers.from_dict(data)
-
-
-
-                return receivers_once_active_type_1
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(EmailRuleReceivers | None, data)
-
-        receivers_once_active = _parse_receivers_once_active(d.pop("receivers_once_active"))
-
-
         created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
@@ -283,8 +247,6 @@ class GetEmailRuleCoveringMeResult:
         current = _parse_current(d.pop("current"))
 
 
-        do_not_share_note = d.pop("do_not_share_note", UNSET)
-
         note = d.pop("note", UNSET)
 
         get_email_rule_covering_me_result = cls(
@@ -297,11 +259,9 @@ class GetEmailRuleCoveringMeResult:
             covers=covers,
             current_version=current_version,
             receivers=receivers,
-            receivers_once_active=receivers_once_active,
             created_at=created_at,
             covers_now=covers_now,
             current=current,
-            do_not_share_note=do_not_share_note,
             note=note,
         )
 

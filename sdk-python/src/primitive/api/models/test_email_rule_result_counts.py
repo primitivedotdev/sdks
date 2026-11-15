@@ -27,8 +27,8 @@ class TestEmailRuleResultCounts:
             near_miss (int):
             no_match (int):
             unclassified (int):
+            skipped (int):
             not_found (int):
-            skipped (int | Unset):
      """
 
     emails: int
@@ -36,8 +36,8 @@ class TestEmailRuleResultCounts:
     near_miss: int
     no_match: int
     unclassified: int
+    skipped: int
     not_found: int
-    skipped: int | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -55,9 +55,9 @@ class TestEmailRuleResultCounts:
 
         unclassified = self.unclassified
 
-        not_found = self.not_found
-
         skipped = self.skipped
+
+        not_found = self.not_found
 
 
         field_dict: dict[str, Any] = {}
@@ -68,10 +68,9 @@ class TestEmailRuleResultCounts:
             "near_miss": near_miss,
             "no_match": no_match,
             "unclassified": unclassified,
+            "skipped": skipped,
             "not_found": not_found,
         })
-        if skipped is not UNSET:
-            field_dict["skipped"] = skipped
 
         return field_dict
 
@@ -90,9 +89,9 @@ class TestEmailRuleResultCounts:
 
         unclassified = d.pop("unclassified")
 
-        not_found = d.pop("not_found")
+        skipped = d.pop("skipped")
 
-        skipped = d.pop("skipped", UNSET)
+        not_found = d.pop("not_found")
 
         test_email_rule_result_counts = cls(
             emails=emails,
@@ -100,8 +99,8 @@ class TestEmailRuleResultCounts:
             near_miss=near_miss,
             no_match=no_match,
             unclassified=unclassified,
-            not_found=not_found,
             skipped=skipped,
+            not_found=not_found,
         )
 
 

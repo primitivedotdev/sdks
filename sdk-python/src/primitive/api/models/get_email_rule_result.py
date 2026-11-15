@@ -37,50 +37,44 @@ class GetEmailRuleResult:
             id (UUID):
             name (str):
             state (GetEmailRuleResultState):
+            evaluation_scope (GetEmailRuleResultEvaluationScope): Whose mail it runs over, as stored (GET /email-
+                rules/{id}/scope: what that is now).
+            scope_selection (EmailRuleScopeNames | None): What a selected rule names; null for any other scope.
             current_version (int | None):
-            author_user_id (UUID):
+            revision (int): Moves on by one with every update. Send it as if_revision.
+            author (EmailRuleAuthor):
             is_author (bool): Whether you are its author, in your current membership. Only its author edits it.
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
             current (EmailRuleVersion | None): Its current version: english and tree, with Primitive's reading and notes.
                 current_version is its number. GET /email-rules lists rules without it.
+            expectations (GetEmailRuleResultExpectations): Its saved expectations, each list by email id.
+            expectation_samples (list[EmailRuleExpectationSample]): Its saved made-up emails, oldest first.
             kind (GetEmailRuleResultKind | Unset): grant: what it matches can be shared. do_not_share: it blocks sharing
                 what it matches.
             protection_note (str | Unset): On a do_not_share rule only: it protects nothing yet (not active), a classifier
                 fact narrows it, or its several questions are alternatives.
-            evaluation_scope (GetEmailRuleResultEvaluationScope | Unset): Whose mail it runs over, as stored (GET /email-
-                rules/{id}/scope: what that is now).
-            scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.
-            revision (int | Unset): Moves on by one with every update. Send it as if_revision.
-            author (EmailRuleAuthor | Unset):
-            pending_objections (int | Unset): To its author, on the dashboard or the Primitive CLI: objections to it waiting
-                for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time:
-                absent is not 0.
-            objection_notice (str | Unset): With pending_objections above 0: that members objected (each message says what
-                they ask: to turn it off, narrow it or explain it), and how to answer.
-            expectations (GetEmailRuleResultExpectations | Unset): Its saved expectations, each list by email id.
-            expectation_samples (list[EmailRuleExpectationSample] | Unset): Its saved made-up emails, oldest first.
+            pending_objections (int | Unset): To its author, on the dashboard or the Primitive CLI, on GET, the list and a
+                create: objections to it waiting for their answer (GET /email-rule-objections).
      """
 
     id: UUID
     name: str
     state: GetEmailRuleResultState
+    evaluation_scope: GetEmailRuleResultEvaluationScope
+    scope_selection: EmailRuleScopeNames | None
     current_version: int | None
-    author_user_id: UUID
+    revision: int
+    author: EmailRuleAuthor
     is_author: bool
     created_at: datetime.datetime
     updated_at: datetime.datetime
     current: EmailRuleVersion | None
+    expectations: GetEmailRuleResultExpectations
+    expectation_samples: list[EmailRuleExpectationSample]
     kind: GetEmailRuleResultKind | Unset = UNSET
     protection_note: str | Unset = UNSET
-    evaluation_scope: GetEmailRuleResultEvaluationScope | Unset = UNSET
-    scope_selection: EmailRuleScopeNames | None | Unset = UNSET
-    revision: int | Unset = UNSET
-    author: EmailRuleAuthor | Unset = UNSET
     pending_objections: int | Unset = UNSET
-    objection_notice: str | Unset = UNSET
-    expectations: GetEmailRuleResultExpectations | Unset = UNSET
-    expectation_samples: list[EmailRuleExpectationSample] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -99,10 +93,20 @@ class GetEmailRuleResult:
 
         state = self.state.value
 
+        evaluation_scope = self.evaluation_scope.value
+
+        scope_selection: dict[str, Any] | None
+        if isinstance(self.scope_selection, EmailRuleScopeNames):
+            scope_selection = self.scope_selection.to_dict()
+        else:
+            scope_selection = self.scope_selection
+
         current_version: int | None
         current_version = self.current_version
 
-        author_user_id = str(self.author_user_id)
+        revision = self.revision
+
+        author = self.author.to_dict()
 
         is_author = self.is_author
 
@@ -116,6 +120,15 @@ class GetEmailRuleResult:
         else:
             current = self.current
 
+        expectations = self.expectations.to_dict()
+
+        expectation_samples = []
+        for expectation_samples_item_data in self.expectation_samples:
+            expectation_samples_item = expectation_samples_item_data.to_dict()
+            expectation_samples.append(expectation_samples_item)
+
+
+
         kind: str | Unset = UNSET
         if not isinstance(self.kind, Unset):
             kind = self.kind.value
@@ -123,41 +136,7 @@ class GetEmailRuleResult:
 
         protection_note = self.protection_note
 
-        evaluation_scope: str | Unset = UNSET
-        if not isinstance(self.evaluation_scope, Unset):
-            evaluation_scope = self.evaluation_scope.value
-
-
-        scope_selection: dict[str, Any] | None | Unset
-        if isinstance(self.scope_selection, Unset):
-            scope_selection = UNSET
-        elif isinstance(self.scope_selection, EmailRuleScopeNames):
-            scope_selection = self.scope_selection.to_dict()
-        else:
-            scope_selection = self.scope_selection
-
-        revision = self.revision
-
-        author: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.author, Unset):
-            author = self.author.to_dict()
-
         pending_objections = self.pending_objections
-
-        objection_notice = self.objection_notice
-
-        expectations: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.expectations, Unset):
-            expectations = self.expectations.to_dict()
-
-        expectation_samples: list[dict[str, Any]] | Unset = UNSET
-        if not isinstance(self.expectation_samples, Unset):
-            expectation_samples = []
-            for expectation_samples_item_data in self.expectation_samples:
-                expectation_samples_item = expectation_samples_item_data.to_dict()
-                expectation_samples.append(expectation_samples_item)
-
-
 
 
         field_dict: dict[str, Any] = {}
@@ -166,33 +145,24 @@ class GetEmailRuleResult:
             "id": id,
             "name": name,
             "state": state,
+            "evaluation_scope": evaluation_scope,
+            "scope_selection": scope_selection,
             "current_version": current_version,
-            "author_user_id": author_user_id,
+            "revision": revision,
+            "author": author,
             "is_author": is_author,
             "created_at": created_at,
             "updated_at": updated_at,
             "current": current,
+            "expectations": expectations,
+            "expectation_samples": expectation_samples,
         })
         if kind is not UNSET:
             field_dict["kind"] = kind
         if protection_note is not UNSET:
             field_dict["protection_note"] = protection_note
-        if evaluation_scope is not UNSET:
-            field_dict["evaluation_scope"] = evaluation_scope
-        if scope_selection is not UNSET:
-            field_dict["scope_selection"] = scope_selection
-        if revision is not UNSET:
-            field_dict["revision"] = revision
-        if author is not UNSET:
-            field_dict["author"] = author
         if pending_objections is not UNSET:
             field_dict["pending_objections"] = pending_objections
-        if objection_notice is not UNSET:
-            field_dict["objection_notice"] = objection_notice
-        if expectations is not UNSET:
-            field_dict["expectations"] = expectations
-        if expectation_samples is not UNSET:
-            field_dict["expectation_samples"] = expectation_samples
 
         return field_dict
 
@@ -218,6 +188,29 @@ class GetEmailRuleResult:
 
 
 
+        evaluation_scope = GetEmailRuleResultEvaluationScope(d.pop("evaluation_scope"))
+
+
+
+
+        def _parse_scope_selection(data: object) -> EmailRuleScopeNames | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                scope_selection_type_1 = EmailRuleScopeNames.from_dict(data)
+
+
+
+                return scope_selection_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleScopeNames | None, data)
+
+        scope_selection = _parse_scope_selection(d.pop("scope_selection"))
+
+
         def _parse_current_version(data: object) -> int | None:
             if data is None:
                 return data
@@ -226,7 +219,9 @@ class GetEmailRuleResult:
         current_version = _parse_current_version(d.pop("current_version"))
 
 
-        author_user_id = UUID(d.pop("author_user_id"))
+        revision = d.pop("revision")
+
+        author = EmailRuleAuthor.from_dict(d.pop("author"))
 
 
 
@@ -261,6 +256,21 @@ class GetEmailRuleResult:
         current = _parse_current(d.pop("current"))
 
 
+        expectations = GetEmailRuleResultExpectations.from_dict(d.pop("expectations"))
+
+
+
+
+        expectation_samples = []
+        _expectation_samples = d.pop("expectation_samples")
+        for expectation_samples_item_data in (_expectation_samples):
+            expectation_samples_item = EmailRuleExpectationSample.from_dict(expectation_samples_item_data)
+
+
+
+            expectation_samples.append(expectation_samples_item)
+
+
         _kind = d.pop("kind", UNSET)
         kind: GetEmailRuleResultKind | Unset
         if isinstance(_kind,  Unset):
@@ -273,94 +283,26 @@ class GetEmailRuleResult:
 
         protection_note = d.pop("protection_note", UNSET)
 
-        _evaluation_scope = d.pop("evaluation_scope", UNSET)
-        evaluation_scope: GetEmailRuleResultEvaluationScope | Unset
-        if isinstance(_evaluation_scope,  Unset):
-            evaluation_scope = UNSET
-        else:
-            evaluation_scope = GetEmailRuleResultEvaluationScope(_evaluation_scope)
-
-
-
-
-        def _parse_scope_selection(data: object) -> EmailRuleScopeNames | None | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                scope_selection_type_1 = EmailRuleScopeNames.from_dict(data)
-
-
-
-                return scope_selection_type_1
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(EmailRuleScopeNames | None | Unset, data)
-
-        scope_selection = _parse_scope_selection(d.pop("scope_selection", UNSET))
-
-
-        revision = d.pop("revision", UNSET)
-
-        _author = d.pop("author", UNSET)
-        author: EmailRuleAuthor | Unset
-        if isinstance(_author,  Unset):
-            author = UNSET
-        else:
-            author = EmailRuleAuthor.from_dict(_author)
-
-
-
-
         pending_objections = d.pop("pending_objections", UNSET)
-
-        objection_notice = d.pop("objection_notice", UNSET)
-
-        _expectations = d.pop("expectations", UNSET)
-        expectations: GetEmailRuleResultExpectations | Unset
-        if isinstance(_expectations,  Unset):
-            expectations = UNSET
-        else:
-            expectations = GetEmailRuleResultExpectations.from_dict(_expectations)
-
-
-
-
-        _expectation_samples = d.pop("expectation_samples", UNSET)
-        expectation_samples: list[EmailRuleExpectationSample] | Unset = UNSET
-        if _expectation_samples is not UNSET:
-            expectation_samples = []
-            for expectation_samples_item_data in _expectation_samples:
-                expectation_samples_item = EmailRuleExpectationSample.from_dict(expectation_samples_item_data)
-
-
-
-                expectation_samples.append(expectation_samples_item)
-
 
         get_email_rule_result = cls(
             id=id,
             name=name,
             state=state,
+            evaluation_scope=evaluation_scope,
+            scope_selection=scope_selection,
             current_version=current_version,
-            author_user_id=author_user_id,
+            revision=revision,
+            author=author,
             is_author=is_author,
             created_at=created_at,
             updated_at=updated_at,
             current=current,
-            kind=kind,
-            protection_note=protection_note,
-            evaluation_scope=evaluation_scope,
-            scope_selection=scope_selection,
-            revision=revision,
-            author=author,
-            pending_objections=pending_objections,
-            objection_notice=objection_notice,
             expectations=expectations,
             expectation_samples=expectation_samples,
+            kind=kind,
+            protection_note=protection_note,
+            pending_objections=pending_objections,
         )
 
 

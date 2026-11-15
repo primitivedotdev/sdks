@@ -136,7 +136,8 @@ def sync_detailed(
     accepts it, turning the rule off, declines it (optionally with a reason the objector sees), or
     answers it amended once they have saved a newer version of the rule, or the member who made it
     withdraws it, which clears its message (not from an email to the author already sent or being sent).
-    It never changes after that. You may have one pending objection per rule and 50 in all, and object
+    It never changes after that. It reads closed once nobody can answer it (its rule was deleted, or its
+    author is no longer a member). You may have one pending objection per rule and 50 in all, and object
     to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read,
     the email rules feature, and a member's own full-access credential (no API key, agent key or
     narrowed token).
@@ -184,7 +185,8 @@ def sync(
     accepts it, turning the rule off, declines it (optionally with a reason the objector sees), or
     answers it amended once they have saved a newer version of the rule, or the member who made it
     withdraws it, which clears its message (not from an email to the author already sent or being sent).
-    It never changes after that. You may have one pending objection per rule and 50 in all, and object
+    It never changes after that. It reads closed once nobody can answer it (its rule was deleted, or its
+    author is no longer a member). You may have one pending objection per rule and 50 in all, and object
     to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read,
     the email rules feature, and a member's own full-access credential (no API key, agent key or
     narrowed token).
@@ -227,7 +229,8 @@ async def asyncio_detailed(
     accepts it, turning the rule off, declines it (optionally with a reason the objector sees), or
     answers it amended once they have saved a newer version of the rule, or the member who made it
     withdraws it, which clears its message (not from an email to the author already sent or being sent).
-    It never changes after that. You may have one pending objection per rule and 50 in all, and object
+    It never changes after that. It reads closed once nobody can answer it (its rule was deleted, or its
+    author is no longer a member). You may have one pending objection per rule and 50 in all, and object
     to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read,
     the email rules feature, and a member's own full-access credential (no API key, agent key or
     narrowed token).
@@ -275,7 +278,8 @@ async def asyncio(
     accepts it, turning the rule off, declines it (optionally with a reason the objector sees), or
     answers it amended once they have saved a newer version of the rule, or the member who made it
     withdraws it, which clears its message (not from an email to the author already sent or being sent).
-    It never changes after that. You may have one pending objection per rule and 50 in all, and object
+    It never changes after that. It reads closed once nobody can answer it (its rule was deleted, or its
+    author is no longer a member). You may have one pending objection per rule and 50 in all, and object
     to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read,
     the email rules feature, and a member's own full-access credential (no API key, agent key or
     narrowed token).

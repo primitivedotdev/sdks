@@ -219,13 +219,20 @@ function testResult(
       kind: "grant",
       warnings: [],
     },
-    window: { mode: "recent", since: "2026-10-11T00:00:00Z", limit: 198 },
+    window: {
+      mode: "recent",
+      since: "2026-10-11T00:00:00Z",
+      limit: 198,
+      oldest_at: null,
+      newest_at: null,
+    },
     counts: {
       emails: 4,
       matched: 1,
       near_miss: 1,
       no_match: 1,
       unclassified: 1,
+      skipped: 0,
       not_found: 0,
     },
     classification: { classified_now: 0, still_unclassified: 1 },
@@ -262,7 +269,6 @@ function testResult(
           {
             question: "Is it a sales pitch?",
             answer: false,
-            probability: 0.19,
             confidence: 0.81,
           },
         ],
@@ -1333,12 +1339,12 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
     expect(JSON.parse(result.merged)).toEqual({ success: true, data });
   });
 
-  it("generates --if-version on update and no --explanation on rule writes, which the API writes itself", () => {
+  it("generates --if-revision, and no --if-version or --explanation, on rule writes", () => {
     const update = (
       COMMANDS["email-rules:update-email-rule"] as unknown as Runnable
     ).flags;
-    expect(update["if-version"]?.type).toBe("option");
-    expect(update["if-version"]?.description).toContain("version_moved");
+    expect(update["if-revision"]?.type).toBe("option");
+    expect(update["if-version"]).toBeUndefined();
     for (const id of [
       "email-rules:create-email-rule",
       "email-rules:update-email-rule",
@@ -1785,7 +1791,6 @@ describe("email-rules made-up emails in test and write reports", () => {
                 {
                   question: "Is it a bill?",
                   answer: true,
-                  probability: 0.9,
                   confidence: 0.9,
                 },
               ],
@@ -1853,9 +1858,7 @@ describe("email-rules made-up emails in test and write reports", () => {
             judged(2, "undecided", "near_miss", {
               reason: "unanswered",
               retryable: true,
-              question_answers: [
-                { question: "Is it a bill?", answer: null, probability: null },
-              ],
+              question_answers: [{ question: "Is it a bill?", answer: null }],
             }),
           ],
           { undecided: 1 },
@@ -2310,19 +2313,16 @@ describe("how sure a question's answer is", () => {
       answerConfidence({
         question: "Q",
         answer: false,
-        probability: 0.25,
         confidence: 0.75,
       }),
     ).toBe(0.75);
-    // Without a confidence, nothing is worked out from probability.
     expect(
-      answerConfidence({ question: "Q", answer: false, probability: 0.2 }),
+      answerConfidence({ question: "Q", answer: false, confidence: null }),
     ).toBeNull();
     expect(
       answerConfidence({
         question: "Q",
         answer: true,
-        probability: 0.6,
         confidence: Number.NaN,
       }),
     ).toBeNull();
@@ -2330,7 +2330,6 @@ describe("how sure a question's answer is", () => {
       answerConfidence({
         question: "Q",
         answer: null,
-        probability: null,
         confidence: 0.9,
       }),
     ).toBeNull();

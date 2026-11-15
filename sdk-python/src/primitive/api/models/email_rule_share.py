@@ -38,8 +38,7 @@ class EmailRuleShare:
             created_at (datetime.datetime):
             ended_at (datetime.datetime | None):
             end_reason (EmailRuleShareEndReasonType1 | EmailRuleShareEndReasonType2Type1 | EmailRuleShareEndReasonType3Type1
-                | None): Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin, rule_changed
-                (a new version of the rule was saved, on a share that ended before new versions kept shares) or rule_deleted
+                | None): Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin or rule_deleted
                 (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not.
             accepted_rule_version (int): The version of the rule that was accepted. A later version keeps the share: what
                 each version matches is shared from when it is saved.
@@ -49,6 +48,9 @@ class EmailRuleShare:
             delivery_paused (bool | None): True when the rule is active and the share live but new email is not being shared
                 now (what was shared stays visible); false when new email is shared. Null when it does not apply (share not
                 live, rule not active, or you are not on the share) or could not be read.
+            activity (EmailRuleShareActivity | None): For the member it is shared with, on the dashboard or the Primitive
+                CLI, while it is live and their access reads content: whether it is working, so a quiet mailbox can be told from
+                a stopped share. Null otherwise, and when it could not be read.
             is_granter (bool): Whether you are the member sharing their mail.
             is_beneficiary (bool): Whether you are the member it is shared with.
             granter (EmailRuleShareGranter):
@@ -58,9 +60,6 @@ class EmailRuleShare:
             rule_id (None | UUID): The rule itself. Only for the member sharing their mail; null for anyone else. The member
                 it is shared with lists this share's id in a key's grant.rules instead (from the dashboard), and their own
                 webhooks receive what it shares.
-            activity (EmailRuleShareActivity | None | Unset): For the member it is shared with, on the dashboard or the
-                Primitive CLI, while it is live and their access reads content: whether it is working, so a quiet mailbox can be
-                told from a stopped share. Null otherwise.
      """
 
     id: UUID
@@ -72,13 +71,13 @@ class EmailRuleShare:
     edited_on_accept: bool
     live: bool
     delivery_paused: bool | None
+    activity: EmailRuleShareActivity | None
     is_granter: bool
     is_beneficiary: bool
     granter: EmailRuleShareGranter
     beneficiary: EmailRuleShareBeneficiary
     rule: EmailRuleShareRuleType0 | None
     rule_id: None | UUID
-    activity: EmailRuleShareActivity | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -121,6 +120,12 @@ class EmailRuleShare:
         delivery_paused: bool | None
         delivery_paused = self.delivery_paused
 
+        activity: dict[str, Any] | None
+        if isinstance(self.activity, EmailRuleShareActivity):
+            activity = self.activity.to_dict()
+        else:
+            activity = self.activity
+
         is_granter = self.is_granter
 
         is_beneficiary = self.is_beneficiary
@@ -141,14 +146,6 @@ class EmailRuleShare:
         else:
             rule_id = self.rule_id
 
-        activity: dict[str, Any] | None | Unset
-        if isinstance(self.activity, Unset):
-            activity = UNSET
-        elif isinstance(self.activity, EmailRuleShareActivity):
-            activity = self.activity.to_dict()
-        else:
-            activity = self.activity
-
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -162,6 +159,7 @@ class EmailRuleShare:
             "edited_on_accept": edited_on_accept,
             "live": live,
             "delivery_paused": delivery_paused,
+            "activity": activity,
             "is_granter": is_granter,
             "is_beneficiary": is_beneficiary,
             "granter": granter,
@@ -169,8 +167,6 @@ class EmailRuleShare:
             "rule": rule,
             "rule_id": rule_id,
         })
-        if activity is not UNSET:
-            field_dict["activity"] = activity
 
         return field_dict
 
@@ -268,6 +264,24 @@ class EmailRuleShare:
         delivery_paused = _parse_delivery_paused(d.pop("delivery_paused"))
 
 
+        def _parse_activity(data: object) -> EmailRuleShareActivity | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                activity_type_1 = EmailRuleShareActivity.from_dict(data)
+
+
+
+                return activity_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleShareActivity | None, data)
+
+        activity = _parse_activity(d.pop("activity"))
+
+
         is_granter = d.pop("is_granter")
 
         is_beneficiary = d.pop("is_beneficiary")
@@ -318,26 +332,6 @@ class EmailRuleShare:
         rule_id = _parse_rule_id(d.pop("rule_id"))
 
 
-        def _parse_activity(data: object) -> EmailRuleShareActivity | None | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                activity_type_1 = EmailRuleShareActivity.from_dict(data)
-
-
-
-                return activity_type_1
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(EmailRuleShareActivity | None | Unset, data)
-
-        activity = _parse_activity(d.pop("activity", UNSET))
-
-
         email_rule_share = cls(
             id=id,
             request_id=request_id,
@@ -348,13 +342,13 @@ class EmailRuleShare:
             edited_on_accept=edited_on_accept,
             live=live,
             delivery_paused=delivery_paused,
+            activity=activity,
             is_granter=is_granter,
             is_beneficiary=is_beneficiary,
             granter=granter,
             beneficiary=beneficiary,
             rule=rule,
             rule_id=rule_id,
-            activity=activity,
         )
 
 

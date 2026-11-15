@@ -23,13 +23,13 @@ class EndEmailRuleShareResult:
     """ 
         Attributes:
             ended (bool):
+            note (str):
             rule_id (str | Unset):
-            note (str | Unset):
      """
 
     ended: bool
+    note: str
     rule_id: str | Unset = UNSET
-    note: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -39,20 +39,19 @@ class EndEmailRuleShareResult:
     def to_dict(self) -> dict[str, Any]:
         ended = self.ended
 
-        rule_id = self.rule_id
-
         note = self.note
+
+        rule_id = self.rule_id
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "ended": ended,
+            "note": note,
         })
         if rule_id is not UNSET:
             field_dict["rule_id"] = rule_id
-        if note is not UNSET:
-            field_dict["note"] = note
 
         return field_dict
 
@@ -63,14 +62,14 @@ class EndEmailRuleShareResult:
         d = dict(src_dict)
         ended = d.pop("ended")
 
-        rule_id = d.pop("rule_id", UNSET)
+        note = d.pop("note")
 
-        note = d.pop("note", UNSET)
+        rule_id = d.pop("rule_id", UNSET)
 
         end_email_rule_share_result = cls(
             ended=ended,
-            rule_id=rule_id,
             note=note,
+            rule_id=rule_id,
         )
 
 

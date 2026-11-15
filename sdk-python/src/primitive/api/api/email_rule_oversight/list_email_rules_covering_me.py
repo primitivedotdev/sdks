@@ -124,12 +124,8 @@ def sync_detailed(
     number of rules): keep reading until meta.cursor is null. For what happened to one email of yours,
     every rule's decision on it and, for another member's rule covering you, who receives what it
     shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id
-    <email-id>). Whether a rule delivered the email by webhook is not in the rule results: on your own
-    mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id> --json) counts each
-    rule's webhook deliveries; on another member's mail, GET /v1/webhooks/deliveries?email_id=<email-id>
-    (primitive webhook-deliveries list --email-id <email-id>, with webhooks:read) lists them. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token).
+    <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no
+    API key, agent key or narrowed token).
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -183,12 +179,8 @@ def sync(
     number of rules): keep reading until meta.cursor is null. For what happened to one email of yours,
     every rule's decision on it and, for another member's rule covering you, who receives what it
     shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id
-    <email-id>). Whether a rule delivered the email by webhook is not in the rule results: on your own
-    mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id> --json) counts each
-    rule's webhook deliveries; on another member's mail, GET /v1/webhooks/deliveries?email_id=<email-id>
-    (primitive webhook-deliveries list --email-id <email-id>, with webhooks:read) lists them. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token).
+    <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no
+    API key, agent key or narrowed token).
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -237,12 +229,8 @@ async def asyncio_detailed(
     number of rules): keep reading until meta.cursor is null. For what happened to one email of yours,
     every rule's decision on it and, for another member's rule covering you, who receives what it
     shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id
-    <email-id>). Whether a rule delivered the email by webhook is not in the rule results: on your own
-    mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id> --json) counts each
-    rule's webhook deliveries; on another member's mail, GET /v1/webhooks/deliveries?email_id=<email-id>
-    (primitive webhook-deliveries list --email-id <email-id>, with webhooks:read) lists them. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token).
+    <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no
+    API key, agent key or narrowed token).
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -296,12 +284,8 @@ async def asyncio(
     number of rules): keep reading until meta.cursor is null. For what happened to one email of yours,
     every rule's decision on it and, for another member's rule covering you, who receives what it
     shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id
-    <email-id>). Whether a rule delivered the email by webhook is not in the rule results: on your own
-    mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id> --json) counts each
-    rule's webhook deliveries; on another member's mail, GET /v1/webhooks/deliveries?email_id=<email-id>
-    (primitive webhook-deliveries list --email-id <email-id>, with webhooks:read) lists them. Needs
-    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token).
+    <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no
+    API key, agent key or narrowed token).
 
     Args:
         limit (int | Unset):  Default: 50.

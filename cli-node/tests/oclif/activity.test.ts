@@ -459,34 +459,6 @@ describe("activity concerning command", () => {
     expect(COMMANDS["activity:concerning"]).toBeDefined();
   });
 
-  it("marks a notice whose rule has since been deleted", () => {
-    const out = formatConcerningRows([
-      item({
-        kind: "email_rule_coverage",
-        name: "Vendor invoices",
-        state: "started",
-        rule_id: "3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f",
-        rule_now: "deleted",
-        owned_now: "someone_else",
-        created_through: { kind: "member", id: "u-3", name: "Sam Rivera" },
-      }),
-      item({
-        kind: "email_rule_coverage",
-        name: "Other rule",
-        state: "started",
-        owned_now: "someone_else",
-        created_through: { kind: "member", id: "u-3", name: "Sam Rivera" },
-      }),
-    ]);
-    expect(out).toMatch(
-      /^started\s+.*Vendor invoices \(deleted\)\s+Sam Rivera/m,
-    );
-    expect(out).toMatch(/^started\s+.*Other rule\s+Sam Rivera/m);
-    expect(out).not.toMatch(/Other rule \(deleted\)/);
-    // No baseline row, so no baseline footer.
-    expect(out).not.toContain("baseline:");
-  });
-
   it("says under the table what a baseline notice is, when one is listed", () => {
     const out = formatConcerningRows([
       item({
@@ -554,25 +526,6 @@ describe("activity concerning command", () => {
     }
   });
 
-  it("lists the pending and unfinished footnotes together", () => {
-    const all = formatConcerningRows(
-      [
-        item({
-          kind: "email_rule_coverage",
-          state: "pending",
-          name: "Waiting",
-        }),
-        item({ kind: "email_rule_coverage", state: "started", name: "Other" }),
-      ],
-      false,
-      null,
-      false,
-    );
-    expect(all).toContain("pending: the rule covers you now");
-    expect(all).toContain("did not finish");
-    expect(all).not.toContain("CHANGE");
-  });
-
   it("lists coverage notices with the rule's author, and asks the API for exactly that", async () => {
     const urls = useApi([
       page(
@@ -621,17 +574,10 @@ describe("activity concerning command", () => {
     expect(out).toMatch(/More: \S+ activity concerning --cursor next-page$/m);
   });
 
-  it("never reads an empty listing as no rule covering you: it says how far the notices go and where to look now", async () => {
-    const now =
-      "Notices can lag, so a rule that starts covering your mail may not appear here yet. `primitive email-rule-oversight list-email-rules-covering-me` shows what covers you now.";
-    expect(formatConcerningRows([], true)).toBe(
-      `Nothing recorded for you yet. ${now}`,
-    );
-    expect(formatConcerningRows([], true, "2026-11-12T23:50:03.315Z")).toBe(
-      `Nothing recorded for you as of 2026-11-12 23:50 UTC. ${now}`,
-    );
-    expect(formatConcerningRows([])).toBe("Nothing to show.");
-    expect(formatConcerningRows([], true)).not.toMatch(/has covered/);
+  it("never reads an empty listing as no rule covering you: it says where to look now", async () => {
+    const empty =
+      "No coverage notices to show. `primitive email-rule-oversight list-email-rules-covering-me` shows what covers you now.";
+    expect(formatConcerningRows([])).toBe(empty);
     const urls = useApi([
       {
         body: {
@@ -641,7 +587,6 @@ describe("activity concerning command", () => {
             items: [],
             withheld: [],
             next_cursor: null,
-            as_of: "2026-11-12T23:50:03.315Z",
           },
         },
       },
@@ -655,116 +600,7 @@ describe("activity concerning command", () => {
     await ActivityConcerningCommand.run([], { root });
     // The notices only: no other read.
     expect(urls.map((url) => url.pathname)).toEqual(["/v1/activity/objects"]);
-    expect(lines.join("\n")).toContain(
-      `Nothing recorded for you as of 2026-11-12 23:50 UTC. ${now}`,
-    );
-  });
-
-  it("lists a rule that covers you before its notice is written as pending, and keeps as_of in --json", async () => {
-    const pending = item({
-      kind: "email_rule_coverage",
-      id: "6e4dc223-0000-4000-8000-000000000001",
-      name: "edge-test-noshare-secrets",
-      state: "pending",
-      created_at: "2026-11-12T23:49:21.000Z",
-      owned_now: "someone_else",
-      created_through: { kind: "member", id: "u-1", name: "Ethan Byrd" },
-    });
-    const out = formatConcerningRows([pending], true, null);
-    expect(out).toMatch(
-      /^pending\s+2026-11-12 23:49\s+edge-test-noshare-secrets\s+Ethan Byrd\s+6e4dc223-0000-4000-8000-000000000001$/m,
-    );
-    expect(out).toContain(
-      "pending: the rule covers you now and its notice is not written yet.",
-    );
-    expect(formatConcerningRows([item({ state: "started" })])).not.toContain(
-      "pending:",
-    );
-    useApi([
-      {
-        body: {
-          success: true,
-          data: {
-            covers: "you",
-            items: [pending],
-            withheld: [],
-            next_cursor: null,
-            as_of: null,
-          },
-        },
-      },
-    ]);
-    const lines: string[] = [];
-    vi.spyOn(ActivityConcerningCommand.prototype, "log").mockImplementation(
-      (message?: string) => {
-        lines.push(message ?? "");
-      },
-    );
-    await ActivityConcerningCommand.run(["--json"], { root });
-    expect(JSON.parse(lines.join("\n"))).toMatchObject({
-      items: [{ id: pending.id, state: "pending" }],
-      as_of: null,
-    });
-  });
-
-  it("keeps pending_complete in --json, and says when the check for pending rows did not finish", async () => {
-    const unfinished =
-      "The check for rules that cover you with no notice written yet did not finish, so some may be missing: run this again in a moment.";
-    const covering =
-      "`primitive email-rule-oversight list-email-rules-covering-me` shows what covers you now.";
-    // Nothing listed, but the check ran out of time: not "nothing recorded".
-    expect(formatConcerningRows([], false, null, false)).toBe(
-      `${unfinished} ${covering}`,
-    );
-    const started = item({ kind: "email_rule_coverage", state: "started" });
-    expect(formatConcerningRows([started], false, null, false)).toContain(
-      `\n\n${unfinished} ${covering}`,
-    );
-    // Under a pending row's own note, the pointer is not said twice.
-    const pending = item({ kind: "email_rule_coverage", state: "pending" });
-    const both = formatConcerningRows([pending], false, null, false);
-    expect(both.split(covering)).toHaveLength(2);
-    expect(both.endsWith(unfinished)).toBe(true);
-    expect(formatConcerningRows([started], true, null, true)).not.toContain(
-      unfinished,
-    );
-    const answer = (pending_complete?: boolean) => ({
-      body: {
-        success: true,
-        data: {
-          covers: "you",
-          items: [],
-          withheld: [],
-          next_cursor: null,
-          as_of: "2026-11-12T23:50:03.315Z",
-          ...(pending_complete === undefined ? {} : { pending_complete }),
-        },
-      },
-    });
-    const lines: string[] = [];
-    vi.spyOn(ActivityConcerningCommand.prototype, "log").mockImplementation(
-      (message?: string) => {
-        lines.push(message ?? "");
-      },
-    );
-    useApi([answer(false)]);
-    await ActivityConcerningCommand.run(["--json"], { root });
-    expect(JSON.parse(lines.join("\n"))).toMatchObject({
-      pending_complete: false,
-    });
-    // Unfinished is never read as a complete, empty listing.
-    lines.length = 0;
-    useApi([
-      answer(false),
-      { body: { success: true, data: [], meta: { cursor: null } } },
-    ]);
-    await ActivityConcerningCommand.run([], { root });
-    expect(lines.join("\n")).toBe(`${unfinished} ${covering}`);
-    // An answer without it keeps the document as it was.
-    lines.length = 0;
-    useApi([answer()]);
-    await ActivityConcerningCommand.run(["--json"], { root });
-    expect(JSON.parse(lines.join("\n"))).not.toHaveProperty("pending_complete");
+    expect(lines.join("\n")).toContain(empty);
   });
 });
 

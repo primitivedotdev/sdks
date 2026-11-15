@@ -88,8 +88,7 @@ class EmailSummary:
             received_at (datetime.datetime):
             webhook_attempt_count (int): Only this email's routed delivery (the webhook or Function routing sent it to),
                 never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST
-                /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET
-                /emails/{id}, for the mailbox's owner. Its attempts.
+                /emails/{id}/replay), and says nothing about rule deliveries. Its attempts.
             reply_count (int): Number of replies recorded against this email: sends whose
                 `in_reply_to_email_id` is this email, the same linkage that populates
                 `EmailDetail.replies`, excluding sends that never went out (status

@@ -32,6 +32,10 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
         Attributes:
             rule_version (int): The version of the rule that decided.
             matched (bool):
+            near_miss (bool): Not matched, but nearly: its conditions held and its questions did not match it, or it needs
+                several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or
+                is_false). False when detail_withheld is true. Decisions recorded under the earlier definition counted an
+                exclusion too.
             parts (list[ListEmailRuleResultsResultRulesItemDecisionType0PartsItem]): How each top-level part of the rule
                 decided. Empty when a fact the rule reads was missing, so it was not evaluated, or when detail_withheld is true.
             question_answers (list[ListEmailRuleResultsResultRulesItemDecisionType0QuestionAnswersItem]): The answers to the
@@ -39,10 +43,6 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
             tree (EmailRuleTree | None): The conditions and questions of the version that decided, so the result reads in
                 that version's words.
             created_at (datetime.datetime):
-            near_miss (bool | Unset): Not matched, but nearly: its conditions held and its questions did not match it, or it
-                needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level
-                not, or is_false). False when detail_withheld is true. Decisions recorded under the earlier definition counted
-                an exclusion too.
             detail_withheld (bool | Unset): Present, as true, on a result for an email whose content cannot be read
                 (withheld, failed to parse or discarded): matched still says what the rule decided, but how it got there was
                 read from that content, so parts and question_answers are empty and near_miss is false. Absent otherwise.
@@ -54,11 +54,11 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
 
     rule_version: int
     matched: bool
+    near_miss: bool
     parts: list[ListEmailRuleResultsResultRulesItemDecisionType0PartsItem]
     question_answers: list[ListEmailRuleResultsResultRulesItemDecisionType0QuestionAnswersItem]
     tree: EmailRuleTree | None
     created_at: datetime.datetime
-    near_miss: bool | Unset = UNSET
     detail_withheld: bool | Unset = UNSET
     withheld_by: list[EmailRuleWithheldBy] | Unset = UNSET
     withheld_by_hidden: int | Unset = UNSET
@@ -76,6 +76,8 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
         rule_version = self.rule_version
 
         matched = self.matched
+
+        near_miss = self.near_miss
 
         parts = []
         for parts_item_data in self.parts:
@@ -99,8 +101,6 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
 
         created_at = self.created_at.isoformat()
 
-        near_miss = self.near_miss
-
         detail_withheld = self.detail_withheld
 
         withheld_by: list[dict[str, Any]] | Unset = UNSET
@@ -120,13 +120,12 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
         field_dict.update({
             "rule_version": rule_version,
             "matched": matched,
+            "near_miss": near_miss,
             "parts": parts,
             "question_answers": question_answers,
             "tree": tree,
             "created_at": created_at,
         })
-        if near_miss is not UNSET:
-            field_dict["near_miss"] = near_miss
         if detail_withheld is not UNSET:
             field_dict["detail_withheld"] = detail_withheld
         if withheld_by is not UNSET:
@@ -148,6 +147,8 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
         rule_version = d.pop("rule_version")
 
         matched = d.pop("matched")
+
+        near_miss = d.pop("near_miss")
 
         parts = []
         _parts = d.pop("parts")
@@ -192,8 +193,6 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
 
 
 
-        near_miss = d.pop("near_miss", UNSET)
-
         detail_withheld = d.pop("detail_withheld", UNSET)
 
         _withheld_by = d.pop("withheld_by", UNSET)
@@ -213,11 +212,11 @@ class ListEmailRuleResultsResultRulesItemDecisionType0:
         list_email_rule_results_result_rules_item_decision_type_0 = cls(
             rule_version=rule_version,
             matched=matched,
+            near_miss=near_miss,
             parts=parts,
             question_answers=question_answers,
             tree=tree,
             created_at=created_at,
-            near_miss=near_miss,
             detail_withheld=detail_withheld,
             withheld_by=withheld_by,
             withheld_by_hidden=withheld_by_hidden,

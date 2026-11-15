@@ -44,9 +44,6 @@ class TestEmailRuleOnSampleRequest:
             kind (TestEmailRuleOnSampleRequestKind | Unset): Required with tree: do_not_share tests it as a rule that blocks
                 sharing.
             english (str | Unset): With tree: its description, which the answer's rule.warnings read.
-            with_protection (bool | Unset): With true, a grant rule that matches is also judged against the active do-not-
-                share rules over the first recipient's mailbox, which you must read in full and the rule must run over; see
-                protection. Limited to 20 an hour per member.
      """
 
     email: TestEmailRuleOnSampleRequestEmail
@@ -57,7 +54,6 @@ class TestEmailRuleOnSampleRequest:
     request_id: UUID | Unset = UNSET
     kind: TestEmailRuleOnSampleRequestKind | Unset = UNSET
     english: str | Unset = UNSET
-    with_protection: bool | Unset = UNSET
 
 
 
@@ -97,8 +93,6 @@ class TestEmailRuleOnSampleRequest:
 
         english = self.english
 
-        with_protection = self.with_protection
-
 
         field_dict: dict[str, Any] = {}
 
@@ -119,8 +113,6 @@ class TestEmailRuleOnSampleRequest:
             field_dict["kind"] = kind
         if english is not UNSET:
             field_dict["english"] = english
-        if with_protection is not UNSET:
-            field_dict["with_protection"] = with_protection
 
         return field_dict
 
@@ -199,8 +191,6 @@ class TestEmailRuleOnSampleRequest:
 
         english = d.pop("english", UNSET)
 
-        with_protection = d.pop("with_protection", UNSET)
-
         test_email_rule_on_sample_request = cls(
             email=email,
             tree=tree,
@@ -210,7 +200,6 @@ class TestEmailRuleOnSampleRequest:
             request_id=request_id,
             kind=kind,
             english=english,
-            with_protection=with_protection,
         )
 
         return test_email_rule_on_sample_request

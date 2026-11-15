@@ -20,20 +20,20 @@ T = TypeVar("T", bound="CreateEmailRuleResultAffects")
 
 @_attrs_define
 class CreateEmailRuleResultAffects:
-    """ After an update that saved a version, or turned a grant rule active: API keys listing the rule and the webhooks they
-    own, which read and receive what a grant rule grants from now on. shares_ended is always 0: a new version keeps the
-    rule's share (share_notice says so). Saving a version does not by itself change the rule's state. Absent after any
-    other write, and if not read.
+    """ After an update that saved a version, or turned a grant rule active: your own keys and webhooks that receive what it
+    grants from now on, counted as receivers counts them, and how many live shares it has. Nothing about a colleague it
+    is shared with is counted. All zero for a rule that is not an active grant rule. Absent after any other write, and
+    if not read.
 
         Attributes:
             keys (int):
-            endpoints (int):
-            shares_ended (int):
+            webhooks (int):
+            shares (int):
      """
 
     keys: int
-    endpoints: int
-    shares_ended: int
+    webhooks: int
+    shares: int
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -43,17 +43,17 @@ class CreateEmailRuleResultAffects:
     def to_dict(self) -> dict[str, Any]:
         keys = self.keys
 
-        endpoints = self.endpoints
+        webhooks = self.webhooks
 
-        shares_ended = self.shares_ended
+        shares = self.shares
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "keys": keys,
-            "endpoints": endpoints,
-            "shares_ended": shares_ended,
+            "webhooks": webhooks,
+            "shares": shares,
         })
 
         return field_dict
@@ -65,14 +65,14 @@ class CreateEmailRuleResultAffects:
         d = dict(src_dict)
         keys = d.pop("keys")
 
-        endpoints = d.pop("endpoints")
+        webhooks = d.pop("webhooks")
 
-        shares_ended = d.pop("shares_ended")
+        shares = d.pop("shares")
 
         create_email_rule_result_affects = cls(
             keys=keys,
-            endpoints=endpoints,
-            shares_ended=shares_ended,
+            webhooks=webhooks,
+            shares=shares,
         )
 
 
