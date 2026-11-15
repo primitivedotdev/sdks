@@ -17,14 +17,9 @@
 
 import { Errors, Flags } from "@oclif/core";
 import type {
-  DeleteEmailRuleResult,
-  EmailRuleScopeWarning,
-  EmailRuleWritten,
-  GetEmailRuleScopeResult,
   ListEmailRuleResultsResult,
   TestEmailRuleResult,
 } from "@primitivedotdev/api-core";
-import { withCliCommands } from "./api-path-commands.js";
 import {
   ADD_SAMPLES_FILE_FLAG,
   EXPECT_SAMPLES_FILE_FLAG,
@@ -47,6 +42,7 @@ import type {
   OperationExtension,
   OperationReport,
 } from "./operation-extension.js";
+import { ruleNotesLines, ruleNotesReport } from "./rule-notes.js";
 import { shownLine, shownText } from "./terminal-text.js";
 
 const EMAIL_ID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -276,25 +272,6 @@ export function formatFact(
   fact: FactValue | null | undefined,
 ): string {
   return `${name}: ${formatFactValue(fact)}`;
-}
-
-export function scopeWarningLine(warning: EmailRuleScopeWarning): string {
-  const message =
-    typeof warning.message === "string" && warning.message.trim()
-      ? withCliCommands(warning.message.trim())
-      : undefined;
-  if (!message) return `Scope warning: ${warning.name} (${warning.reason})`;
-  return message.includes(warning.name)
-    ? `Scope warning: ${message}`
-    : `Scope warning: ${warning.name}: ${message}`;
-}
-
-function scopeWarningLines(warnings: unknown): string[] {
-  return Array.isArray(warnings)
-    ? (warnings as EmailRuleScopeWarning[])
-        .filter(isRecord)
-        .map(scopeWarningLine)
-    : [];
 }
 
 // test-email-rule
@@ -787,10 +764,7 @@ export function testEmailRuleReport(
     (typeof counts?.not_found === "number" ? counts.not_found : 0);
   const lines = [
     ...windowLine(data, tested),
-    ...(Array.isArray(summary?.warnings) ? summary.warnings : []).map(
-      (warning) => `Warning: ${warning}`,
-    ),
-    ...scopeWarningLines(result.scope_warnings),
+    ...ruleNotesLines(data),
     ...conditionLines(summary),
     ...questionLines(summary, results),
     ...expectationsLines(result.expectations, results, name),
@@ -896,333 +870,6 @@ export function writtenSampleNamer(
     }
     return indexed(`saved sample ${index + 1}`, index);
   };
-}
-
-function expectationsCheckLine(
-  check: EmailRuleWritten["expectations_check"],
-  ruleId: string,
-  name: (index: number) => string = (index) => `saved sample ${index + 1}`,
-): string | undefined {
-  if (!isRecord(check)) return undefined;
-  const on =
-    typeof check.version === "number"
-      ? `version ${check.version}`
-      : "the current version";
-  const failed = Array.isArray(check.failed) ? check.failed : [];
-  const undecided = Array.isArray(check.undecided) ? check.undecided : [];
-  const failedSamples = indexList(
-    (check as Record<string, unknown>).failed_samples,
-  );
-  const undecidedSamples = indexList(
-    (check as Record<string, unknown>).undecided_samples,
-  );
-  if (
-    check.passed &&
-    failed.length === 0 &&
-    undecided.length === 0 &&
-    failedSamples.length === 0 &&
-    undecidedSamples.length === 0
-  )
-    return `Expectations on ${on}: all passed.`;
-  const parts: string[] = [];
-  if (failed.length > 0)
-    parts.push(`${failed.length} failed (${failed.join(", ")})`);
-  if (failedSamples.length > 0)
-    parts.push(
-      `${plural(failedSamples.length, "made-up email", "made-up emails")} failed (${failedSamples.map(name).join(", ")})`,
-    );
-  // passed null: none failed, but a write judges without classifying mail
-  // or asking questions, so some are not decided yet. That is not a failure.
-  if (
-    failed.length === 0 &&
-    failedSamples.length === 0 &&
-    (undecided.length > 0 || undecidedSamples.length > 0)
-  )
-    parts.push("none failed");
-  if (undecided.length > 0)
-    parts.push(`${undecided.length} undecided (${undecided.join(", ")})`);
-  // A saved write's check never judges made-up emails: only the guard
-  // before an update with if_expectations_pass does, and it then passed.
-  if (undecidedSamples.length > 0)
-    parts.push(
-      `${plural(undecidedSamples.length, "made-up email", "made-up emails")} not judged by this write (${undecidedSamples.map(name).join(", ")})`,
-    );
-  const rest =
-    undecided.length > 0 || undecidedSamples.length > 0
-      ? ` To decide the rest, run \`primitive email-rules test-email-rule --rule-id ${ruleId}\`.`
-      : "";
-  // On an update that saved a version that did not pass: saved anyway, and whether it is live.
-  const note =
-    typeof check.note === "string" && check.note.trim()
-      ? ` ${check.note.trim()}`
-      : "";
-  return `Expectations on ${on}: ${parts.length > 0 ? parts.join(", ") : "not passed"}.${rest}${note}`;
-}
-
-/** What a written do_not_share rule's report says first. */
-const BLOCKS_SHARING =
-  "This rule blocks sharing (kind do_not_share): while it is active, no rule shares an email it matches.";
-
-/** A do_not_share rule's protection_note, as a line, or undefined. */
-export function protectionLine(rule: unknown): string | undefined {
-  if (!isRecord(rule)) return undefined;
-  const note = rule.protection_note;
-  return typeof note === "string" && note.trim()
-    ? `Protection: ${note.trim()}`
-    : undefined;
-}
-
-/** What a restore_version write saved, as its answer says. */
-function restoredLine(
-  restored: unknown,
-  currentVersion: unknown,
-): string | undefined {
-  if (!isRecord(restored) || typeof restored.version !== "number")
-    return undefined;
-  const note =
-    typeof restored.note === "string" && restored.note.trim()
-      ? ` ${restored.note.trim()}`
-      : "";
-  const as =
-    typeof currentVersion === "number"
-      ? `as version ${currentVersion}, now current`
-      : "as the current version";
-  return `Saved version ${restored.version} again ${as}.${note}`;
-}
-
-/**
- * Who an update that saved a version, or turned a grant rule active, reaches,
- * as its answer counts them: the keys listing the rule and the webhooks those
- * keys own, and the shares the write ended when it ended any. A new version
- * keeps a rule's share, so the API counts none; the answer's `share_notice`
- * says the share goes on.
- */
-export function affectsLine(
-  affects: unknown,
-  write: {
-    /** The write sent state active and no tree or restored version. */
-    activatedOnly?: boolean;
-    /** It also sent a scope, which saves a version when it differs from the rule's. */
-    scopeSent?: boolean;
-    /** The state the write sent, if any, and the rule's state after it. */
-    stateSent?: unknown;
-    state?: unknown;
-  } = {},
-): string | undefined {
-  if (!isRecord(affects)) return undefined;
-  const count = (value: unknown) =>
-    typeof value === "number" && Number.isFinite(value) ? value : undefined;
-  const keys = count(affects.keys);
-  const endpoints = count(affects.endpoints);
-  // A new version ends no share, so a missing count reads as none.
-  const shares = count(affects.shares_ended) ?? 0;
-  const reach = `${plural(keys ?? 0, "API key", "API keys")} listing the rule and ${plural(endpoints ?? 0, "webhook", "webhooks")} those keys own`;
-  // Sent only for a saved version or a rule turned active. With no tree or
-  // restored version it is the activation, and with a scope sent, the scope
-  // too (a changed scope saves a version that copies the current words and
-  // tree): what it reaches now either way.
-  if (write.activatedOnly && keys !== undefined && endpoints !== undefined)
-    return `Now active${write.scopeSent ? ", over the scope this write sent" : ""}: it reaches ${reach}.`;
-  if (keys === undefined || endpoints === undefined) return undefined;
-  const ended =
-    shares > 0 ? `; it ended ${plural(shares, "share", "shares")}` : "";
-  // A write that also sent a state may have changed it: say what it is now.
-  if (write.stateSent !== undefined && typeof write.state === "string")
-    return `This version reaches ${reach}${ended}. The rule is now ${write.state}.`;
-  return `This version reaches ${reach}${ended}. The rule keeps its state.`;
-}
-
-/** The rule's author, by name and email where the answer gives them. */
-export function authorLine(author: unknown): string | undefined {
-  if (!isRecord(author) || typeof author.user_id !== "string") return undefined;
-  const name =
-    typeof author.name === "string" && author.name.trim()
-      ? author.name.trim()
-      : null;
-  const email =
-    typeof author.email === "string" && author.email.trim()
-      ? author.email.trim()
-      : null;
-  if (name && email) return `Author: ${name} <${email}>`;
-  if (name || email) return `Author: ${name ?? email}`;
-  return `Author: user ${author.user_id} (name and email not shown to you)`;
-}
-
-/** A note the server wrote on a rule answer, as a line, or undefined. */
-function noteLine(note: unknown): string | undefined {
-  return typeof note === "string" && note.trim() ? note.trim() : undefined;
-}
-
-/** The stderr report of a rule written by create-email-rule or update-email-rule. */
-export function writtenEmailRuleReport(
-  data: unknown,
-  request: {
-    body: unknown;
-    path?: Record<string, unknown>;
-    flags?: Record<string, unknown>;
-  },
-): OperationReport {
-  if (!isRecord(data)) return { lines: [] };
-  const rule = data as Partial<EmailRuleWritten>;
-  const ruleId = typeof rule.id === "string" ? rule.id : "<rule-id>";
-  const lines = scopeWarningLines(rule.scope_warnings);
-  // A rule that blocks sharing reads like any other in the JSON; say so.
-  if ((rule as { kind?: unknown }).kind === "do_not_share") {
-    // The server's note says what it protects now; an older server sends
-    // none, so say the one thing that was known.
-    const note = protectionLine(rule);
-    lines.unshift(
-      ...(note
-        ? [BLOCKS_SHARING, note]
-        : [
-            `${BLOCKS_SHARING}${typeof rule.state === "string" && rule.state !== "active" ? " It blocks nothing until it is active." : ""}`,
-          ]),
-    );
-  }
-  const restored = restoredLine(rule.restored_from, rule.current_version);
-  if (restored) lines.push(restored);
-  // A write that turned the rule active saves no version unless it sent a
-  // tree or a restored one, or changed the scope: affects counts what it
-  // reaches now either way. A do-not-share rule turned on reaches no key, so
-  // its line is left out, unless a scope was sent, which may have saved a
-  // version, said as a tree saved on one is.
-  const body = isRecord(request.body) ? request.body : {};
-  const activatedOnly =
-    body.state === "active" &&
-    body.tree === undefined &&
-    body.restore_version === undefined;
-  const scopeSent = body.evaluation_scope !== undefined;
-  const reach =
-    (rule as { kind?: unknown }).kind === "do_not_share" &&
-    activatedOnly &&
-    !scopeSent
-      ? undefined
-      : affectsLine(rule.affects, {
-          activatedOnly,
-          scopeSent,
-          stateSent: body.state,
-          state: rule.state,
-        });
-  if (reach) lines.push(reach);
-  // That the rule's share goes on under the new version, and with whom; then,
-  // for a version saved on an active rule keys, webhooks or a share read
-  // without a check, what it changes; and, on a grant rule's create, that
-  // do-not-share rules run first.
-  for (const note of [rule.share_notice, rule.notice, rule.do_not_share_note]) {
-    const line = noteLine(note);
-    if (line) lines.push(line);
-  }
-  const sentExpectations = sentExpectationsIn(request.body);
-  const name = writtenSampleNamer(
-    request.body,
-    request.flags,
-    (rule as Record<string, unknown>).expectation_samples,
-    sampleDetailLabels(rule.expectations_check),
-  );
-  const checked = expectationsCheckLine(rule.expectations_check, ruleId, name);
-  if (checked) lines.push(checked);
-  else if (sentExpectations)
-    lines.push(
-      `Expectations were not checked on this write. Test them with \`primitive email-rules test-email-rule --rule-id ${ruleId}\`.`,
-    );
-  // To its author: objections to the rule waiting for an answer.
-  const objections = noteLine(rule.objection_notice);
-  if (objections) lines.push(objections);
-  return { lines };
-}
-
-/** Whether a rule write sent expectations: emails by id, or made-up emails to save or add. */
-function sentExpectationsIn(body: unknown): boolean {
-  if (!isRecord(body)) return false;
-  const some = (value: unknown) => Array.isArray(value) && value.length > 0;
-  return (
-    isRecord(body.expectations) ||
-    some(body.add_expectation_samples) ||
-    some(body.expectation_samples)
-  );
-}
-
-// get-email-rule-scope
-
-/** The stderr report of get-email-rule-scope. */
-export function emailRuleScopeReport(data: unknown): OperationReport {
-  if (!isRecord(data)) return { lines: [] };
-  const scope = data as Partial<GetEmailRuleScopeResult>;
-  const lines = scopeWarningLines(scope.scope_warnings);
-  if (scope.reads_nothing === true) {
-    const stopped =
-      typeof scope.stopped_reason === "string" && scope.stopped_reason
-        ? ` Stopped: ${scope.stopped_reason}.`
-        : "";
-    lines.push(
-      `This rule reads no mail now: it cannot run as its author, or everything its scope names is at none of the organization's domains or no longer read.${stopped}`,
-    );
-  }
-  return { lines };
-}
-
-// delete-email-rule
-
-/**
- * What a rule's delete left behind, read from the answer: the shares it
- * ended, and the keys that still list the rule and now read nothing through
- * it. An answer without these fields (an older server) prints nothing.
- */
-export function deleteEmailRuleReport(
-  data: unknown,
-  request: { path: Record<string, unknown> },
-): OperationReport {
-  if (!isRecord(data)) return { lines: [] };
-  const answer = data as Partial<DeleteEmailRuleResult>;
-  const lines: string[] = [];
-  const ended = Array.isArray(answer.ended_shares)
-    ? answer.ended_shares.length
-    : 0;
-  // The server's notice says with whom each share was and what ending it
-  // takes away; without one (an older server), the count.
-  const shareNotice = noteLine(answer.share_notice);
-  if (shareNotice) lines.push(shareNotice);
-  else if (ended > 0) {
-    lines.push(
-      `Ended ${ended === 1 ? "1 share" : `${ended} shares`} of this rule (end_reason rule_deleted). ${ended === 1 ? "It keeps its record" : "Each keeps its record"}.`,
-    );
-  }
-  const keys = Array.isArray(answer.keys) ? answer.keys : [];
-  const others =
-    typeof answer.other_keys === "number" && answer.other_keys > 0
-      ? answer.other_keys
-      : 0;
-  const ruleId =
-    typeof request.path.id === "string" ? request.path.id : "<rule-id>";
-  if (keys.length > 0) {
-    lines.push(
-      `${keys.length === 1 ? "1 key still lists" : `${keys.length} keys still list`} this rule and now ${keys.length === 1 ? "reads" : "read"} nothing through it:`,
-    );
-    for (const key of keys) {
-      lines.push(`  ${key.id}  ${key.name ?? "(no name)"}  ${key.key_prefix}`);
-    }
-    lines.push(
-      keys.length === 1
-        ? `Take the rule off with \`primitive keys update ${keys[0]?.id} --remove-rule ${ruleId}\`, or revoke the key.`
-        : `Take the rule off each with \`primitive keys update <key-id> --remove-rule ${ruleId}\`, or revoke them.`,
-    );
-  }
-  if (others > 0) {
-    lines.push(
-      keys.length > 0
-        ? `${others === 1 ? "1 more key" : `${others} more keys`} you cannot read ${others === 1 ? "lists" : "list"} this rule too.`
-        : `${others === 1 ? "1 key" : `${others} keys`} you cannot read ${others === 1 ? "lists" : "list"} this rule and now ${others === 1 ? "reads" : "read"} nothing through it.`,
-    );
-  }
-  // A server that says what a delete left but could not read the keys leaves them out.
-  if (
-    Array.isArray(answer.ended_shares) &&
-    answer.keys === undefined &&
-    answer.other_keys === undefined
-  ) {
-    lines.push("Could not check which keys list this rule.");
-  }
-  return { lines };
 }
 
 // update-email-rule's 409
@@ -1475,154 +1122,6 @@ function undecidedSamplesMayStay(count: number, reason: string): boolean {
   );
 }
 
-// test-email-rule-on-sample
-
-/**
- * The stderr report of test-email-rule-on-sample with --with-protection:
- * whether a match would be shared, and the do-not-share rules that would
- * keep it from being shared. Nothing without protection in the answer.
- */
-export function testSampleProtectionReport(data: unknown): OperationReport {
-  if (!isRecord(data) || !isRecord(data.protection)) return { lines: [] };
-  const protection = data.protection;
-  const mailbox =
-    typeof protection.mailbox === "string" && protection.mailbox
-      ? ` over ${protection.mailbox}`
-      : "";
-  if (protection.outcome === "not_matched")
-    return {
-      lines: [
-        `Protection${mailbox}: the rule did not match, so nothing would be shared and no do-not-share rule was judged.`,
-      ],
-    };
-  if (protection.outcome === "shared")
-    return {
-      lines: [
-        `Protection${mailbox}: a match would be shared; no do-not-share rule keeps it back.`,
-      ],
-    };
-  if (protection.outcome !== "withheld") return { lines: [] };
-  const withheld = (
-    Array.isArray(protection.withheld_by) ? protection.withheld_by : []
-  ).filter(isRecord);
-  const named = withheld.map(
-    (rule) =>
-      `${typeof rule.name === "string" ? rule.name : "a rule"} (${rule.id}, ${rule.reason === "undecided" ? "undecided" : "matched"})`,
-  );
-  const hidden =
-    typeof protection.withheld_by_hidden === "number" &&
-    protection.withheld_by_hidden > 0
-      ? protection.withheld_by_hidden
-      : 0;
-  const by = [
-    ...named,
-    ...(hidden > 0
-      ? [plural(hidden, "rule you cannot see", "rules you cannot see")]
-      : []),
-  ];
-  const undecided = withheld.some((rule) => rule.reason === "undecided")
-    ? " An undecided one holds it back until it is decided."
-    : "";
-  return {
-    lines: [
-      `Protection${mailbox}: a match would be withheld${by.length > 0 ? ` by ${by.join(", ")}` : ""}.${undecided}`,
-    ],
-  };
-}
-
-// compile-email-rule
-
-/** Where compile counted breadth, by the evaluation_scope it was sent. */
-const BREADTH_SCOPE: Readonly<Record<string, string>> = {
-  own_mailboxes: "in your own mailboxes",
-  author: "in all the mail you can read",
-  selected: "in the inboxes and domains the selected scope names",
-};
-
-/** The stderr report of compile-email-rule: how many recent emails it holds for. */
-export function compileEmailRuleReport(
-  data: unknown,
-  request?: { body?: unknown },
-): OperationReport {
-  if (!isRecord(data)) return { lines: [] };
-  const lines = [
-    // Names in the scope sent that no mail reaches, first: a typo there makes the rest moot.
-    ...scopeWarningLines(data.scope_warnings),
-    ...(Array.isArray(data.warnings) ? data.warnings : [])
-      .filter(
-        (warning): warning is string =>
-          typeof warning === "string" && warning.trim() !== "",
-      )
-      .map((warning) => `Warning: ${warning.trim()}`),
-  ];
-  const breadth = data.breadth;
-  // Counted over the evaluation_scope sent, by default your own mailboxes,
-  // as the answer's breadth_scope says when the server sends it.
-  const sent =
-    isRecord(request?.body) && typeof request.body.evaluation_scope === "string"
-      ? request.body.evaluation_scope
-      : undefined;
-  const counted =
-    isRecord(data.breadth_scope) &&
-    typeof data.breadth_scope.evaluation_scope === "string"
-      ? data.breadth_scope.evaluation_scope
-      : sent;
-  const where =
-    sent === undefined && (counted === undefined || counted === "own_mailboxes")
-      ? "in your own mailboxes, the default; pass --evaluation-scope to count over the scope you will save it with"
-      : (BREADTH_SCOPE[counted ?? "own_mailboxes"] ??
-        `in evaluation_scope ${counted}`);
-  if (
-    isRecord(breadth) &&
-    typeof breadth.checked === "number" &&
-    typeof breadth.matched === "number"
-  )
-    lines.push(
-      `Breadth: its conditions hold for ${breadth.matched} of ${plural(breadth.checked, "recent email", "recent emails")} checked ${where}.`,
-    );
-  return { lines };
-}
-
-// get-email-rule
-
-/** The stderr report of get-email-rule: who wrote it, and its revision. */
-export function getEmailRuleReport(data: unknown): OperationReport {
-  if (!isRecord(data)) return { lines: [] };
-  const lines: string[] = [];
-  const author = authorLine(data.author);
-  if (author) lines.push(author);
-  const protection = protectionLine(data);
-  if (protection) lines.push(protection);
-  if (typeof data.revision === "number")
-    lines.push(
-      `Revision ${data.revision}: pass --if-revision ${data.revision} to update-email-rule so a change made since is never replaced unseen.`,
-    );
-  // To its author: objections to the rule waiting for an answer.
-  const objections = noteLine(data.objection_notice);
-  if (objections) lines.push(objections);
-  return { lines };
-}
-
-// list-email-rules
-
-/** The stderr report of list-email-rules: the protective rules that protect nothing yet, or less than they seem. */
-export function listEmailRulesReport(data: unknown): OperationReport {
-  const rules = Array.isArray(data) ? data : [];
-  const lines: string[] = [];
-  for (const rule of rules) {
-    if (!isRecord(rule)) continue;
-    const note =
-      typeof rule.protection_note === "string"
-        ? rule.protection_note.trim()
-        : "";
-    if (!note) continue;
-    const id = typeof rule.id === "string" ? rule.id : "<rule-id>";
-    const name = typeof rule.name === "string" ? rule.name : "no name";
-    lines.push(`Protection of ${id} (${name}): ${note}`);
-  }
-  return { lines };
-}
-
 // The flags and reports, by generated operation
 
 /** What a samples file flag reads. */
@@ -1631,102 +1130,6 @@ const SAMPLES_FILE_SHAPE =
 
 const EXPECTATION_FLAG_NOTE =
   "Replaces any expect in --body-file or --raw-body. The answer reports them in expectations (passed, counts, results) and the exit code follows it; see --help-full.";
-
-/**
- * The stderr report of end-email-rule-share: the answer's note, which says
- * the rule itself is left as it was (ending a share does not turn it off)
- * and, to the member who shared, how to stop it.
- */
-export function endEmailRuleShareReport(data: unknown): OperationReport {
-  const note =
-    isRecord(data) && typeof data.note === "string" ? data.note.trim() : "";
-  return { lines: note ? [note] : [] };
-}
-
-/**
- * Whether a share made with you is working, from its `activity`, as one line:
- * the last hour that has ended (or in which an email was shared with you) in
- * which its rule looked at an email in the sharing member's mailboxes, how
- * many emails it has shared and when it last did, and whether the rule is
- * active. Nothing for a share without it: one you are not the person it is
- * shared with, one not live, or a server that predates the field.
- */
-export function shareActivityLines(share: unknown): string[] {
-  if (!isRecord(share) || !isRecord(share.activity)) return [];
-  const activity = share.activity;
-  const id = typeof share.id === "string" ? share.id : "<share-id>";
-  const rule =
-    isRecord(share.rule) && typeof share.rule.name === "string"
-      ? shownLine(share.rule.name)
-      : "";
-  const granter = isRecord(share.granter) ? share.granter : {};
-  const person =
-    shownLine(granter.name) || shownLine(granter.email) || "the member sharing";
-  const head = `Share ${id}${rule ? ` (${rule})` : ""}:`;
-  const count = activity.shared_emails;
-  const sharedAt =
-    typeof activity.last_shared_at === "string"
-      ? activity.last_shared_at
-      : null;
-  const unread = `${head} whether it is working could not be read just now; try again.`;
-  if (typeof count !== "number") return [unread];
-  // The hour counts the newest email shared, so it is never empty while something was shared; if it is, it was not read.
-  if (typeof activity.last_decided_at !== "string" && (count > 0 || sharedAt))
-    return [unread];
-  // A count and a last time that disagree were not read together either.
-  if (count > 0 !== (sharedAt !== null)) return [unread];
-  const decided =
-    typeof activity.last_decided_at === "string"
-      ? `its rule last looked at an email in ${person}'s mailboxes in the hour starting ${minuteUtc(activity.last_decided_at)}`
-      : `its rule has not looked at an email in ${person}'s mailboxes in any hour that has ended since it was shared with you`;
-  const more = activity.shared_emails_more === true;
-  const many = `${more ? "more than " : ""}${count.toLocaleString("en-US")}`;
-  const shared =
-    count === 0
-      ? "nothing has been shared with you yet"
-      : `it has shared ${many} ${count === 1 && !more ? "email" : "emails"} with you${sharedAt ? `, the last at ${minuteUtc(sharedAt)}` : ""}`;
-  const paused =
-    activity.rule_active === false
-      ? " The rule is not active, so nothing new is shared until it is."
-      : share.delivery_paused === true
-        ? " New email is not being shared with you right now; what was shared stays visible."
-        : "";
-  return [`${head} ${decided}; ${shared}.${paused}`];
-}
-
-/**
- * accept-email-rule-request without --json: the answer's notice, then the
- * rule as it was agreed, since the answer's request block holds the rule as
- * it was asked and reads like what was accepted.
- */
-export function acceptEmailRuleRequestReport(data: unknown): OperationReport {
-  if (!isRecord(data)) return { lines: [] };
-  const notice =
-    typeof data.notice === "string"
-      ? data.notice
-          .split(/\n\s*\n/)
-          .map((part) => part.trim())
-          .filter(Boolean)
-      : [];
-  const rule = isRecord(data.rule) ? data.rule : undefined;
-  const current = rule && isRecord(rule.current) ? rule.current : undefined;
-  const lines = [...notice];
-  if (rule && typeof rule.name === "string" && typeof rule.id === "string") {
-    const version =
-      typeof current?.version === "number"
-        ? `, version ${current.version}`
-        : "";
-    const state = typeof rule.state === "string" ? `, ${rule.state}` : "";
-    const agreed =
-      typeof current?.english === "string"
-        ? ` What you agreed to: ${current.english}`
-        : "";
-    lines.push(
-      `Accepted as ${rule.name} (${rule.id})${version}${state}.${agreed}`,
-    );
-  }
-  return { lines };
-}
 
 export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   string,
@@ -1799,7 +1202,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
       ...scopeSelectionBodyFields(flags, base),
     ],
     bodyProperties: ["expectations", "expectation_samples", "scope_selection"],
-    report: writtenEmailRuleReport,
+    report: ruleNotesReport,
   },
   updateEmailRule: {
     flags: {
@@ -1831,7 +1234,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
       "add_expectation_samples",
       "scope_selection",
     ],
-    report: writtenEmailRuleReport,
+    report: ruleNotesReport,
   },
   generateLookAlikes: {
     flags: {
@@ -1848,7 +1251,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
     flags: scopeSelectionFlags(),
     bodyFields: scopeSelectionBodyFields,
     bodyProperties: ["scope_selection"],
-    report: testSampleProtectionReport,
+    report: ruleNotesReport,
   },
   acceptEmailRuleRequest: {
     flags: {
@@ -1861,43 +1264,13 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
     },
     bodyFields: samplesBodyFields(false),
     bodyProperties: ["expectation_samples"],
-    report: acceptEmailRuleRequestReport,
+    report: ruleNotesReport,
   },
   compileEmailRule: {
     flags: scopeSelectionFlags(),
     bodyFields: scopeSelectionBodyFields,
     bodyProperties: ["scope_selection"],
-    report: compileEmailRuleReport,
-  },
-  endEmailRuleShare: {
-    flags: {},
-    report: endEmailRuleShareReport,
-  },
-  getEmailRuleShare: {
-    flags: {},
-    report: (data) => ({ lines: shareActivityLines(data) }),
-  },
-  listEmailRuleShares: {
-    flags: {},
-    report: (data) => ({
-      lines: (Array.isArray(data) ? data : []).flatMap(shareActivityLines),
-    }),
-  },
-  getEmailRule: {
-    flags: {},
-    report: getEmailRuleReport,
-  },
-  listEmailRules: {
-    flags: {},
-    report: listEmailRulesReport,
-  },
-  getEmailRuleScope: {
-    flags: {},
-    report: emailRuleScopeReport,
-  },
-  deleteEmailRule: {
-    flags: {},
-    report: deleteEmailRuleReport,
+    report: ruleNotesReport,
   },
 };
 

@@ -8,14 +8,11 @@ vi.mock("node:readline/promises", () => ({
   createInterface: () => ({ question: prompt.question, close: () => {} }),
 }));
 
-import { deleteEmailRuleReport } from "../../src/oclif/email-rule-authoring.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
 const API_BASE_URL = "https://api.delete-email-rule.test/v1";
 const RULE = "00000000-0000-4000-8000-0000000000aa";
-const SHARE = "00000000-0000-4000-8000-0000000000bb";
-const KEY = "00000000-0000-4000-8000-0000000000cc";
 const COMMAND = "email-rules:delete-email-rule";
 
 type Runnable = {
@@ -171,11 +168,8 @@ describe("delete-email-rule", () => {
   });
 });
 
-// A server that answers only { deleted: true } (before it said what a delete
-// left) gets the command's old output: the answer on stdout, and nothing on
-// stderr, so no report claims nothing was left.
-describe("delete-email-rule against a server that answers only deleted", () => {
-  it("prints the answer and no report, with or without --json", async () => {
+describe("delete-email-rule prints the answer as it came", () => {
+  it("prints the answer and no report of its own, with or without --json", async () => {
     answer = { deleted: true };
     const plain = await run([RULE]);
     expect(plain.exitCode).toBe(0);
@@ -187,115 +181,5 @@ describe("delete-email-rule against a server that answers only deleted", () => {
     expect(JSON.parse(json.stdout)).toEqual({ deleted: true });
     expect(json.stderr).toBe("");
     expect(deletes()).toHaveLength(2);
-  });
-});
-
-describe("delete-email-rule says what the delete left", () => {
-  it("names the shares it ended and the keys still listing the rule, on stderr", async () => {
-    answer = {
-      deleted: true,
-      ended_shares: [SHARE],
-      keys: [{ id: KEY, name: "Support reader", key_prefix: "prim_abc123" }],
-      other_keys: 2,
-    };
-    const result = await run([RULE]);
-    expect(result.exitCode).toBe(0);
-    expect(JSON.parse(result.stdout)).toEqual(answer);
-    expect(result.stderr).toContain(
-      "Ended 1 share of this rule (end_reason rule_deleted). It keeps its record.",
-    );
-    expect(result.stderr).toContain(
-      "1 key still lists this rule and now reads nothing through it:",
-    );
-    expect(result.stderr).toContain(`${KEY}  Support reader  prim_abc123`);
-    expect(result.stderr).toContain(
-      `Take the rule off with \`primitive keys update ${KEY} --remove-rule ${RULE}\`, or revoke the key.`,
-    );
-    expect(result.stderr).toContain(
-      "2 more keys you cannot read list this rule too.",
-    );
-  });
-
-  it("prints nothing for an answer that carries none of it", () => {
-    expect(
-      deleteEmailRuleReport({ deleted: true }, { path: { id: RULE } }),
-    ).toEqual({ lines: [] });
-    expect(
-      deleteEmailRuleReport(
-        { deleted: true, ended_shares: [], keys: [], other_keys: 0 },
-        { path: { id: RULE } },
-      ),
-    ).toEqual({ lines: [] });
-  });
-
-  it("counts in the plural and names a key without a name", () => {
-    const { lines } = deleteEmailRuleReport(
-      {
-        deleted: true,
-        ended_shares: [SHARE, SHARE],
-        keys: [
-          { id: KEY, name: null, key_prefix: "prim_a" },
-          { id: KEY, name: "B", key_prefix: "prim_b" },
-        ],
-        other_keys: 1,
-      },
-      { path: { id: RULE } },
-    );
-    expect(lines).toEqual([
-      "Ended 2 shares of this rule (end_reason rule_deleted). Each keeps its record.",
-      "2 keys still list this rule and now read nothing through it:",
-      `  ${KEY}  (no name)  prim_a`,
-      `  ${KEY}  B  prim_b`,
-      `Take the rule off each with \`primitive keys update <key-id> --remove-rule ${RULE}\`, or revoke them.`,
-      "1 more key you cannot read lists this rule too.",
-    ]);
-  });
-
-  it("says keys it cannot name now read nothing, when none are named", () => {
-    expect(
-      deleteEmailRuleReport(
-        { deleted: true, ended_shares: [], keys: [], other_keys: 2 },
-        { path: { id: RULE } },
-      ).lines,
-    ).toEqual([
-      "2 keys you cannot read list this rule and now read nothing through it.",
-    ]);
-    expect(
-      deleteEmailRuleReport(
-        { deleted: true, ended_shares: [], keys: [], other_keys: 1 },
-        { path: { id: RULE } },
-      ).lines,
-    ).toEqual([
-      "1 key you cannot read lists this rule and now reads nothing through it.",
-    ]);
-  });
-
-  it("prints the server's share notice in place of the share count", () => {
-    const notice =
-      "Deleting this rule ended its share with Dana (accepted at version 2): they can no longer read anything it shared through Primitive, even what it shared before; copies already delivered to their webhooks or downloaded stay with them. The share keeps its record.";
-    expect(
-      deleteEmailRuleReport(
-        {
-          deleted: true,
-          ended_shares: [SHARE],
-          keys: [],
-          other_keys: 0,
-          share_notice: `  ${notice} `,
-        },
-        { path: { id: RULE } },
-      ).lines,
-    ).toEqual([notice]);
-  });
-
-  it("says when the keys could not be checked", () => {
-    expect(
-      deleteEmailRuleReport(
-        { deleted: true, ended_shares: [SHARE] },
-        { path: { id: RULE } },
-      ).lines,
-    ).toEqual([
-      "Ended 1 share of this rule (end_reason rule_deleted). It keeps its record.",
-      "Could not check which keys list this rule.",
-    ]);
   });
 });

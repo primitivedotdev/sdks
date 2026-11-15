@@ -82,6 +82,7 @@ import {
   ReplyStateUnsupportedError,
   replyStateSurfaceForOperation,
 } from "./reply-state.js";
+import { RULE_NOTES_TAGS, ruleNotesReport } from "./rule-notes.js";
 import {
   createEndpointRuleRequestHint,
   updateEndpointRuleRequestHint,
@@ -2368,7 +2369,17 @@ export function createOperationCommand(
         let report: OperationReport | undefined;
         let reportError: string | undefined;
         try {
-          report = extension?.report?.(envelope?.data, {
+          // The email rules tags' single-object answers print the server's
+          // notes when no extension reads them otherwise.
+          const reader =
+            extension?.report ??
+            (RULE_NOTES_TAGS.has(operation.tag) &&
+            envelope?.data !== null &&
+            typeof envelope?.data === "object" &&
+            !Array.isArray(envelope?.data)
+              ? ruleNotesReport
+              : undefined);
+          report = reader?.(envelope?.data, {
             body,
             path: collectValues(
               operation.pathParams,
