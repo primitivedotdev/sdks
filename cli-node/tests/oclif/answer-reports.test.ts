@@ -234,7 +234,7 @@ describe("delivery attempts", () => {
     expect(plain.stdout).not.toContain('"retry_scheduled": false');
     const json = await run(command, [DELIVERY, "--json"]);
     expect(json.stderr).toBe("");
-    expect(JSON.parse(json.stdout)).toEqual(data);
+    expect(JSON.parse(json.stdout)).toEqual({ success: true, data });
   });
 
   it("removes terminal controls from what the endpoint answered, and cuts by character", () => {
@@ -373,7 +373,7 @@ describe("endpoints list DELIVERING", () => {
     expect(endpointDeliveryLines(null)).toEqual([]);
   });
 
-  it("prints the table on stderr after the JSON without --json, and leaves --json as it was", async () => {
+  it("prints the table on stderr after the JSON without --json, and nothing on stderr with --json", async () => {
     const page = () =>
       Response.json({
         success: true,
@@ -386,18 +386,12 @@ describe("endpoints list DELIVERING", () => {
     expect(listed.stderr).toMatch(/ENABLED\s+DELIVERING/);
     expect(listed.stderr).toContain("no (acting_owner_revoked)");
     useServer(page);
-    const enveloped = await run(COMMANDS["endpoints:list-endpoints"] as never, [
-      "--envelope",
-    ]);
-    expect(enveloped.stderr).toMatch(/ENABLED\s+DELIVERING/);
-    expect(JSON.parse(enveloped.stdout).data).toEqual([
-      endpoint({ delivery: revoked }),
-    ]);
-    useServer(page);
     const json = await run(COMMANDS["endpoints:list-endpoints"] as never, [
       "--json",
     ]);
     expect(json.stderr).toBe("");
-    expect(JSON.parse(json.stdout)).toEqual([endpoint({ delivery: revoked })]);
+    expect(JSON.parse(json.stdout).data).toEqual([
+      endpoint({ delivery: revoked }),
+    ]);
   });
 });

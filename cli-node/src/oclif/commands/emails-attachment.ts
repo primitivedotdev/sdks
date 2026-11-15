@@ -176,11 +176,11 @@ export class EmailsAttachmentMembersCommand extends Command {
   the path the listing reports. stdout then carries only its bytes,
   unless --output names a file.
 
-  The listing is JSON with or without --json; --json is accepted like on
-  every other command, and with it a failure prints one JSON document on
-  stdout (the error with exit_code) and nothing on stderr. --envelope
-  prints the full response envelope instead of only the listing. Neither
-  applies to a --member download, whose output is the file's bytes.
+  The listing is JSON with or without --json. With --json it is the full
+  response body (data, and meta where the API sends it), and a failure
+  prints one JSON document on stdout (the error with exit_code) and nothing
+  on stderr. Neither applies to a --member download, whose output is the
+  file's bytes.
 
   The server refuses archives that are not zip or tar, that hold an
   unsafe path (absolute, "..", backslashes and similar), or that exceed
@@ -212,13 +212,8 @@ export class EmailsAttachmentMembersCommand extends Command {
     }),
     json: Flags.boolean({
       description:
-        "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr. On success it is the listing, as without --json (or the full envelope with --envelope); a failure prints the error with exit_code. Not for --member downloads or --output.",
+        "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr. On success it is the response body (the listing in data); a failure prints the error with exit_code. Not for --member downloads or --output.",
       exclusive: ["member", "output"],
-    }),
-    envelope: Flags.boolean({
-      description:
-        "Print the full response envelope instead of only the listing. Not for --member downloads.",
-      exclusive: ["member"],
     }),
   };
 
@@ -268,7 +263,7 @@ export class EmailsAttachmentMembersCommand extends Command {
         return;
       }
       const envelope = result.data as { data?: unknown } | undefined;
-      const listing = flags.envelope ? (envelope ?? null) : envelope?.data;
+      const listing = flags.json ? (envelope ?? null) : envelope?.data;
       const text = `${JSON.stringify(listing, null, 2)}\n`;
       if (flags.output) writeFileSync(flags.output, text);
       else process.stdout.write(text);

@@ -169,7 +169,7 @@ export function sameEmailsBodyFields(
   const file = flags[SAME_EMAILS_FLAG];
   if (typeof file !== "string") return [];
   const saved = readJsonFileFlag(file, `--${SAME_EMAILS_FLAG}`);
-  // The answer as --json prints it, or with --envelope.
+  // The answer as --json prints it (the data inside the body), or the data alone.
   const answer = isRecord(saved) && isRecord(saved.data) ? saved.data : saved;
   const results =
     isRecord(answer) && Array.isArray(answer.results) ? answer.results : null;

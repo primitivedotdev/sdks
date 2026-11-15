@@ -62,11 +62,11 @@ describe("search command registration", () => {
       "limit",
       "cursor",
       "json",
-      "envelope",
       "corpus",
     ]) {
       expect(flags[name]).toBeDefined();
     }
+    expect(flags.envelope).toBeUndefined();
   });
 
   it("keeps the old topic-nested form callable for back-compat", () => {

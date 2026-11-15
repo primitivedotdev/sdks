@@ -178,7 +178,10 @@ describe("delete-email-rule prints the answer as it came", () => {
 
     const json = await run([RULE, "--json"]);
     expect(json.exitCode).toBe(0);
-    expect(JSON.parse(json.stdout)).toEqual({ deleted: true });
+    expect(JSON.parse(json.stdout)).toEqual({
+      success: true,
+      data: { deleted: true },
+    });
     expect(json.stderr).toBe("");
     expect(deletes()).toHaveLength(2);
   });

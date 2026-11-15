@@ -895,7 +895,8 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
       expect(json.stderr).toBe("");
       expect(json.exitCode).toBe(1);
       expect(JSON.parse(json.merged)).toEqual({
-        ...data,
+        success: true,
+        data,
         error: {
           code: "expectations_failed",
           message:
@@ -1146,7 +1147,8 @@ describe("email-rules test-email-rule --json", () => {
     expect(failed.exitCode).toBe(1);
     expect(failed.stderr).toBe("");
     expect(JSON.parse(failed.merged)).toEqual({
-      ...data,
+      success: true,
+      data,
       error: {
         code: "expectations_failed",
         message: `1 expectation failed: ${B}.`,
@@ -1161,7 +1163,6 @@ describe("email-rules test-email-rule --json", () => {
       "--expect-no-match",
       D,
       "--json",
-      "--envelope",
     ]);
     expect(undecided.exitCode).toBe(3);
     expect(undecided.stderr).toBe("");
@@ -1176,7 +1177,7 @@ describe("email-rules test-email-rule --json", () => {
     });
   });
 
-  it("prints the data alone when the exit code is 0", async () => {
+  it("prints the response body when the exit code is 0", async () => {
     const data = testResult(PASSED_EXPECTATIONS);
     answer(data);
     const result = await run("email-rules:test-email-rule", [
@@ -1186,7 +1187,7 @@ describe("email-rules test-email-rule --json", () => {
     ]);
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
-    expect(JSON.parse(result.merged)).toEqual(data);
+    expect(JSON.parse(result.merged)).toEqual({ success: true, data });
   });
 
   it("relies on composeJsonDocument keeping the error and adding exit_code", () => {
@@ -1305,7 +1306,7 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
     ]);
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
-    expect(JSON.parse(result.merged)).toEqual(data);
+    expect(JSON.parse(result.merged)).toEqual({ success: true, data });
   });
 
   it("generates --if-version on update and an optional --explanation on rule writes", () => {

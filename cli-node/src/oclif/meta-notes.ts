@@ -3,14 +3,14 @@
 // word of context: an empty email list whose --recipient the credential does
 // not read, say, or a search page cut short by its time limit. Without --json
 // the command prints the data alone, so these would go unseen; each is
-// printed as one line on stderr. Under --json nothing is added: the document
-// stays the data alone, and with --envelope its meta already carries them.
+// printed as one line on stderr. Under --json nothing is added: the
+// document's meta already carries them.
 //
 // Notes are keyed by the meta field's name, so any command whose answer
 // carries one prints it. Only fields that change how the printed data reads
 // are here. Fields that qualify meta.total or the facets (total_capped,
 // total_unavailable, facets_capped, facets_unavailable) sit beside the value
-// they qualify, which only --envelope prints.
+// they qualify, which --json prints.
 
 /** The note for a meta field that is true, given the whole meta. */
 type MetaNote = (meta: Record<string, unknown>) => string;

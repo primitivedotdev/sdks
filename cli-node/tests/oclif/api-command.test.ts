@@ -719,19 +719,13 @@ describe("runWithTiming", () => {
 });
 
 describe("operationOutputPayload", () => {
-  it("keeps generated command stdout backward-compatible by default", () => {
+  it("is the data payload, for stdout without --json", () => {
     expect(
-      operationOutputPayload(
-        { data: [{ id: "email-1" }], meta: { cursor: "next" } },
-        false,
-      ),
+      operationOutputPayload({
+        data: [{ id: "email-1" }],
+        meta: { cursor: "next" },
+      }),
     ).toEqual([{ id: "email-1" }]);
-  });
-
-  it("returns the full envelope when --envelope is requested", () => {
-    const envelope = { data: [{ id: "email-1" }], meta: { cursor: "next" } };
-
-    expect(operationOutputPayload(envelope, true)).toEqual(envelope);
   });
 });
 
@@ -1090,21 +1084,11 @@ describe("createOperationCommand description", () => {
     );
   });
 
-  it("adds --envelope to non-binary generated commands", () => {
+  it("adds --json, and no --envelope, to non-binary generated commands", () => {
     const Cmd = createOperationCommand(makeOperation()) as unknown as {
       flags: Record<string, unknown>;
     };
-
-    expect(Cmd.flags.envelope).toBeDefined();
-  });
-
-  it("does not add --envelope to binary download commands", () => {
-    const Cmd = createOperationCommand(
-      makeOperation({ binaryResponse: true }),
-    ) as unknown as {
-      flags: Record<string, unknown>;
-    };
-
+    expect(Cmd.flags.json).toBeDefined();
     expect(Cmd.flags.envelope).toBeUndefined();
   });
 });

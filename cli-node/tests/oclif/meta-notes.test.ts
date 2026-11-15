@@ -244,25 +244,12 @@ describe("emails list --recipient outside the credential's mail", () => {
     ]);
   });
 
-  it("prints nothing more under --json, which stays the data alone", async () => {
+  it("leaves the note out of a --json document, whose meta carries the field", async () => {
     responder = () => emailListAnswer({ recipient_outside_access: true });
     const result = await run("emails:list", [
       "--recipient",
       "someone@example.com",
       "--json",
-    ]);
-    expect(result.exitCode, result.stderr).toBe(0);
-    expect(result.stderr).toBe("");
-    expect(JSON.parse(result.stdout)).toEqual([]);
-  });
-
-  it("leaves the note out of a --json --envelope document, whose meta carries the field", async () => {
-    responder = () => emailListAnswer({ recipient_outside_access: true });
-    const result = await run("emails:list", [
-      "--recipient",
-      "someone@example.com",
-      "--json",
-      "--envelope",
     ]);
     expect(result.exitCode, result.stderr).toBe(0);
     expect(result.stderr).toBe("");
@@ -328,7 +315,7 @@ describe("other meta notes", () => {
       "Note: the organization has more known addresses than the 500 address rules listed here.",
     ]);
     // Under --json a stderr note would land in the document's warnings.
-    const quiet = await run("sending:permissions", ["--json", "--envelope"]);
+    const quiet = await run("sending:permissions", ["--json"]);
     expect(quiet.stderr).toBe("");
     const document = JSON.parse(quiet.stdout) as Record<string, unknown>;
     expect(document.meta).toEqual({

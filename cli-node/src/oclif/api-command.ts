@@ -327,7 +327,7 @@ export function pagingFlagOverride(
   const described = flagDescription(parameter).trim().replace(/\.$/, "");
   if (parameter.name === "cursor") {
     return {
-      description: `${described}. The next page's cursor is meta.cursor, null on the last page: without --json it is printed on stderr as \`next cursor: <value>\`; with --json, add --envelope to get it, since the bare --json output is the data array alone.`,
+      description: `${described}. The next page's cursor is meta.cursor, null on the last page: without --json it is printed on stderr as \`next cursor: <value>\`; with --json it is meta.cursor in the document.`,
     };
   }
   if (parameter.name === "limit" && typeof parameter.maximum === "number") {
@@ -1095,7 +1095,6 @@ const RESERVED_FLAG_NAMES = new Set([
   "api-base-url",
   "raw-body",
   "body-file",
-  "envelope",
   "output",
 ]);
 
@@ -1195,11 +1194,7 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   if (!operation.binaryResponse) {
     flags.json = Flags.boolean({
       description:
-        "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr. Stdout keeps its usual shape: the data payload, or with --envelope the full response envelope (data plus meta, including meta.cursor, and, in summary, empty-result hints and what a list's default filters left out). The next-cursor line is not printed; use --envelope to page. A failure prints the error with exit_code. Without --json, the cursor and notices go to stderr.",
-    });
-    flags.envelope = Flags.boolean({
-      description:
-        "Print the full response envelope, including pagination metadata such as meta.cursor. Defaults to printing only the data payload for backward compatibility.",
+        "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr: the API's response body (data, and meta with meta.cursor where the route sends it) plus the CLI's own summary, warnings, error and exit_code. Without --json, stdout is the data payload, and notes and the next cursor go to stderr.",
     });
   }
 
@@ -1421,9 +1416,8 @@ type OperationResponseEnvelope =
 
 export function operationOutputPayload(
   envelope: OperationResponseEnvelope,
-  includeEnvelope: boolean,
 ): unknown {
-  return includeEnvelope ? (envelope ?? null) : (envelope?.data ?? null);
+  return envelope?.data ?? null;
 }
 
 /**
@@ -2234,11 +2228,10 @@ export function createOperationCommand(
             return;
           }
         }
-        // With --json stdout keeps its usual shape (the data payload, or
-        // the full envelope with --envelope, where meta.cursor travels) and
-        // stderr stays empty, so a merged stream parses as one document.
+        // With --json stdout is the response body, where meta.cursor
+        // travels, and stderr stays empty, so a merged stream parses as one
+        // document.
         const jsonOutput = parsedFlags.json === true;
-        const withEnvelope = parsedFlags.envelope === true;
         const cursor = envelope?.meta?.cursor;
         if (cursor && !jsonOutput) {
           process.stderr.write(`next cursor: ${cursor}\n`);
@@ -2254,13 +2247,10 @@ export function createOperationCommand(
         // AGX walkthrough flagged this: `list-deliveries` returning
         // `[]` left the agent unsure whether they had an empty
         // delivery log or no endpoints configured at all.
-        // Under --json the hint rides in the envelope's summary when one is
-        // printed; a bare data payload has nowhere to carry it, so nothing
-        // more is read for it.
+        // Under --json the hint rides in the document's summary.
         if (
           Array.isArray(envelope?.data) &&
           envelope.data.length === 0 &&
-          (!jsonOutput || withEnvelope) &&
           // Without --json, a meta note below says why instead.
           (jsonOutput || !metaExplainsEmptyList(envelope?.meta))
         ) {
@@ -2295,8 +2285,8 @@ export function createOperationCommand(
         }
 
         // What the answer's meta says about the data, such as a --recipient
-        // this credential does not read. Under --json the document is left
-        // as it was: with --envelope its meta already carries these.
+        // this credential does not read. Under --json the document's meta
+        // already carries these.
         if (!jsonOutput) {
           for (const line of metaNoteLines(envelope?.meta)) {
             process.stderr.write(`${line}\n`);
@@ -2311,9 +2301,8 @@ export function createOperationCommand(
             envelope?.data,
             auth.connectedAgent?.agentAddress,
           );
-          if (note && jsonOutput) {
-            if (withEnvelope) summary.push(note);
-          } else if (note) process.stderr.write(`${note}\n`);
+          if (note && jsonOutput) summary.push(note);
+          else if (note) process.stderr.write(`${note}\n`);
         }
 
         // Idempotent-replay banner. Send-mail (and any future
@@ -2404,10 +2393,9 @@ export function createOperationCommand(
               },
             };
         }
-        let printed =
-          jsonOutput && withEnvelope
-            ? operationJsonDocument(envelope, summary)
-            : operationOutputPayload(envelope, withEnvelope);
+        let printed = jsonOutput
+          ? operationJsonDocument(envelope, summary)
+          : operationOutputPayload(envelope);
         if (
           jsonOutput &&
           report?.exitCode &&
