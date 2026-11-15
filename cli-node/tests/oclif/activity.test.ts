@@ -502,21 +502,15 @@ describe("activity concerning command", () => {
     );
   });
 
-  it("says in its help that notices can lag, promising no cadence, and which id is the rule's", () => {
+  it("says in three sentences what is listed, that notices can lag, and which id is the rule's", () => {
     const help = ActivityConcerningCommand.description;
-    expect(help).toContain("Notices can lag.");
-    expect(help).not.toMatch(/every minute|a few minutes/);
+    expect(help).toContain("Notices can lag");
+    expect(help).not.toMatch(/every minute|a few minutes|receivers_change/);
+    expect(help).toContain("stopped (it stopped, with why)");
     expect(help).toContain(
       "RULE ID, and rule_id with --json, is the rule's id",
     );
-  });
-
-  it("promises no receivers_changed notices in its help, and says where to see who receives a rule's matches", () => {
-    const help = ActivityConcerningCommand.description;
-    expect(help).not.toMatch(/receivers_change/);
-    expect(help).toContain(
-      "A rename is not listed, and neither is a change in who receives the rule's matches (its keys, webhooks or share): `primitive email-rule-oversight get-email-rule-covering-me <rule-id>` shows who receives them now, by owner, while the rule covers you.",
-    );
+    expect(help.split(/(?<=\.) /)).toHaveLength(3);
   });
 
   it("shows a stopped notice's reason in the last column, and nothing for a reason it does not know", () => {
@@ -558,16 +552,6 @@ describe("activity concerning command", () => {
       expect(bare).not.toContain("CHANGE");
       expect(bare).toMatch(/^stopped {2,}2026-/m);
     }
-  });
-
-  it("says in its help that a rule that stops covering you is listed as stopped", () => {
-    const help = ActivityConcerningCommand.description;
-    expect(help).toContain(
-      "A rule that stops covering you is listed as stopped, with why",
-    );
-    expect(help).not.toContain(
-      "A rule that stops covering you and a rename are not listed",
-    );
   });
 
   it("lists the pending and unfinished footnotes together", () => {

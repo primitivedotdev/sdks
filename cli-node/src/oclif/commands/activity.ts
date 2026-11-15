@@ -609,7 +609,7 @@ export class ActivityAskedCommand extends Command {
 
   Signed in with \`primitive login\`, you see what was asked of you under your current membership. A key, an app or an agent is asked nothing. Read a request (email_rule_request) with \`primitive email-rules get-email-rule-request --id <id>\`, and an objection (email_rule_objection) with \`primitive email-rule-oversight get-email-rule-objection --id <id>\`, then accept or decline it.
 
-  Requests and objections you made are not here: \`primitive activity created --kind email_rule_request,email_rule_objection\` lists them with where each stands (pending, accepted, declined or withdrawn; with --json, ended_at says when it was decided).`;
+  Requests and objections you made are not here: \`primitive activity created --kind email_rule_request,email_rule_objection\` lists them with where each stands (pending, accepted, declined or withdrawn, and for an objection also amended; with --json, ended_at says when it was decided).`;
 
   static summary = "List what other members asked of you";
 
@@ -651,11 +651,7 @@ export class ActivityAskedCommand extends Command {
 
 export class ActivityConcerningCommand extends Command {
   static description =
-    `List what other members did that concerns your own mail, newest first: each time another member's rule started covering your mailboxes, that is, it was made or turned active over them or an active rule came to reach you, once per rule, not per mailbox (started), or saved a new version while covering it (new_version), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline. A rule in draft or observe grants and blocks nothing and gets no notice while it stays there, though \`primitive email-rule-oversight list-email-rules-covering-me\` lists it; turning it active is what is listed, and a rule that covers you again within an hour of its last started or baseline notice gets no new one unless you were told it stopped since, though a version it saved meanwhile is listed as new_version. A rule that stops covering you is listed as stopped, with why (rule deleted, turned off, or no longer reaching your mailboxes; stop_reason with --json), about 5 minutes after the notices find it stopped, so one turned off and on again meanwhile is listed neither stopped nor started again. A rename is not listed, and neither is a change in who receives the rule's matches (its keys, webhooks or share): \`primitive email-rule-oversight get-email-rule-covering-me <rule-id>\` shows who receives them now, by owner, while the rule covers you.
-
-  Notices can lag. Until a start is written, a rule that now covers you is listed first as pending, dated when the rule last changed, and with --json its id is the rule's. When the check for such rules did not finish, the listing says so and --json carries pending_complete: false; run it again in a moment.
-
-  Signed in with \`primitive login\`, you see the notices about your own mail under your current membership. A key, an app or an agent has none. The rules that cover you now, with their ids, are listed by \`primitive email-rule-oversight list-email-rules-covering-me\`; ask a rule's author to turn it off with \`primitive email-rule-oversight create-email-rule-objection --rule-id <rule-id>\`. The table's RULE ID, and rule_id with --json, is the rule's id, which \`primitive email-rule-oversight get-email-rule-covering-me <rule-id>\` and create-email-rule-objection --rule-id take; with --json each notice's own id is the notice's, not the rule's.`;
+    `List what other members' rules did that concerns your own mail, newest first: started (a rule began covering your mailboxes), new_version (it saved a new version while covering them), stopped (it stopped, with why), and baseline (it covered you when these notices began). Notices can lag, and a rule in draft or observe gets none: \`primitive email-rule-oversight list-email-rules-covering-me\` lists what covers you now. RULE ID, and rule_id with --json, is the rule's id, which \`primitive email-rule-oversight get-email-rule-covering-me <rule-id>\` and create-email-rule-objection --rule-id take.`;
 
   static summary =
     "List rules that started covering your mail, changed or stopped";

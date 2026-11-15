@@ -1070,7 +1070,7 @@ const SAMPLES_FILE_SHAPE =
   'A JSON file of made-up emails the rule must match or not, such as [{"expected": "no_match", "label": "a personal bill", "email": {...}}], or a generate-look-alikes answer saved with --json.';
 
 const EXPECTATION_FLAG_NOTE =
-  "Replaces any expect in --body-file or --raw-body. The answer reports them in expectations (passed, counts, results) and the exit code follows it; see --help-full.";
+  "Replaces any expect in --body-file or --raw-body.";
 
 export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   string,

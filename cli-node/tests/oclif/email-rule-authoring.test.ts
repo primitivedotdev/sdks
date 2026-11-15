@@ -416,7 +416,7 @@ describe("email-rules test-email-rule: expectations from flags", () => {
       const text =
         flags("email-rules:test-email-rule")[flag]?.description ?? "";
       expect(text, flag).toContain(
-        "The answer reports them in expectations (passed, counts, results) and the exit code follows it",
+        "Replaces any expect in --body-file or --raw-body.",
       );
     }
     for (const id of [
