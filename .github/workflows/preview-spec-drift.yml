@@ -1,0 +1,60 @@
+name: Preview spec drift
+
+# Compares the preview line's openapi/primitive-api.yaml (branch
+# sdk-3.0.0-preview) with the OpenAPI document the API serves, and lists every
+# difference the spec does not keep on purpose. The comparison lives on that
+# branch (packages/api-core/scripts/check-openapi-drift.ts, `make
+# openapi-drift`); this file is here because GitHub runs scheduled workflows
+# from the default branch only.
+#
+# A report, not a merge check: it has no pull_request trigger and is not
+# required anywhere. The run goes red when there is drift to resync, so drift
+# does not build up unseen, and also when the comparison could not run, so
+# green always means the spec was checked and matches.
+#
+# When the preview line merges into main or its branch is deleted, retarget
+# `ref` below or delete this workflow, or it fails every day.
+
+on:
+  schedule:
+    - cron: '41 14 * * *'
+  workflow_dispatch:
+    inputs:
+      served:
+        description: URL of the served OpenAPI document (empty for the production API)
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    name: Compare with the served spec
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: sdk-3.0.0-preview
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115
+        with:
+          version: 10
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @primitivedotdev/api-core
+
+      - name: Report drift
+        env:
+          SERVED: ${{ inputs.served }}
+        # The input reaches the script as an argument, never as shell or make
+        # syntax. An empty value means the production API's document.
+        run: pnpm --filter @primitivedotdev/api-core drift:openapi "$SERVED"
