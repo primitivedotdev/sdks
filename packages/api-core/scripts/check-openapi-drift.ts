@@ -100,6 +100,11 @@ export type Drift = {
 
 const TEXT_KEYS = new Set(["description", "summary"]);
 
+// Keywords whose value is a set written as an array: order and repeats do not
+// change what they mean. Every other array (`const`, `default`, `examples`,
+// `prefixItems`, ...) is compared by position.
+const SET_KEYS = new Set(["enum", "required", "type"]);
+
 function isObject(value: Json | undefined): value is JsonObject {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -129,25 +134,47 @@ function isPlain(value: Json): boolean {
   return value === null || typeof value !== "object";
 }
 
+// Keys under which a document holds data, not schema: a key named `type` in
+// an example is not the `type` keyword.
+const DATA_KEYS = new Set(["example", "examples", "default", "const", "enum"]);
+
+/**
+ * The path ends in one of these keywords: not a property so named (inside a
+ * `properties` map, names and keywords alternate, so an odd run of
+ * `properties` segments before it makes it a name), and not a key in data.
+ */
+function isKeyword(path: string, keys: ReadonlySet<string>): boolean {
+  const segments = path.split("/");
+  const last = segments.length - 1;
+  // Segment `at` is a keyword unless an odd run of `properties` precedes it.
+  const atKeyword = (at: number) => {
+    let run = 0;
+    for (let i = at - 1; i >= 0 && segments[i] === "properties"; i--) run++;
+    return run % 2 === 0;
+  };
+  if (!keys.has(segments[last]) || !atKeyword(last)) return false;
+  return !segments
+    .slice(0, last)
+    .some((segment, at) => DATA_KEYS.has(segment) && atKeyword(at));
+}
+
 /** Every difference between the synced served document and the committed spec. */
 export function diffDocuments(served: Json, spec: Json): Drift[] {
   const out: Drift[] = [];
-  // A text key, not a property that happens to be named `description`.
-  const isText = (path: string) => {
-    const segments = path.split("/");
-    return (
-      TEXT_KEYS.has(segments[segments.length - 1]) &&
-      segments[segments.length - 2] !== "properties"
-    );
-  };
+  const isText = (path: string) => isKeyword(path, TEXT_KEYS);
 
   const walk = (a: Json, b: Json, path: string): void => {
     if (Array.isArray(a) && Array.isArray(b)) {
-      if (a.every(isPlain) && b.every(isPlain)) {
+      if (isKeyword(path, SET_KEYS) && a.every(isPlain) && b.every(isPlain)) {
         const sa = a.map((v) => JSON.stringify(v));
         const sb = b.map((v) => JSON.stringify(v));
-        const servedOnly = a.filter((_, i) => !sb.includes(sa[i]));
-        const specOnly = b.filter((_, i) => !sa.includes(sb[i]));
+        // Each value once, as a set has it.
+        const only = (values: Json[], own: string[], other: string[]) =>
+          values.filter(
+            (_, i) => !other.includes(own[i]) && own.indexOf(own[i]) === i,
+          );
+        const servedOnly = only(a, sa, sb);
+        const specOnly = only(b, sb, sa);
         // Order alone (an enum or `required` reordered) is not drift.
         if (servedOnly.length > 0 || specOnly.length > 0) {
           out.push({
@@ -157,6 +184,13 @@ export function diffDocuments(served: Json, spec: Json): Drift[] {
             servedOnly,
             specOnly,
           });
+        }
+        return;
+      }
+      // Any other list of plain values is data: compared whole, by position.
+      if (a.every(isPlain) && b.every(isPlain)) {
+        if (JSON.stringify(a) !== JSON.stringify(b)) {
+          out.push({ path, kind: "changed", text: false, served: a, spec: b });
         }
         return;
       }

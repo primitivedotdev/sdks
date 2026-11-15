@@ -144,6 +144,69 @@ describe("diffDocuments edge cases", () => {
     ]);
   });
 
+  it("compares a list of data values by position, and only set keywords as sets", () => {
+    assert.deepEqual(
+      diffDocuments(
+        { const: ["a", "b"], type: ["string", "null"] },
+        { const: ["b", "a"], type: ["null", "string"] },
+      ),
+      [
+        {
+          path: "/const",
+          kind: "changed",
+          text: false,
+          served: ["a", "b"],
+          spec: ["b", "a"],
+        },
+      ],
+    );
+    // The `required` of a property named `properties` is still the keyword.
+    assert.deepEqual(
+      diffDocuments(
+        { properties: { properties: { required: ["a", "b"] } } },
+        { properties: { properties: { required: ["b", "a", "a"] } } },
+      ),
+      [],
+    );
+    // A key named `type` inside an example is data.
+    assert.deepEqual(
+      diffDocuments(
+        { examples: [{ type: ["a", "b"] }] },
+        { examples: [{ type: ["b", "a"] }] },
+      ),
+      [
+        {
+          path: "/examples/0/type",
+          kind: "changed",
+          text: false,
+          served: ["a", "b"],
+          spec: ["b", "a"],
+        },
+      ],
+    );
+    // A property named `default` is a schema, so its `type` is the keyword.
+    assert.deepEqual(
+      diffDocuments(
+        { properties: { default: { type: ["string", "null"] } } },
+        { properties: { default: { type: ["null", "string"] } } },
+      ),
+      [],
+    );
+    // A value repeated on one side is listed once.
+    assert.deepEqual(
+      diffDocuments({ required: ["b", "b"] }, { required: [] }),
+      [
+        {
+          path: "/required",
+          kind: "changed",
+          text: false,
+          servedOnly: ["b"],
+          specOnly: [],
+        },
+      ],
+    );
+  });
+
   it("reports an array against an object once, as changed", () => {
     assert.deepEqual(diffDocuments({ x: [1] }, { x: { a: 1 } }), [
       {
