@@ -79,7 +79,12 @@ import {
   replyStateSurfaceForOperation,
 } from "./reply-state.js";
 import { RULE_NOTES_TAGS, ruleNotesReport } from "./rule-notes.js";
-import { sentListOtherSendersNote } from "./sent-list-labels.js";
+import {
+  ALL_SENDERS_FLAG,
+  ALL_SENDERS_FLAG_DESCRIPTION,
+  sentListLines,
+  withMineDefault,
+} from "./sent-list.js";
 import {
   approveThenRerunHint,
   BROWSER_FLAG_DESCRIPTION,
@@ -1293,6 +1298,12 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     headerFlagToName.set(name, parameter.name);
   }
 
+  if (operation.sdkName === "listSentEmails") {
+    flags[ALL_SENDERS_FLAG] = Flags.boolean({
+      description: ALL_SENDERS_FLAG_DESCRIPTION,
+    });
+  }
+
   if (EVENT_TYPES_FLAG_OPERATIONS.has(operation.sdkName)) {
     flags["event-types"] = Flags.string({
       description: EVENT_TYPES_FLAG_DESCRIPTION,
@@ -1893,11 +1904,16 @@ export function createOperationCommand(
         const operationFn = operations[
           operation.sdkName as OperationName
         ] as unknown as OperationExecutor;
-        const query = collectValues(
+        const given = collectValues(
           operation.queryParams,
           parsedFlags,
           operation.sdkName,
         );
+        // sent list lists your own sends unless --all-senders.
+        const query =
+          operation.sdkName === "listSentEmails"
+            ? withMineDefault(given, parsedFlags)
+            : given;
         // Set when this list or search call asked for reply state, so an
         // older server that lacks it fails loudly instead of returning
         // unfiltered mail that looks filtered.
@@ -2279,18 +2295,6 @@ export function createOperationCommand(
           }
         }
 
-        // A connected address's sent list also carries delivered sends
-        // other addresses made to it. Say so, so they are not read as this
-        // address's own sends.
-        if (operation.sdkName === "listSentEmails") {
-          const note = sentListOtherSendersNote(
-            envelope?.data,
-            auth.connectedAgent?.agentAddress,
-          );
-          if (note && jsonOutput) summary.push(note);
-          else if (note) process.stderr.write(`${note}\n`);
-        }
-
         // Idempotent-replay banner. Send-mail (and any future
         // operation that might surface this flag) carries
         // `idempotent_replay: true` when the server short-circuited
@@ -2400,6 +2404,10 @@ export function createOperationCommand(
         }
         if (report && !jsonOutput) {
           for (const line of report.lines) process.stderr.write(`${line}\n`);
+        }
+        if (operation.sdkName === "listSentEmails" && !jsonOutput) {
+          for (const line of sentListLines(envelope))
+            process.stderr.write(`${line}\n`);
         }
         if (reportError !== undefined && report?.exitCode && !jsonOutput) {
           process.stderr.write(
