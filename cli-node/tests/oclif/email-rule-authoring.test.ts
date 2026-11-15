@@ -1315,7 +1315,7 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
     expect(JSON.parse(result.merged)).toEqual({ success: true, data });
   });
 
-  it("generates --if-version on update and an optional --explanation on rule writes", () => {
+  it("generates --if-version on update and no --explanation on rule writes, which the API writes itself", () => {
     const update = (
       COMMANDS["email-rules:update-email-rule"] as unknown as Runnable
     ).flags;
@@ -1326,15 +1326,11 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
       "email-rules:update-email-rule",
       "email-rules:create-email-rule-request",
       "email-rules:accept-email-rule-request",
-    ]) {
-      const explanation = (COMMANDS[id] as unknown as Runnable).flags
-        .explanation;
-      expect(explanation, id).toBeDefined();
-      expect(explanation?.required, id).toBeFalsy();
-      expect(explanation?.description, id).toContain(
-        "Left out, the server writes one",
-      );
-    }
+    ])
+      expect(
+        (COMMANDS[id] as unknown as Runnable).flags.explanation,
+        id,
+      ).toBeUndefined();
   });
 });
 
@@ -3088,17 +3084,18 @@ describe("the test report prints server text safely", () => {
 });
 
 describe("a saved compile answer as a write body", () => {
-  it("creates the compiled rule from the data of the --json answer, as the help says", async () => {
+  it("creates the compiled rule from the rule of the --json answer, as the help says", async () => {
     const tree = { version: 1, vocabulary: "v1", when: { all: [] } };
-    answer({ tree, english: "bills", explanation: "Bills." });
+    const rule = { english: "bills", kind: "grant", tree };
+    answer({ rule, explanation: "Bills.", assumptions: [], warnings: [] });
     const compiled = await run("email-rules:compile-email-rule", [
       "--raw-body",
       JSON.stringify({ english: "bills" }),
       "--json",
     ]);
     const file = tempFile(
-      "compiled.json",
-      JSON.stringify(JSON.parse(compiled.stdout).data),
+      "rule.json",
+      JSON.stringify(JSON.parse(compiled.stdout).data.rule),
     );
     calls = [];
     answer({ id: RULE, name: "Bills" });
@@ -3107,14 +3104,8 @@ describe("a saved compile answer as a write body", () => {
       file,
       "--name",
       "Bills",
-      "--english",
-      "bills",
     ]);
     expect(created.exitCode, created.stderr).toBe(0);
-    expect(calls[0]?.body).toMatchObject({
-      tree,
-      name: "Bills",
-      english: "bills",
-    });
+    expect(calls[0]?.body).toEqual({ ...rule, name: "Bills" });
   });
 });

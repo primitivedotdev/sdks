@@ -1550,13 +1550,13 @@ export function overLongBodyField(
 }
 
 /** What a write that takes a compile answer reads from --body-file, said beside the generic help. */
-const COMPILE_ANSWER =
-  "the data of the answer `compile-email-rule --json` printed (without --include-sql), saved to a file: `compile-email-rule ... --json | jq .data > rule.json`";
+const COMPILE_RULE =
+  "the `rule` of a saved compile answer: `compile-email-rule ... --json | jq .data.rule > rule.json`";
 export const BODY_FILE_HELP: Record<string, string> = {
-  createEmailRule: `For this command, ${COMPILE_ANSWER}, and add --english with the description you compiled, and --name.`,
-  updateEmailRule: `For a new version, ${COMPILE_ANSWER}, and add --english with the description you compiled (required with a new tree); --name only to rename it.`,
-  createEmailRuleRequest: `For this command, ${COMPILE_ANSWER}, and add --english with the description you compiled, --name and --target-email.`,
-  acceptEmailRuleRequest: `To change the rule as you accept it, ${COMPILE_ANSWER}, and add --english with the description you compiled.`,
+  createEmailRule: `For this command, ${COMPILE_RULE}, with --name.`,
+  updateEmailRule: `For a new version, ${COMPILE_RULE}; --name only to rename it.`,
+  createEmailRuleRequest: `For this command, ${COMPILE_RULE}, compiled without --evaluation-scope, with --name and --target-email.`,
+  acceptEmailRuleRequest: `To change the rule as you accept it, ${COMPILE_RULE}, compiled without --evaluation-scope.`,
 };
 
 // Per-operation flag aliases keyed by operation.sdkName and body
