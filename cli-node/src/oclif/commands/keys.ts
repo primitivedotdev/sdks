@@ -40,6 +40,7 @@ import {
   terminalApprovalIo,
   withApproval,
 } from "../step-up-approval.js";
+import { shownLine } from "../terminal-text.js";
 
 // The approval helpers moved to step-up-approval.ts; re-exported for callers
 // that imported them from here.
@@ -332,6 +333,14 @@ function otherNotes(notes: unknown): Array<{ description?: unknown }> {
   );
 }
 
+/**
+ * A key's name as printed. A key can be transferred to you, so its name may
+ * be someone else's: no terminal control sequences or reordering marks.
+ */
+function keyName(key: KeyView): string {
+  return shownLine(key.name) || "(unnamed)";
+}
+
 export function formatKeyRows(
   rows: readonly KeyView[],
   options: { includeRevoked?: boolean } = {},
@@ -366,7 +375,7 @@ export function formatKeyRows(
         row.rotated_to ? ` [rotated to ${row.rotated_to}]` : "",
         row.rotated_from ? ` [rotated from ${row.rotated_from}]` : "",
       ].join("");
-      return `${row.id}  ${row.key_prefix}  ${row.name ?? "(unnamed)"}  ${describePermissions(row.grant)}  mail: ${describeMailScope(row.grant)}  expires ${row.expires_at ?? "never"}  last used ${row.last_used_at ?? "never"}${suspended}${revoked}${rotated}${whole}${notes}`;
+      return `${row.id}  ${row.key_prefix}  ${keyName(row)}  ${describePermissions(row.grant)}  mail: ${describeMailScope(row.grant)}  expires ${row.expires_at ?? "never"}  last used ${row.last_used_at ?? "never"}${suspended}${revoked}${rotated}${whole}${notes}`;
     })
     .join("\n");
 }
@@ -385,7 +394,7 @@ function wholeMailboxLines(key: KeyView): string[] {
 
 export function formatKeyDetail(key: KeyView): string {
   const lines = [
-    `Name:         ${key.name ?? "(unnamed)"}`,
+    `Name:         ${keyName(key)}`,
     `Id:           ${key.id}`,
     `Prefix:       ${key.key_prefix}`,
     `Kind:         ${key.kind}`,

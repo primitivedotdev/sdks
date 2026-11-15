@@ -52,7 +52,7 @@ import type {
   OperationExtension,
   OperationReport,
 } from "./operation-extension.js";
-import { sanitizeForTerminal } from "./terminal-text.js";
+import { shownLine, shownText } from "./terminal-text.js";
 
 const EMAIL_ID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
@@ -720,31 +720,6 @@ function notMatchedLine(result: TestResult): string[] {
     lines.push(`    questions${source}: ${answers.map(answerText).join("; ")}`);
   }
   return [...lines, ...attachmentsLine(result)];
-}
-
-/** Marks that reorder text on screen, so "inv\u202egpj.exe" could show as "invexe.jpg". */
-const BIDI_CONTROLS = /[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
-/** The longest a sender's subject or file name is shown in a report line. */
-const SHOWN_TEXT_MAX = 100;
-
-/** Text from outside the CLI on one report line: no terminal control sequences or reordering marks, and uncut. */
-function shownLine(value: unknown): string {
-  if (typeof value !== "string") return "";
-  return sanitizeForTerminal(value)
-    .replace(BIDI_CONTROLS, "")
-    .replaceAll(/\s+/g, " ")
-    .trim();
-}
-
-/**
- * Text a sender wrote (a subject, an address, a file name), as a report
- * line shows it: shownLine, cut at SHOWN_TEXT_MAX.
- */
-function shownText(value: unknown): string {
-  const line = shownLine(value);
-  return line.length > SHOWN_TEXT_MAX
-    ? `${line.slice(0, SHOWN_TEXT_MAX - 3)}...`
-    : line;
 }
 
 /**

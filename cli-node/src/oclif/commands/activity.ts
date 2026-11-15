@@ -12,6 +12,7 @@ import {
   surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "../api-command.js";
+import { shownLine } from "../terminal-text.js";
 import {
   backoffDelay,
   pauseForTransientFailure,
@@ -202,21 +203,32 @@ export function throughLabel(through: ActivityItem["created_through"]): string {
   return through.name ? `${kind} ${through.name}` : kind;
 }
 
+/**
+ * A table row as printed: every cell on one line, with no terminal control
+ * sequences or reordering marks. Names in these tables are written by other
+ * members, so none reaches the terminal raw.
+ */
+function shownCells(cells: readonly string[]): string[] {
+  return cells.map(shownLine);
+}
+
 /** One line per item: kind, state, when it was created, its name, and what it was created through. */
 export function formatActivityRows(
   covers: string,
   items: readonly ActivityItem[],
 ): string {
   if (items.length === 0) return "Nothing to show.";
-  const rows = items.map((item) => [
-    item.kind,
-    item.owned_now === "someone_else"
-      ? `${item.state} (transferred)`
-      : item.state,
-    minute(item.created_at),
-    item.name ?? item.id,
-    ...(covers === "you" ? [throughLabel(item.created_through)] : []),
-  ]);
+  const rows = items
+    .map((item) => [
+      item.kind,
+      item.owned_now === "someone_else"
+        ? `${item.state} (transferred)`
+        : item.state,
+      minute(item.created_at),
+      item.name ?? item.id,
+      ...(covers === "you" ? [throughLabel(item.created_through)] : []),
+    ])
+    .map(shownCells);
   const header = [
     "KIND",
     "STATE",
@@ -249,14 +261,16 @@ export function formatAskedRows(
 ): string {
   if (items.length === 0)
     return complete ? "Nobody has asked you for anything." : "Nothing to show.";
-  const rows = items.map((item) => [
-    item.kind,
-    item.state,
-    minute(item.created_at),
-    item.name ?? item.id,
-    item.created_through.name ?? item.created_through.id ?? "",
-    item.id,
-  ]);
+  const rows = items
+    .map((item) => [
+      item.kind,
+      item.state,
+      minute(item.created_at),
+      item.name ?? item.id,
+      item.created_through.name ?? item.created_through.id ?? "",
+      item.id,
+    ])
+    .map(shownCells);
   const header = ["KIND", "STATE", "ASKED (UTC)", "NAME", "FROM", "ID"];
   const widths = header.map((h, i) =>
     Math.max(h.length, ...rows.map((row) => (row[i] ?? "").length)),
@@ -383,15 +397,17 @@ export function formatConcerningRows(
       : unfinished
         ? `${unfinished} ${COVERING_NOW}`
         : "Nothing to show.";
-  const rows = items.map((item) => [
-    item.state,
-    minute(item.created_at),
-    // The rule's name then; marked once the rule has been deleted.
-    `${item.name ?? "(unnamed)"}${item.rule_now === "deleted" ? " (deleted)" : ""}`,
-    item.created_through.name ?? item.created_through.id ?? "",
-    // An older server sends no rule_id; a pending row's id is the rule's.
-    item.rule_id ?? (item.state === "pending" ? item.id : ""),
-  ]);
+  const rows = items
+    .map((item) => [
+      item.state,
+      minute(item.created_at),
+      // The rule's name then; marked once the rule has been deleted.
+      `${item.name ?? "(unnamed)"}${item.rule_now === "deleted" ? " (deleted)" : ""}`,
+      item.created_through.name ?? item.created_through.id ?? "",
+      // An older server sends no rule_id; a pending row's id is the rule's.
+      item.rule_id ?? (item.state === "pending" ? item.id : ""),
+    ])
+    .map(shownCells);
   // Last, so it widens no other column, and only when a row has one.
   const changes = items.map(
     (item) => receiversChangeText(item) ?? stoppedText(item),

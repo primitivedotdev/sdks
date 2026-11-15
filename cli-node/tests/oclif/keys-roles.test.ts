@@ -238,6 +238,18 @@ describe("keys helpers", () => {
     expect(detail).not.toContain("Revoked:");
   });
 
+  it("prints a key's name without terminal controls, since it may be someone else's", () => {
+    const hostile = keyRow(
+      { template: "super_admin", permissions: null, mail_scope: null },
+      { name: "ci\u001b]0;owned\u0007\u202e key" },
+    );
+    expect(formatKeyRows([hostile])).toContain("  ci key  ");
+    expect(formatKeyDetail(hostile)).toContain("Name:         ci key\n");
+    for (const control of ["\u001b", "\u0007", "\u202e"]) {
+      expect(formatKeyRows([hostile])).not.toContain(control);
+    }
+  });
+
   it("names the key a key was rotated to and from, in the list and the detail", () => {
     const rotated = keyRow(
       { template: "super_admin", permissions: null, mail_scope: null },

@@ -47,6 +47,32 @@ const item = (overrides: Partial<ActivityItem> = {}): ActivityItem => ({
   ...overrides,
 });
 
+describe("activity tables print other members' text safely", () => {
+  const hostile = "pay\u001b[31mroll\u001b[0m \u202etxt.exe\nnext";
+  const shown = "payroll txt.exe next";
+
+  it("strips terminal controls and reordering marks from every cell", () => {
+    const named = item({
+      name: hostile,
+      created_through: { kind: "org_key", id: "k", name: hostile },
+    });
+    for (const out of [
+      formatActivityRows("you", [named]),
+      formatAskedRows([
+        { ...named, kind: "email_rule_request", state: "pending" },
+      ]),
+      formatConcerningRows([
+        { ...named, kind: "email_rule", state: "started" },
+      ]),
+    ]) {
+      expect(out).not.toContain("\u001b");
+      expect(out).not.toContain("\u202e");
+      expect(out.split("\n")).toHaveLength(2);
+      expect(out).toContain(shown);
+    }
+  });
+});
+
 describe("activity created", () => {
   it("is registered beside the generated operation", () => {
     expect(COMMANDS["activity:created"]).toBeDefined();
