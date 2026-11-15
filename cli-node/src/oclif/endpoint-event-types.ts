@@ -1,29 +1,22 @@
 // `--event-types` on `endpoints create` and `endpoints update`.
 //
 // An endpoint's subscription lives in `rules.event_types`, a nested array
-// the generated commands could only take through `--raw-body` JSON. The
-// opt-in `sent_email.*` events reach an endpoint only when that list names
-// them, so this flag makes the common case one flag:
+// the generated commands could only take through `--raw-body` JSON, so this
+// flag sets it:
 //
 //   primitive endpoints create --url https://... \
-//     --event-types sent_email.accepted,sent_email.delivered,sent_email.failed,sent_email.completed
+//     --event-types email.received,sent_email.*
 //
-// The server matches the list by exact string and does not reject unknown
-// names, so a typo silently matches nothing. The CLI warns about names it
-// does not know, and expands the `sent_email.*`, `email_rule_request.*` and
-// `email_rule_objection.*` shorthands (which the server would otherwise store
-// as literals that match nothing) to the four events each.
+// The API expands a `family.*` name to every event in the family and refuses
+// names it does not know. A webhook create that names no event types, by this
+// flag or in the body, sends email.received.
 //
 // PATCH replaces `rules` as a whole. So on update, unless the caller also
 // passes `rules` through `--raw-body`, the CLI reads the endpoint's current
 // rules and changes only `event_types`, keeping its sender and size rules.
+// It never fills in the URL: adding rule events to a webhook takes --url
+// from the person, as the API asks.
 
-import {
-  EMAIL_RULE_OBJECTION_EVENT_TYPES,
-  EMAIL_RULE_REQUEST_EVENT_TYPES,
-  SENT_EMAIL_EVENT_TYPES,
-  WEBHOOK_EVENT_TYPES,
-} from "@primitivedotdev/sdk/webhook";
 import type { ListEndpointsFn } from "./endpoints-test-redirect.js";
 
 export const EVENT_TYPES_FLAG_OPERATIONS = new Set([
@@ -32,24 +25,16 @@ export const EVENT_TYPES_FLAG_OPERATIONS = new Set([
 ]);
 
 export const EVENT_TYPES_FLAG_DESCRIPTION =
-  "Event types this endpoint subscribes to, comma separated or repeated (sets rules.event_types). Omitting the subscription means every event type except the opt-in sent_email.*, email_rule_request.* and email_rule_objection.* events, which an endpoint receives only when it lists them; each of those shorthands expands to all four. Rule request and objection events can be listed only when the webhook is created, signed in as yourself; such a webhook is yours and always a route target. Keep email.received in the list if the endpoint also handles inbound mail. On update, the endpoint's other rules are kept.";
+  "Event types this endpoint receives, comma separated or repeated (sets rules.event_types); `family.*` names a whole family. A webhook created without it receives email.received. On update it replaces the stored list, so restate the types to keep (--event-types email.received,email_rule_request.*); the endpoint's other rules are kept. Rule event types need a webhook of your own; to add them to an existing one, pass --url again.";
 
-export const MAX_EVENT_TYPES = 50;
-
-/** Shorthands the CLI expands, since the server would store them as literals that match nothing. */
-const WILDCARDS: Readonly<Record<string, readonly string[]>> = {
-  "sent_email.*": SENT_EMAIL_EVENT_TYPES,
-  "email_rule_request.*": EMAIL_RULE_REQUEST_EVENT_TYPES,
-  "email_rule_objection.*": EMAIL_RULE_OBJECTION_EVENT_TYPES,
-};
-const KNOWN_EVENT_TYPES = new Set<string>(WEBHOOK_EVENT_TYPES);
+/** What a create that names no event types receives. */
+export const DEFAULT_EVENT_TYPES: readonly string[] = ["email.received"];
 
 export class EventTypesFlagError extends Error {}
 
 /**
- * Turn the raw `--event-types` values into the list to store: split on
- * commas, trim, expand the shorthands in WILDCARDS, and drop duplicates while
- * keeping the order the caller gave.
+ * Turn the raw `--event-types` values into the list to send: split on
+ * commas, trim, and drop duplicates while keeping the order the caller gave.
  */
 export function parseEventTypesFlag(values: readonly string[]): string[] {
   const out: string[] = [];
@@ -58,36 +43,17 @@ export function parseEventTypesFlag(values: readonly string[]): string[] {
     for (const raw of value.split(",")) {
       const name = raw.trim();
       if (name === "") continue;
-      const names = Object.hasOwn(WILDCARDS, name)
-        ? [...(WILDCARDS[name] ?? [])]
-        : [name];
-      for (const entry of names) {
-        if (seen.has(entry)) continue;
-        seen.add(entry);
-        out.push(entry);
-      }
+      if (seen.has(name)) continue;
+      seen.add(name);
+      out.push(name);
     }
   }
   if (out.length === 0) {
     throw new EventTypesFlagError(
-      "--event-types needs at least one event type. To receive every event type except the opt-in sent_email.*, email_rule_request.* and email_rule_objection.* events, omit the subscription instead.",
-    );
-  }
-  if (out.length > MAX_EVENT_TYPES) {
-    throw new EventTypesFlagError(
-      `--event-types accepts at most ${MAX_EVENT_TYPES} event types (got ${out.length}).`,
+      "--event-types needs at least one event type, such as email.received.",
     );
   }
   return out;
-}
-
-/** The names in `eventTypes` this CLI does not recognise. */
-export function unknownEventTypes(eventTypes: readonly string[]): string[] {
-  return eventTypes.filter((name) => !KNOWN_EVENT_TYPES.has(name));
-}
-
-export function unknownEventTypesWarning(unknown: readonly string[]): string {
-  return `Warning: ${unknown.join(", ")} ${unknown.length === 1 ? "is" : "are"} not an event type this CLI knows. Subscriptions match exact names, so a misspelled name receives nothing. Continuing; newer event types may not be known to this CLI yet.\n`;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -150,4 +116,18 @@ export function withEventTypes(
 /** True when the caller already passed `rules` in the request body. */
 export function bodyHasRules(body: unknown): boolean {
   return isPlainObject(body) && body.rules !== undefined;
+}
+
+/**
+ * A webhook create's body with DEFAULT_EVENT_TYPES in rules.event_types when
+ * it names none; any other body (a Function or pull endpoint, or no body at
+ * all) as it is.
+ */
+export function withDefaultEventTypes(body: unknown): unknown {
+  if (!isPlainObject(body)) return body;
+  if (body.kind !== undefined && body.kind !== "http") return body;
+  const rules = body.rules;
+  if (rules !== undefined && !isPlainObject(rules)) return body;
+  if (isPlainObject(rules) && rules.event_types !== undefined) return body;
+  return withEventTypes(body, DEFAULT_EVENT_TYPES, {});
 }

@@ -48,8 +48,7 @@ import {
   EVENT_TYPES_FLAG_OPERATIONS,
   EventTypesFlagError,
   parseEventTypesFlag,
-  unknownEventTypes,
-  unknownEventTypesWarning,
+  withDefaultEventTypes,
   withEventTypes,
 } from "./endpoint-event-types.js";
 import {
@@ -83,10 +82,6 @@ import {
   replyStateSurfaceForOperation,
 } from "./reply-state.js";
 import { RULE_NOTES_TAGS, ruleNotesReport } from "./rule-notes.js";
-import {
-  createEndpointRuleRequestHint,
-  updateEndpointRuleRequestHint,
-} from "./rule-request-webhooks.js";
 import { sentListOtherSendersNote } from "./sent-list-labels.js";
 import {
   approveThenRerunHint,
@@ -1370,14 +1365,9 @@ async function applyEventTypesFlag(params: {
   values: string[];
   endpointId: string | undefined;
   listEndpoints: ListEndpointsFn;
-  quiet: boolean;
 }): Promise<Record<string, unknown>> {
   try {
     const eventTypes = parseEventTypesFlag(params.values);
-    const unknown = unknownEventTypes(eventTypes);
-    if (unknown.length > 0 && !params.quiet) {
-      process.stderr.write(unknownEventTypesWarning(unknown));
-    }
     const baseRules =
       params.endpointId !== undefined && !bodyHasRules(params.body)
         ? await currentEndpointRules(params.endpointId, params.listEndpoints)
@@ -1634,10 +1624,6 @@ export const OPERATION_ERROR_HINTS: Record<
 > = {
   inviteOrganizationMember: (code, body, payload) =>
     inviteRefusalHint(code, body, payload),
-  createEndpoint: (code, body, payload) =>
-    createEndpointRuleRequestHint(code, body, payload),
-  updateEndpoint: (code, body, payload) =>
-    updateEndpointRuleRequestHint(code, body, payload),
   updateEmailRule: (code, body, payload, path) => {
     const hint = updateEmailRuleErrorHint(code, payload, path?.id, body);
     return hint === undefined ? undefined : terminalLine(hint);
@@ -1895,8 +1881,11 @@ export function createOperationCommand(
                 client: apiClient.client,
                 responseStyle: "fields",
               }) as ReturnType<ListEndpointsFn>,
-            quiet: parsedFlags.json === true,
           });
+        } else if (operation.sdkName === "createEndpoint") {
+          // A create always states what it receives: email.received unless
+          // the flag or the body names event types.
+          body = withDefaultEventTypes(body);
         }
 
         if (operation.bodyRequired && body === undefined) {
