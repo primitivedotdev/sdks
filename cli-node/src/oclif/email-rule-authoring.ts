@@ -39,7 +39,6 @@ import {
   pickFlagHelp,
   readJsonFileFlag,
   SAMPLES_FILE_FLAG,
-  SAMPLES_MAX,
   samplesBodyFields,
   sentSampleNumber,
 } from "./email-rule-samples.js";
@@ -69,8 +68,6 @@ export const EXIT_EXPECTATION_FAILED = 1;
 /** Exit code of a test with no failed expectation but an undecided one. */
 export const EXIT_EXPECTATION_UNDECIDED = 3;
 
-type Expectations = { match?: string[]; no_match?: string[] };
-
 function usageError(message: string): Errors.CLIError {
   return new Errors.CLIError(message, { exit: 2 });
 }
@@ -82,14 +79,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /** `count` and the word for it: "1 expectation", "2 expectations". */
 function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
-}
-
-function checkEmailId(id: string, label: string): string {
-  if (!isEmailId(id))
-    throw usageError(
-      `${label} takes email ids (UUIDs, from \`primitive emails list\`); "${id}" is not one.`,
-    );
-  return id;
 }
 
 /**
@@ -106,7 +95,6 @@ export function parseEmailIdList(
     for (const raw of value.split(",")) {
       const id = raw.trim();
       if (id === "") continue;
-      checkEmailId(id, flag);
       if (seen.has(id.toLowerCase())) continue;
       seen.add(id.toLowerCase());
       ids.push(id);
@@ -117,58 +105,24 @@ export function parseEmailIdList(
   return ids;
 }
 
-function assertDisjoint(expectations: Expectations, label: string): void {
-  const match = new Set(
-    (expectations.match ?? []).map((id) => id.toLowerCase()),
-  );
-  const both = (expectations.no_match ?? []).find((id) =>
-    match.has(id.toLowerCase()),
-  );
-  if (both)
-    throw usageError(
-      `${label}: ${both} is expected both to match and not to match; give each email one way.`,
-    );
-}
-
 /**
- * Check a JSON value in the shape of a rule's expectations or a test's
- * `expect`: an object with `match` and `no_match`, each a list of email ids,
- * at least one id in all, and no id in both. Repeats are removed.
+ * A JSON value given as a rule's expectations or a test's `expect`: a JSON
+ * object, sent as it is (the API checks what it holds). Made-up emails have
+ * their own flag.
  */
-export function checkExpectations(value: unknown, label: string): Expectations {
+export function checkExpectations(
+  value: unknown,
+  label: string,
+): Record<string, unknown> {
   if (!isRecord(value))
     throw usageError(
       `${label} must hold a JSON object such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}.`,
     );
-  const expectations: Expectations = {};
-  for (const [key, list] of Object.entries(value)) {
-    if (key !== "match" && key !== "no_match")
-      throw usageError(
-        key === "samples"
-          ? `${label} takes emails by id only; give made-up emails with ${label.startsWith("--expectations-file") ? "--expectation-samples-file" : "--expect-samples-file"}.`
-          : `${label} takes only "match" and "no_match"; "${key}" is not one of them.`,
-      );
-    if (!Array.isArray(list) || list.some((id) => typeof id !== "string"))
-      throw usageError(`${label}: "${key}" must be a list of email ids.`);
-    const ids: string[] = [];
-    const seen = new Set<string>();
-    for (const id of list as string[]) {
-      checkEmailId(id, label);
-      if (seen.has(id.toLowerCase())) continue;
-      seen.add(id.toLowerCase());
-      ids.push(id);
-    }
-    expectations[key] = ids;
-  }
-  if (
-    (expectations.match?.length ?? 0) + (expectations.no_match?.length ?? 0) ===
-    0
-  )
+  if ("samples" in value)
     throw usageError(
-      `${label} needs at least one email id in match or no_match.`,
+      `${label} takes emails by id only; give made-up emails with ${label.startsWith("--expectations-file") ? "--expectation-samples-file" : "--expect-samples-file"}.`,
     );
-  assertDisjoint(expectations, label);
-  return expectations;
+  return value;
 }
 
 /**
@@ -180,7 +134,7 @@ export function expectBodyFields(
 ): ExtensionBodyField[] {
   const samples = expectSamples(flags);
   const file = flags["expect-file"];
-  const expect: Expectations & { samples?: unknown[] } = {};
+  const expect: Record<string, unknown> = {};
   const given: string[] = [];
   if (typeof file === "string") {
     Object.assign(
@@ -205,7 +159,6 @@ export function expectBodyFields(
     );
     given.push("--expect-no-match");
   }
-  assertDisjoint(expect, given.join(" and "));
   if (samples) {
     expect.samples = samples;
     given.push(`--${EXPECT_SAMPLES_FILE_FLAG}`);
@@ -216,7 +169,6 @@ export function expectBodyFields(
 
 /** test-email-rule's flag that tests the emails an earlier answer tested. */
 export const SAME_EMAILS_FLAG = "same-emails-as";
-const EMAIL_IDS_MAX = 200;
 
 /**
  * `email_ids` for test-email-rule, from --same-emails-as: every email an
@@ -251,69 +203,30 @@ export function sameEmailsBodyFields(
   ];
   if (ids.length === 0)
     throw usageError(`--${SAME_EMAILS_FLAG} ${file} names no emails.`);
-  if (ids.length > EMAIL_IDS_MAX)
-    throw usageError(
-      `--${SAME_EMAILS_FLAG} ${file} names ${ids.length} emails; a test takes at most ${EMAIL_IDS_MAX}.`,
-    );
   return [{ flag: `--${SAME_EMAILS_FLAG}`, property: "email_ids", value: ids }];
 }
 
 /**
- * The emails --same-emails-as names with the expected ones this test sends
- * (from the expect flags, or the body's own expect) are at most
- * EMAIL_IDS_MAX, as the API takes them: refused here, naming the flag,
- * rather than by the API as email_ids the caller never typed. A saved rule's
- * own expectations are not known here; the API counts those.
- */
-function checkSameEmailsWithExpected(
-  same: ExtensionBodyField[],
-  expect: ExtensionBodyField[],
-  base: unknown,
-): void {
-  const ids = same[0]?.value;
-  if (!Array.isArray(ids)) return;
-  const sent = expect[0]?.value ?? (isRecord(base) ? base.expect : undefined);
-  const expected = isRecord(sent)
-    ? [sent.match, sent.no_match].flatMap((list) =>
-        Array.isArray(list)
-          ? list.filter((id): id is string => typeof id === "string")
-          : [],
-      )
-    : [];
-  const all = new Set([...ids, ...expected.map((id) => id.toLowerCase())]);
-  if (all.size > EMAIL_IDS_MAX)
-    throw usageError(
-      `--${SAME_EMAILS_FLAG} names ${ids.length} emails and the expectations sent name others: ${all.size} in all, and a test takes at most ${EMAIL_IDS_MAX}.`,
-    );
-}
-
-/**
  * `expectations` for create-email-rule and update-email-rule, from
- * --expectations-file. A file holding `null` removes the saved expectations,
- * which only update accepts.
+ * --expectations-file. A file holding `null` removes the saved expectations
+ * (the API takes that on update only).
  */
 export function expectationsBodyFields(
-  allowNull: boolean,
-): (flags: Record<string, unknown>) => ExtensionBodyField[] {
-  return (flags) => {
-    const file = flags["expectations-file"];
-    if (typeof file !== "string") return [];
-    const value = readJsonFileFlag(file, "--expectations-file");
-    if (value === null && !allowNull)
-      throw usageError(
-        `--expectations-file ${file} holds null, which only update-email-rule takes (to remove a rule's saved expectations). A new rule takes an object such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}, or no --expectations-file.`,
-      );
-    return [
-      {
-        flag: "--expectations-file",
-        property: "expectations",
-        value:
-          value === null
-            ? null
-            : checkExpectations(value, `--expectations-file ${file}`),
-      },
-    ];
-  };
+  flags: Record<string, unknown>,
+): ExtensionBodyField[] {
+  const file = flags["expectations-file"];
+  if (typeof file !== "string") return [];
+  const value = readJsonFileFlag(file, "--expectations-file");
+  return [
+    {
+      flag: "--expectations-file",
+      property: "expectations",
+      value:
+        value === null
+          ? null
+          : checkExpectations(value, `--expectations-file ${file}`),
+    },
+  ];
 }
 
 // Readable values
@@ -2052,7 +1965,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
         exclusive: ["expect-match", "expect-no-match"],
       }),
       [EXPECT_SAMPLES_FILE_FLAG]: Flags.string({
-        description: `${SAMPLES_FILE_SHAPE} Sets expect.samples (at most ${SAMPLES_MAX}), beside any emails by id; the answer judges each in expectations.samples (index from 0 over those sent), and the report names each by its number in the file. Like any expect, it replaces a saved rule's own expectations and samples for this test. ${EXPECTATION_FLAG_NOTE}`,
+        description: `${SAMPLES_FILE_SHAPE} Sets expect.samples, beside any emails by id; the answer judges each in expectations.samples (index from 0 over those sent), and the report names each by its number in the file. Like any expect, it replaces a saved rule's own expectations and samples for this test. ${EXPECTATION_FLAG_NOTE}`,
       }),
       [PICK_FLAG]: Flags.string({
         description: pickFlagHelp([EXPECT_SAMPLES_FILE_FLAG]),
@@ -2066,7 +1979,6 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
     bodyFields: (flags, base) => {
       const expect = expectBodyFields(flags);
       const same = sameEmailsBodyFields(flags);
-      checkSameEmailsWithExpected(same, expect, base);
       return [...expect, ...same, ...scopeSelectionBodyFields(flags, base)];
     },
     bodyProperties: ["expect", "scope_selection"],
@@ -2088,7 +2000,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
           'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}. Sets expectations, over any in --body-file or --raw-body; the answer judges them in expectations_check (passed, decided, failed, undecided); the report test-email-rule answers with is named expectations instead.',
       }),
       [SAMPLES_FILE_FLAG]: Flags.string({
-        description: `${SAMPLES_FILE_SHAPE} Sets expectation_samples (at most ${SAMPLES_MAX}), over any in --body-file or --raw-body. A create does not judge them; test-email-rule --rule-id does.`,
+        description: `${SAMPLES_FILE_SHAPE} Sets expectation_samples, over any in --body-file or --raw-body. A create does not judge them; test-email-rule --rule-id does.`,
       }),
       [PICK_FLAG]: Flags.string({
         description: pickFlagHelp([SAMPLES_FILE_FLAG]),
@@ -2099,7 +2011,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
       ...scopeSelectionFlags(),
     },
     bodyFields: (flags, base) => [
-      ...expectationsBodyFields(false)(flags),
+      ...expectationsBodyFields(flags),
       ...samplesBodyFields(false)(flags),
       ...scopeSelectionBodyFields(flags, base),
     ],
@@ -2118,7 +2030,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
         exclusive: [ADD_SAMPLES_FILE_FLAG],
       }),
       [ADD_SAMPLES_FILE_FLAG]: Flags.string({
-        description: `${SAMPLES_FILE_SHAPE} They are added to the rule's saved ones, ${SAMPLES_MAX} at most in all. Sets add_expectation_samples, over any in --body-file or --raw-body. Not with --${SAMPLES_FILE_FLAG}. ${UPDATE_JUDGES_SAMPLES}`,
+        description: `${SAMPLES_FILE_SHAPE} They are added to the rule's saved ones. Sets add_expectation_samples, over any in --body-file or --raw-body. Not with --${SAMPLES_FILE_FLAG}. ${UPDATE_JUDGES_SAMPLES}`,
         exclusive: [SAMPLES_FILE_FLAG],
       }),
       [PICK_FLAG]: Flags.string({
@@ -2130,7 +2042,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
       ...scopeSelectionFlags(),
     },
     bodyFields: (flags, base) => [
-      ...expectationsBodyFields(true)(flags),
+      ...expectationsBodyFields(flags),
       ...samplesBodyFields(true)(flags),
       ...expectationsGuardBodyFields(flags),
       ...scopeSelectionBodyFields(flags, base),
@@ -2165,7 +2077,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   acceptEmailRuleRequest: {
     flags: {
       [SAMPLES_FILE_FLAG]: Flags.string({
-        description: `${SAMPLES_FILE_SHAPE} Sets expectation_samples (at most ${SAMPLES_MAX}), over any in --body-file or --raw-body: they are kept on the rule this accept writes, such as the look-alikes of the request, each keeping whether it must match.`,
+        description: `${SAMPLES_FILE_SHAPE} Sets expectation_samples, over any in --body-file or --raw-body: they are kept on the rule this accept writes, such as the look-alikes of the request, each keeping whether it must match.`,
       }),
       [PICK_FLAG]: Flags.string({
         description: pickFlagHelp([SAMPLES_FILE_FLAG]),

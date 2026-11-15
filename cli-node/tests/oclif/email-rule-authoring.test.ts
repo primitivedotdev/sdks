@@ -510,14 +510,6 @@ describe("email-rules test-email-rule: expectations from flags", () => {
   });
 
   it.each([
-    [
-      ["--expect-match", "not-an-id"],
-      'takes email ids (UUIDs, from `primitive emails list`); "not-an-id" is not one',
-    ],
-    [
-      ["--expect-match", A, "--expect-no-match", A],
-      "is expected both to match and not to match",
-    ],
     [["--expect-match", " , "], "--expect-match needs at least one email id"],
   ])("refuses %j with exit 2 and sends nothing", async (argv, message) => {
     const result = await run("email-rules:test-email-rule", [
@@ -530,21 +522,10 @@ describe("email-rules test-email-rule: expectations from flags", () => {
     expect(calls).toEqual([]);
   });
 
-  it("refuses an --expect-file that is not in the expect shape with exit 2", async () => {
+  it("refuses an --expect-file that is not a JSON object, or that holds samples, and sends the rest as it is", async () => {
     for (const [content, message] of [
       ["[]", "must hold a JSON object"],
-      [JSON.stringify({ matches: [A] }), 'takes only "match" and "no_match"'],
-      [JSON.stringify({ match: A }), '"match" must be a list of email ids'],
-      [JSON.stringify({ match: ["x"] }), '"x" is not one'],
-      ["{}", "needs at least one email id in match or no_match"],
-      [
-        JSON.stringify({ match: [], no_match: [] }),
-        "needs at least one email id in match or no_match",
-      ],
-      [
-        JSON.stringify({ match: [A], no_match: [A.toUpperCase()] }),
-        "is expected both to match and not to match",
-      ],
+      [JSON.stringify({ samples: [] }), "--expect-samples-file"],
     ] as const) {
       const result = await run("email-rules:test-email-rule", [
         "--rule-id",
@@ -556,6 +537,17 @@ describe("email-rules test-email-rule: expectations from flags", () => {
       expect(result.stderr, content).toContain(message);
     }
     expect(calls).toEqual([]);
+    answer(testResult());
+    await run("email-rules:test-email-rule", [
+      "--rule-id",
+      RULE,
+      "--expect-file",
+      tempFile("odd.json", JSON.stringify({ match: ["x"], no_match: ["x"] })),
+    ]);
+    expect(calls[0]?.body).toEqual({
+      rule_id: RULE,
+      expect: { match: ["x"], no_match: ["x"] },
+    });
   });
 
   it("refuses an unreadable or invalid JSON --expect-file as a usage error", async () => {
@@ -573,23 +565,6 @@ describe("email-rules test-email-rule: expectations from flags", () => {
       expect(result.stderr, path).toContain(message);
     }
     expect(calls).toEqual([]);
-  });
-
-  it("removes repeated ids from --expect-file", async () => {
-    answer(testResult());
-    await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-      "--expect-file",
-      tempFile(
-        "expect.json",
-        JSON.stringify({ match: [A, B, A.toUpperCase()], no_match: [C, C] }),
-      ),
-    ]);
-    expect(calls[0]?.body).toEqual({
-      rule_id: RULE,
-      expect: { match: [A, B], no_match: [C] },
-    });
   });
 
   it("names the expectation flag when --raw-body is not an object", async () => {
@@ -1096,7 +1071,7 @@ describe("email-rules test-email-rule: which mail was tested (--same-emails-as)"
     ).toEqual([A.toLowerCase(), B]);
   });
 
-  it("refuses a saved answer that names no emails, or more than a test takes with the expected ones", async () => {
+  it("refuses a saved answer that names no emails", async () => {
     calls.length = 0;
     const none = await run("email-rules:test-email-rule", [
       "--rule-id",
@@ -1106,23 +1081,6 @@ describe("email-rules test-email-rule: which mail was tested (--same-emails-as)"
     ]);
     expect(none.exitCode).toBe(2);
     expect(none.stderr).toContain("names no emails");
-    const many = Array.from(
-      { length: 200 },
-      (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
-    );
-    const full = await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-      "--expect-match",
-      "00000000-0000-4000-8000-999999999999",
-      "--same-emails-as",
-      tempFile(
-        "many.json",
-        JSON.stringify({ results: many.map((email_id) => ({ email_id })) }),
-      ),
-    ]);
-    expect(full.exitCode).toBe(2);
-    expect(full.stderr).toContain("201 in all, and a test takes at most 200");
     expect(calls).toEqual([]);
   });
 
@@ -1322,41 +1280,6 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
     expect(stderrLines(result)).toEqual([
       "Expectations on version 1: all passed.",
     ]);
-  });
-
-  it("refuses a null file on create, which only update takes", async () => {
-    const result = await run("email-rules:create-email-rule", [
-      "--raw-body",
-      JSON.stringify({ tree, name: "n", english: "e" }),
-      "--expectations-file",
-      tempFile("null.json", "null"),
-    ]);
-    expect(result.exitCode).toBe(2);
-    expect(result.stderr).toContain("only update-email-rule takes");
-    expect(calls).toEqual([]);
-  });
-
-  it("refuses a file with no email id on create and update", async () => {
-    for (const [id, argv] of [
-      [
-        "email-rules:create-email-rule",
-        ["--raw-body", JSON.stringify({ tree, name: "n", english: "e" })],
-      ],
-      ["email-rules:update-email-rule", [RULE]],
-    ] as const) {
-      for (const content of ["{}", JSON.stringify({ match: [] })]) {
-        const result = await run(id, [
-          ...argv,
-          "--expectations-file",
-          tempFile("empty.json", content),
-        ]);
-        expect(result.exitCode, `${id} ${content}`).toBe(2);
-        expect(result.stderr).toContain(
-          "needs at least one email id in match or no_match",
-        );
-      }
-    }
-    expect(calls).toEqual([]);
   });
 
   it("clears saved expectations on update with a null file", async () => {
@@ -4144,7 +4067,7 @@ describe("--scope-address and --scope-domain", () => {
           multiple: true,
         });
         expect(command.flags[flag]?.description, `${id} --${flag}`).toContain(
-          "Goes with --evaluation-scope selected",
+          "Sends evaluation_scope selected unless --evaluation-scope or the body gives a scope.",
         );
       }
       expect(command.flags["evaluation-scope"], id).toBeDefined();
@@ -4244,7 +4167,19 @@ describe("--scope-address and --scope-domain", () => {
     }
   });
 
-  it("are refused beside another --evaluation-scope, or with no evaluation_scope anywhere", async () => {
+  it("send evaluation_scope selected when no scope is given, and any scope given as it is", async () => {
+    answer(written);
+    const alone = await run("email-rules:update-email-rule", [
+      RULE,
+      "--scope-address",
+      "support@example.com",
+    ]);
+    expect(alone.exitCode, alone.stderr).toBe(0);
+    expect(calls[0]?.body).toEqual({
+      evaluation_scope: "selected",
+      scope_selection: { addresses: ["support@example.com"], domains: [] },
+    });
+    calls = [];
     const other = await run("email-rules:update-email-rule", [
       RULE,
       "--evaluation-scope",
@@ -4252,27 +4187,17 @@ describe("--scope-address and --scope-domain", () => {
       "--scope-address",
       "support@example.com",
     ]);
-    expect(other.exitCode).toBe(2);
-    expect(other.stderr).toContain(
-      "--scope-address names what a selected scope covers, so it goes with --evaluation-scope selected, not author. Pass --evaluation-scope selected, or leave it out.",
-    );
-    const missing = await run("email-rules:update-email-rule", [
-      RULE,
-      "--scope-address",
-      "support@example.com",
-      "--scope-domain",
-      "example.org",
-    ]);
-    expect(missing.exitCode).toBe(2);
-    expect(missing.stderr).toContain(
-      "--scope-address and --scope-domain name what a selected scope covers, so they go with --evaluation-scope selected. Pass --evaluation-scope selected with them.",
-    );
-    expect(calls).toEqual([]);
+    expect(other.exitCode, other.stderr).toBe(0);
+    expect(calls[0]?.body).toEqual({
+      evaluation_scope: "author",
+      scope_selection: { addresses: ["support@example.com"], domains: [] },
+    });
   });
 
   it("read evaluation_scope from --raw-body or --body-file when --evaluation-scope is not given, and let the flag win", async () => {
+    answer(written);
     for (const [argv, scope] of [
-      [["--raw-body", JSON.stringify({ tree, name: "n" })], undefined],
+      [["--raw-body", JSON.stringify({ tree, name: "n" })], "selected"],
       [
         [
           "--raw-body",
@@ -4291,18 +4216,16 @@ describe("--scope-address and --scope-domain", () => {
         "own_mailboxes",
       ],
     ] as const) {
+      calls = [];
       const result = await run("email-rules:create-email-rule", [
         ...argv,
         "--scope-address",
         "support@example.com",
       ]);
-      expect(result.exitCode, argv.join(" ")).toBe(2);
-      expect(result.stderr).toContain(
-        scope === undefined
-          ? "--scope-address names what a selected scope covers, so it goes with --evaluation-scope selected. Pass --evaluation-scope selected with it."
-          : `so it goes with --evaluation-scope selected, not ${scope}.`,
-      );
+      expect(result.exitCode, argv.join(" ")).toBe(0);
+      expect(calls[0]?.body).toMatchObject({ evaluation_scope: scope });
     }
+    calls = [];
     // A body that is not an object is refused for what it is.
     const array = await run("email-rules:create-email-rule", [
       "--raw-body",
@@ -4316,7 +4239,6 @@ describe("--scope-address and --scope-domain", () => {
     );
     expect(calls).toEqual([]);
 
-    answer(written);
     const file = tempFile(
       "selected.json",
       JSON.stringify({ tree, name: "n", evaluation_scope: "selected" }),
@@ -4351,32 +4273,25 @@ describe("--scope-address and --scope-domain", () => {
     });
   });
 
-  it("refuse a domain given as an inbox, an inbox given as a domain, and an empty value", async () => {
-    for (const [argv, message] of [
-      [
-        ["--scope-address", "example.org"],
-        '--scope-address takes inboxes such as support@example.com; "example.org" is a domain, so give it with --scope-domain.',
-      ],
-      [
-        ["--scope-domain", "support@example.com"],
-        '--scope-domain takes domains such as example.com; "support@example.com" is an inbox, so give it with --scope-address.',
-      ],
-      [
-        ["--scope-domain", "localhost"],
-        '--scope-domain takes domains such as example.com; "localhost" is not one.',
-      ],
-      [["--scope-address", " , "], "--scope-address needs a value."],
-    ] as const) {
-      const result = await run("email-rules:update-email-rule", [
-        RULE,
-        "--evaluation-scope",
-        "selected",
-        ...argv,
-      ]);
-      expect(result.exitCode, argv.join(" ")).toBe(2);
-      expect(result.stderr).toContain(message);
-    }
+  it("refuse an empty value, and leave the address and domain forms to the API", async () => {
+    const empty = await run("email-rules:update-email-rule", [
+      RULE,
+      "--scope-address",
+      " , ",
+    ]);
+    expect(empty.exitCode).toBe(2);
+    expect(empty.stderr).toContain("--scope-address needs a value.");
     expect(calls).toEqual([]);
+    answer(written);
+    const domain = await run("email-rules:update-email-rule", [
+      RULE,
+      "--scope-address",
+      "example.org",
+    ]);
+    expect(domain.exitCode, domain.stderr).toBe(0);
+    expect(calls[0]?.body).toMatchObject({
+      scope_selection: { addresses: ["example.org"] },
+    });
   });
 });
 

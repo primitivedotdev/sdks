@@ -370,15 +370,6 @@ export function buildCreateGrant(
     ...(choice.domains.length > 0 ? { domains: choice.domains } : {}),
     ...(choice.rules.length > 0 ? { rules: choice.rules } : {}),
   };
-  // A key reads every email on a domain it lists, so a domain beside a rule
-  // would read far more than the rule's emails. The API refuses it too.
-  const domainBesideRule =
-    choice.rules.length > 0 && choice.domains.length > 0
-      ? {
-          ok: false as const,
-          message: `--rule cannot be combined with --domain: the key would read every email on ${choice.domains.join(", ")}, not only what the rules granted. Create a key with --rule alone, or one with --domain alone.`,
-        }
-      : null;
   if (choice.permissions.length > 0) {
     if (choice.preset) {
       return {
@@ -394,7 +385,6 @@ export function buildCreateGrant(
           : "Say which mail the key reaches: --address, --domain or --rule (each repeatable), or --all-mailboxes.",
       };
     }
-    if (domainBesideRule) return domainBesideRule;
     return {
       ok: true,
       grant: {
@@ -433,7 +423,6 @@ export function buildCreateGrant(
         message: `${choice.preset} needs --address, --domain or --rule.`,
       };
     }
-    if (domainBesideRule) return domainBesideRule;
     return {
       ok: true,
       grant: {

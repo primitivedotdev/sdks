@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   expectSamples,
   lookAlikeSample,
@@ -152,62 +152,6 @@ describe("samplesFromJson", () => {
     ]);
   });
 
-  it("keeps attachment_names, as look-alikes now carry them, paired with the types", () => {
-    const named = {
-      ...email("a"),
-      attachment_types: ["application/pdf"],
-      attachment_names: ["statement.pdf"],
-    };
-    expect(
-      samplesFromJson([{ expected: "no_match", email: named }], "f"),
-    ).toEqual([{ expected: "no_match", email: named }]);
-    // A generate-look-alikes answer saved as printed, whose look-alikes carry them.
-    expect(
-      samplesFromJson(
-        answer([
-          { ...lookAlike("Statement", "passed", "no_match"), email: named },
-        ]),
-        "f",
-      ).map((sample) => sample.email),
-    ).toEqual([named]);
-    // Names alone are kept too: the API pairs by position only when both list files.
-    const namesOnly = { ...email("b"), attachment_names: ["notes.txt"] };
-    expect(
-      samplesFromJson([{ expected: "match", email: namesOnly }], "f"),
-    ).toEqual([{ expected: "match", email: namesOnly }]);
-    expect(() =>
-      samplesFromJson(
-        [
-          {
-            expected: "match",
-            email: {
-              ...email("c"),
-              attachment_types: ["application/pdf", "image/png"],
-              attachment_names: ["statement.pdf"],
-            },
-          },
-        ],
-        "f",
-      ),
-    ).toThrow(
-      "f, sample 1 (index 0): email attachment_names pairs with attachment_types by position, so give the same number of each.",
-    );
-    expect(() =>
-      samplesFromJson(
-        [
-          {
-            expected: "match",
-            email: {
-              ...email("d"),
-              attachment_names: ["x"].concat(Array(10).fill("y")),
-            },
-          },
-        ],
-        "f",
-      ),
-    ).toThrow("email attachment_names must be a list of at most 10 strings");
-  });
-
   it("takes a generate-look-alikes answer, bare or as --json printed it", () => {
     const expected = lookAlikeSamples(THREE);
     expect(expected).toHaveLength(3);
@@ -217,155 +161,29 @@ describe("samplesFromJson", () => {
     );
   });
 
-  it("refuses anything else, naming the sample", () => {
+  it("refuses only a file that is neither shape, and leaves each sample to the API", () => {
     expect(() => samplesFromJson({ x: 1 }, "--f a.json")).toThrow(
       "--f a.json must hold a JSON array of samples",
     );
-    expect(() =>
-      samplesFromJson([{ expected: "maybe", email: email("x") }], "--f a.json"),
-    ).toThrow(
-      '--f a.json, sample 1 (index 0): expected must be "match" or "no_match".',
+    expect(() => samplesFromJson([3], "--f a.json")).toThrow(
+      "--f a.json, sample 1 (index 0) is not an object.",
     );
-    expect(() =>
-      samplesFromJson(
-        [{ expected: "match", email: email("x") }, { expected: "match" }],
-        "--f a.json",
-      ),
-    ).toThrow("--f a.json, sample 2 (index 1): email must be an object");
-    expect(() =>
-      samplesFromJson(
-        [{ expected: "match", email: email("x"), label: 3 }],
-        "f",
-      ),
-    ).toThrow("label must be a string");
-    expect(() =>
-      samplesFromJson(
-        [{ expected: "match", email: email("x"), label: "  " }],
-        "f",
-      ),
-    ).toThrow("f, sample 1 (index 0): label is blank");
-    expect(() =>
-      samplesFromJson(
-        [{ expected: "match", email: email("x"), label: "x".repeat(201) }],
-        "f",
-      ),
-    ).toThrow("label is longer than 200 characters");
-    // The email itself, checked against what the API keeps.
-    const refused = (email: Record<string, unknown>) => () =>
-      samplesFromJson([{ expected: "no_match", email }], "f");
-    expect(refused({ to: ["a@b.example"], text: "t" })).toThrow(
-      "f, sample 1 (index 0): email needs from.address.",
-    );
-    expect(refused({ ...email("x"), text: "t".repeat(4_001) })).toThrow(
-      "email text must be 1 to 4000 characters",
-    );
-    expect(refused({ ...email("x"), to: [] })).toThrow(
-      "email to must be a list of 1 to 10 strings",
-    );
-    expect(refused({ ...email("x"), automated: "no" })).toThrow(
-      "email automated must be true or false",
-    );
+    // What a sample holds is sent as it is, a saved one's id and time aside.
+    const odd = {
+      expected: "maybe",
+      label: "  ",
+      email: { to: [] },
+      reply_to: ["r@b.example"],
+    };
+    expect(
+      samplesFromJson([{ ...odd, id: "s1", created_at: "t" }], "f"),
+    ).toEqual([odd]);
     // An empty answer is refused, so it never empties a rule's samples;
     // only a literal [] does.
     expect(() => samplesFromJson(answer([]), "--x a.json")).toThrow(
       "--x a.json is a generate-look-alikes answer with no look-alikes in it.",
     );
     expect(samplesFromJson([], "f")).toEqual([]);
-  });
-});
-
-describe("samples with fields this CLI does not know", () => {
-  function captureStderr(): string[] {
-    const said: string[] = [];
-    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
-      said.push(String(chunk));
-      return true;
-    });
-    return said;
-  }
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-  const withNew = (subject: string) => ({
-    ...email(subject),
-    reply_to: ["r@b.example"],
-  });
-
-  it("passes them on for the API to judge instead of refusing, and names them once for the samples sent", () => {
-    const said = captureStderr();
-    const samples = [
-      { expected: "match", email: withNew("one"), lable: "x" },
-      { expected: "no_match", email: email("two") },
-      { expected: "match", email: withNew("three") },
-    ];
-    const path = join(dir, "samples.json");
-    writeFileSync(path, JSON.stringify(samples));
-    const sent = expectSamples({ "expect-samples-file": path });
-    expect(sent).toEqual([
-      { lable: "x", expected: "match", email: withNew("one") },
-      { expected: "no_match", email: email("two") },
-      { expected: "match", email: withNew("three") },
-    ]);
-    expect(said).toEqual([
-      `--expect-samples-file ${path} has fields this CLI does not know, which it does not refuse but leaves for the API to judge (if the API refuses one, take it out): sample field "lable" (sample 1 (index 0)), email field "reply_to" (samples 1 (index 0), 3 (index 2)).\n`,
-    ]);
-    // Only what --pick sends is named, by its number in the file.
-    said.length = 0;
-    expect(
-      expectSamples({ "expect-samples-file": path, pick: "2,3" }),
-    ).toHaveLength(2);
-    expect(said).toEqual([
-      `--expect-samples-file ${path} has fields this CLI does not know, which it does not refuse but leaves for the API to judge (if the API refuses one, take it out): email field "reply_to" (sample 3 (index 2)).\n`,
-    ]);
-    said.length = 0;
-    expectSamples({ "expect-samples-file": path, pick: "2" });
-    expect(said).toEqual([]);
-  });
-
-  it("says nothing for a file that is then refused, or for known fields", () => {
-    const said = captureStderr();
-    const path = join(dir, "many.json");
-    writeFileSync(
-      path,
-      JSON.stringify(
-        Array.from({ length: 21 }, (_, index) => ({
-          expected: "no_match",
-          email: index === 0 ? withNew("first") : email(`n${index}`),
-        })),
-      ),
-    );
-    // More than a test takes, and a --pick the file does not hold.
-    expect(() => expectSamples({ "expect-samples-file": path })).toThrow(
-      "holds 21 samples",
-    );
-    expect(() =>
-      expectSamples({ "expect-samples-file": path, pick: "99" }),
-    ).toThrow("99 is not a sample number");
-    // A sample refused part way through says nothing of the ones before it.
-    expect(() =>
-      samplesFromJson(
-        [
-          { expected: "match", email: withNew("one") },
-          { expected: "maybe", email: email("two") },
-        ],
-        "f",
-      ),
-    ).toThrow("f, sample 2");
-    // A look-alikes answer whose emails carry a field added later is not refused either.
-    expect(
-      samplesFromJson(
-        answer([{ kind: "medical", why: "w", email: withNew("x") }]),
-        "--x a.json",
-      ),
-    ).toHaveLength(1);
-    // A saved sample's id and time are still left out.
-    expect(
-      samplesFromJson(
-        [{ expected: "match", email: email("x"), id: "s1", created_at: "t" }],
-        "f",
-      ),
-    ).toEqual([{ expected: "match", email: email("x") }]);
-    expect(said).toEqual([]);
   });
 });
 
@@ -451,15 +269,13 @@ describe("samplesBodyFields and expectSamples", () => {
     expect(expectSamples({})).toBeNull();
   });
 
-  it("refuses more than 20 samples, after --pick", () => {
+  it("sends every sample the file holds, or those --pick takes, and leaves the count to the API", () => {
     const many = Array.from({ length: 21 }, (_, i) => ({
       expected: "no_match",
       email: email(`s${i}`),
     }));
     const path = file("many.json", many);
-    expect(() => expectSamples({ "expect-samples-file": path })).toThrow(
-      `--expect-samples-file ${path} holds 21 samples, and a rule or a test takes at most 20; take some with --pick.`,
-    );
+    expect(expectSamples({ "expect-samples-file": path })).toHaveLength(21);
     expect(
       expectSamples({ "expect-samples-file": path, pick: "21,1" }),
     ).toEqual([

@@ -423,7 +423,7 @@ describe("keys helpers", () => {
     ).toBe(false);
   });
 
-  it("refuses a domain beside a rule before sending, for every way of asking, and leaves an address to the API", () => {
+  it("leaves a domain or an address beside a rule to the API, for every way of asking", () => {
     const none = {
       permissions: [],
       addresses: [],
@@ -436,18 +436,15 @@ describe("keys helpers", () => {
       { preset: "own_addresses_read_only" },
       { preset: "own_addresses" },
     ]) {
-      const refused = buildCreateGrant({
-        ...none,
-        ...choice,
-        rules: [RULE_ID],
-        domains: ["acme.example"],
-        addresses: ["bot@acme.example"],
-      });
-      expect(refused).toEqual({
-        ok: false,
-        message:
-          "--rule cannot be combined with --domain: the key would read every email on acme.example, not only what the rules granted. Create a key with --rule alone, or one with --domain alone.",
-      });
+      expect(
+        buildCreateGrant({
+          ...none,
+          ...choice,
+          rules: [RULE_ID],
+          domains: ["acme.example"],
+          addresses: ["bot@acme.example"],
+        }).ok,
+      ).toBe(true);
     }
     // Each alone, and an address beside a rule (an agent's or a shared one may be listed; the API refuses a member's).
     expect(
@@ -962,29 +959,6 @@ describe("keys commands", () => {
     const requests = useServer(() => Response.json({}, { status: 500 }));
     const result = await run(KeysCreateCommand, ["--name", "x"]);
     expect(String(result.error)).toContain("no default");
-    expect(requests).toHaveLength(0);
-  });
-
-  it("create refuses --domain beside --rule with exit 2 and sends nothing, with or without --json", async () => {
-    const requests = useServer(() => Response.json({}, { status: 500 }));
-    const args = [
-      "--name",
-      "x",
-      "--permission",
-      "mail:read",
-      "--rule",
-      RULE_ID,
-      "--domain",
-      "acme.example",
-    ];
-    const result = await run(KeysCreateCommand, args);
-    expect(String(result.error)).toContain(
-      "--rule cannot be combined with --domain",
-    );
-    expect(result.exitCode).toBe(2);
-    const json = await run(KeysCreateCommand, [...args, "--json"]);
-    expect(json.stderr).toBe("");
-    expect(JSON.parse(json.stdout)).toMatchObject({ exit_code: 2 });
     expect(requests).toHaveLength(0);
   });
 
