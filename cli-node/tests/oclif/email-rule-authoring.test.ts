@@ -1547,66 +1547,45 @@ describe("email-rules generate-look-alikes", () => {
     note: "These emails are made up.",
   };
 
-  it("sends the rule, prints each look-alike numbered, and writes them to --samples-file in that order", async () => {
+  it("sends the rule, prints each look-alike numbered, and an update takes the saved answer by those numbers", async () => {
     answer(data);
-    const path = join(tempHome, "look-alikes.json");
     const result = await run("email-rules:generate-look-alikes", [
       "--rule-id",
       RULE,
-      "--samples-file",
-      path,
     ]);
     expect(result.exitCode, result.stderr).toBe(0);
     expect(calls[0]?.url.pathname).toBe("/v1/email-rules/look-alikes");
     expect(calls[0]?.body).toEqual({ rule_id: RULE });
-    expect(stderrLines(result).slice(0, 2)).toEqual([
+    expect(stderrLines(result).slice(0, 3)).toEqual([
       '1. failed  medical  "Your dental invoice" from billing@clinic.example',
       "   Why it should not match: Your dental invoice is private.",
+      "   matched (expected no_match)",
     ]);
-    const written = JSON.parse(readFileSync(path, "utf8"));
-    expect(
-      written.map((s: { email: { subject: string } }) => s.email.subject),
-    ).toEqual(["Your dental invoice", "Lab results"]);
-    expect(written[0]).toMatchObject({
-      expected: "no_match",
-      label: "medical: Your dental invoice is private.",
-    });
-    // And an update takes the file by those numbers.
+    const saved = tempFile("look-alikes.json", result.stdout);
     answer({ id: RULE, name: "Bills", state: "observe", current_version: 2 });
     await run("email-rules:update-email-rule", [
       RULE,
       "--add-expectation-samples-file",
-      path,
+      saved,
       "--pick",
       "1",
     ]);
-    expect(calls[1]?.body).toEqual({ add_expectation_samples: [written[0]] });
+    expect(calls[1]?.body).toEqual({
+      add_expectation_samples: [
+        {
+          expected: "no_match",
+          label: "medical: Your dental invoice is private.",
+          email: data.look_alikes[0]?.email,
+        },
+      ],
+    });
   });
 
-  it("writes the file under --json too, and exits 1 with samples_file_not_written when it cannot", async () => {
-    answer(data);
-    const path = join(tempHome, "quiet.json");
-    const quiet = await run("email-rules:generate-look-alikes", [
-      "--rule-id",
-      RULE,
-      "--samples-file",
-      path,
-      "--json",
-    ]);
-    expect(quiet.exitCode).toBe(0);
-    expect(quiet.stderr).toBe("");
-    expect(JSON.parse(readFileSync(path, "utf8"))).toHaveLength(2);
-    const failed = await run("email-rules:generate-look-alikes", [
-      "--rule-id",
-      RULE,
-      "--samples-file",
-      join(tempHome, "no-such-dir", "f.json"),
-      "--json",
-    ]);
-    expect(failed.exitCode).toBe(1);
-    expect(JSON.parse(failed.merged).error.code).toBe(
-      "samples_file_not_written",
-    );
+  it("has no --samples-file", () => {
+    const command = COMMANDS["email-rules:generate-look-alikes"] as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(command.flags["samples-file"]).toBeUndefined();
   });
 });
 
@@ -1776,8 +1755,8 @@ describe("email-rules made-up emails in test and write reports", () => {
     return all.slice(all.findIndex((line) => line.startsWith("Expectations")));
   };
 
-  it("names each sample that did not pass by its number in the file --pick took it from", async () => {
-    // Sent as --pick 3,1: the API's index 0 is the file's sample 3.
+  it("names each sample that did not pass by its place from 1 among those sent", async () => {
+    // Sent as --pick 3,1: named by the API's index, from 1.
     answer(
       testResult(
         expectations(
@@ -1810,9 +1789,9 @@ describe("email-rules made-up emails in test and write reports", () => {
     expect(result.exitCode).toBe(1);
     expect(lines(result).slice(0, 4)).toEqual([
       "Expectations: 1 failed, 1 undecided, 0 passed.",
-      '  failed: sample 3 ("medical: three") expected no_match, got matched',
+      '  failed: sample 1 ("medical: three") expected no_match, got matched',
       '    questions: "Is it a bill?" yes at 0.90',
-      '  undecided: sample 1 ("medical: one") expected no_match, got not_decided (not_decided; test again later)',
+      '  undecided: sample 2 ("medical: one") expected no_match, got not_decided (not_decided; test again later)',
     ]);
   });
 
@@ -1833,7 +1812,7 @@ describe("email-rules made-up emails in test and write reports", () => {
     expect(JSON.parse(later.merged).error).toEqual({
       code: "expectations_undecided",
       message:
-        "1 expectation is undecided: saved sample 1 (index 0) (not_decided). Test again later.",
+        "1 expectation is undecided: sample 1 (not_decided). Test again later.",
     });
     // A question left unanswered, with none answered no, can be decided by a
     // later test: exit 3 too.
@@ -1857,7 +1836,7 @@ describe("email-rules made-up emails in test and write reports", () => {
     ]);
     expect(unanswered.exitCode).toBe(3);
     expect(lines(unanswered)).toContain(
-      '  undecided: saved sample 3 (index 2, "medical: three") expected no_match, got near_miss (question_unanswered; test again later)',
+      '  undecided: sample 3 ("medical: three") expected no_match, got near_miss (question_unanswered; test again later)',
     );
     const unansweredJson = await run("email-rules:test-email-rule", [
       "--rule-id",
@@ -1867,7 +1846,7 @@ describe("email-rules made-up emails in test and write reports", () => {
     expect(JSON.parse(unansweredJson.merged).error).toEqual({
       code: "expectations_undecided",
       message:
-        "1 expectation is undecided: saved sample 3 (index 2) (question_unanswered). Test again later.",
+        "1 expectation is undecided: sample 3 (question_unanswered). Test again later.",
     });
     answer(
       testResult(
@@ -1889,7 +1868,7 @@ describe("email-rules made-up emails in test and write reports", () => {
       ).error.message,
     ).toContain("testing again will not decide this one");
     expect(lines(may)).toContain(
-      '  undecided: saved sample 2 (index 1, "medical: two") expected no_match, got no_match (no_match; testing again will not decide it)',
+      '  undecided: sample 2 ("medical: two") expected no_match, got no_match (no_match; testing again will not decide it)',
     );
   });
 
@@ -1920,7 +1899,7 @@ describe("email-rules made-up emails in test and write reports", () => {
     ]);
     expect(result.exitCode).toBe(1);
     expect(stderrLines(result).at(-1)).toBe(
-      "Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations failed: saved sample 2 (index 1).",
+      "Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations failed: sample 2.",
     );
     // A server that names each one's label beside its index: said with it.
     responder = () =>
@@ -1952,7 +1931,7 @@ describe("email-rules made-up emails in test and write reports", () => {
       "active",
     ]);
     expect(stderrLines(labelled).at(-1)).toContain(
-      'Expectations failed: saved sample 2 (index 1, "Personal medical bill").',
+      'Expectations failed: sample 2 ("Personal medical bill").',
     );
   });
 
@@ -1980,7 +1959,7 @@ describe("email-rules made-up emails in test and write reports", () => {
       });
   };
 
-  it("names a refused write's own samples by their numbers in the file, or says where an added one may be", async () => {
+  it("names a refused write's samples by their place among those judged, and says where an added one may be", async () => {
     const file = tempFile("samples.json", JSON.stringify(samples));
     refusedWith({ failed_samples: [0] });
     const replaced = await run("email-rules:update-email-rule", [
@@ -1991,7 +1970,7 @@ describe("email-rules made-up emails in test and write reports", () => {
       "3",
     ]);
     expect(stderrLines(replaced).at(-1)).toContain(
-      'Expectations failed: sample 3 ("medical: three").',
+      'Expectations failed: sample 1 ("medical: three").',
     );
     refusedWith({ failed_samples: [4] });
     const added = await run("email-rules:update-email-rule", [
@@ -2000,7 +1979,7 @@ describe("email-rules made-up emails in test and write reports", () => {
       file,
     ]);
     expect(stderrLines(added).at(-1)).toContain(
-      "Expectations failed: made-up email 5 (index 4). Made-up emails are numbered from 1: the rule's saved ones first, then those this write adds.",
+      "Expectations failed: sample 5. Made-up emails are numbered from 1: the rule's saved ones first, then those this write adds.",
     );
   });
 
@@ -2013,7 +1992,7 @@ describe("email-rules made-up emails in test and write reports", () => {
     ]);
     expect(stays.exitCode).toBe(1);
     expect(stderrLines(stays).at(-1)).toBe(
-      `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations undecided: saved sample 1 (index 0). A made-up email undecided for no reason given may stay so (a spam score it does not carry, a fact its classification left out, or a failed classification), so sending the write again may not decide it. To see why, test rule ${RULE} on each with \`primitive email-rules test-email-rule-on-sample\` (\`primitive email-rules get-email-rule ${RULE}\` lists its saved ones).`,
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations undecided: sample 1. A made-up email undecided for no reason given may stay so (a spam score it does not carry, a fact its classification left out, or a failed classification), so sending the write again may not decide it. To see why, test rule ${RULE} on each with \`primitive email-rules test-email-rule-on-sample\` (\`primitive email-rules get-email-rule ${RULE}\` lists its saved ones).`,
     );
     refusedWith({ undecided_samples: [0] }, "deadline");
     const later = await run("email-rules:update-email-rule", [

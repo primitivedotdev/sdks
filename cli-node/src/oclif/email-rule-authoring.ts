@@ -24,14 +24,12 @@ import {
   ADD_SAMPLES_FILE_FLAG,
   EXPECT_SAMPLES_FILE_FLAG,
   expectSamples,
-  LOOK_ALIKES_SAMPLES_FILE_FLAG,
   lookAlikesReport,
   PICK_FLAG,
   pickFlagHelp,
   readJsonFileFlag,
   SAMPLES_FILE_FLAG,
   samplesBodyFields,
-  sentSampleNumber,
 } from "./email-rule-samples.js";
 import {
   scopeSelectionBodyFields,
@@ -451,32 +449,19 @@ function sampleJudgments(expectations: unknown): SampleJudgment[] {
   }));
 }
 
-/**
- * How a test names a made-up email: by its number in the samples file when
- * --expect-samples-file sent it (the one --pick took it by), else by its
- * place among the rule's saved ones, from 1; with its label.
- */
+/** A made-up email as every report names it: its place from 1 in the set the API judged, and its label. */
 type SampleNamer = (sample: Pick<SampleJudgment, "index" | "label">) => string;
 
-function sampleNamer(request?: {
-  body?: unknown;
-  flags?: Record<string, unknown>;
-}): SampleNamer {
-  const sent =
-    isRecord(request?.body) &&
-    isRecord(request.body.expect) &&
-    Array.isArray(request.body.expect.samples);
-  const fromFile =
-    sent && typeof request?.flags?.[EXPECT_SAMPLES_FILE_FLAG] === "string";
-  return ({ index, label }) => {
-    const n = fromFile ? sentSampleNumber(index, request?.flags) : index + 1;
-    // A saved one also by the index from 0 the API names it by, as rule writes name it.
-    if (!sent)
-      return `saved sample ${n} (index ${index}${label ? `, "${label}"` : ""})`;
-    const name = `sample ${n}`;
-    return label ? `${name} ("${label}")` : name;
-  };
+function sampleName(index: number, label: unknown): string {
+  const name = `sample ${index + 1}`;
+  const shown = shownLine(label);
+  return shown ? `${name} ("${shown}")` : name;
 }
+
+const sampleNamer =
+  (): SampleNamer =>
+  ({ index, label }) =>
+    sampleName(index, label);
 
 function sampleLines(sample: SampleJudgment, name: SampleNamer): string[] {
   const note =
@@ -748,12 +733,9 @@ function windowLine(data: Record<string, unknown>, tested: number): string[] {
 }
 
 /** The stderr report and exit code of a test-email-rule answer. */
-export function testEmailRuleReport(
-  data: unknown,
-  request?: { body?: unknown; flags?: Record<string, unknown> },
-): OperationReport {
+export function testEmailRuleReport(data: unknown): OperationReport {
   if (!isRecord(data)) return { lines: [] };
-  const name = sampleNamer(request);
+  const name = sampleNamer();
   const result = data as Partial<TestEmailRuleResult>;
   const results = Array.isArray(result.results) ? result.results : [];
   const summary = isRecord(result.summary) ? result.summary : undefined;
@@ -813,62 +795,26 @@ export function sampleDetailLabels(check: unknown): Map<number, string | null> {
 }
 
 /**
- * How a rule write names a made-up email its check gives by index, from 0 in
- * the set judged: those this write sends in place of the rule's
- * (expectation_samples), or the rule's saved ones oldest first and then
- * those it adds (add_expectation_samples). One this write sent is "sample
- * N", its number in the samples file --pick took it from (or its place in
- * what was sent); any other is "saved sample N (index i)", its place among
- * the rule's and the index the API names it by. With its label when known,
- * from the samples or from `labels` (sampleDetailLabels). `saved` is the
- * answer's expectation_samples, every one the rule keeps after the write,
- * when it has them.
+ * How a rule write names a made-up email its check gives by index: as every
+ * report names it, with its label from the rule's samples after the write
+ * (`saved`), from `labels` (sampleDetailLabels), or from what the write sent.
  */
 export function writtenSampleNamer(
   body: unknown,
-  flags: Record<string, unknown> | undefined,
   saved?: unknown,
   labels: ReadonlyMap<number, string | null> = new Map(),
 ): (index: number) => string {
   const sent =
     isRecord(body) && Array.isArray(body.expectation_samples)
       ? body.expectation_samples
-      : null;
-  const added =
-    isRecord(body) && Array.isArray(body.add_expectation_samples)
-      ? body.add_expectation_samples
-      : null;
-  const kept = Array.isArray(saved) ? saved : null;
-  const labelled = (name: string, sample: unknown) =>
-    isRecord(sample) && typeof sample.label === "string" && sample.label
-      ? `${name} ("${sample.label}")`
-      : name;
-  // A sample this write did not send: numbered from 1 among the rule's, with
-  // the index from 0 the API names it by, and its label from the rule's
-  // samples or the check's details.
-  const indexed = (name: string, index: number) => {
-    const sample = kept?.[index];
-    const label =
-      isRecord(sample) && typeof sample.label === "string" && sample.label
-        ? sample.label
-        : labels.get(index);
-    return `${name} (index ${index}${label ? `, "${label}"` : ""})`;
-  };
+      : [];
+  const kept = Array.isArray(saved) ? saved : [];
   return (index) => {
-    if (sent)
-      return labelled(`sample ${sentSampleNumber(index, flags)}`, sent[index]);
-    if (added) {
-      // Where the added ones start, known only from the rule's samples after
-      // the write; a refused write answers without them.
-      const start = kept ? kept.length - added.length : null;
-      if (start === null) return indexed(`made-up email ${index + 1}`, index);
-      if (index >= start)
-        return labelled(
-          `sample ${sentSampleNumber(index - start, flags)}`,
-          added[index - start],
-        );
-    }
-    return indexed(`saved sample ${index + 1}`, index);
+    const sample = kept[index] ?? sent[index];
+    return sampleName(
+      index,
+      labels.get(index) ?? (isRecord(sample) ? sample.label : undefined),
+    );
   };
 }
 
@@ -1000,12 +946,7 @@ export function updateEmailRuleErrorHint(
       : {};
     const failed = Array.isArray(check.failed) ? check.failed : [];
     const undecided = Array.isArray(check.undecided) ? check.undecided : [];
-    const name = writtenSampleNamer(
-      body,
-      flags,
-      undefined,
-      sampleDetailLabels(check),
-    );
+    const name = writtenSampleNamer(body, undefined, sampleDetailLabels(check));
     const failedAll = [...failed, ...indexList(check.failed_samples).map(name)];
     const undecidedSamples = indexList(check.undecided_samples);
     const undecidedAll = [...undecided, ...undecidedSamples.map(name)];
@@ -1126,7 +1067,7 @@ function undecidedSamplesMayStay(count: number, reason: string): boolean {
 
 /** What a samples file flag reads. */
 const SAMPLES_FILE_SHAPE =
-  'A JSON file of made-up emails the rule must match or not: an array such as [{"expected": "no_match", "label": "a personal bill", "email": {...}}], with email as test-email-rule-on-sample takes it (text up to 4,000 characters, at most 10 each of to, cc, attachment_types and attachment_names), like the one generate-look-alikes --samples-file writes, or a generate-look-alikes answer saved as it printed it.';
+  'A JSON file of made-up emails the rule must match or not, such as [{"expected": "no_match", "label": "a personal bill", "email": {...}}], or a generate-look-alikes answer saved with --json.';
 
 const EXPECTATION_FLAG_NOTE =
   "Replaces any expect in --body-file or --raw-body. The answer reports them in expectations (passed, counts, results) and the exit code follows it; see --help-full.";
@@ -1153,7 +1094,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
         exclusive: ["expect-match", "expect-no-match"],
       }),
       [EXPECT_SAMPLES_FILE_FLAG]: Flags.string({
-        description: `${SAMPLES_FILE_SHAPE} Sets expect.samples, beside any emails by id; the answer judges each in expectations.samples (index from 0 over those sent), and the report names each by its number in the file. Like any expect, it replaces a saved rule's own expectations and samples for this test. ${EXPECTATION_FLAG_NOTE}`,
+        description: `${SAMPLES_FILE_SHAPE} Sets expect.samples, beside any emails by id; the answer judges each in expectations.samples, and the report names each sample N, its place from 1 among those sent. Like any expect, it replaces a saved rule's own expectations and samples for this test. ${EXPECTATION_FLAG_NOTE}`,
       }),
       [PICK_FLAG]: Flags.string({
         description: pickFlagHelp([EXPECT_SAMPLES_FILE_FLAG]),
@@ -1238,9 +1179,6 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
   },
   generateLookAlikes: {
     flags: {
-      [LOOK_ALIKES_SAMPLES_FILE_FLAG]: Flags.string({
-        description: `Also write the look-alikes to this JSON file as made-up emails the rule must match or not (each keeps its expected: most must not match, and a near case it should take must match), a JSON array numbered from 1 in the order the report prints them. Save the ones you choose with create-email-rule --${SAMPLES_FILE_FLAG}, update-email-rule --${ADD_SAMPLES_FILE_FLAG} or, for a request, accept-email-rule-request --${SAMPLES_FILE_FLAG}, with --pick; test an edited rule on them with test-email-rule --${EXPECT_SAMPLES_FILE_FLAG}. Replaces the file if it exists, once the call succeeds; when no look-alikes came back it leaves the file as it was and exits 1. The numbered report is printed on stderr, and only without --json, which prints exactly one JSON document and nothing on stderr; the answer's look_alikes and this file hold the same emails in the same order, so with --json the file still gives the numbered set to --pick from.`,
-      }),
       ...scopeSelectionFlags(),
     },
     bodyFields: scopeSelectionBodyFields,
