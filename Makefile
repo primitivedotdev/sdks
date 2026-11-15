@@ -362,6 +362,16 @@ openapi-sync:
 
 .PHONY: openapi-sync
 
+# Report where openapi/primitive-api.yaml differs from the served document,
+# beyond the blocks it keeps on purpose (PREVIEW_ONLY in the script). SERVED is
+# a URL or a path; it defaults to the production API's document. Exit 1 means
+# there is drift to resync, 2 that the comparison could not run.
+# SERVED must not contain spaces or quotes.
+openapi-drift:
+	pnpm --filter @primitivedotdev/api-core drift:openapi $(if $(SERVED),"$(if $(findstring ://,$(SERVED)),$(SERVED),$(abspath $(SERVED)))")
+
+.PHONY: openapi-drift
+
 # Regenerate every artifact derived from the JSON schemas and the OpenAPI spec
 # (node, python, go). Run after editing json-schema/ or openapi/primitive-api.yaml;
 # the pre-commit hook in .githooks/ refuses source edits without regenerated output.
