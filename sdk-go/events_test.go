@@ -77,6 +77,51 @@ func TestWebhookEventTypesCatalog(t *testing.T) {
 	}
 }
 
+func TestEmailRuleAndCredentialCatalogs(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		got  []string
+		want []string
+	}{
+		{"objection", EmailRuleObjectionEventTypes, []string{
+			"email_rule_objection.created",
+			"email_rule_objection.accepted",
+			"email_rule_objection.declined",
+			"email_rule_objection.amended",
+			"email_rule_objection.withdrawn",
+		}},
+		{"coverage", EmailRuleCoverageEventTypes, []string{
+			"email_rule_coverage.started",
+			"email_rule_coverage.new_version",
+			"email_rule_coverage.stopped",
+		}},
+		{"credential", CredentialEventTypes, []string{
+			"credential.created",
+			"credential.updated",
+			"credential.rotated",
+			"credential.revoked",
+			"credential.expired",
+			"credential.suspended",
+			"credential.leak_detected",
+			"credential.oauth_granted",
+			"credential.oauth_revoked",
+			"credential.policy_changed",
+		}},
+	} {
+		if len(tc.got) != len(tc.want) {
+			t.Fatalf("%s: got %v, want %v", tc.name, tc.got, tc.want)
+		}
+		for i := range tc.want {
+			if tc.got[i] != tc.want[i] {
+				t.Fatalf("%s: got %v, want %v", tc.name, tc.got, tc.want)
+			}
+			if !IsKnownWebhookEventType(tc.want[i]) {
+				t.Fatalf("catalog missing %q", tc.want[i])
+			}
+		}
+	}
+}
+
 func TestEventTypeGuards(t *testing.T) {
 	if !IsEmailReceivedEventType(map[string]any{"event": "email.received"}) {
 		t.Fatal("expected IsEmailReceivedEventType true")

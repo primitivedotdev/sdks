@@ -6,8 +6,8 @@ package primitive
 // Primitive posts every webhook with the event name in the X-Webhook-Event
 // HEADER, not in the body. The stored payload is sent verbatim with no
 // envelope: an email.* or sent_email.* body carries "event", an
-// email_rule_request.* or email_rule_objection.* body carries "type" but not
-// "event", and an interaction.* body is just
+// email_rule_request.*, email_rule_objection.* or email_rule_coverage.* body
+// carries "type" but not "event", and an interaction.* body is just
 // {"interaction": {...}} with no event/type field at all. The HEADER is
 // therefore the only reliable discriminator across all the families, which is
 // why the parser keys on it.
@@ -32,16 +32,43 @@ var EmailRuleRequestEventTypes = []string{
 	"email_rule_request.withdrawn",
 }
 
-// EmailRuleObjectionEventTypes are the four opt-in email_rule_objection.*
+// EmailRuleObjectionEventTypes are the five opt-in email_rule_objection.*
 // events (subject = an objection a member made, asking the author of a rule
 // over their own mail to turn it off). Each goes to the person who did not
-// act, and an endpoint receives them only when its rules.event_types lists
-// them.
+// act (amended: the author saved a new version in answer), and an endpoint
+// receives them only when its rules.event_types lists them.
 var EmailRuleObjectionEventTypes = []string{
 	"email_rule_objection.created",
 	"email_rule_objection.accepted",
 	"email_rule_objection.declined",
+	"email_rule_objection.amended",
 	"email_rule_objection.withdrawn",
+}
+
+// EmailRuleCoverageEventTypes are the three opt-in email_rule_coverage.*
+// events (subject = a coverage notice: another member's rule started covering
+// one of your own mailboxes, saved a new version while covering it, or
+// stopped). Only a webhook of your own whose rules.event_types lists them
+// receives them.
+var EmailRuleCoverageEventTypes = []string{
+	"email_rule_coverage.started",
+	"email_rule_coverage.new_version",
+	"email_rule_coverage.stopped",
+}
+
+// CredentialEventTypes are the opt-in credential.* events (subject = an API
+// key, an app grant or the organization's credential policy).
+var CredentialEventTypes = []string{
+	"credential.created",
+	"credential.updated",
+	"credential.rotated",
+	"credential.revoked",
+	"credential.expired",
+	"credential.suspended",
+	"credential.leak_detected",
+	"credential.oauth_granted",
+	"credential.oauth_revoked",
+	"credential.policy_changed",
 }
 
 // InteractionEventTypes are the interaction step events (subject = an
@@ -55,15 +82,17 @@ var InteractionEventTypes = []string{
 }
 
 // WebhookEventTypes is the full enumerated catalog of every current webhook
-// event type: the five email.*, the four opt-in sent_email.*, the four opt-in
-// email_rule_request.*, the four opt-in email_rule_objection.*, and every
-// interaction.<protocol>.<suffix>.
+// event type: the five email.*, the opt-in sent_email.*, credential.*,
+// email_rule_request.*, email_rule_objection.* and email_rule_coverage.*
+// families, and every interaction.<protocol>.<suffix>.
 var WebhookEventTypes = func() []string {
-	all := make([]string, 0, len(EmailEventTypes)+len(SentEmailEventTypes)+len(EmailRuleRequestEventTypes)+len(EmailRuleObjectionEventTypes)+len(InteractionEventTypes))
+	all := make([]string, 0, len(EmailEventTypes)+len(SentEmailEventTypes)+len(CredentialEventTypes)+len(EmailRuleRequestEventTypes)+len(EmailRuleObjectionEventTypes)+len(EmailRuleCoverageEventTypes)+len(InteractionEventTypes))
 	all = append(all, EmailEventTypes...)
 	all = append(all, SentEmailEventTypes...)
+	all = append(all, CredentialEventTypes...)
 	all = append(all, EmailRuleRequestEventTypes...)
 	all = append(all, EmailRuleObjectionEventTypes...)
+	all = append(all, EmailRuleCoverageEventTypes...)
 	all = append(all, InteractionEventTypes...)
 	return all
 }()

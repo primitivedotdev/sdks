@@ -63,14 +63,18 @@ export {
 } from "./errors.js";
 // Event catalog, typed interaction events, and type guards
 export {
+  CREDENTIAL_EVENT_TYPES,
   EMAIL_EVENT_TYPES,
+  EMAIL_RULE_COVERAGE_EVENT_TYPES,
   EMAIL_RULE_OBJECTION_EVENT_TYPES,
   EMAIL_RULE_REQUEST_EVENT_TYPES,
+  type EmailRuleCoverageEvent,
   type EmailRuleObjectionEvent,
   type EmailRuleRequestEvent,
   INTERACTION_EVENT_TYPES,
   type InteractionEvent,
   isEmailReceivedEvent,
+  isEmailRuleCoverageEvent,
   isEmailRuleObjectionEvent,
   isEmailRuleRequestEvent,
   isKnownWebhookEventType,

@@ -3,9 +3,10 @@
 Primitive posts every webhook with the event name in the ``X-Webhook-Event``
 HEADER, not in the body. The stored payload is sent verbatim with no envelope:
 an ``email.*`` or ``sent_email.*`` body carries ``event``, an
-``email_rule_request.*`` or ``email_rule_objection.*`` body carries ``type``
-but not ``event``, and an ``interaction.*`` body is just
-``{"interaction": {...}}`` with no event/type field at all. The HEADER is
+``email_rule_request.*``, ``email_rule_objection.*`` or
+``email_rule_coverage.*`` body carries ``type`` but not ``event``, and an
+``interaction.*`` body is just ``{"interaction": {...}}`` with no event/type
+field at all. The HEADER is
 therefore the only reliable discriminator across all the families, which is
 why the parser keys on it.
 """
@@ -42,15 +43,42 @@ EMAIL_RULE_REQUEST_EVENT_TYPES: tuple[str, ...] = (
     "email_rule_request.withdrawn",
 )
 
-#: The four opt-in ``email_rule_objection.*`` events (subject = an objection a
+#: The five opt-in ``email_rule_objection.*`` events (subject = an objection a
 #: member made, asking the author of a rule over their own mail to turn it
-#: off). Each goes to the person who did not act, and an endpoint receives them
-#: only when its ``rules.event_types`` lists them.
+#: off). Each goes to the person who did not act (``amended``: the author saved
+#: a new version in answer), and an endpoint receives them only when its
+#: ``rules.event_types`` lists them.
 EMAIL_RULE_OBJECTION_EVENT_TYPES: tuple[str, ...] = (
     "email_rule_objection.created",
     "email_rule_objection.accepted",
     "email_rule_objection.declined",
+    "email_rule_objection.amended",
     "email_rule_objection.withdrawn",
+)
+
+#: The three opt-in ``email_rule_coverage.*`` events (subject = a coverage
+#: notice: another member's rule started covering one of your own mailboxes,
+#: saved a new version while covering it, or stopped). Only a webhook of your
+#: own whose ``rules.event_types`` lists them receives them.
+EMAIL_RULE_COVERAGE_EVENT_TYPES: tuple[str, ...] = (
+    "email_rule_coverage.started",
+    "email_rule_coverage.new_version",
+    "email_rule_coverage.stopped",
+)
+
+#: The opt-in ``credential.*`` events (subject = an API key, an app grant or
+#: the organization's credential policy).
+CREDENTIAL_EVENT_TYPES: tuple[str, ...] = (
+    "credential.created",
+    "credential.updated",
+    "credential.rotated",
+    "credential.revoked",
+    "credential.expired",
+    "credential.suspended",
+    "credential.leak_detected",
+    "credential.oauth_granted",
+    "credential.oauth_revoked",
+    "credential.policy_changed",
 )
 
 #: The interaction step events (subject = an interaction), named
@@ -67,8 +95,10 @@ INTERACTION_EVENT_TYPES: tuple[str, ...] = (
 WEBHOOK_EVENT_TYPES: tuple[str, ...] = (
     *EMAIL_EVENT_TYPES,
     *SENT_EMAIL_EVENT_TYPES,
+    *CREDENTIAL_EVENT_TYPES,
     *EMAIL_RULE_REQUEST_EVENT_TYPES,
     *EMAIL_RULE_OBJECTION_EVENT_TYPES,
+    *EMAIL_RULE_COVERAGE_EVENT_TYPES,
     *INTERACTION_EVENT_TYPES,
 )
 

@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 
 from primitive import (
+    CREDENTIAL_EVENT_TYPES,
     EMAIL_EVENT_TYPES,
+    EMAIL_RULE_COVERAGE_EVENT_TYPES,
     EMAIL_RULE_OBJECTION_EVENT_TYPES,
     EMAIL_RULE_REQUEST_EVENT_TYPES,
     INTERACTION_EVENT_TYPES,
@@ -88,6 +90,7 @@ def test_catalog_lists_the_opt_in_rule_objection_events() -> None:
         "email_rule_objection.created",
         "email_rule_objection.accepted",
         "email_rule_objection.declined",
+        "email_rule_objection.amended",
         "email_rule_objection.withdrawn",
     )
     for event_type in EMAIL_RULE_OBJECTION_EVENT_TYPES:
@@ -102,6 +105,43 @@ def test_catalog_lists_the_opt_in_rule_objection_events() -> None:
         "email_rule_objection.created",
     )
     assert _event_name(event) == "email_rule_objection.created"
+
+
+def test_catalog_lists_the_opt_in_rule_coverage_events() -> None:
+    assert EMAIL_RULE_COVERAGE_EVENT_TYPES == (
+        "email_rule_coverage.started",
+        "email_rule_coverage.new_version",
+        "email_rule_coverage.stopped",
+    )
+    for event_type in EMAIL_RULE_COVERAGE_EVENT_TYPES:
+        assert event_type in WEBHOOK_EVENT_TYPES
+        assert is_known_webhook_event_type(event_type)
+    event = parse_webhook_event(
+        {
+            "id": "evt_3",
+            "type": "email_rule_coverage.stopped",
+            "email_rule_coverage": {"id": "notice_1", "stop_reason": "turned_off"},
+        },
+        "email_rule_coverage.stopped",
+    )
+    assert _event_name(event) == "email_rule_coverage.stopped"
+
+
+def test_catalog_lists_the_opt_in_credential_events() -> None:
+    assert CREDENTIAL_EVENT_TYPES == (
+        "credential.created",
+        "credential.updated",
+        "credential.rotated",
+        "credential.revoked",
+        "credential.expired",
+        "credential.suspended",
+        "credential.leak_detected",
+        "credential.oauth_granted",
+        "credential.oauth_revoked",
+        "credential.policy_changed",
+    )
+    for event_type in CREDENTIAL_EVENT_TYPES:
+        assert is_known_webhook_event_type(event_type)
 
 
 def test_catalog_no_longer_lists_payment_events() -> None:
