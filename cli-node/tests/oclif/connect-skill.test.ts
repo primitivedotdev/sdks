@@ -19,10 +19,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   CONNECT_SKILL_NAME,
   connectSkillTarget,
-  connectSkillVersion,
-  installConnectSkill,
   installedConnectSkillFile,
+  installSkill,
   readBundledConnectSkill,
+  skillVersion,
 } from "../../src/oclif/connect-skill.js";
 
 const cliRoot = resolve(import.meta.dirname, "../..");
@@ -113,7 +113,7 @@ describe("bundled skill", () => {
         readFileSync(join(vendored, file)),
       );
     expect(bundle.version).toBe(source.version);
-    expect(connectSkillVersion(bundle.files)).toBe(source.version);
+    expect(skillVersion(bundle.files)).toBe(source.version);
     expect(bundle.commit).toBe(source.commit);
     expect(source.repository).toBe("https://github.com/primitivedotdev/skills");
     expect(files(vendored)).toContain("SKILL.md");
@@ -167,6 +167,23 @@ describe("bundled skill", () => {
   });
 });
 
+describe("vendor-skill", () => {
+  const vendor = (...args: string[]) =>
+    execFileSync(
+      process.execPath,
+      [join(cliRoot, "scripts", "vendor-skill.mjs"), ...args],
+      { stdio: "pipe" },
+    );
+  it("needs a skill name and a checkout", () => {
+    expect(() => vendor("--from", temp("vendor-skill-"))).toThrow(/--skill/);
+  });
+  it("refuses a skill the CLI does not bundle", () => {
+    expect(() =>
+      vendor("--skill", "not-bundled", "--from", temp("vendor-skill-")),
+    ).toThrow(/not a bundled skill/);
+  });
+});
+
 describe("skill install", () => {
   function setup(runtime: "claude" | "codex" = "codex") {
     const bundle = readBundledConnectSkill(bundledPackage());
@@ -175,7 +192,7 @@ describe("skill install", () => {
       CODEX_HOME: join(home, "codex"),
       CLAUDE_CONFIG_DIR: join(home, "claude"),
     };
-    const install = () => installConnectSkill({ bundle, runtime, env });
+    const install = () => installSkill({ bundle, runtime, env });
     const target = connectSkillTarget({ runtime, env });
     return { bundle, env, install, target };
   }

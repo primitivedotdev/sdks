@@ -221,19 +221,17 @@ jobs:
         with:
           node-version: 22
 
-      - name: Read the bundled skill's source commit
-        id: skill-source
-        run: printf 'commit=%s\n' "$(node -p "require('./cli-node/vendor/skills/primitive-connect.source.json').commit")" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          repository: primitivedotdev/skills
-          ref: ${{ steps.skill-source.outputs.commit }}
-          path: skills-source
-          persist-credentials: false
-
-      - name: Check the bundled skill matches its source commit
-        run: node cli-node/scripts/vendor-connect-skill.mjs --from skills-source --check
+      - name: Check each bundled skill matches its recorded source commit
+        run: |
+          set -euo pipefail
+          git clone --quiet --filter=blob:none --no-checkout https://github.com/primitivedotdev/skills skills-source
+          for source in cli-node/vendor/skills/*.source.json; do
+            name=$(basename "$source" .source.json)
+            commit=$(node -p "require('./$source').commit")
+            git -C skills-source fetch --quiet --depth 1 origin "$commit"
+            git -C skills-source checkout --quiet --detach "$commit"
+            node cli-node/scripts/vendor-skill.mjs --skill "$name" --from skills-source --check
+          done
 
   python:
     name: Python (${{ matrix.python-version }})

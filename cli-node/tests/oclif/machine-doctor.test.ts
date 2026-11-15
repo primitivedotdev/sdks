@@ -130,6 +130,7 @@ function machine(options: { runtimes?: string[] } = {}) {
     }) as typeof fetch,
     now: () => new Date("2026-10-02T12:00:00.000Z"),
     bundle: () => ({
+      name: "primitive-connect",
       directory: bundleDir,
       version: versionDigest,
       commit: null,

@@ -1,5 +1,5 @@
-// Shared file selection and hashing for the bundled primitive-connect skill.
-// The skill's single source is the public skills repository. A release vendors
+// Shared file selection and hashing for the skills bundled in the CLI.
+// Each skill's single source is the public skills repository. A release vendors
 // one commit of it into vendor/skills, and the build copies that snapshot into
 // dist/skills with a manifest. src/oclif/connect-skill.ts computes the same
 // version from installed files, so the two must stay byte-for-byte identical in
@@ -8,7 +8,8 @@ import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-export const SKILL_NAME = 'primitive-connect'
+/** Every skill the CLI bundles, each vendored under vendor/skills/<name>. */
+export const SKILL_NAMES = ['primitive-connect']
 
 /** Tests and dependency folders belong to the source repository, not to an installed skill. */
 export function includedSkillFile(relativePath) {
