@@ -23052,6 +23052,11 @@ type ListEmailsParams struct {
 	// With `true`, only emails whose content was discarded after delivery; with `false`, only emails
 	// that still have it.
 	ContentDiscarded OptListEmailsContentDiscarded `json:",omitempty,omitzero"`
+	// With `false`, a history page runs no total count: `meta.total` and `meta.total_capped` are absent,
+	// and `meta.has_more` still says whether another page follows. Unset or `true`, a history page
+	// reports its total as before. The forward tail (`since`) and `search` report the page itself as the
+	// total and run no count either way.
+	Count OptListEmailsCount `json:",omitempty,omitzero"`
 	// With `message`, one row per message instead of one per mailbox copy (a message to several
 	// mailboxes of the org is stored once per mailbox). The row is the copy in your own mailbox (the
 	// `recipient` filter, then your bound address, then your member address), else the copy that arrived
@@ -23273,6 +23278,15 @@ func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsPara
 		}
 		if v, ok := packed[key]; ok {
 			params.ContentDiscarded = v.(OptListEmailsContentDiscarded)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "count",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Count = v.(OptListEmailsCount)
 		}
 	}
 	{
@@ -24524,6 +24538,62 @@ func decodeListEmailsParams(args [0]string, argsEscaped bool, r *http.Request) (
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "content_discarded",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: count.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "count",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotCountVal ListEmailsCount
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotCountVal = ListEmailsCount(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Count.SetTo(paramsDotCountVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Count.Get(); ok {
+					if err := func() error {
+						if err := validateParameter(value); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "count",
 			In:   "query",
 			Err:  err,
 		}

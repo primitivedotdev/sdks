@@ -115,13 +115,13 @@ def sync_detailed(
     """ Change my email notification preferences
 
      Turn one or more kinds on or off for the calling member. Only a kind whose organization mode is
-    optional_on or optional_off can be changed: a platform_required kind, one the organization requires,
-    and one it turned off are refused with 409 (conflict, details.reason not_member_choice,
-    details.org_mode saying which), and nothing is changed. An unknown kind is refused with 400. Answers
-    the preferences as they now stand. Each kind lists its label and description, its class, whether it
-    needs an entitlement and whether the organization has it, the organization's mode (null for
-    platform_required) and the modes it may choose, and whether the calling member gets it and may
-    change that.
+    optional_on or optional_off can be changed: a platform_required kind, an org_only kind, one the
+    organization requires, and one it turned off are refused with 409 (conflict, details.reason
+    not_member_choice, details.org_mode saying which: platform_required, org_only, required or off), and
+    nothing is changed. An unknown kind is refused with 400. Answers the preferences as they now stand.
+    Each kind lists its label and description, its class, whether it needs an entitlement and whether
+    the organization has it, the organization's mode (null for platform_required) and the modes it may
+    choose, and whether the calling member gets it and may change that.
 
     Person only: a dashboard session or the person's own OAuth token (the CLI or an app they connected).
     The person's role must hold notifications:manage. API keys, agent connection keys and agents are
@@ -159,13 +159,13 @@ def sync(
     """ Change my email notification preferences
 
      Turn one or more kinds on or off for the calling member. Only a kind whose organization mode is
-    optional_on or optional_off can be changed: a platform_required kind, one the organization requires,
-    and one it turned off are refused with 409 (conflict, details.reason not_member_choice,
-    details.org_mode saying which), and nothing is changed. An unknown kind is refused with 400. Answers
-    the preferences as they now stand. Each kind lists its label and description, its class, whether it
-    needs an entitlement and whether the organization has it, the organization's mode (null for
-    platform_required) and the modes it may choose, and whether the calling member gets it and may
-    change that.
+    optional_on or optional_off can be changed: a platform_required kind, an org_only kind, one the
+    organization requires, and one it turned off are refused with 409 (conflict, details.reason
+    not_member_choice, details.org_mode saying which: platform_required, org_only, required or off), and
+    nothing is changed. An unknown kind is refused with 400. Answers the preferences as they now stand.
+    Each kind lists its label and description, its class, whether it needs an entitlement and whether
+    the organization has it, the organization's mode (null for platform_required) and the modes it may
+    choose, and whether the calling member gets it and may change that.
 
     Person only: a dashboard session or the person's own OAuth token (the CLI or an app they connected).
     The person's role must hold notifications:manage. API keys, agent connection keys and agents are
@@ -198,13 +198,13 @@ async def asyncio_detailed(
     """ Change my email notification preferences
 
      Turn one or more kinds on or off for the calling member. Only a kind whose organization mode is
-    optional_on or optional_off can be changed: a platform_required kind, one the organization requires,
-    and one it turned off are refused with 409 (conflict, details.reason not_member_choice,
-    details.org_mode saying which), and nothing is changed. An unknown kind is refused with 400. Answers
-    the preferences as they now stand. Each kind lists its label and description, its class, whether it
-    needs an entitlement and whether the organization has it, the organization's mode (null for
-    platform_required) and the modes it may choose, and whether the calling member gets it and may
-    change that.
+    optional_on or optional_off can be changed: a platform_required kind, an org_only kind, one the
+    organization requires, and one it turned off are refused with 409 (conflict, details.reason
+    not_member_choice, details.org_mode saying which: platform_required, org_only, required or off), and
+    nothing is changed. An unknown kind is refused with 400. Answers the preferences as they now stand.
+    Each kind lists its label and description, its class, whether it needs an entitlement and whether
+    the organization has it, the organization's mode (null for platform_required) and the modes it may
+    choose, and whether the calling member gets it and may change that.
 
     Person only: a dashboard session or the person's own OAuth token (the CLI or an app they connected).
     The person's role must hold notifications:manage. API keys, agent connection keys and agents are
@@ -242,13 +242,13 @@ async def asyncio(
     """ Change my email notification preferences
 
      Turn one or more kinds on or off for the calling member. Only a kind whose organization mode is
-    optional_on or optional_off can be changed: a platform_required kind, one the organization requires,
-    and one it turned off are refused with 409 (conflict, details.reason not_member_choice,
-    details.org_mode saying which), and nothing is changed. An unknown kind is refused with 400. Answers
-    the preferences as they now stand. Each kind lists its label and description, its class, whether it
-    needs an entitlement and whether the organization has it, the organization's mode (null for
-    platform_required) and the modes it may choose, and whether the calling member gets it and may
-    change that.
+    optional_on or optional_off can be changed: a platform_required kind, an org_only kind, one the
+    organization requires, and one it turned off are refused with 409 (conflict, details.reason
+    not_member_choice, details.org_mode saying which: platform_required, org_only, required or off), and
+    nothing is changed. An unknown kind is refused with 400. Answers the preferences as they now stand.
+    Each kind lists its label and description, its class, whether it needs an entitlement and whether
+    the organization has it, the organization's mode (null for platform_required) and the modes it may
+    choose, and whether the calling member gets it and may change that.
 
     Person only: a dashboard session or the person's own OAuth token (the CLI or an app they connected).
     The person's role must hold notifications:manage. API keys, agent connection keys and agents are

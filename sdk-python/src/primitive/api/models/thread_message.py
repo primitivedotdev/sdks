@@ -15,6 +15,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.thread_message_copies_item import ThreadMessageCopiesItem
+  from ..models.thread_message_imported_type_0 import ThreadMessageImportedType0
   from ..models.thread_message_repeat_type_0 import ThreadMessageRepeatType0
   from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0
 
@@ -35,6 +36,9 @@ class ThreadMessage:
                 for a send (`/sent-emails/{id}`). Use it with `id` to fetch
                 full content from the right endpoint.
             id (UUID):
+            imported (None | ThreadMessageImportedType0): Historical import; never sender or SMTP delivery proof. EML
+                uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and
+                deltas.
             message_id (None | str | Unset):
             from_ (None | str | Unset):
             to (None | str | Unset):
@@ -64,6 +68,7 @@ class ThreadMessage:
 
     direction: ThreadMessageDirection
     id: UUID
+    imported: None | ThreadMessageImportedType0
     message_id: None | str | Unset = UNSET
     from_: None | str | Unset = UNSET
     to: None | str | Unset = UNSET
@@ -85,11 +90,18 @@ class ThreadMessage:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.thread_message_copies_item import ThreadMessageCopiesItem # noqa: PLC0415
+        from ..models.thread_message_imported_type_0 import ThreadMessageImportedType0 # noqa: PLC0415
         from ..models.thread_message_repeat_type_0 import ThreadMessageRepeatType0 # noqa: PLC0415
         from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0 # noqa: PLC0415
         direction = self.direction.value
 
         id = str(self.id)
+
+        imported: dict[str, Any] | None
+        if isinstance(self.imported, ThreadMessageImportedType0):
+            imported = self.imported.to_dict()
+        else:
+            imported = self.imported
 
         message_id: None | str | Unset
         if isinstance(self.message_id, Unset):
@@ -170,6 +182,7 @@ class ThreadMessage:
         field_dict.update({
             "direction": direction,
             "id": id,
+            "imported": imported,
         })
         if message_id is not UNSET:
             field_dict["message_id"] = message_id
@@ -205,6 +218,7 @@ class ThreadMessage:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.thread_message_copies_item import ThreadMessageCopiesItem # noqa: PLC0415
+        from ..models.thread_message_imported_type_0 import ThreadMessageImportedType0 # noqa: PLC0415
         from ..models.thread_message_repeat_type_0 import ThreadMessageRepeatType0 # noqa: PLC0415
         from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0 # noqa: PLC0415
         d = dict(src_dict)
@@ -216,6 +230,24 @@ class ThreadMessage:
         id = UUID(d.pop("id"))
 
 
+
+
+        def _parse_imported(data: object) -> None | ThreadMessageImportedType0:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                imported_type_0 = ThreadMessageImportedType0.from_dict(data)
+
+
+
+                return imported_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | ThreadMessageImportedType0, data)
+
+        imported = _parse_imported(d.pop("imported"))
 
 
         def _parse_message_id(data: object) -> None | str | Unset:
@@ -359,6 +391,7 @@ class ThreadMessage:
         thread_message = cls(
             direction=direction,
             id=id,
+            imported=imported,
             message_id=message_id,
             from_=from_,
             to=to,

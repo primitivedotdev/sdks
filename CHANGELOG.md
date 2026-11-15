@@ -18,6 +18,45 @@ of the changes below follow from that document.
 
 Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.17` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.17`), and `3.0.0rc17` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.16` (`3.0.0rc16`), which kept a rule's share across a new version and added attachment names on rule tests, compile scope warnings, labelled sample details on judged writes, `stopped` coverage notices, the mail a rule test covered and the emails it matched, `--same-emails-as`, text length checks before sending and the API's message on a refused send, and printed webhook URLs as stored again, `3.0.0-preview.15` (`3.0.0rc15`), which added `rule_deliveries` on email reads, protection on sample tests, tests of a pending rule request, the test window's scope and compile's breadth scope, `existing` on an idempotent rule request, the successor's details on key rotation, `outside_scope` as a reason a rule did not run, `do_not_share_note` on grant rules and `rule_now` on coverage notices, `3.0.0-preview.14` (`3.0.0rc14`), which added email notification settings in the SDKs, `receivers_changed` coverage notices with their totals, webhook URL query strings hidden in endpoint output and activity read retries, `3.0.0-preview.13` (`3.0.0rc13`), which added email detail attachments, attachment names on made-up emails, compile scope, rule share and objection notices, objection box `mine` and the mail import operations, `3.0.0-preview.12` (`3.0.0rc12`), which added imported mail, pending coverage rows, endpoint and key warnings and the default check of writes to rules that keys or webhooks read, `3.0.0-preview.11` (`3.0.0rc11`), which added server notes on rule requests, rule receivers, `activity concerning` and the rule objection webhook events, `3.0.0-preview.10` (`3.0.0rc10`), which added email rule objections, the email rule scope flags and true or false on boolean flags, `3.0.0-preview.9` (`3.0.0rc9`), which added email rule oversight and look-alikes that carry `expected`, and changed what `hidden` counts on rule results, `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
 
+What the next preview changes from `3.0.0-preview.17`:
+
+- Not noted in an earlier preview: a send with `unsubscribe` (`sendEmail`
+  and each `sendMailBatch` message) must have exactly one recipient across
+  `to`, `cc` and `bcc` (an address given twice counts twice); a send to
+  more is refused with a `validation_error`. A `replyToEmail` with
+  `unsubscribe` goes to the one address it answers, and one with
+  `reply_all` that adds a cc is refused the same way.
+- An email notification kind's `class` can be `org_only`: the organization
+  alone turns it on (for every owner and admin) or off.
+  `updateEmailNotificationSettings` takes only `off` or `required` for it
+  and answers another mode with `409` `conflict`, `details.reason`
+  `mode_not_allowed`. `updateEmailNotificationPreferences` refuses it with
+  `details.reason` `not_member_choice` and `details.org_mode` `org_only`,
+  and `getEmailNotificationPreferences` leaves it out.
+- New error code: `mail_import_storage_not_ready`.
+- `imported` describes an uploaded EML file as `from` `unknown`, `method`
+  `api_upload` and `verification` `unverified`, beside the Google Workspace
+  import. It is declared, required and nullable, on thread messages, on
+  sent email reads and on outbound messages in the change feed. In
+  Python, `imported` is a required argument of `ThreadMessage` (after
+  `id`), `SentEmailSummary` and `SentEmailDetail` (after
+  `interaction_kind`).
+- `listEmails` takes `count` (`"true"` or `"false"`): with `"false"`, a
+  history page runs no total count, `meta.total` is absent and
+  `meta.has_more` says whether another page follows. `meta.total` is
+  therefore optional on `listEmails`: in Python `EmailListMeta.total` is
+  `int | Unset` and no longer a required argument, in Go `Total` is
+  `OptInt`, and in TypeScript `total` is optional.
+- An agent's `presence` may carry `basis`, `probe` or `organic`.
+- `listEmailRulesCoveringMe` items require `english` and `explanation`
+  (nullable). In Python they are required arguments of
+  `EmailRuleCoveringMe`, after `created_at`; in Go they are `NilString`
+  (were `OptNilString`); in TypeScript they are `string | null`.
+- `listActivityObjects` items no longer declare `receivers_change`. The
+  Python models and Go types for it are removed.
+- The `downloadDomainZoneFile` description says when SPF is left out of the
+  zone file.
+
 What `3.0.0-preview.17` (`3.0.0rc17`) changes from `3.0.0-preview.16`:
 
 - `amendEmailRuleObjection` (`POST /email-rule-objections/{id}/amend`)

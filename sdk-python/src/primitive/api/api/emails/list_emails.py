@@ -13,6 +13,7 @@ from ...models.error_response import ErrorResponse
 from ...models.list_emails_automated import ListEmailsAutomated
 from ...models.list_emails_awaiting import ListEmailsAwaiting
 from ...models.list_emails_content_discarded import ListEmailsContentDiscarded
+from ...models.list_emails_count import ListEmailsCount
 from ...models.list_emails_exclude_fyi import ListEmailsExcludeFyi
 from ...models.list_emails_exclude_muted import ListEmailsExcludeMuted
 from ...models.list_emails_from_verified import ListEmailsFromVerified
@@ -54,6 +55,7 @@ def _get_kwargs(
     search_negate: ListEmailsSearchNegate | Unset = UNSET,
     kind: ListEmailsKind | Unset = UNSET,
     content_discarded: ListEmailsContentDiscarded | Unset = UNSET,
+    count: ListEmailsCount | Unset = UNSET,
     group: ListEmailsGroup | Unset = UNSET,
     include_presence: ListEmailsIncludePresence | Unset = UNSET,
 
@@ -164,6 +166,12 @@ def _get_kwargs(
 
     params["content_discarded"] = json_content_discarded
 
+    json_count: str | Unset = UNSET
+    if not isinstance(count, Unset):
+        json_count = count.value
+
+    params["count"] = json_count
+
     json_group: str | Unset = UNSET
     if not isinstance(group, Unset):
         json_group = group.value
@@ -260,6 +268,7 @@ def sync_detailed(
     search_negate: ListEmailsSearchNegate | Unset = UNSET,
     kind: ListEmailsKind | Unset = UNSET,
     content_discarded: ListEmailsContentDiscarded | Unset = UNSET,
+    count: ListEmailsCount | Unset = UNSET,
     group: ListEmailsGroup | Unset = UNSET,
     include_presence: ListEmailsIncludePresence | Unset = UNSET,
 
@@ -331,6 +340,7 @@ def sync_detailed(
         search_negate (ListEmailsSearchNegate | Unset):
         kind (ListEmailsKind | Unset):
         content_discarded (ListEmailsContentDiscarded | Unset):
+        count (ListEmailsCount | Unset):
         group (ListEmailsGroup | Unset):
         include_presence (ListEmailsIncludePresence | Unset):
 
@@ -366,6 +376,7 @@ search_case_sensitive=search_case_sensitive,
 search_negate=search_negate,
 kind=kind,
 content_discarded=content_discarded,
+count=count,
 group=group,
 include_presence=include_presence,
 
@@ -402,6 +413,7 @@ def sync(
     search_negate: ListEmailsSearchNegate | Unset = UNSET,
     kind: ListEmailsKind | Unset = UNSET,
     content_discarded: ListEmailsContentDiscarded | Unset = UNSET,
+    count: ListEmailsCount | Unset = UNSET,
     group: ListEmailsGroup | Unset = UNSET,
     include_presence: ListEmailsIncludePresence | Unset = UNSET,
 
@@ -473,6 +485,7 @@ def sync(
         search_negate (ListEmailsSearchNegate | Unset):
         kind (ListEmailsKind | Unset):
         content_discarded (ListEmailsContentDiscarded | Unset):
+        count (ListEmailsCount | Unset):
         group (ListEmailsGroup | Unset):
         include_presence (ListEmailsIncludePresence | Unset):
 
@@ -509,6 +522,7 @@ search_case_sensitive=search_case_sensitive,
 search_negate=search_negate,
 kind=kind,
 content_discarded=content_discarded,
+count=count,
 group=group,
 include_presence=include_presence,
 
@@ -539,6 +553,7 @@ async def asyncio_detailed(
     search_negate: ListEmailsSearchNegate | Unset = UNSET,
     kind: ListEmailsKind | Unset = UNSET,
     content_discarded: ListEmailsContentDiscarded | Unset = UNSET,
+    count: ListEmailsCount | Unset = UNSET,
     group: ListEmailsGroup | Unset = UNSET,
     include_presence: ListEmailsIncludePresence | Unset = UNSET,
 
@@ -610,6 +625,7 @@ async def asyncio_detailed(
         search_negate (ListEmailsSearchNegate | Unset):
         kind (ListEmailsKind | Unset):
         content_discarded (ListEmailsContentDiscarded | Unset):
+        count (ListEmailsCount | Unset):
         group (ListEmailsGroup | Unset):
         include_presence (ListEmailsIncludePresence | Unset):
 
@@ -645,6 +661,7 @@ search_case_sensitive=search_case_sensitive,
 search_negate=search_negate,
 kind=kind,
 content_discarded=content_discarded,
+count=count,
 group=group,
 include_presence=include_presence,
 
@@ -681,6 +698,7 @@ async def asyncio(
     search_negate: ListEmailsSearchNegate | Unset = UNSET,
     kind: ListEmailsKind | Unset = UNSET,
     content_discarded: ListEmailsContentDiscarded | Unset = UNSET,
+    count: ListEmailsCount | Unset = UNSET,
     group: ListEmailsGroup | Unset = UNSET,
     include_presence: ListEmailsIncludePresence | Unset = UNSET,
 
@@ -752,6 +770,7 @@ async def asyncio(
         search_negate (ListEmailsSearchNegate | Unset):
         kind (ListEmailsKind | Unset):
         content_discarded (ListEmailsContentDiscarded | Unset):
+        count (ListEmailsCount | Unset):
         group (ListEmailsGroup | Unset):
         include_presence (ListEmailsIncludePresence | Unset):
 
@@ -788,6 +807,7 @@ search_case_sensitive=search_case_sensitive,
 search_negate=search_negate,
 kind=kind,
 content_discarded=content_discarded,
+count=count,
 group=group,
 include_presence=include_presence,
 

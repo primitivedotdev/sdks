@@ -25,12 +25,13 @@ T = TypeVar("T", bound="EmailSummaryImportedType0")
 
 @_attrs_define
 class EmailSummaryImportedType0:
-    """ Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and
-    deltas.
+    """ Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a
+    provider. Null for live mail. Excluded from live tails and deltas.
 
         Attributes:
-            from_ (EmailSummaryImportedType0From):
-            method (EmailSummaryImportedType0Method):
+            from_ (EmailSummaryImportedType0From): Original mail provider. Unknown when Primitive has not established the
+                provider of an uploaded file.
+            method (EmailSummaryImportedType0Method): How Primitive acquired the historical message.
             verification (EmailSummaryImportedType0Verification):
             at (datetime.datetime): When Primitive acquired this historical message.
      """

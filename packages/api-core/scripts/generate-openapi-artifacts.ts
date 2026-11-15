@@ -554,6 +554,37 @@ function normalizeForCodegen(value: unknown): unknown {
     }
   }
 
+  // A `oneOf` beside an object's own `properties`, whose branches are null or
+  // objects that only narrow properties declared beside it (which values go
+  // together), adds no shape: the properties beside it already admit every
+  // branch. No generator can express the pairing, and the Go generator stops
+  // on it, so the codegen document leaves it to the server. A `oneOf` with a
+  // `discriminator` names its branches, so it is left alone.
+  if (
+    Array.isArray(next.oneOf) &&
+    next.oneOf.length > 0 &&
+    isSchemaNode(next.properties) &&
+    next.discriminator === undefined
+  ) {
+    const declared = new Set(Object.keys(next.properties));
+    // A null branch adds nothing only when the object beside it admits null.
+    const admitsNull =
+      next.nullable === true || (Array.isArray(next.type) && next.type.includes("null"));
+    const narrowsOnly = (branch: unknown): boolean => {
+      if (!isSchemaNode(branch)) return false;
+      if (branch.type === "null" && Object.keys(branch).length === 1) return admitsNull;
+      return (
+        branch.type === "object" &&
+        isSchemaNode(branch.properties) &&
+        Object.keys(branch).every((name) => name === "type" || name === "properties" || name === "required") &&
+        Object.keys(branch.properties).every((name) => declared.has(name))
+      );
+    };
+    if (next.oneOf.every(narrowsOnly)) {
+      delete next.oneOf;
+    }
+  }
+
   // The Go generator has no array or object defaults. The server applies
   // them, so a client that leaves the field out gets the same result.
   if (next.default !== null && typeof next.default === "object") {

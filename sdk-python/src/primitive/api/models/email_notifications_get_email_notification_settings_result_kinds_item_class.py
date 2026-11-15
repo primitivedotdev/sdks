@@ -2,6 +2,7 @@ from enum import StrEnum
 
 class EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass(StrEnum):
     OPTIONAL = "optional"
+    ORG_ONLY = "org_only"
     ORG_REQUIRABLE = "org_requirable"
     PLATFORM_REQUIRED = "platform_required"
 

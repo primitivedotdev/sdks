@@ -18,6 +18,7 @@
     "snippet": "Hello",
     "interaction_hint": "none",
     "interaction_kind": null,
+    "imported": null,
     "content_discarded_at": null,
     "attachments": [
       {

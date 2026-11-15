@@ -23,6 +23,7 @@ if TYPE_CHECKING:
   from ..models.sent_email_summary_attachments_item import SentEmailSummaryAttachmentsItem
   from ..models.sent_email_summary_delivery_recipients_type_0_item import SentEmailSummaryDeliveryRecipientsType0Item
   from ..models.sent_email_summary_hold import SentEmailSummaryHold
+  from ..models.sent_email_summary_imported_type_0 import SentEmailSummaryImportedType0
   from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0
   from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
 
@@ -98,6 +99,9 @@ class ChangeOutboundMessage:
                 `none`.
             interaction_kind (None | str): The `<protocol>/<version>` the hint was decided from when `interaction_hint` is
                 `status` or `card`; null otherwise.
+            imported (None | SentEmailSummaryImportedType0): Historical import; never sender or SMTP delivery proof. EML
+                uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and
+                deltas.
             snippet (None | str): A plain-text preview of `body_text` (never `body_html`), computed once when the message is
                 stored: quoted replies (an "On ... wrote:" line, an "Original Message" separator, a From/Sent header block, `>`
                 lines) and a `-- ` signature are cut off, whitespace is collapsed to single spaces, and the result is at most
@@ -219,6 +223,7 @@ class ChangeOutboundMessage:
     body_size_bytes: int
     interaction_hint: SentEmailSummaryInteractionHint
     interaction_kind: None | str
+    imported: None | SentEmailSummaryImportedType0
     snippet: None | str
     direction: ChangeOutboundMessageDirection
     client_idempotency_key: None | str | Unset = UNSET
@@ -265,6 +270,7 @@ class ChangeOutboundMessage:
         from ..models.sent_email_summary_attachments_item import SentEmailSummaryAttachmentsItem # noqa: PLC0415
         from ..models.sent_email_summary_delivery_recipients_type_0_item import SentEmailSummaryDeliveryRecipientsType0Item # noqa: PLC0415
         from ..models.sent_email_summary_hold import SentEmailSummaryHold # noqa: PLC0415
+        from ..models.sent_email_summary_imported_type_0 import SentEmailSummaryImportedType0 # noqa: PLC0415
         from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0 # noqa: PLC0415
         from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0 # noqa: PLC0415
         id = str(self.id)
@@ -296,6 +302,12 @@ class ChangeOutboundMessage:
 
         interaction_kind: None | str
         interaction_kind = self.interaction_kind
+
+        imported: dict[str, Any] | None
+        if isinstance(self.imported, SentEmailSummaryImportedType0):
+            imported = self.imported.to_dict()
+        else:
+            imported = self.imported
 
         snippet: None | str
         snippet = self.snippet
@@ -538,6 +550,7 @@ class ChangeOutboundMessage:
             "body_size_bytes": body_size_bytes,
             "interaction_hint": interaction_hint,
             "interaction_kind": interaction_kind,
+            "imported": imported,
             "snippet": snippet,
             "direction": direction,
         })
@@ -616,6 +629,7 @@ class ChangeOutboundMessage:
         from ..models.sent_email_summary_attachments_item import SentEmailSummaryAttachmentsItem # noqa: PLC0415
         from ..models.sent_email_summary_delivery_recipients_type_0_item import SentEmailSummaryDeliveryRecipientsType0Item # noqa: PLC0415
         from ..models.sent_email_summary_hold import SentEmailSummaryHold # noqa: PLC0415
+        from ..models.sent_email_summary_imported_type_0 import SentEmailSummaryImportedType0 # noqa: PLC0415
         from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0 # noqa: PLC0415
         from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0 # noqa: PLC0415
         d = dict(src_dict)
@@ -675,6 +689,24 @@ class ChangeOutboundMessage:
             return cast(None | str, data)
 
         interaction_kind = _parse_interaction_kind(d.pop("interaction_kind"))
+
+
+        def _parse_imported(data: object) -> None | SentEmailSummaryImportedType0:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                imported_type_0 = SentEmailSummaryImportedType0.from_dict(data)
+
+
+
+                return imported_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | SentEmailSummaryImportedType0, data)
+
+        imported = _parse_imported(d.pop("imported"))
 
 
         def _parse_snippet(data: object) -> None | str:
@@ -1131,6 +1163,7 @@ class ChangeOutboundMessage:
             body_size_bytes=body_size_bytes,
             interaction_hint=interaction_hint,
             interaction_kind=interaction_kind,
+            imported=imported,
             snippet=snippet,
             direction=direction,
             client_idempotency_key=client_idempotency_key,

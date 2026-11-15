@@ -112,9 +112,10 @@ def sync_detailed(
 ) -> Response[ErrorResponse | File]:
     """ Download domain DNS zone file
 
-     Downloads a BIND-format DNS zone file containing the DNS records required for a domain claim. Agents
-    should offer this after `addDomain` when users want to import DNS records instead of copying each
-    record manually.
+     Downloads a BIND-format DNS zone file for a domain claim. SPF is omitted when an existing SPF policy
+    is observed or DNS lookup is inconclusive; read the file comments for the required manual SPF
+    review. Agents should offer this after `addDomain` when users want to import DNS records instead of
+    copying each record manually.
 
     Args:
         id (UUID):
@@ -153,9 +154,10 @@ def sync(
 ) -> ErrorResponse | File | None:
     """ Download domain DNS zone file
 
-     Downloads a BIND-format DNS zone file containing the DNS records required for a domain claim. Agents
-    should offer this after `addDomain` when users want to import DNS records instead of copying each
-    record manually.
+     Downloads a BIND-format DNS zone file for a domain claim. SPF is omitted when an existing SPF policy
+    is observed or DNS lookup is inconclusive; read the file comments for the required manual SPF
+    review. Agents should offer this after `addDomain` when users want to import DNS records instead of
+    copying each record manually.
 
     Args:
         id (UUID):
@@ -189,9 +191,10 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | File]:
     """ Download domain DNS zone file
 
-     Downloads a BIND-format DNS zone file containing the DNS records required for a domain claim. Agents
-    should offer this after `addDomain` when users want to import DNS records instead of copying each
-    record manually.
+     Downloads a BIND-format DNS zone file for a domain claim. SPF is omitted when an existing SPF policy
+    is observed or DNS lookup is inconclusive; read the file comments for the required manual SPF
+    review. Agents should offer this after `addDomain` when users want to import DNS records instead of
+    copying each record manually.
 
     Args:
         id (UUID):
@@ -230,9 +233,10 @@ async def asyncio(
 ) -> ErrorResponse | File | None:
     """ Download domain DNS zone file
 
-     Downloads a BIND-format DNS zone file containing the DNS records required for a domain claim. Agents
-    should offer this after `addDomain` when users want to import DNS records instead of copying each
-    record manually.
+     Downloads a BIND-format DNS zone file for a domain claim. SPF is omitted when an existing SPF policy
+    is observed or DNS lookup is inconclusive; read the file comments for the required manual SPF
+    review. Agents should offer this after `addDomain` when users want to import DNS records instead of
+    copying each record manually.
 
     Args:
         id (UUID):
