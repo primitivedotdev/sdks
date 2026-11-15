@@ -142,7 +142,7 @@ describe("search --thread-id, --prefix, --no-count", () => {
     expect(sentQuery()).not.toHaveProperty("count");
   });
 
-  it("prints a null total as not counted with --envelope", async () => {
+  it("prints a null total as not counted below the table", async () => {
     mocks.searchEmails.mockResolvedValue({
       data: {
         success: true,
@@ -150,7 +150,7 @@ describe("search --thread-id, --prefix, --no-count", () => {
         meta: { total: null, total_capped: false, cursor: "next-page" },
       },
     });
-    const result = await runSearch(["invoice", "--no-count", "--envelope"]);
+    const result = await runSearch(["invoice", "--no-count"]);
     expect(result.exitCode).toBeUndefined();
     expect(result.stdout).toContain("quarterly invoice");
     expect(result.stderr).toContain("Total: not counted (--no-count)");
@@ -182,7 +182,7 @@ describe("search --thread-id, --prefix, --no-count", () => {
     expect(q.endsWith("quarterly invoi")).toBe(true);
   });
 
-  it("prints the total footer for an empty result with --envelope", async () => {
+  it("prints the total footer for an empty result", async () => {
     mocks.searchEmails.mockResolvedValue({
       data: {
         success: true,
@@ -190,7 +190,7 @@ describe("search --thread-id, --prefix, --no-count", () => {
         meta: { total: 0, total_capped: false, cursor: null },
       },
     });
-    const counted = await runSearch(["invoice", "--envelope"]);
+    const counted = await runSearch(["invoice"]);
     expect(counted.stderr).toContain("No matching mail.");
     expect(counted.stderr).toContain("Total: 0\n");
 
@@ -201,25 +201,13 @@ describe("search --thread-id, --prefix, --no-count", () => {
         meta: { total: null, total_capped: false, cursor: null },
       },
     });
-    const uncounted = await runSearch(["invoice", "--no-count", "--envelope"]);
+    const uncounted = await runSearch(["invoice", "--no-count"]);
     expect(uncounted.stderr).toContain("No matching mail.");
     expect(uncounted.stderr).toContain("Total: not counted (--no-count)");
   });
 
-  it("prints only the empty notice for an empty result without --envelope", async () => {
-    mocks.searchEmails.mockResolvedValue({
-      data: {
-        success: true,
-        data: [],
-        meta: { total: 0, total_capped: false, cursor: null },
-      },
-    });
+  it("prints a counted total below the table", async () => {
     const result = await runSearch(["invoice"]);
-    expect(result.stderr).toBe("No matching mail.\n");
-  });
-
-  it("prints a counted total with --envelope", async () => {
-    const result = await runSearch(["invoice", "--envelope"]);
     expect(result.stderr).toContain("Total: 1\n");
   });
 

@@ -108,9 +108,12 @@ afterEach(() => {
   process.exitCode = undefined;
 });
 
-/** The JSON document stdout holds, with or without --json. */
-function printed(stdout: string): unknown {
-  return JSON.parse(stdout);
+/** The data stdout holds: alone without --json, in the response body with it. */
+function printed(stdout: string, json: boolean): unknown {
+  const document = JSON.parse(stdout);
+  if (!json) return document;
+  expect(document).toMatchObject({ success: true });
+  return (document as { data: unknown }).data;
 }
 
 describe("the endpoint commands print a webhook URL as stored", () => {
@@ -121,7 +124,9 @@ describe("the endpoint commands print a webhook URL as stored", () => {
       fixture({ body: { success: true, data: endpointRow(QUERY_URL) } });
       const got = await run("getEndpoint", [ENDPOINT_ID, ...mode]);
       expect(got.error).toBeNull();
-      expect(printed(got.stdout)).toEqual(endpointRow(QUERY_URL));
+      expect(printed(got.stdout, mode.length > 0)).toEqual(
+        endpointRow(QUERY_URL),
+      );
       expect(got.stderr).not.toContain("query string is hidden");
 
       fixture({
@@ -134,7 +139,7 @@ describe("the endpoint commands print a webhook URL as stored", () => {
       const listed = await run("listEndpoints", [...mode]);
       expect(listed.error).toBeNull();
       expect(listed.stdout).toContain("s3cr3t-value");
-      const rows = printed(listed.stdout) as { url: string }[];
+      const rows = printed(listed.stdout, mode.length > 0) as { url: string }[];
       expect(rows.map((row) => row.url)).toEqual([
         QUERY_URL,
         "https://a.test/p",
@@ -154,9 +159,10 @@ describe("the endpoint commands print a webhook URL as stored", () => {
         const result = await run(sdkName, [...argv, ...mode]);
         expect(result.error, sdkName).toBeNull();
         expect(calls[0]?.body, sdkName).toEqual({ url: sent });
-        expect((printed(result.stdout) as { url: string }).url, sdkName).toBe(
-          sent,
-        );
+        expect(
+          (printed(result.stdout, mode.length > 0) as { url: string }).url,
+          sdkName,
+        ).toBe(sent);
       }
     });
 

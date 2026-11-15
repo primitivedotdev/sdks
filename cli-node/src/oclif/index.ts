@@ -173,6 +173,7 @@ import SignupCommand, {
   SignupResendCommand,
   SignupStatusCommand,
 } from "./commands/signup.js";
+import SkillsInstallCommand from "./commands/skills-install.js";
 import {
   ThreadsMuteCommand,
   ThreadsMutedCommand,
@@ -710,6 +711,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   // `machine doctor` checks and repairs the per-machine setup that lets
   // coding sessions register and receive mail (hooks, instructions, skills).
   "machine:doctor": MachineDoctorCommand,
+  // `skills install` copies the skills bundled in this package into a
+  // runtime's skills folder, for people who sign in with `primitive login`
+  // and never run `agent connect`.
+  "skills:install": SkillsInstallCommand,
   // `emails:latest` is the inbox-triage shortcut: the most recent N
   // inbound emails as a compact text table. emails:list-emails stays
   // available for the full JSON envelope + cursor pagination.
@@ -720,7 +725,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   "emails:attachment": EmailsAttachmentCommand,
   "emails:attachment-members": EmailsAttachmentMembersCommand,
   // `emails:facts` prints what the classifier read from one email, a fact
-  // per line, from the email's rule results (list-email-rule-results).
+  // per line, from the email's own understanding (GET /emails/{id}).
   "emails:facts": EmailsFactsCommand,
   // `emails:watch` and unscoped `emails:wait` poll the search API for matching
   // inbound mail. `watch` defaults to a human table; `wait` defaults to JSONL.

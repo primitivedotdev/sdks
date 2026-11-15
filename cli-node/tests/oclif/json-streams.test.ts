@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -24,10 +24,7 @@ vi.mock("node:child_process", async (original) => {
   };
 });
 
-import {
-  headerFlagName,
-  OPERATION_EXTENSIONS,
-} from "../../src/oclif/api-command.js";
+import { headerFlagName } from "../../src/oclif/api-command.js";
 import {
   claimAutoRead,
   readWorkingLease,
@@ -360,9 +357,54 @@ describe("composeJsonDocument", () => {
         thrown: { error },
       }),
     ).toEqual({
-      error: { message: "Missing required flag to" },
+      error: { message: "Missing required flag to", code: "usage_error" },
       exit_code: 2,
     });
+  });
+
+  it("gives a thrown error with no code and no usage exit the code cli_error", () => {
+    expect(
+      composeJsonDocument({
+        exitCode: 1,
+        stderr: [],
+        stdout: "",
+        thrown: { error: new Error("Something broke") },
+      }),
+    ).toEqual({
+      error: { message: "Something broke", code: "cli_error" },
+      exit_code: 1,
+    });
+  });
+
+  it("does not call a usage error what a command set as its exit code", () => {
+    expect(
+      composeJsonDocument({
+        exitCode: 2,
+        stderr: ["The deploy did not finish in time\n"],
+        stdout: "",
+      }),
+    ).toEqual({
+      error: { message: "The deploy did not finish in time" },
+      exit_code: 2,
+      warnings: ["The deploy did not finish in time"],
+    });
+  });
+
+  it("puts the CLI's notes beside a document's own warnings, never in them", () => {
+    expect(
+      composeJsonDocument({
+        exitCode: 0,
+        stderr: ["note\n"],
+        stdout: '{"warnings":["server"]}',
+      }),
+    ).toEqual({ warnings: ["server"], cli_warnings: ["note"] });
+    expect(
+      composeJsonDocument({
+        exitCode: 0,
+        stderr: ["note\n"],
+        stdout: '{"warnings":"not a list"}',
+      }),
+    ).toEqual({ warnings: "not a list", cli_warnings: ["note"] });
   });
 
   it("keeps a thrown refusal's code and details", () => {
@@ -579,22 +621,27 @@ function operationArgv(operation: PrimitiveOperationManifest): string[] {
   if (operation.hasJsonBody && operation.bodyRequired) {
     argv.push("--raw-body", "{}");
   }
-  // A command that asks before it acts needs --yes under --json.
-  if (OPERATION_EXTENSIONS[operation.sdkName ?? ""]?.confirm)
-    argv.push("--yes");
   argv.push("--json");
   return argv;
 }
 
+// Operation ids a hand-written command serves, with its own --json document.
+const HAND_WRITTEN_OPERATION_IDS = new Set([
+  "agent-connections:claim-agent-connection",
+  "cli:list-cli-orgs",
+  "credits:redeem-credit-code",
+  "search:semantic-search",
+]);
+
 const generatedJsonOperations = operationManifest.filter((operation) => {
-  const command = COMMANDS[`${operation.tagCommand}:${operation.command}`] as
-    | Runnable
-    | undefined;
+  const id = `${operation.tagCommand}:${operation.command}`;
+  const command = COMMANDS[id] as Runnable | undefined;
   return (
+    !HAND_WRITTEN_OPERATION_IDS.has(id) &&
     command !== undefined &&
     !operation.binaryResponse &&
     command.flags !== undefined &&
-    "envelope" in command.flags
+    "json" in command.flags
   );
 });
 
@@ -605,7 +652,7 @@ describe("generated commands with --json", () => {
         [`${operation.tagCommand}:${operation.command}`, operation] as const,
     ),
   )(
-    "%s keeps the data payload as one document with empty stderr",
+    "%s prints the response body as one document with empty stderr",
     async (id, operation) => {
       responder = () =>
         jsonResponse(200, {
@@ -617,34 +664,21 @@ describe("generated commands with --json", () => {
       expect(result.stderr).toBe("");
       const document = parseOne(result.merged);
       expect(result.exitCode, JSON.stringify(document)).toBe(0);
-      // The same stdout shape as without --json: the bare data payload.
-      expect(document).toEqual([]);
-      const enveloped = await runMerged(id, [
-        ...operationArgv(operation),
-        "--envelope",
-      ]);
-      expect(enveloped.stderr).toBe("");
-      expect(enveloped.exitCode).toBe(0);
-      expect(parseOne(enveloped.merged)).toMatchObject({
+      expect(document).toMatchObject({
+        success: true,
         data: [],
         meta: { cursor: "cursor-2" },
       });
     },
   );
 
-  it("drops the cursor line under --json and keeps it in --envelope", async () => {
+  it("drops the cursor line under --json, where meta.cursor carries it", async () => {
     responder = answering(grantWithScope("org"), {
       success: true,
       data: [],
       meta: { cursor: "cursor-2" },
     });
-    const bare = await runMerged("emails:list", ["--json"]);
-    expect(bare.exitCode).toBe(0);
-    expect(bare.stderr).toBe("");
-    expect(parseOne(bare.merged)).toEqual([]);
-    // A bare payload has nowhere to carry a hint, so nothing more is read for one.
-    expect(fetchCalls.map((c) => c.url.pathname)).toEqual(["/v1/emails"]);
-    const result = await runMerged("emails:list", ["--json", "--envelope"]);
+    const result = await runMerged("emails:list", ["--json"]);
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
     const document = parseOne(result.merged) as Record<string, unknown>;
@@ -657,10 +691,7 @@ describe("generated commands with --json", () => {
     expect(document.summary).toContain(
       "This page came back empty, but the list goes on: continue with --cursor cursor-2.",
     );
-    expect(fetchCalls.map((c) => c.url.pathname)).toEqual([
-      "/v1/emails",
-      "/v1/emails",
-    ]);
+    expect(fetchCalls.map((c) => c.url.pathname)).toEqual(["/v1/emails"]);
   });
 
   it("keeps a caught-up --since tail's wording even when its page carries a cursor", async () => {
@@ -827,7 +858,7 @@ describe("generated commands with --json", () => {
       );
     });
 
-    it("keeps --json --envelope to one document with exit 0 when the grant cannot be read", async () => {
+    it("keeps --json to one document with exit 0 when the grant cannot be read", async () => {
       responder = (url, init) =>
         url.pathname.endsWith("/whoami/grant")
           ? serverError(url, init)
@@ -836,7 +867,7 @@ describe("generated commands with --json", () => {
               data: [],
               meta: { cursor: null },
             });
-      const result = await runMerged("emails:list", ["--json", "--envelope"]);
+      const result = await runMerged("emails:list", ["--json"]);
       expect(result.exitCode).toBe(0);
       expect(result.stderr).toBe("");
       expect(
@@ -865,9 +896,9 @@ describe("generated commands with --json", () => {
       );
     });
 
-    it("carries the credential's hint in --envelope", async () => {
+    it("carries the credential's hint in the --json summary", async () => {
       responder = emptyList(rulesOnly);
-      const result = await runMerged("emails:list", ["--json", "--envelope"]);
+      const result = await runMerged("emails:list", ["--json"]);
       expect(result.stderr).toBe("");
       const document = parseOne(result.merged) as Record<string, unknown>;
       expect(String(document.summary)).toContain(
@@ -1141,12 +1172,60 @@ describe("generated commands with --json", () => {
     expect(flags.limit?.description).toContain("page with --cursor");
     expect(flags.cursor?.description).toContain("meta.cursor");
     expect(flags.cursor?.description).toContain("next cursor: <value>");
-    expect(flags.cursor?.description).toContain("--envelope");
+    expect(flags.cursor?.description).toContain(
+      "with --json it is meta.cursor",
+    );
     // A list that returns its cursor in the data keeps the spec's text.
     const templates = (
       COMMANDS["templates:list-templates"] as unknown as Runnable
     ).flags as Record<string, { description?: string }>;
-    expect(templates.cursor?.description).not.toContain("--envelope");
+    expect(templates.cursor?.description).not.toContain(
+      "meta.cursor in the document",
+    );
+  });
+
+  it("calls a --body-file it cannot read or parse a usage error, before sending", async () => {
+    const bad = join(tempHome, "bad-body.json");
+    writeFileSync(bad, "{");
+    for (const file of [bad, join(tempHome, "missing-body.json")]) {
+      const result = await runMerged("email-rules:create-email-rule", [
+        "--body-file",
+        file,
+        "--json",
+      ]);
+      expect(result.exitCode, result.merged).toBe(2);
+      expect(parseOne(result.merged)).toMatchObject({
+        error: { code: "usage_error" },
+        exit_code: 2,
+      });
+    }
+    expect(fetchCalls).toHaveLength(0);
+  });
+
+  it("calls a rules file it cannot read or parse a usage error, before sending", async () => {
+    const bad = join(tempHome, "bad.json");
+    writeFileSync(bad, "{");
+    const rule = "00000000-0000-4000-8000-0000000000aa";
+    for (const [id, argv] of [
+      [
+        "email-rules:create-email-rule",
+        ["--name", "n", "--expectations-file", join(tempHome, "missing.json")],
+      ],
+      [
+        "email-rules:test-email-rule",
+        ["--rule-id", rule, "--expect-samples-file", bad],
+      ],
+    ] as const) {
+      const result = await runMerged(id, [...argv, "--json"]);
+      expect(result.exitCode, result.merged).toBe(2);
+      expect(parseOne(result.merged)).toMatchObject({
+        error: { code: "usage_error" },
+        exit_code: 2,
+      });
+    }
+    expect(
+      fetchCalls.some((call) => call.url.pathname.includes("/email-rules")),
+    ).toBe(false);
   });
 
   it("takes the only path parameter as the first argument", async () => {
@@ -1176,9 +1255,13 @@ describe("generated commands with --json", () => {
     ).toContain("not both with different values");
     const none = await runMerged("email-rules:get-email-rule", ["--json"]);
     expect(none.exitCode).toBe(2);
-    expect(
-      (parseOne(none.merged) as { error: { message: string } }).error.message,
-    ).toBe("Missing the id: pass it as the first argument or with --id.");
+    expect(parseOne(none.merged)).toMatchObject({
+      error: {
+        code: "usage_error",
+        message: "Missing the id: pass it as the first argument or with --id.",
+      },
+      exit_code: 2,
+    });
     // A renamed path flag names its argument the same way.
     const results = COMMANDS[
       "email-rules:list-email-rule-results"
@@ -1201,12 +1284,7 @@ describe("generated commands with --json", () => {
         meta: { cursor: next < rows.length ? String(next) : null, limit },
       });
     };
-    const result = await runMerged("emails:list", [
-      "--limit",
-      "200",
-      "--json",
-      "--envelope",
-    ]);
+    const result = await runMerged("emails:list", ["--limit", "200", "--json"]);
     expect(result.exitCode, result.merged).toBe(0);
     expect(
       fetchCalls.map((call) => [
@@ -1245,7 +1323,9 @@ describe("generated commands with --json", () => {
       ["100", "120"],
       ["100", "220"],
     ]);
-    expect((parseOne(rest.merged) as unknown[]).length).toBe(130);
+    expect((parseOne(rest.merged) as { data: unknown[] }).data.length).toBe(
+      130,
+    );
 
     // At or under the cap it is one request, as before.
     fetchCalls = [];
@@ -1271,7 +1351,6 @@ describe("generated commands with --json", () => {
       "--limit",
       "300",
       "--json",
-      "--envelope",
     ]);
     expect(result.exitCode, result.merged).toBe(0);
     expect(
@@ -1318,7 +1397,9 @@ describe("generated commands with --json", () => {
     expect(
       fetchCalls.map((call) => call.url.searchParams.get("limit")),
     ).toEqual(["100", "50"]);
-    expect((parseOne(sent.merged) as unknown[]).length).toBe(150);
+    expect((parseOne(sent.merged) as { data: unknown[] }).data.length).toBe(
+      150,
+    );
     for (const argv of [
       ["--wait", "30", "--since", "2026-11-10T00:00:00Z"],
       ["--since", "2026-11-10T00:00:00Z"],
@@ -1359,7 +1440,7 @@ describe("generated commands with --json", () => {
     });
   });
 
-  it("pages memories search: the cursor on stderr, or in the envelope", async () => {
+  it("pages memories search: the cursor on stderr, or in the --json document", async () => {
     responder = () =>
       jsonResponse(200, {
         success: true,
@@ -1372,21 +1453,11 @@ describe("generated commands with --json", () => {
     expect(bare.stderr).toBe("next cursor: a\n");
     const json = await runMerged("memories:search", ["--json"]);
     expect(json.stderr).toBe("");
-    expect(parseOne(json.merged)).toEqual([{ key: "a" }]);
-    const enveloped = await runMerged("memories:search", [
-      "--json",
-      "--envelope",
-    ]);
-    expect(parseOne(enveloped.merged)).toEqual({
+    expect(parseOne(json.merged)).toEqual({
       success: true,
       data: [{ key: "a" }],
       meta: { cursor: "a" },
     });
-    const plainEnvelope = await runMerged("memories:search", ["--envelope"]);
-    expect(JSON.parse(plainEnvelope.stdout)).toMatchObject({
-      meta: { cursor: "a" },
-    });
-    expect(plainEnvelope.stderr).toBe("next cursor: a\n");
     responder = () =>
       jsonResponse(200, { success: true, data: [], meta: { cursor: null } });
     const last = await runMerged("memories:search", []);

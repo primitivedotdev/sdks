@@ -88,7 +88,7 @@ const LEXICAL_ONLY_FLAGS = [
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// One line describing meta.total for the --envelope footer. The total is
+// One line describing meta.total for the text table's footer. The total is
 // null when the request skipped counting (--no-count), and a lower bound
 // when the server capped the count.
 export function formatSearchTotal(
@@ -244,10 +244,6 @@ class SearchCommand extends Command {
       description:
         "Print the raw response envelope as JSON on STDOUT instead of the text table.",
     }),
-    envelope: Flags.boolean({
-      description:
-        "Lexical text-table only. Surface the total match count and the next pagination cursor (if any) on STDERR below the table. Has no effect with --json; --json already prints the full envelope including meta.",
-    }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
@@ -284,13 +280,6 @@ class SearchCommand extends Command {
       };
 
       if (flags.mode) {
-        if (flags.envelope) {
-          process.stderr.write(
-            "--envelope only applies to lexical mode. Use --json for the raw semantic envelope.\n",
-          );
-          process.exitCode = 2;
-          return;
-        }
         const incompatible = LEXICAL_ONLY_FLAGS.filter(
           (name) => (flags as Record<string, unknown>)[name] !== undefined,
         );
@@ -448,12 +437,11 @@ class SearchCommand extends Command {
         }
       }
 
-      if (flags.envelope) {
-        process.stderr.write(`\n${formatSearchTotal(envelope?.meta)}\n`);
-        const nextCursor = envelope?.meta?.cursor ?? null;
-        if (nextCursor) {
-          process.stderr.write(`Next page: pass --cursor ${nextCursor}\n`);
-        }
+      // The total and the next page, on stderr below the table.
+      process.stderr.write(`\n${formatSearchTotal(envelope?.meta)}\n`);
+      const nextCursor = envelope?.meta?.cursor ?? null;
+      if (nextCursor) {
+        process.stderr.write(`Next page: pass --cursor ${nextCursor}\n`);
       }
     });
   }

@@ -82,15 +82,7 @@ import {
   ReplyStateUnsupportedError,
   replyStateSurfaceForOperation,
 } from "./reply-state.js";
-import {
-  emptyRuleListHint,
-  isObjectionBoxRefused,
-  OBJECTION_BOX_FALLBACK,
-  OBJECTION_BOX_FLAG,
-  objectionBoxErrorHint,
-  ruleListDefaultsNote,
-  withDefaultObjectionBox,
-} from "./rule-list-defaults.js";
+import { RULE_NOTES_TAGS, ruleNotesReport } from "./rule-notes.js";
 import {
   createEndpointRuleRequestHint,
   updateEndpointRuleRequestHint,
@@ -99,12 +91,12 @@ import { sentListOtherSendersNote } from "./sent-list-labels.js";
 import {
   approveThenRerunHint,
   BROWSER_FLAG_DESCRIPTION,
-  promptLine,
   STEP_UP_HEADER,
   STEP_UP_TOKEN_FLAG_DESCRIPTION,
   terminalApprovalIo,
   withApproval,
 } from "./step-up-approval.js";
+import { terminalLine } from "./terminal-text.js";
 import { parseRetryAfter } from "./transient-retry.js";
 
 type OperationName = keyof typeof operations;
@@ -255,8 +247,6 @@ export const OPERATION_PATH_FLAGS: Record<
         "The id of the email (from `primitive emails list`), not a rule id: lists what every rule you can see decided about this email, and why a rule did not run. --id is accepted too.",
     },
   },
-  // The CLI's own default box, asked for by name (rule-list-defaults.ts).
-  listEmailRuleObjections: { box: OBJECTION_BOX_FLAG },
   replyToEmail: { id: { flag: "email-id", description: EMAIL_ID_NOT_SENT } },
   signalEmail: { id: { flag: "email-id", description: EMAIL_ID_NOT_SENT } },
   stopRepeatFromEmail: {
@@ -338,7 +328,7 @@ export function pagingFlagOverride(
   const described = flagDescription(parameter).trim().replace(/\.$/, "");
   if (parameter.name === "cursor") {
     return {
-      description: `${described}. The next page's cursor is meta.cursor, null on the last page: without --json it is printed on stderr as \`next cursor: <value>\`; with --json, add --envelope to get it, since the bare --json output is the data array alone.`,
+      description: `${described}. The next page's cursor is meta.cursor, null on the last page: without --json it is printed on stderr as \`next cursor: <value>\`; with --json it is meta.cursor in the document.`,
     };
   }
   if (parameter.name === "limit" && typeof parameter.maximum === "number") {
@@ -665,8 +655,9 @@ function coerceParameterValue(
   throw new Errors.CLIError(`Unsupported flag value for --${parameter.name}`);
 }
 
+/** A refusal before anything is sent: exit 2, and usage_error under --json. */
 function cliError(message: string): Errors.CLIError {
-  return new Errors.CLIError(message, { exit: 1 });
+  return new Errors.CLIError(message, { exit: 2 });
 }
 
 function parseJson(source: string, flagLabel: string): unknown {
@@ -1106,7 +1097,6 @@ const RESERVED_FLAG_NAMES = new Set([
   "api-base-url",
   "raw-body",
   "body-file",
-  "envelope",
   "output",
 ]);
 
@@ -1206,11 +1196,7 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   if (!operation.binaryResponse) {
     flags.json = Flags.boolean({
       description:
-        "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr. Stdout keeps its usual shape: the data payload, or with --envelope the full response envelope (data plus meta, including meta.cursor, and, in summary, empty-result hints and what a list's default filters left out). The next-cursor line is not printed; use --envelope to page. A failure prints the error with exit_code. Without --json, the cursor and notices go to stderr.",
-    });
-    flags.envelope = Flags.boolean({
-      description:
-        "Print the full response envelope, including pagination metadata such as meta.cursor. Defaults to printing only the data payload for backward compatibility.",
+        "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr: the API's response body (data, and meta with meta.cursor where the route sends it) plus the CLI's own summary, warnings, error and exit_code. Without --json, stdout is the data payload, and notes and the next cursor go to stderr.",
     });
   }
 
@@ -1340,11 +1326,6 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   // A flag an extension adds would change meaning if the spec gained a
   // parameter of the same name; refuse to build rather than guess.
   const extension = OPERATION_EXTENSIONS[operation.sdkName];
-  // A confirmation is skipped only by --yes, so the command must have it.
-  if (extension?.confirm && !("yes" in extension.flags))
-    throw new Error(
-      `${operation.sdkName}: a CLI extension that asks for confirmation must add --yes`,
-    );
   for (const [name, flag] of Object.entries(extension?.flags ?? {})) {
     if (flags[name] !== undefined)
       throw new Error(
@@ -1437,9 +1418,8 @@ type OperationResponseEnvelope =
 
 export function operationOutputPayload(
   envelope: OperationResponseEnvelope,
-  includeEnvelope: boolean,
 ): unknown {
-  return includeEnvelope ? (envelope ?? null) : (envelope?.data ?? null);
+  return envelope?.data ?? null;
 }
 
 /**
@@ -1498,7 +1478,7 @@ export function domainVerificationFailedHint(payload: unknown): string {
 
 // Discoverability hints for generated commands: a hand-rolled ergonomic
 // shortcut, or a behaviour of the command an agent should know before it
-// runs it (deleteEmailRule asks for confirmation). Keyed by the manifest's
+// runs it. Keyed by the manifest's
 // `sdkName` (camelCase, matches the generated SDK function). The
 // hint is appended to the operation's --help description so an
 // agent reading `<command> --help` finds the shortcut without
@@ -1511,8 +1491,6 @@ export function domainVerificationFailedHint(payload: unknown): string {
 // generated operation; the COMMANDS map in `index.ts` is the
 // authoritative list of shortcuts.
 export const OPERATION_HINTS: Record<string, string> = {
-  deleteEmailRule:
-    "Asks for confirmation first in a terminal. Pass --yes (-y) to delete without a prompt; without a terminal, or with --json, it is required.",
   addDomain:
     "Tip: after this returns a domain id, run `primitive domains zone-file --id <domain-id> --output <domain>.zone` when the user wants an importable DNS zone file.",
   verifyDomain:
@@ -1543,18 +1521,12 @@ export const OPERATION_HINTS: Record<string, string> = {
     "Tip: prefer `primitive memories search [prefix] [--metadata-only] [--function <function-id>]` for the common search path.",
   listEmails:
     "Tip: for a one-line-per-email table, `primitive emails latest --limit 100`.",
-  createEmailRuleObjection:
-    "Tip: say in --message (up to 500 characters) what you want. It can ask for less than turning the rule off: ask the author to narrow the rule, or to explain where its matches go (its receivers). The author accepts, which turns the rule off; declines, optionally giving a reason; or answers amended once they have saved a new version of the rule, optionally with a note. You see the answer in `primitive email-rule-oversight get-email-rule-objection <objection-id>`. You can withdraw it with `primitive email-rule-oversight withdraw-email-rule-objection <objection-id>`. Objecting does not change the rule.",
-  declineEmailRuleObjection:
-    "Tip: the member who objected sees --reason (up to 500 characters). When the objection asked you to explain a receiver, the reason can say what the receiver is for. If you changed the rule instead of turning it off, do not decline: save the new version with `primitive email-rules update-email-rule`, then answer with `primitive email-rule-oversight amend-email-rule-objection <objection-id>`.",
-  amendEmailRuleObjection:
-    "Tip: save the new version first with `primitive email-rules update-email-rule`; until the rule's version is newer than when the objection was made, this answers 409 no_new_version. The member who objected sees --note (up to 500 characters) and both version numbers.",
   listEndpoints:
     "Tip: without --json, a table on stderr after the JSON shows each endpoint's ENABLED and DELIVERING. DELIVERING is read from delivery.delivering, whether a webhook is being sent mail at all, not from enabled: an endpoint can be enabled and still not be delivering (its owner's key revoked, say), shown as no with the reason codes in parentheses. A webhook whose delivery could not be checked shows unknown, and a Function or pull endpoint shows -.",
   startAgentSignup:
     "Tip: pass --terms-accepted. Capture the signup_token from the response and feed it to `primitive agent verify-agent-signup --signup-token <token> --verification-code <6-digit-code>` (the verify flag accepts --code as an alias). The high-level `primitive signup <email>` command walks an interactive user through both steps with friendlier prompts.",
   testEmailRule:
-    "Tip: --expect-match and --expect-no-match (or --expect-file) set expect, the emails the rule must match and must not. When no expect is sent, by these flags or in the body, a saved rule's saved expectations are judged instead. Either way, the answer reports the expectations it judged in expectations: passed, counts and per-email results. (create-email-rule and update-email-rule instead judge the rule's saved expectations on the version they save, in expectations_check: passed, decided, failed and undecided.) The exit code follows that report: 1 when one failed; 1 when one is undecided and testing again will not decide it (its email cannot be found or read, cannot be classified, or cannot be tested: skipped); 3 when the only undecided ones can be decided later (not classified yet, or a question unanswered), so test again later. Exit 1 also means the request failed. With --json, error.code tells these apart: expectations_failed, expectations_unresolvable, expectations_undecided (exit 3), or the API's own code. Without --json a readable report follows the JSON on stderr: warnings, how each condition held, the expectations, and the values each email that did not match was compared on.",
+    "Tip: --expect-match and --expect-no-match (or --expect-file) set expect; without it, a saved rule's own expectations are judged. Exit 0 when every expectation passed, 1 when one failed or is undecided for good (or the request failed), and 3 when the only ones not passed can be decided by testing again later; with --json, error.code is expectations_failed or expectations_undecided, and exit_code and error, not the API's success, say whether the expectations passed.",
   verifyAgentSignup:
     "Tip: pass --verification-code <code> (or --code; both work). The response carries OAuth tokens but not your assigned inbox domain; run `primitive domains list` (or `primitive whoami`) after success to see the managed *.primitive.email address that routes to this account.",
 };
@@ -1589,11 +1561,9 @@ export function overLongBodyField(
 
 /** What a write that takes a compile answer reads from --body-file, said beside the generic help. */
 const COMPILE_ANSWER =
-  "the answer `compile-email-rule --json` printed (without --include-sql), unchanged: save it to a file";
-const SCOPE_AGAIN =
-  "The answer carries no scope: pass --evaluation-scope again if you compiled with one.";
+  "the data of the answer `compile-email-rule --json` printed (without --include-sql), saved to a file: `compile-email-rule ... --json | jq .data > rule.json`";
 export const BODY_FILE_HELP: Record<string, string> = {
-  createEmailRule: `For this command, ${COMPILE_ANSWER}, and add --english with the description you compiled, and --name. ${SCOPE_AGAIN}`,
+  createEmailRule: `For this command, ${COMPILE_ANSWER}, and add --english with the description you compiled, and --name.`,
   updateEmailRule: `For a new version, ${COMPILE_ANSWER}, and add --english with the description you compiled (required with a new tree); --name only to rename it.`,
   createEmailRuleRequest: `For this command, ${COMPILE_ANSWER}, and add --english with the description you compiled, --name and --target-email.`,
   acceptEmailRuleRequest: `To change the rule as you accept it, ${COMPILE_ANSWER}, and add --english with the description you compiled.`,
@@ -1636,8 +1606,8 @@ export const OPERATION_EXTRA_BODY_FLAGS: Record<
 };
 
 // CLI additions to generated commands keyed by operation.sdkName: flags that
-// set request body fields, a confirmation asked before the request, and a
-// stderr report and exit code read from the answer. See operation-extension.ts.
+// set request body fields, and a stderr report and exit code read from the
+// answer. See operation-extension.ts.
 export const OPERATION_EXTENSIONS: Record<string, OperationExtension> = {
   ...EMAIL_RULE_OPERATION_EXTENSIONS,
   ...ANSWER_REPORT_EXTENSIONS,
@@ -1668,10 +1638,10 @@ export const OPERATION_ERROR_HINTS: Record<
     createEndpointRuleRequestHint(code, body, payload),
   updateEndpoint: (code, body, payload) =>
     updateEndpointRuleRequestHint(code, body, payload),
-  updateEmailRule: (code, body, payload, path, flags) =>
-    updateEmailRuleErrorHint(code, payload, path?.id, body, flags),
-  listEmailRuleObjections: (_code, _body, payload, _path, flags) =>
-    objectionBoxErrorHint(payload, flags),
+  updateEmailRule: (code, body, payload, path) => {
+    const hint = updateEmailRuleErrorHint(code, payload, path?.id, body);
+    return hint === undefined ? undefined : terminalLine(hint);
+  },
   verifyDomain: (code, _body, payload) =>
     code === "dns_verification_failed"
       ? domainVerificationFailedHint(payload)
@@ -1829,23 +1799,6 @@ export function createOperationCommand(
         }
         parsedFlags[positionalFlag] = value;
       }
-      // A request that cannot be undone is confirmed first, before any
-      // credential is read: in a terminal by asking, otherwise only by --yes.
-      const confirm = extension?.confirm;
-      if (confirm && parsedFlags.yes !== true) {
-        if (
-          parsedFlags.json === true ||
-          !(process.stdin.isTTY && process.stderr.isTTY)
-        ) {
-          throw new Errors.CLIError(confirm.noTerminal, { exit: 2 });
-        }
-        const answer = await promptLine(confirm.question(parsedFlags));
-        if (!/^y(es)?$/i.test(answer.trim())) {
-          process.stderr.write(`${confirm.cancelled}\n`);
-          process.exitCode = 1;
-          return;
-        }
-      }
       const headers = collectHeaderFlags(parsedFlags, headerFlagToName);
       if (
         [
@@ -1978,16 +1931,9 @@ export function createOperationCommand(
         // And for `from_verified`, a trust filter: rows without the
         // requested value are refused, never printed.
         const fromVerified = fromVerifiedExpectation(operation.sdkName, query);
-        // What is sent: the query as given, with the objection list's default
-        // box asked for by name (rule-list-defaults.ts). `query` stays as
-        // given, for the notes that say which defaults applied.
-        let sentQuery = withDefaultObjectionBox(operation.sdkName, query);
-        // Set when the server refused that box, so objections you made were
-        // read instead.
-        let objectionBoxRefused = false;
         const callOperation = (
           stepUpToken?: string,
-          pageQuery: Record<string, unknown> = sentQuery,
+          pageQuery: Record<string, unknown> = query,
         ) => {
           const sent = stepUpToken
             ? { ...headers, [STEP_UP_HEADER]: stepUpToken }
@@ -2063,7 +2009,7 @@ export function createOperationCommand(
           const rows: unknown[] = [];
           let sentCursor = query.cursor;
           let last = await callOperation(undefined, {
-            ...sentQuery,
+            ...query,
             limit: Math.min(max, wanted),
           });
           // Only a null cursor ends a list: a page can come back short, even
@@ -2104,7 +2050,7 @@ export function createOperationCommand(
             }
             sentCursor = cursor;
             last = await callOperation(undefined, {
-              ...sentQuery,
+              ...query,
               cursor,
               limit: Math.min(max, wanted - rows.length),
             });
@@ -2142,19 +2088,7 @@ export function createOperationCommand(
                     },
                   })
                 : await callOperation();
-        let result = await send();
-        // A server that predates the objection list's default box refuses
-        // it: read the list once more with objections you made, which such a
-        // server lists by default, and say so in the line below.
-        if (
-          result.error &&
-          sentQuery !== query &&
-          isObjectionBoxRefused(extractErrorPayload(result.error))
-        ) {
-          sentQuery = { ...query, box: OBJECTION_BOX_FALLBACK };
-          objectionBoxRefused = true;
-          result = await send();
-        }
+        const result = await send();
 
         if (result.error) {
           const errorPayload = extractErrorPayload(result.error);
@@ -2228,8 +2162,7 @@ export function createOperationCommand(
               this.config.configDir,
               parsedFlags.id,
             );
-          // A hook never turns a failed request into exit 0.
-          process.exitCode = extension?.errorExitCode?.(errorPayload) || 1;
+          process.exitCode = 1;
           return;
         }
 
@@ -2299,20 +2232,16 @@ export function createOperationCommand(
             return;
           }
         }
-        // With --json stdout keeps its usual shape (the data payload, or
-        // the full envelope with --envelope, where meta.cursor travels) and
-        // stderr stays empty, so a merged stream parses as one document.
+        // With --json stdout is the response body, where meta.cursor
+        // travels, and stderr stays empty, so a merged stream parses as one
+        // document.
         const jsonOutput = parsedFlags.json === true;
-        const withEnvelope = parsedFlags.envelope === true;
         const cursor = envelope?.meta?.cursor;
         if (cursor && !jsonOutput) {
           process.stderr.write(`next cursor: ${cursor}\n`);
         }
         if (pagingNote && !jsonOutput) process.stderr.write(`${pagingNote}\n`);
         const summary: string[] = [];
-        // Set when the empty-result hint below said what a rule list's
-        // defaults left out, so the line is not said twice.
-        let ruleListHintSaid = false;
 
         // Empty-result hint. When a list-style operation returns
         // an empty array, emit an operation-specific note to
@@ -2322,13 +2251,10 @@ export function createOperationCommand(
         // AGX walkthrough flagged this: `list-deliveries` returning
         // `[]` left the agent unsure whether they had an empty
         // delivery log or no endpoints configured at all.
-        // Under --json the hint rides in the envelope's summary when one is
-        // printed; a bare data payload has nowhere to carry it, so nothing
-        // more is read for it.
+        // Under --json the hint rides in the document's summary.
         if (
           Array.isArray(envelope?.data) &&
           envelope.data.length === 0 &&
-          (!jsonOutput || withEnvelope) &&
           // Without --json, a meta note below says why instead.
           (jsonOutput || !metaExplainsEmptyList(envelope?.meta))
         ) {
@@ -2338,10 +2264,6 @@ export function createOperationCommand(
           // the grant too, and nor does a page with more to read.
           const tail = query.since !== undefined;
           const more = envelope?.meta?.cursor ?? null;
-          const ruleListHint = emptyRuleListHint(operation.sdkName, query, {
-            objectionBoxRefused,
-          });
-          ruleListHintSaid = ruleListHint !== undefined;
           const hint =
             operation.sdkName === "listEmails"
               ? emptyEmailListHint({
@@ -2360,30 +2282,15 @@ export function createOperationCommand(
                       ? null
                       : await readCallerMailFor(auth, apiClient.client),
                 })
-              : (ruleListHint ??
-                emptyDeliveriesHint(operation.sdkName, query) ??
+              : (emptyDeliveriesHint(operation.sdkName, query) ??
                 EMPTY_RESULT_HINTS[operation.sdkName]);
           if (hint && jsonOutput) summary.push(hint);
           else if (hint) process.stderr.write(`${hint}\n`);
         }
 
-        // A rule list read with a default left in place says what that
-        // default leaves out on every page, not only an empty first one:
-        // one live share of seven reads as all there is. An empty first page
-        // said it above, after "(no results)".
-        if (Array.isArray(envelope?.data) && (!jsonOutput || withEnvelope)) {
-          const note = ruleListHintSaid
-            ? undefined
-            : ruleListDefaultsNote(operation.sdkName, query, {
-                objectionBoxRefused,
-              });
-          if (note && jsonOutput) summary.push(note);
-          else if (note) process.stderr.write(`${note}\n`);
-        }
-
         // What the answer's meta says about the data, such as a --recipient
-        // this credential does not read. Under --json the document is left
-        // as it was: with --envelope its meta already carries these.
+        // this credential does not read. Under --json the document's meta
+        // already carries these.
         if (!jsonOutput) {
           for (const line of metaNoteLines(envelope?.meta)) {
             process.stderr.write(`${line}\n`);
@@ -2398,9 +2305,8 @@ export function createOperationCommand(
             envelope?.data,
             auth.connectedAgent?.agentAddress,
           );
-          if (note && jsonOutput) {
-            if (withEnvelope) summary.push(note);
-          } else if (note) process.stderr.write(`${note}\n`);
+          if (note && jsonOutput) summary.push(note);
+          else if (note) process.stderr.write(`${note}\n`);
         }
 
         // Idempotent-replay banner. Send-mail (and any future
@@ -2450,7 +2356,17 @@ export function createOperationCommand(
         let report: OperationReport | undefined;
         let reportError: string | undefined;
         try {
-          report = extension?.report?.(envelope?.data, {
+          // The email rules tags' single-object answers print the server's
+          // notes when no extension reads them otherwise.
+          const reader =
+            extension?.report ??
+            (RULE_NOTES_TAGS.has(operation.tag) &&
+            envelope?.data !== null &&
+            typeof envelope?.data === "object" &&
+            !Array.isArray(envelope?.data)
+              ? ruleNotesReport
+              : undefined);
+          report = reader?.(envelope?.data, {
             body,
             path: collectValues(
               operation.pathParams,
@@ -2475,16 +2391,15 @@ export function createOperationCommand(
               lines: [],
               exitCode: fallback,
               error: {
-                code: "expectations_not_passed",
+                code: "expectations_failed",
                 message:
                   "The answer's expectations were not all shown to pass; read their result in the answer.",
               },
             };
         }
-        let printed =
-          jsonOutput && withEnvelope
-            ? operationJsonDocument(envelope, summary)
-            : operationOutputPayload(envelope, withEnvelope);
+        let printed = jsonOutput
+          ? operationJsonDocument(envelope, summary)
+          : operationOutputPayload(envelope);
         if (
           jsonOutput &&
           report?.exitCode &&
@@ -2494,23 +2409,6 @@ export function createOperationCommand(
           !Array.isArray(printed)
         ) {
           printed = { ...printed, error: report.error };
-        }
-        if (
-          jsonOutput &&
-          report?.json &&
-          printed !== null &&
-          typeof printed === "object" &&
-          !Array.isArray(printed)
-        ) {
-          const answer = printed as Record<string, unknown>;
-          printed = {
-            ...answer,
-            ...Object.fromEntries(
-              Object.entries(report.json).filter(
-                ([key]) => !Object.hasOwn(answer, key),
-              ),
-            ),
-          };
         }
         this.log(JSON.stringify(printed, null, 2));
         if (reportError !== undefined) {
@@ -2548,6 +2446,14 @@ export const EMPTY_RESULT_HINTS: Record<string, string> = {
   listDomains:
     "(no results) No domains on this account. Add one with `primitive domains add --domain <yourdomain.example>`.",
   listFilters: "(no results) No filter rules configured.",
+  listEmailRuleRequests:
+    "(no results) No rule requests match. Without --box and --status only pending requests made to you are listed; `--box all --status any` lists every one you can see.",
+  listEmailRuleShares:
+    "(no results) No shares match. Without --box and --live only live shares made with you are listed; `--box all --live any` lists every one you can see.",
+  listGivenEmailRuleShares:
+    "(no results) No shares match. Without --live only live shares of your mail are listed; `--live any` lists ended ones too.",
+  listEmailRuleObjections:
+    "(no results) No objections match. Without --box and --status only pending objections you made and those to rules you wrote are listed; `--box all --status any` lists every one you can see.",
   listFunctions:
     "(no results) No Functions configured yet. Start with `primitive functions templates`, then `primitive functions init --template <template>` and `primitive functions deploy --name <name> --file <bundle>`.",
 };

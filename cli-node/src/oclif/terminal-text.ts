@@ -47,3 +47,42 @@ export function sanitizeForTerminal(value: string): string {
   }
   return out;
 }
+
+/** Marks that reorder text on screen, so "inv\u202egpj.exe" could show as "invexe.jpg". */
+const BIDI_CONTROLS = /[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
+/** The longest a sender's subject or file name is shown in a report line. */
+const SHOWN_TEXT_MAX = 100;
+
+/**
+ * Text from outside the CLI (a server string, or one another member wrote)
+ * on one report line: no terminal control sequences or reordering marks,
+ * whitespace collapsed, and uncut.
+ */
+export function shownLine(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return sanitizeForTerminal(value)
+    .replace(BIDI_CONTROLS, "")
+    .replaceAll(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Text a sender wrote (a subject, an address, a file name), as a report
+ * line shows it: shownLine, cut at SHOWN_TEXT_MAX.
+ */
+export function shownText(value: unknown): string {
+  const line = shownLine(value);
+  return line.length > SHOWN_TEXT_MAX
+    ? `${line.slice(0, SHOWN_TEXT_MAX - 3)}...`
+    : line;
+}
+
+/**
+ * A report line the CLI built around server text: no terminal control
+ * sequences or reordering marks, and on one line, with its indentation kept.
+ */
+export function terminalLine(line: string): string {
+  return sanitizeForTerminal(line)
+    .replace(BIDI_CONTROLS, "")
+    .replaceAll(/[\r\n\t]+/g, " ");
+}

@@ -33,9 +33,9 @@ import {
   installClaudeWakeHook,
 } from "./claude-wake-install.js";
 import {
-  type ConnectSkillInstall,
-  installConnectSkill,
+  installSkill,
   readBundledConnectSkill,
+  type SkillInstall,
 } from "./connect-skill.js";
 import {
   AgentConnectionSetupError,
@@ -258,7 +258,7 @@ export type AgentConnectFlowDependencies = {
   /** The installed Codex version, or null when it cannot be read. */
   codexVersion(): Promise<string | null>;
   installClaudeWakeHook: typeof installClaudeWakeHook;
-  installSkill(runtime: AgentRuntime): ConnectSkillInstall;
+  installSkill(runtime: AgentRuntime): SkillInstall;
   seedAgentInfo(profileName: string, value: string): Promise<AgentInfoSeed>;
   /** Writes the AGENT_RESUME note for the bound session; best effort. */
   publishResumeNote(
@@ -371,7 +371,7 @@ function defaults(
     installClaudeWakeHook,
     installSkill(runtime) {
       const bundle = readBundledConnectSkill(options.packageRoot);
-      return installConnectSkill({
+      return installSkill({
         bundle,
         runtime,
         project: options.project,
@@ -516,7 +516,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
   const agentInfo = agentInfoValue(options.name, options.info);
   const skipped: Skip[] = [];
 
-  let skill: ConnectSkillInstall;
+  let skill: SkillInstall;
   if (options.skill === false) {
     skill = {
       state: "skipped",

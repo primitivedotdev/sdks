@@ -221,7 +221,7 @@ describe("sent list under a connected profile", () => {
 
   it("carries the label in the envelope summary under --json", async () => {
     responder = () => jsonResponse(200, { success: true, data: rows });
-    const result = await run("sent:list", ["--json", "--envelope"]);
+    const result = await run("sent:list", ["--json"]);
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
     expect(JSON.parse(result.stdout).summary).toContain(

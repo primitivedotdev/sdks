@@ -227,31 +227,15 @@ describe("emails attachment-members", () => {
     "emails:attachment-members"
   ] as unknown as Runnable;
 
-  it("accepts --json and prints the same listing", async () => {
-    mocks.listEmailAttachmentArchiveMembers.mockResolvedValue({
-      data: { success: true, data: LISTING },
-    });
+  it("prints the listing alone, and the response body with --json", async () => {
+    const body = { success: true, data: LISTING };
+    mocks.listEmailAttachmentArchiveMembers.mockResolvedValue({ data: body });
     const plain = await run(Installed, [EMAIL_ID, "logs.zip"]);
+    expect(JSON.parse(plain.stdout)).toEqual(LISTING);
     const json = await run(Installed, [EMAIL_ID, "logs.zip", "--json"]);
     expect(json.exitCode).toBeUndefined();
-    expect(JSON.parse(json.stdout)).toEqual(LISTING);
-    expect(json.stdout).toBe(plain.stdout);
+    expect(JSON.parse(json.stdout)).toEqual(body);
     expect(json.stderr).toBe("");
-  });
-
-  it("prints the full envelope with --envelope", async () => {
-    const envelope = { success: true, data: LISTING };
-    mocks.listEmailAttachmentArchiveMembers.mockResolvedValue({
-      data: envelope,
-    });
-    const result = await run(Installed, [
-      EMAIL_ID,
-      "logs.zip",
-      "--json",
-      "--envelope",
-    ]);
-    expect(result.exitCode).toBeUndefined();
-    expect(JSON.parse(result.stdout)).toEqual(envelope);
   });
 
   it("puts a failure in one JSON document on stdout with --json", async () => {
@@ -283,8 +267,8 @@ describe("emails attachment-members", () => {
     expect(mocks.listEmailAttachmentArchiveMembers).not.toHaveBeenCalled();
   });
 
-  it("refuses --json and --envelope with a --member download", async () => {
-    for (const flag of ["--json", "--envelope"]) {
+  it("refuses --json with a --member download", async () => {
+    for (const flag of ["--json"]) {
       await expect(
         EmailsAttachmentMembersCommand.run(
           [EMAIL_ID, "0", "--member", "a/b.txt", flag],

@@ -47,6 +47,32 @@ const item = (overrides: Partial<ActivityItem> = {}): ActivityItem => ({
   ...overrides,
 });
 
+describe("activity tables print other members' text safely", () => {
+  const hostile = "pay\u001b[31mroll\u001b[0m \u202etxt.exe\nnext";
+  const shown = "payroll txt.exe next";
+
+  it("strips terminal controls and reordering marks from every cell", () => {
+    const named = item({
+      name: hostile,
+      created_through: { kind: "org_key", id: "k", name: hostile },
+    });
+    for (const out of [
+      formatActivityRows("you", [named]),
+      formatAskedRows([
+        { ...named, kind: "email_rule_request", state: "pending" },
+      ]),
+      formatConcerningRows([
+        { ...named, kind: "email_rule", state: "started" },
+      ]),
+    ]) {
+      expect(out).not.toContain("\u001b");
+      expect(out).not.toContain("\u202e");
+      expect(out.split("\n")).toHaveLength(2);
+      expect(out).toContain(shown);
+    }
+  });
+});
+
 describe("activity created", () => {
   it("is registered beside the generated operation", () => {
     expect(COMMANDS["activity:created"]).toBeDefined();
@@ -476,65 +502,15 @@ describe("activity concerning command", () => {
     );
   });
 
-  it("says in its help that notices can lag, promising no cadence, and which id is the rule's", () => {
+  it("says in three sentences what is listed, that notices can lag, and which id is the rule's", () => {
     const help = ActivityConcerningCommand.description;
-    expect(help).toContain("Notices can lag.");
-    expect(help).not.toMatch(/every minute|a few minutes/);
+    expect(help).toContain("Notices can lag");
+    expect(help).not.toMatch(/every minute|a few minutes|receivers_change/);
+    expect(help).toContain("stopped (it stopped, with why)");
     expect(help).toContain(
       "RULE ID, and rule_id with --json, is the rule's id",
     );
-  });
-
-  it("promises no receivers_changed notices in its help, and says where to see who receives a rule's matches", () => {
-    const help = ActivityConcerningCommand.description;
-    expect(help).not.toMatch(/receivers_change/);
-    expect(help).toContain(
-      "A rename is not listed, and neither is a change in who receives the rule's matches (its keys, webhooks or share): `primitive email-rule-oversight get-email-rule-covering-me <rule-id>` shows who receives them now, by owner, while the rule covers you.",
-    );
-  });
-
-  it("still shows an older receivers_changed notice's totals in a last column, with no line under the table about it", () => {
-    const changed = (
-      before: unknown,
-      after: unknown,
-      name = "Vendor invoices",
-    ) =>
-      item({
-        kind: "email_rule_coverage",
-        rule_id: "3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f",
-        name,
-        state: "receivers_changed",
-        owned_now: "someone_else",
-        created_through: { kind: "member", id: "u-3", name: "Sam Rivera" },
-        receivers_change: { before, after },
-      } as Partial<ActivityItem>);
-    const totals = { keys: 3, reads_in_full: 1, webhooks: 2, shares: 0 };
-    const out = formatConcerningRows([
-      changed(totals, { ...totals, keys: 2, reads_in_full: 0, webhooks: 1 }),
-      changed(totals, totals, "Same"),
-      changed(totals, { ...totals, reads_in_full: 2 }, "Full"),
-      changed(totals, { ...totals, keys: 4, shares: 1 }, "Shared"),
-      item({ kind: "email_rule_coverage", state: "started", name: "Other" }),
-    ]);
-    expect(out).toMatch(
-      /^NOTICE\s+WHEN \(UTC\)\s+RULE\s+AUTHOR\s+RULE ID\s+CHANGE$/m,
-    );
-    expect(out).toMatch(
-      /^receivers_changed {2,}.*Vendor invoices\s+Sam Rivera\s+3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f {2}keys 3 to 2 \(1 to 0 also reading your mail beyond the rule\), webhooks 2 to 1$/m,
-    );
-    expect(out).toMatch(
-      /Same\s+.*same totals, an owner or webhook site changed$/m,
-    );
-    expect(out).toMatch(
-      /Full\s+.*keys 3 \(1 to 2 also reading your mail beyond the rule\)$/m,
-    );
-    expect(out).toMatch(/Shared\s+.*keys 3 to 4, shares 0 to 1$/m);
-    // Other notices keep their state alone, and nothing is added to the NOTICE column.
-    expect(out).toMatch(/^started {2,}.*Other/m);
-    expect(out).not.toContain("receivers_changed (");
-    // The API no longer sends these notices, so nothing under the table explains or promises them.
-    expect(out).not.toContain("receivers_changed:");
-    expect(out).not.toContain("get-email-rule-covering-me");
+    expect(help.split(/(?<=\.) /)).toHaveLength(3);
   });
 
   it("shows a stopped notice's reason in the last column, and nothing for a reason it does not know", () => {
@@ -578,45 +554,7 @@ describe("activity concerning command", () => {
     }
   });
 
-  it("says in its help that a rule that stops covering you is listed as stopped", () => {
-    const help = ActivityConcerningCommand.description;
-    expect(help).toContain(
-      "A rule that stops covering you is listed as stopped, with why",
-    );
-    expect(help).not.toContain(
-      "A rule that stops covering you and a rename are not listed",
-    );
-  });
-
-  it("shows no CHANGE for totals that are missing or not counts, and lists the pending and unfinished footnotes together", () => {
-    const odd = (receivers_change: unknown, state = "receivers_changed") =>
-      item({
-        kind: "email_rule_coverage",
-        state,
-        name: "Odd",
-        receivers_change,
-      } as Partial<ActivityItem>);
-    const totals = { keys: 3, reads_in_full: 1, webhooks: 2, shares: 0 };
-    for (const change of [
-      undefined,
-      { before: { keys: 3 }, after: totals },
-      { before: {}, after: {} },
-      { before: [], after: [] },
-      { before: { ...totals, keys: "3" }, after: totals },
-      { before: { ...totals, keys: -1 }, after: totals },
-      { before: { ...totals, keys: 1.5 }, after: totals },
-    ]) {
-      const out = formatConcerningRows([odd(change)]);
-      expect(out).not.toContain("CHANGE");
-      expect(out).not.toContain("undefined");
-      expect(out).toMatch(/^receivers_changed {2,}2026-/m);
-    }
-    // Totals on any other notice are not shown.
-    expect(
-      formatConcerningRows([
-        odd({ before: totals, after: { ...totals, keys: 1 } }, "new_version"),
-      ]),
-    ).not.toContain("CHANGE");
+  it("lists the pending and unfinished footnotes together", () => {
     const all = formatConcerningRows(
       [
         item({
@@ -624,7 +562,7 @@ describe("activity concerning command", () => {
           state: "pending",
           name: "Waiting",
         }),
-        odd({ before: totals, after: { ...totals, webhooks: 3 } }),
+        item({ kind: "email_rule_coverage", state: "started", name: "Other" }),
       ],
       false,
       null,
@@ -632,7 +570,7 @@ describe("activity concerning command", () => {
     );
     expect(all).toContain("pending: the rule covers you now");
     expect(all).toContain("did not finish");
-    expect(all).not.toContain("receivers_changed:");
+    expect(all).not.toContain("CHANGE");
   });
 
   it("lists coverage notices with the rule's author, and asks the API for exactly that", async () => {
@@ -715,128 +653,11 @@ describe("activity concerning command", () => {
       },
     );
     await ActivityConcerningCommand.run([], { root });
-    // The notices, then the rules over your mail, for the observe footer.
-    expect(urls.map((url) => url.pathname)).toEqual([
-      "/v1/activity/objects",
-      "/v1/email-rules/covering-me",
-    ]);
+    // The notices only: no other read.
+    expect(urls.map((url) => url.pathname)).toEqual(["/v1/activity/objects"]);
     expect(lines.join("\n")).toContain(
       `Nothing recorded for you as of 2026-11-12 23:50 UTC. ${now}`,
     );
-  });
-
-  it("says under the listing how many rules in observe another member wrote over your mail", async () => {
-    const rule = (state: string, is_author = false) => ({
-      id: "r",
-      state,
-      is_author,
-    });
-    const covering = (data: unknown[], cursor: string | null) => ({
-      body: { success: true, data, meta: { cursor } },
-    });
-    const lines: string[] = [];
-    vi.spyOn(ActivityConcerningCommand.prototype, "log").mockImplementation(
-      (message?: string) => {
-        lines.push(message ?? "");
-      },
-    );
-    const says =
-      "a rule in observe records a decision on every email it reads and shares or blocks nothing until it is turned active, which is listed here as started. `primitive email-rule-oversight list-email-rules-covering-me` lists them.";
-    // Your own rules, and rules turned active, are not counted.
-    const urls = useApi([
-      page([], null),
-      covering(
-        [
-          rule("observe"),
-          rule("observe"),
-          rule("observe", true),
-          rule("active"),
-        ],
-        null,
-      ),
-    ]);
-    await ActivityConcerningCommand.run([], { root });
-    expect(Object.fromEntries(urls[1]?.searchParams ?? [])).toEqual({
-      limit: "100",
-    });
-    expect(lines.at(-1)).toBe(
-      `\n2 rules in observe also cover your mail: ${says}`,
-    );
-    // A page with a cursor counts at least that many.
-    lines.length = 0;
-    useApi([page([], null), covering([rule("observe")], "next")]);
-    await ActivityConcerningCommand.run([], { root });
-    expect(lines.at(-1)).toBe(
-      `\nAt least 1 rule in observe also covers your mail: ${says}`,
-    );
-    // None: nothing is said.
-    lines.length = 0;
-    useApi([page([], null), covering([rule("active")], null)]);
-    await ActivityConcerningCommand.run([], { root });
-    expect(lines.join("\n")).not.toContain("in observe");
-    // A list this credential may not read says nothing; one that fails otherwise, the sentence without a count.
-    lines.length = 0;
-    useApi([
-      page([], null),
-      {
-        status: 403,
-        body: { success: false, error: { code: "forbidden", message: "no" } },
-      },
-    ]);
-    await ActivityConcerningCommand.run([], { root });
-    expect(lines.join("\n")).not.toContain("in observe");
-    lines.length = 0;
-    useApi([
-      page([], null),
-      {
-        status: 500,
-        body: { success: false, error: { code: "internal", message: "down" } },
-      },
-    ]);
-    await ActivityConcerningCommand.run([], { root });
-    expect(lines.at(-1)).toBe(
-      `\nRules in observe can also cover your mail: ${says}`,
-    );
-    // A fetch that throws is the same, and changes no exit code.
-    lines.length = 0;
-    process.exitCode = undefined;
-    useApi((n) => {
-      if (n === 1) return page([], null);
-      throw new Error("socket hang up");
-    });
-    await ActivityConcerningCommand.run([], { root });
-    expect(lines.at(-1)).toBe(
-      `\nRules in observe can also cover your mail: ${says}`,
-    );
-    expect(process.exitCode).toBeUndefined();
-    // A key, an app or an agent has no coverage notices: the list is not read.
-    lines.length = 0;
-    const keyed = useApi([
-      {
-        body: {
-          success: true,
-          data: {
-            covers: "this key",
-            items: [],
-            withheld: [{ kind: "email_rule_coverage", reason: "credential" }],
-            next_cursor: null,
-          },
-        },
-      },
-    ]);
-    await ActivityConcerningCommand.run([], { root });
-    expect(keyed).toHaveLength(1);
-    expect(lines.join("\n")).not.toContain("in observe");
-    // A later page is not told again.
-    lines.length = 0;
-    const later = useApi([page([], null)]);
-    await ActivityConcerningCommand.run(["--cursor", "next-page"], { root });
-    expect(later).toHaveLength(1);
-    // Not with --json, which keeps its document.
-    lines.length = 0;
-    const json = useApi([page([], null)]);
-    await ActivityConcerningCommand.run(["--json"], { root });
-    expect(json).toHaveLength(1);
   });
 
   it("lists a rule that covers you before its notice is written as pending, and keeps as_of in --json", async () => {

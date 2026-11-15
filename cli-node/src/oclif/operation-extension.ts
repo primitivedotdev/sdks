@@ -1,9 +1,8 @@
 // Additions a CLI module makes to one generated operation command, keyed by
 // the operation's sdkName in OPERATION_EXTENSIONS (api-command.ts). The
 // generated command stays in charge of the request and of stdout; an
-// extension only adds flags that set request body fields, asks for
-// confirmation before a request that cannot be undone, and reads the answer
-// to add a report on stderr and an exit code.
+// extension only adds flags that set request body fields, and reads the
+// answer to add a report on stderr and an exit code.
 
 /** A request body field set by an extension's flags. */
 export type ExtensionBodyField = {
@@ -24,34 +23,11 @@ export type OperationReport = {
    * document says why the command exited non-zero.
    */
   error?: { code: string; message: string };
-  /**
-   * Keys the CLI worked out from the answer, added beside it in a --json
-   * document (and never over a key the answer has), such as the comparison
-   * test-email-rule makes with --same-emails-as.
-   */
-  json?: Record<string, unknown>;
-};
-
-/**
- * A yes/no question asked before the request is sent. With --yes nothing is
- * asked. Without a terminal on stdin and stderr, or under --json, the command
- * sends nothing and exits 2, naming --yes. An answer other than y or yes sends
- * nothing and exits 1. The extension's flags must include `yes`.
- */
-export type OperationConfirmation = {
-  /** The question, given the parsed flags (the path parameter among them). */
-  question: (flags: Record<string, unknown>) => string;
-  /** The refusal without a terminal to ask in. */
-  noTerminal: string;
-  /** Printed on stderr when the answer is not yes. */
-  cancelled: string;
 };
 
 export type OperationExtension = {
   /** Flags added to the generated command's own. */
   flags: Record<string, unknown>;
-  /** A confirmation asked before the request is sent. */
-  confirm?: OperationConfirmation;
   /**
    * The body fields the added flags set. They are merged over --raw-body or
    * --body-file like the generated per-field flags, and win on conflict.
@@ -76,11 +52,6 @@ export type OperationExtension = {
     data: unknown,
     request: { body: unknown; flags: Record<string, unknown> },
   ) => number | undefined;
-  /**
-   * The exit code for an error answer, read from its payload (the error
-   * object); undefined keeps the usual 1.
-   */
-  errorExitCode?: (payload: unknown) => number | undefined;
   /**
    * Read the answer's data, given the request body and path that were sent
    * and the command's parsed flags.

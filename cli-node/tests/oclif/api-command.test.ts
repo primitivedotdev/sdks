@@ -32,7 +32,6 @@ import {
   type StoredCliCredentials,
   saveCliCredentials,
 } from "../../src/oclif/auth.js";
-import { emptyRuleListHint } from "../../src/oclif/rule-list-defaults.js";
 
 describe("formatErrorPayload", () => {
   it("wraps a fetch TypeError into a code/message payload instead of {}", () => {
@@ -720,19 +719,13 @@ describe("runWithTiming", () => {
 });
 
 describe("operationOutputPayload", () => {
-  it("keeps generated command stdout backward-compatible by default", () => {
+  it("is the data payload, for stdout without --json", () => {
     expect(
-      operationOutputPayload(
-        { data: [{ id: "email-1" }], meta: { cursor: "next" } },
-        false,
-      ),
+      operationOutputPayload({
+        data: [{ id: "email-1" }],
+        meta: { cursor: "next" },
+      }),
     ).toEqual([{ id: "email-1" }]);
-  });
-
-  it("returns the full envelope when --envelope is requested", () => {
-    const envelope = { data: [{ id: "email-1" }], meta: { cursor: "next" } };
-
-    expect(operationOutputPayload(envelope, true)).toEqual(envelope);
   });
 });
 
@@ -832,53 +825,20 @@ describe("OPERATION_HINTS", () => {
   });
 });
 
-describe("emptyRuleListHint", () => {
-  it("says which default filters hid rule requests and shares, and nothing once every one is given", () => {
-    expect(emptyRuleListHint("listEmailRuleRequests", {})).toBe(
-      "(no results) No requests match. By default this lists only pending requests made to you: add `--box all --status any` to widen it.",
+describe("the rules lists' empty-result hints", () => {
+  it("say what each list leaves out by default and how to see more", () => {
+    expect(EMPTY_RESULT_HINTS.listEmailRuleRequests).toContain(
+      "only pending requests made to you",
     );
-    expect(emptyRuleListHint("listEmailRuleRequests", { box: "all" })).toBe(
-      "(no results) No requests match. By default this lists only pending requests: add `--status any` to widen it.",
+    expect(EMPTY_RESULT_HINTS.listEmailRuleShares).toContain(
+      "`--box all --live any`",
     );
-    expect(emptyRuleListHint("listEmailRuleShares", {})).toBe(
-      "(no results) No shares match. By default this lists only live shares made with you: add `--box all --live any` to widen it.",
+    expect(EMPTY_RESULT_HINTS.listGivenEmailRuleShares).toContain(
+      "`--live any`",
     );
-    // A later page is empty only past the end: no hint.
-    expect(
-      emptyRuleListHint("listEmailRuleRequests", { cursor: "c" }),
-    ).toBeUndefined();
-    expect(
-      emptyRuleListHint("listEmailRuleRequests", { box: "all", status: "any" }),
-    ).toBeUndefined();
-    expect(emptyRuleListHint("listEmailRuleShares", { live: "false" })).toBe(
-      "(no results) No shares match. By default this lists only shares made with you: add `--box all` to widen it.",
+    expect(EMPTY_RESULT_HINTS.listEmailRuleObjections).toContain(
+      "pending objections you made and those to rules you wrote",
     );
-    expect(emptyRuleListHint("listGivenEmailRuleShares", {})).toBe(
-      "(no results) No shares match. By default this lists only live shares of your mail: add `--live any` to widen it.",
-    );
-    expect(emptyRuleListHint("listEmails", {})).toBeUndefined();
-  });
-
-  it("says which default filters hid objections", () => {
-    expect(emptyRuleListHint("listEmailRuleObjections", {})).toBe(
-      "(no results) No objections match. By default this lists only pending objections you made and those to rules you wrote: add `--box all --status any` to widen it.",
-    );
-    expect(
-      emptyRuleListHint("listEmailRuleObjections", { box: "incoming" }),
-    ).toBe(
-      "(no results) No objections match. By default this lists only pending objections: add `--status any` to widen it.",
-    );
-    expect(
-      emptyRuleListHint("listEmailRuleObjections", { status: "decided" }),
-    ).toBe(
-      "(no results) No objections match. By default this lists only objections you made and those to rules you wrote: add `--box all` to widen it.",
-    );
-    expect(
-      emptyRuleListHint("listEmailRuleObjections", {
-        box: "all",
-        status: "any",
-      }),
-    ).toBeUndefined();
   });
 });
 
@@ -1124,21 +1084,11 @@ describe("createOperationCommand description", () => {
     );
   });
 
-  it("adds --envelope to non-binary generated commands", () => {
+  it("adds --json, and no --envelope, to non-binary generated commands", () => {
     const Cmd = createOperationCommand(makeOperation()) as unknown as {
       flags: Record<string, unknown>;
     };
-
-    expect(Cmd.flags.envelope).toBeDefined();
-  });
-
-  it("does not add --envelope to binary download commands", () => {
-    const Cmd = createOperationCommand(
-      makeOperation({ binaryResponse: true }),
-    ) as unknown as {
-      flags: Record<string, unknown>;
-    };
-
+    expect(Cmd.flags.json).toBeDefined();
     expect(Cmd.flags.envelope).toBeUndefined();
   });
 });

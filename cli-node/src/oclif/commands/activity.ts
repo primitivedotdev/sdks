@@ -2,7 +2,6 @@ import { Command, Flags } from "@oclif/core";
 import {
   type ListActivityObjectsResult,
   listActivityObjects,
-  listEmailRulesCoveringMe,
 } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
@@ -12,6 +11,7 @@ import {
   surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "../api-command.js";
+import { shownLine } from "../terminal-text.js";
 import {
   backoffDelay,
   pauseForTransientFailure,
@@ -202,21 +202,32 @@ export function throughLabel(through: ActivityItem["created_through"]): string {
   return through.name ? `${kind} ${through.name}` : kind;
 }
 
+/**
+ * A table row as printed: every cell on one line, with no terminal control
+ * sequences or reordering marks. Names in these tables are written by other
+ * members, so none reaches the terminal raw.
+ */
+function shownCells(cells: readonly string[]): string[] {
+  return cells.map(shownLine);
+}
+
 /** One line per item: kind, state, when it was created, its name, and what it was created through. */
 export function formatActivityRows(
   covers: string,
   items: readonly ActivityItem[],
 ): string {
   if (items.length === 0) return "Nothing to show.";
-  const rows = items.map((item) => [
-    item.kind,
-    item.owned_now === "someone_else"
-      ? `${item.state} (transferred)`
-      : item.state,
-    minute(item.created_at),
-    item.name ?? item.id,
-    ...(covers === "you" ? [throughLabel(item.created_through)] : []),
-  ]);
+  const rows = items
+    .map((item) => [
+      item.kind,
+      item.owned_now === "someone_else"
+        ? `${item.state} (transferred)`
+        : item.state,
+      minute(item.created_at),
+      item.name ?? item.id,
+      ...(covers === "you" ? [throughLabel(item.created_through)] : []),
+    ])
+    .map(shownCells);
   const header = [
     "KIND",
     "STATE",
@@ -249,14 +260,16 @@ export function formatAskedRows(
 ): string {
   if (items.length === 0)
     return complete ? "Nobody has asked you for anything." : "Nothing to show.";
-  const rows = items.map((item) => [
-    item.kind,
-    item.state,
-    minute(item.created_at),
-    item.name ?? item.id,
-    item.created_through.name ?? item.created_through.id ?? "",
-    item.id,
-  ]);
+  const rows = items
+    .map((item) => [
+      item.kind,
+      item.state,
+      minute(item.created_at),
+      item.name ?? item.id,
+      item.created_through.name ?? item.created_through.id ?? "",
+      item.id,
+    ])
+    .map(shownCells);
   const header = ["KIND", "STATE", "ASKED (UTC)", "NAME", "FROM", "ID"];
   const widths = header.map((h, i) =>
     Math.max(h.length, ...rows.map((row) => (row[i] ?? "").length)),
@@ -270,66 +283,6 @@ export function formatAskedRows(
   return [line(header), ...rows.map(line)].join("\n");
 }
 
-/** Totals of who receives a rule's matches, as a receivers_changed notice carries them before and after. */
-type ReceiverTotals = {
-  keys: number;
-  reads_in_full: number;
-  webhooks: number;
-  shares: number;
-};
-
-const TOTAL_KEYS = ["keys", "reads_in_full", "webhooks", "shares"] as const;
-
-/** `value` as receiver totals: an object whose four counts are all non-negative integers. */
-function receiverTotals(value: unknown): ReceiverTotals | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const totals = value as Record<string, unknown>;
-  return TOTAL_KEYS.every((key) => {
-    const count = totals[key];
-    return typeof count === "number" && Number.isInteger(count) && count >= 0;
-  })
-    ? (totals as ReceiverTotals)
-    : null;
-}
-
-/**
- * What a receivers_changed notice says changed, from its totals before and
- * after: "keys 3 to 2 (1 to 0 also reading your mail beyond the rule),
- * webhooks 2 to 1",
- * or, when the totals are equal (an owner or a webhook site changed), that
- * they are. Null for any other notice, and for one whose totals are missing
- * or not counts (an older server).
- * The API no longer sends these notices; this only reads one written before,
- * should an answer still carry it, so the help and the table promise none.
- */
-export function receiversChangeText(item: ActivityItem): string | null {
-  if (item.state !== "receivers_changed") return null;
-  const change = (
-    item as { receivers_change?: { before?: unknown; after?: unknown } }
-  ).receivers_change;
-  const before = receiverTotals(change?.before);
-  const after = receiverTotals(change?.after);
-  if (!before || !after) return null;
-  const moved = (key: keyof ReceiverTotals) => before[key] !== after[key];
-  const span = (key: keyof ReceiverTotals) => `${before[key]} to ${after[key]}`;
-  // Keys also reading your mail beyond the rule are some of the keys, so they are told with them.
-  const full = moved("reads_in_full")
-    ? ` (${span("reads_in_full")} also reading your mail beyond the rule)`
-    : "";
-  const changed = [
-    ...(moved("keys")
-      ? [`keys ${span("keys")}${full}`]
-      : full
-        ? [`keys ${after.keys}${full}`]
-        : []),
-    ...(moved("webhooks") ? [`webhooks ${span("webhooks")}`] : []),
-    ...(moved("shares") ? [`shares ${span("shares")}`] : []),
-  ];
-  return changed.length > 0
-    ? changed.join(", ")
-    : "same totals, an owner or webhook site changed";
-}
-
 const STOP_REASONS: ReadonlyMap<string, string> = new Map([
   ["deleted", "rule deleted"],
   ["turned_off", "turned off"],
@@ -338,8 +291,8 @@ const STOP_REASONS: ReadonlyMap<string, string> = new Map([
 
 /**
  * Why a stopped notice says the rule stopped covering you, from its
- * stop_reason. Null for any other notice, and for one whose reason is
- * missing or unknown (an older server).
+ * stop_reason. Null for any other notice, and for a reason this CLI does
+ * not know.
  */
 export function stoppedText(item: ActivityItem): string | null {
   if (item.state !== "stopped") return null;
@@ -357,8 +310,7 @@ const COVERING_NOW = `\`primitive email-rule-oversight list-email-rules-covering
  * now whose notice is not written yet (pending, dated when the rule last
  * changed), then the rule's id (rule_id; a pending row's own id is the
  * rule's), never the notice's own id, which no command takes; and, when any
- * row is a stopped notice with its reason (or an older receivers_changed
- * notice with its totals), what changed (CHANGE).
+ * row is a stopped notice with its reason, what changed (CHANGE).
  * `complete` says the listing is the whole of it (from the first page to the
  * last, nothing withheld). Even then an empty one is no promise that nothing
  * covers you: notices can lag, so it
@@ -383,19 +335,19 @@ export function formatConcerningRows(
       : unfinished
         ? `${unfinished} ${COVERING_NOW}`
         : "Nothing to show.";
-  const rows = items.map((item) => [
-    item.state,
-    minute(item.created_at),
-    // The rule's name then; marked once the rule has been deleted.
-    `${item.name ?? "(unnamed)"}${item.rule_now === "deleted" ? " (deleted)" : ""}`,
-    item.created_through.name ?? item.created_through.id ?? "",
-    // An older server sends no rule_id; a pending row's id is the rule's.
-    item.rule_id ?? (item.state === "pending" ? item.id : ""),
-  ]);
+  const rows = items
+    .map((item) => [
+      item.state,
+      minute(item.created_at),
+      // The rule's name then; marked once the rule has been deleted.
+      `${item.name ?? "(unnamed)"}${item.rule_now === "deleted" ? " (deleted)" : ""}`,
+      item.created_through.name ?? item.created_through.id ?? "",
+      // A pending row's own id is the rule's.
+      item.rule_id ?? (item.state === "pending" ? item.id : ""),
+    ])
+    .map(shownCells);
   // Last, so it widens no other column, and only when a row has one.
-  const changes = items.map(
-    (item) => receiversChangeText(item) ?? stoppedText(item),
-  );
+  const changes = items.map(stoppedText);
   const withChange = changes.some((change) => change !== null);
   if (withChange)
     for (const [i, row] of rows.entries()) row.push(changes[i] ?? "");
@@ -439,67 +391,6 @@ export function formatConcerningRows(
       ? ["", pending.length > 0 ? unfinished : `${unfinished} ${COVERING_NOW}`]
       : []),
   ].join("\n");
-}
-
-/**
- * Rules in observe that another member wrote over your mail, counted from the
- * first page of the rules over your mail (which a member can already list),
- * since `activity concerning` tells only of rules turned active: `count`, with
- * `more` when that page had a cursor; "refused" when this credential may not
- * list them (nothing is said then); or null when the list could not be read
- * for another reason.
- */
-export type ObservingRules =
-  | { count: number; more: boolean }
-  | "refused"
-  | null;
-
-async function observingRules(
-  client: Awaited<
-    ReturnType<typeof createAuthenticatedCliApiClient>
-  >["apiClient"]["client"],
-): Promise<ObservingRules> {
-  try {
-    const result = await listEmailRulesCoveringMe({
-      client,
-      query: { limit: 100 },
-    });
-    const page = result.data as
-      | {
-          data?: Array<{ state?: unknown; is_author?: unknown }>;
-          meta?: { cursor?: unknown };
-        }
-      | undefined;
-    const status = result.response?.status;
-    if (status === 401 || status === 403) return "refused";
-    if (result.error !== undefined || !Array.isArray(page?.data)) return null;
-    return {
-      count: page.data.filter(
-        (rule) => rule.state === "observe" && rule.is_author === false,
-      ).length,
-      more: typeof page.meta?.cursor === "string",
-    };
-  } catch {
-    return null;
-  }
-}
-
-const OBSERVE_SAYS =
-  "a rule in observe records a decision on every email it reads and shares or blocks nothing until it is turned active, which is listed here as started. `primitive email-rule-oversight list-email-rules-covering-me` lists them.";
-
-/** The footer under `activity concerning` for rules in observe over your mail, or null with none to tell of. */
-export function formatObservingFooter(
-  observing: ObservingRules,
-): string | null {
-  if (observing === "refused") return null;
-  if (observing === null)
-    return `Rules in observe can also cover your mail: ${OBSERVE_SAYS}`;
-  if (observing.count === 0)
-    return observing.more
-      ? `Rules in observe can also cover your mail: ${OBSERVE_SAYS}`
-      : null;
-  const counted = `${observing.more ? "At least " : ""}${observing.count} ${observing.count === 1 ? "rule" : "rules"} in observe also ${observing.count === 1 ? "covers" : "cover"} your mail`;
-  return `${counted}: ${OBSERVE_SAYS}`;
 }
 
 /** What was left out, and why: no counts, only the kinds and what would show them. */
@@ -654,18 +545,6 @@ async function runActivityList(
         ? formatConcerningRows(items, complete, asOf, pendingComplete)
         : formatActivityRows(covers, items),
   );
-  // On the first page only, and only for a credential that has coverage notices at all (a key, an app or an agent
-  // gets email_rule_coverage in withheld, and cannot read the rules over a member's mail either).
-  if (
-    relation === "concerning" &&
-    !flags.cursor &&
-    !withheld.some((w) => w.kind === "email_rule_coverage")
-  ) {
-    const observing = formatObservingFooter(
-      await observingRules(auth.apiClient.client),
-    );
-    if (observing) command.log(`\n${observing}`);
-  }
   const notShown = formatWithheld(withheld);
   if (notShown) command.log(`\n${notShown}`);
   if (cursor)
@@ -730,7 +609,7 @@ export class ActivityAskedCommand extends Command {
 
   Signed in with \`primitive login\`, you see what was asked of you under your current membership. A key, an app or an agent is asked nothing. Read a request (email_rule_request) with \`primitive email-rules get-email-rule-request --id <id>\`, and an objection (email_rule_objection) with \`primitive email-rule-oversight get-email-rule-objection --id <id>\`, then accept or decline it.
 
-  Requests and objections you made are not here: \`primitive activity created --kind email_rule_request,email_rule_objection\` lists them with where each stands (pending, accepted, declined or withdrawn; with --json, ended_at says when it was decided).`;
+  Requests and objections you made are not here: \`primitive activity created --kind email_rule_request,email_rule_objection\` lists them with where each stands (pending, accepted, declined or withdrawn, and for an objection also amended; with --json, ended_at says when it was decided).`;
 
   static summary = "List what other members asked of you";
 
@@ -772,11 +651,7 @@ export class ActivityAskedCommand extends Command {
 
 export class ActivityConcerningCommand extends Command {
   static description =
-    `List what other members did that concerns your own mail, newest first: each time another member's rule started covering your mailboxes, that is, it was made or turned active over them or an active rule came to reach you, once per rule, not per mailbox (started), or saved a new version while covering it (new_version), named as the rule was then, with its author. A rule that already covered you when these notices began is listed once as baseline. A rule in draft or observe grants and blocks nothing and gets no notice while it stays there, though \`primitive email-rule-oversight list-email-rules-covering-me\` lists it; turning it active is what is listed, and a rule that covers you again within an hour of its last started or baseline notice gets no new one unless you were told it stopped since, though a version it saved meanwhile is listed as new_version. A rule that stops covering you is listed as stopped, with why (rule deleted, turned off, or no longer reaching your mailboxes; stop_reason with --json), about 5 minutes after the notices find it stopped, so one turned off and on again meanwhile is listed neither stopped nor started again. A rename is not listed, and neither is a change in who receives the rule's matches (its keys, webhooks or share): \`primitive email-rule-oversight get-email-rule-covering-me <rule-id>\` shows who receives them now, by owner, while the rule covers you.
-
-  Notices can lag. Until a start is written, a rule that now covers you is listed first as pending, dated when the rule last changed, and with --json its id is the rule's. When the check for such rules did not finish, the listing says so and --json carries pending_complete: false; run it again in a moment.
-
-  Signed in with \`primitive login\`, you see the notices about your own mail under your current membership. A key, an app or an agent has none. The rules that cover you now, with their ids, are listed by \`primitive email-rule-oversight list-email-rules-covering-me\`; ask a rule's author to turn it off with \`primitive email-rule-oversight create-email-rule-objection --rule-id <rule-id>\`. The table's RULE ID, and rule_id with --json, is the rule's id, which \`primitive email-rule-oversight get-email-rule-covering-me <rule-id>\` and create-email-rule-objection --rule-id take; with --json each notice's own id is the notice's, not the rule's.`;
+    `List what other members' rules did that concerns your own mail, newest first: started (a rule began covering your mailboxes), new_version (it saved a new version while covering them), stopped (it stopped, with why), baseline (it covered you when these notices began), and pending (it covers you now and its notice is not written yet). Notices can lag, and a rule in draft or observe gets none: \`primitive email-rule-oversight list-email-rules-covering-me\` lists what covers you now. RULE ID, and rule_id with --json, is the rule's id, which \`primitive email-rule-oversight get-email-rule-covering-me <rule-id>\` and create-email-rule-objection --rule-id take.`;
 
   static summary =
     "List rules that started covering your mail, changed or stopped";

@@ -2,15 +2,15 @@
 // on the email-rules commands whose request takes evaluation_scope. They set
 // scope_selection, an object the generated per-field flags cannot express:
 //
-//   primitive email-rules create-email-rule ... --evaluation-scope selected \
+//   primitive email-rules create-email-rule ... \
 //     --scope-address support@example.com --scope-domain example.org
 //
 // They set scope_selection as a whole, over any in --raw-body or --body-file,
 // like the other flags that set a body field. When only one of the two flags
-// is given, the other list is sent empty. scope_selection goes only with
-// evaluation_scope selected, so they are refused unless the request sends
-// selected: --evaluation-scope, or else evaluation_scope in --raw-body or
-// --body-file, as the body is merged.
+// is given, the other list is sent empty. scope_selection goes with
+// evaluation_scope selected, so they also send that when neither
+// --evaluation-scope nor the body gives a scope. A scope given otherwise is
+// sent as it is, for the API to judge.
 //
 // This module does not import api-command.ts.
 
@@ -20,11 +20,7 @@ import type { ExtensionBodyField } from "./operation-extension.js";
 export const SCOPE_ADDRESS_FLAG = "scope-address";
 export const SCOPE_DOMAIN_FLAG = "scope-domain";
 
-// The patterns the request schema gives scope_selection's items.
-const ADDRESS = /^[^\s@]+@[^\s@]+$/;
-const DOMAIN = /^[^\s@]+\.[^\s@]+$/;
-
-const SCOPE_FLAG_NOTE = `Goes with --evaluation-scope selected (the flag, or evaluation_scope selected in --raw-body or --body-file). --${SCOPE_ADDRESS_FLAG} and --${SCOPE_DOMAIN_FLAG} set scope_selection as a whole, over any in --raw-body or --body-file, and a list not given is sent empty.`;
+const SCOPE_FLAG_NOTE = `Sends evaluation_scope selected unless --evaluation-scope or the body gives a scope. --${SCOPE_ADDRESS_FLAG} and --${SCOPE_DOMAIN_FLAG} set scope_selection as a whole, over any in --raw-body or --body-file, and a list not given is sent empty.`;
 
 /**
  * The two flags, made anew for each command. Each value is its own flag
@@ -55,11 +51,7 @@ function usageError(message: string): Errors.CLIError {
  * order given and without repeats (compared without case). Undefined when the
  * flag was not given.
  */
-function scopeList(
-  values: unknown,
-  flag: string,
-  check: (value: string) => void,
-): string[] | undefined {
+function scopeList(values: unknown, flag: string): string[] | undefined {
   if (!Array.isArray(values)) return undefined;
   const list: string[] = [];
   const seen = new Set<string>();
@@ -67,7 +59,6 @@ function scopeList(
     for (const raw of String(value).split(",")) {
       const item = raw.trim();
       if (item === "") continue;
-      check(item);
       if (seen.has(item.toLowerCase())) continue;
       seen.add(item.toLowerCase());
       list.push(item);
@@ -77,51 +68,23 @@ function scopeList(
   return list;
 }
 
-function checkAddress(value: string): void {
-  if (ADDRESS.test(value)) return;
-  throw usageError(
-    DOMAIN.test(value)
-      ? `--${SCOPE_ADDRESS_FLAG} takes inboxes such as support@example.com; "${value}" is a domain, so give it with --${SCOPE_DOMAIN_FLAG}.`
-      : `--${SCOPE_ADDRESS_FLAG} takes inboxes such as support@example.com; "${value}" is not one.`,
-  );
-}
-
-function checkDomain(value: string): void {
-  if (DOMAIN.test(value)) return;
-  throw usageError(
-    ADDRESS.test(value)
-      ? `--${SCOPE_DOMAIN_FLAG} takes domains such as example.com; "${value}" is an inbox, so give it with --${SCOPE_ADDRESS_FLAG}.`
-      : `--${SCOPE_DOMAIN_FLAG} takes domains such as example.com; "${value}" is not one.`,
-  );
-}
-
 /**
  * scope_selection from --scope-address and --scope-domain, or nothing when
- * neither was given. `base` is the body --raw-body or --body-file gave.
- * Throws a usage error (exit 2) for a value that is not an inbox or a domain,
- * and when the request would not send evaluation_scope selected.
+ * neither was given, with evaluation_scope selected when neither
+ * --evaluation-scope nor `base` (the body --raw-body or --body-file gave)
+ * gives a scope.
  */
 export function scopeSelectionBodyFields(
   flags: Record<string, unknown>,
   base?: unknown,
 ): ExtensionBodyField[] {
-  const addresses = scopeList(
-    flags[SCOPE_ADDRESS_FLAG],
-    SCOPE_ADDRESS_FLAG,
-    checkAddress,
-  );
-  const domains = scopeList(
-    flags[SCOPE_DOMAIN_FLAG],
-    SCOPE_DOMAIN_FLAG,
-    checkDomain,
-  );
+  const addresses = scopeList(flags[SCOPE_ADDRESS_FLAG], SCOPE_ADDRESS_FLAG);
+  const domains = scopeList(flags[SCOPE_DOMAIN_FLAG], SCOPE_DOMAIN_FLAG);
   if (!addresses && !domains) return [];
-  const both = addresses !== undefined && domains !== undefined;
   const given = [
     ...(addresses ? [`--${SCOPE_ADDRESS_FLAG}`] : []),
     ...(domains ? [`--${SCOPE_DOMAIN_FLAG}`] : []),
   ].join(" and ");
-  const goes = `${given} ${both ? "name" : "names"} what a selected scope covers, so ${both ? "they go" : "it goes"} with --evaluation-scope selected`;
   const fields: ExtensionBodyField[] = [
     {
       flag: given,
@@ -129,25 +92,15 @@ export function scopeSelectionBodyFields(
       value: { addresses: addresses ?? [], domains: domains ?? [] },
     },
   ];
-  // A --raw-body or --body-file that is not a JSON object cannot take these
-  // fields at all; the command refuses it with that reason once merging.
-  const baseIsObject =
-    base !== null && typeof base === "object" && !Array.isArray(base);
-  if (base !== undefined && !baseIsObject) return fields;
-  // The scope the request sends: --evaluation-scope wins over the body's own,
-  // as the body is merged.
-  const scope =
-    flags["evaluation-scope"] ??
-    (baseIsObject
+  const baseScope =
+    base !== null && typeof base === "object" && !Array.isArray(base)
       ? (base as Record<string, unknown>).evaluation_scope
-      : undefined);
-  if (scope === undefined)
-    throw usageError(
-      `${goes}. Pass --evaluation-scope selected with ${both ? "them" : "it"}.`,
-    );
-  if (scope !== "selected")
-    throw usageError(
-      `${goes}, not ${typeof scope === "string" ? scope : JSON.stringify(scope)}. Pass --evaluation-scope selected, or leave ${both ? "them" : "it"} out.`,
-    );
+      : undefined;
+  if (flags["evaluation-scope"] === undefined && baseScope === undefined)
+    fields.push({
+      flag: given,
+      property: "evaluation_scope",
+      value: "selected",
+    });
   return fields;
 }

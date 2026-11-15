@@ -1,33 +1,41 @@
-// Vendor the primitive-connect skill from a checkout of the public skills
-// repository, or check that the vendored copy still matches it.
+// Vendor one bundled skill from a checkout of the public skills repository,
+// or check that the vendored copy still matches it.
 //
-//   node scripts/vendor-connect-skill.mjs --from <skills-checkout> [--check]
+//   node scripts/vendor-skill.mjs --skill <name> --from <skills-checkout> [--check]
 //
-// The checkout's HEAD commit is recorded in vendor/skills/primitive-connect.source.json.
+// The checkout's HEAD commit is recorded in vendor/skills/<name>.source.json.
 // --check fails when the vendored files differ from the checkout's skill
 // directory, or when the recorded commit is not the checkout's HEAD.
 import { execFileSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { hashSkillFiles, listSkillFiles, SKILL_NAME, skillVersion } from './skill-files.mjs'
+import { hashSkillFiles, listSkillFiles, SKILL_NAMES, skillVersion } from './skill-files.mjs'
 
 const cliRoot = fileURLToPath(new URL('..', import.meta.url))
-const vendorDir = join(cliRoot, 'vendor', 'skills', SKILL_NAME)
-const sourceFile = join(cliRoot, 'vendor', 'skills', `${SKILL_NAME}.source.json`)
 
 const args = process.argv.slice(2)
-const fromIndex = args.indexOf('--from')
-const from = fromIndex === -1 ? undefined : args[fromIndex + 1]
+const option = (name) => {
+  const index = args.indexOf(name)
+  return index === -1 ? undefined : args[index + 1]
+}
+const skillName = option('--skill')
+const from = option('--from')
 const check = args.includes('--check')
-if (!from) {
-  console.error('Usage: node scripts/vendor-connect-skill.mjs --from <skills-checkout> [--check]')
+if (!skillName || !from) {
+  console.error('Usage: node scripts/vendor-skill.mjs --skill <name> --from <skills-checkout> [--check]')
   process.exit(64)
 }
+if (!SKILL_NAMES.includes(skillName)) {
+  console.error(`${skillName} is not a bundled skill. Bundled: ${SKILL_NAMES.join(', ')} (scripts/skill-files.mjs).`)
+  process.exit(64)
+}
+const vendorDir = join(cliRoot, 'vendor', 'skills', skillName)
+const sourceFile = join(cliRoot, 'vendor', 'skills', `${skillName}.source.json`)
 const checkout = resolve(from)
-const skillDir = join(checkout, 'skills', SKILL_NAME)
+const skillDir = join(checkout, 'skills', skillName)
 if (!existsSync(join(skillDir, 'SKILL.md'))) {
-  console.error(`No skills/${SKILL_NAME}/SKILL.md under ${checkout}`)
+  console.error(`No skills/${skillName}/SKILL.md under ${checkout}`)
   process.exit(1)
 }
 const commit = execFileSync('git', ['-C', checkout, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
@@ -47,11 +55,11 @@ if (check) {
   if (recorded.version !== skillVersion(vendored))
     problems.push(`recorded version ${recorded.version} does not match the vendored files`)
   if (problems.length) {
-    console.error(`Vendored ${SKILL_NAME} does not match the skills repository:`)
+    console.error(`Vendored ${skillName} does not match the skills repository:`)
     for (const problem of problems) console.error(`  ${problem}`)
     process.exit(1)
   }
-  console.error(`Vendored ${SKILL_NAME} matches ${commit} (version ${recorded.version}).`)
+  console.error(`Vendored ${skillName} matches ${commit} (version ${recorded.version}).`)
   process.exit(0)
 }
 
@@ -63,6 +71,6 @@ for (const file of listSkillFiles(skillDir)) {
 const version = skillVersion(hashSkillFiles(vendorDir))
 writeFileSync(
   sourceFile,
-  `${JSON.stringify({ repository: 'https://github.com/primitivedotdev/skills', path: `skills/${SKILL_NAME}`, commit, version }, null, 2)}\n`,
+  `${JSON.stringify({ repository: 'https://github.com/primitivedotdev/skills', path: `skills/${skillName}`, commit, version }, null, 2)}\n`,
 )
-console.error(`Vendored ${SKILL_NAME} from ${commit} (version ${version}).`)
+console.error(`Vendored ${skillName} from ${commit} (version ${version}).`)

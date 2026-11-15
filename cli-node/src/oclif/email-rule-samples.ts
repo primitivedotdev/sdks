@@ -1,24 +1,22 @@
-// Made-up emails a rule keeps as expectations (expectation_samples), and the
-// look-alike emails `email-rules generate-look-alikes` writes for a rule to
-// be checked against.
+// Made-up emails a rule keeps as expectations (expectation_samples), read
+// from a samples file: a JSON array of samples, or a generate-look-alikes
+// answer saved with --json, whose look-alikes are numbered from 1 as its
+// report numbers them, so --pick picks what the report showed.
 //
-//   primitive email-rules generate-look-alikes --rule-id <id> \
-//     --samples-file look-alikes.json
+//   primitive email-rules generate-look-alikes --rule-id <id> --json > la.json
 //   primitive email-rules update-email-rule <id> \
-//     --add-expectation-samples-file look-alikes.json --pick 2,4
-//
-// The samples file is a JSON array of samples, numbered from 1 in the order
-// the look-alikes report printed them, so --pick picks what the report
-// showed. A hand-written file takes the same shape.
+//     --add-expectation-samples-file la.json --pick 2,4
 //
 // This module does not import email-rule-authoring.ts, which imports it.
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { Errors } from "@oclif/core";
 import type {
   ExtensionBodyField,
   OperationReport,
 } from "./operation-extension.js";
+import { ruleNotesLines } from "./rule-notes.js";
+import { shownLine, shownText, terminalLine } from "./terminal-text.js";
 
 function errorDetail(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -32,14 +30,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-/** A path as a shell word: quoted when it holds anything but plain characters. */
-function shellWord(value: string): string {
-  return /^[\w@%+=:,./-]+$/.test(value)
-    ? value
-    : `'${value.replaceAll("'", "'\\''")}'`;
-}
-
-/** A JSON file a flag names, parsed, or an exit-1 error saying why not. */
+/** A JSON file a flag names, parsed, or a usage error (exit 2) saying why not. */
 export function readJsonFileFlag(path: string, flag: string): unknown {
   let text: string;
   try {
@@ -47,7 +38,7 @@ export function readJsonFileFlag(path: string, flag: string): unknown {
   } catch (error) {
     throw new Errors.CLIError(
       `Could not read ${flag} ${path}: ${errorDetail(error)}`,
-      { exit: 1 },
+      { exit: 2 },
     );
   }
   try {
@@ -55,7 +46,7 @@ export function readJsonFileFlag(path: string, flag: string): unknown {
   } catch (error) {
     throw new Errors.CLIError(
       `${flag} ${path} is not valid JSON: ${errorDetail(error)}`,
-      { exit: 1 },
+      { exit: 2 },
     );
   }
 }
@@ -86,8 +77,7 @@ function cutLabel(text: string, max: number): string {
 
 /**
  * Whether a look-alike is one the rule should match: its `expected` as the
- * API gives it. An answer without one (an older server) is must-not-match,
- * as every look-alike was.
+ * API gives it.
  */
 function lookAlikeExpected(
   lookAlike: Record<string, unknown>,
@@ -142,157 +132,13 @@ export function lookAlikeSamples(answer: unknown): ExpectationSample[] {
   return lookAlikeEntries(answer).map((entry) => entry.sample);
 }
 
-/** The fields a saved made-up email takes, and the API's bounds on them. */
-const SAMPLE_EMAIL_KEYS = new Set([
-  "from",
-  "to",
-  "cc",
-  "subject",
-  "text",
-  "attachment_types",
-  "attachment_names",
-  "automated",
-  "from_mailing_list",
-  "spam_score",
-]);
-const SAMPLE_TEXT_MAX = 4_000;
-const SAMPLE_SUBJECT_MAX = 998;
-const SAMPLE_LIST_MAX = 10;
-
 /**
- * The fields of each sample read from a file that this CLI does not know
- * (`email field "x"`, `sample field "y"`). They are sent as they are: the API
- * validates samples itself, so a field it added after this CLI was built is
- * not refused here. Said once per file, for the samples actually sent
- * (unknownFieldsNote).
- */
-const UNKNOWN_FIELDS = new WeakMap<ExpectationSample, string[]>();
-
-/**
- * A field name from a file or an answer, quoted and safe to print: JSON
- * escapes control characters, and a long name is cut.
- */
-function shownKey(key: string): string {
-  const shown = JSON.stringify(
-    key.length > 60 ? `${key.slice(0, 57)}...` : key,
-  );
-  return shown.replace(/[\u007f-\u009f]/g, "?");
-}
-
-/**
- * One line naming the fields this CLI does not know in the samples sent, with
- * the numbers of the samples in the file that carry each; null when none do.
- */
-export function unknownFieldsNote(
-  source: string,
-  sent: readonly ExpectationSample[],
-  all: readonly ExpectationSample[],
-): string | null {
-  const carriers = new Map<string, string[]>();
-  for (const sample of sent) {
-    const index = all.indexOf(sample);
-    for (const field of UNKNOWN_FIELDS.get(sample) ?? [])
-      carriers.set(field, [
-        ...(carriers.get(field) ?? []),
-        `${index + 1} (index ${index})`,
-      ]);
-  }
-  if (carriers.size === 0) return null;
-  const named = [...carriers]
-    .map(
-      ([field, numbers]) =>
-        `${field} (sample${numbers.length === 1 ? "" : "s"} ${numbers.join(", ")})`,
-    )
-    .join(", ");
-  return `${source} has fields this CLI does not know, which it does not refuse but leaves for the API to judge (if the API refuses one, take it out): ${named}.`;
-}
-
-/**
- * Refuse, naming the sample and the field, a made-up email the API would
- * refuse to keep: the bounds of the fields it takes. Returns the fields this
- * CLI does not know, which are passed on. The API checks the rest (address
- * forms, a NUL).
- */
-function checkSampleEmail(
-  email: Record<string, unknown>,
-  at: string,
-): string[] {
-  const fail = (what: string) => {
-    throw usageError(`${at}: email ${what}.`);
-  };
-  const unknown = Object.keys(email)
-    .filter((key) => !SAMPLE_EMAIL_KEYS.has(key))
-    .map((key) => `email field ${shownKey(key)}`);
-  if (!isRecord(email.from) || typeof email.from.address !== "string")
-    fail("needs from.address");
-  const list = (key: string, min: number) => {
-    const value = email[key];
-    if (value === undefined && min === 0) return;
-    if (
-      !Array.isArray(value) ||
-      value.some((entry) => typeof entry !== "string") ||
-      value.length < min ||
-      value.length > SAMPLE_LIST_MAX
-    )
-      fail(
-        `${key} must be a list of ${min > 0 ? `${min} to ` : "at most "}${SAMPLE_LIST_MAX} strings`,
-      );
-  };
-  list("to", 1);
-  list("cc", 0);
-  list("attachment_types", 0);
-  list("attachment_names", 0);
-  // The names pair with the types by position, so when both list files they
-  // are one length.
-  const types = email.attachment_types;
-  const names = email.attachment_names;
-  if (
-    Array.isArray(types) &&
-    Array.isArray(names) &&
-    types.length > 0 &&
-    names.length > 0 &&
-    types.length !== names.length
-  )
-    fail(
-      "attachment_names pairs with attachment_types by position, so give the same number of each",
-    );
-  if (
-    email.subject !== undefined &&
-    (typeof email.subject !== "string" ||
-      email.subject.length > SAMPLE_SUBJECT_MAX)
-  )
-    fail(
-      `subject must be a string of at most ${SAMPLE_SUBJECT_MAX} characters`,
-    );
-  if (
-    typeof email.text !== "string" ||
-    email.text.length === 0 ||
-    email.text.length > SAMPLE_TEXT_MAX
-  )
-    fail(`text must be 1 to ${SAMPLE_TEXT_MAX} characters`);
-  for (const key of ["automated", "from_mailing_list"])
-    if (email[key] !== undefined && typeof email[key] !== "boolean")
-      fail(`${key} must be true or false`);
-  if (
-    email.spam_score !== undefined &&
-    (typeof email.spam_score !== "number" || !Number.isFinite(email.spam_score))
-  )
-    fail("spam_score must be a number");
-  return unknown;
-}
-
-/** The most made-up emails one rule keeps, and one test or write sends. */
-export const SAMPLES_MAX = 20;
-
-/** The keys a sample may carry: a saved one's id and time are taken and ignored. */
-const SAMPLE_KEYS = new Set(["expected", "label", "email", "id", "created_at"]);
-
-/**
- * The samples a file holds: a JSON array of samples, as --samples-file
- * writes them, or a generate-look-alikes answer saved as the command printed
- * it (with or without --json), whose look-alikes become samples, each
- * keeping whether it must match, numbered as its report numbered them. Only a literal [] holds no
- * samples; an answer with none is refused, so it never empties a rule's.
+ * The samples a file holds: a JSON array of samples, or a
+ * generate-look-alikes answer saved as the command printed it (with or
+ * without --json), whose look-alikes become samples, each keeping whether it
+ * must match, numbered as its report numbered them. The API checks each
+ * sample. Only a literal [] holds no samples; an answer with none is
+ * refused, so it never empties a rule's.
  */
 export function samplesFromJson(
   value: unknown,
@@ -305,13 +151,6 @@ export function samplesFromJson(
       throw usageError(
         `${source} is a generate-look-alikes answer with no look-alikes in it.`,
       );
-    samples.forEach((sample, index) => {
-      const unknown = checkSampleEmail(
-        sample.email,
-        `${source}, look-alike ${index + 1} (index ${index})`,
-      );
-      if (unknown.length > 0) UNKNOWN_FIELDS.set(sample, unknown);
-    });
     return samples;
   }
   if (!Array.isArray(data))
@@ -319,42 +158,13 @@ export function samplesFromJson(
       `${source} must hold a JSON array of samples, such as [{"expected": "no_match", "label": "a personal bill", "email": {...}}], or a generate-look-alikes answer.`,
     );
   return data.map((item, index) => {
-    // Numbered from 1 as in the file, with its index in the file from 0 (as .[N] reads it).
-    const at = `${source}, sample ${index + 1} (index ${index})`;
-    if (!isRecord(item)) throw usageError(`${at} is not an object.`);
-    const unknown = Object.keys(item).filter((key) => !SAMPLE_KEYS.has(key));
-    if (item.expected !== "match" && item.expected !== "no_match")
-      throw usageError(`${at}: expected must be "match" or "no_match".`);
-    if (!isRecord(item.email))
+    if (!isRecord(item))
       throw usageError(
-        `${at}: email must be an object, as test-email-rule-on-sample takes it.`,
+        `${source}, sample ${index + 1} (index ${index}) is not an object.`,
       );
-    const unknownEmail = checkSampleEmail(item.email, at);
-    const label = item.label;
-    if (label !== undefined && label !== null) {
-      if (typeof label !== "string")
-        throw usageError(`${at}: label must be a string.`);
-      if (label.trim() === "")
-        throw usageError(
-          `${at}: label is blank; leave it out or say what the email stands for.`,
-        );
-      if (label.trim().length > SAMPLE_LABEL_MAX)
-        throw usageError(
-          `${at}: label is longer than ${SAMPLE_LABEL_MAX} characters.`,
-        );
-    }
-    const sample: ExpectationSample = {
-      ...Object.fromEntries(unknown.map((key) => [key, item[key]])),
-      expected: item.expected,
-      ...(label !== undefined ? { label } : {}),
-      email: item.email,
-    };
-    const fields = [
-      ...unknown.map((key) => `sample field ${shownKey(key)}`),
-      ...unknownEmail,
-    ];
-    if (fields.length > 0) UNKNOWN_FIELDS.set(sample, fields);
-    return sample;
+    // A saved sample's id and time are read back from a rule, and not sent.
+    const { id: _id, created_at: _createdAt, ...sample } = item;
+    return sample as ExpectationSample;
   });
 }
 
@@ -403,31 +213,11 @@ export function pickSamples(
   );
 }
 
-/**
- * The number a person knows a sample a command sent by: its number in the
- * samples file when --pick took it, else its place from 1 in what was sent.
- * `index` is its place in what was sent, from 0, as the API gives it.
- */
-export function sentSampleNumber(
-  index: number,
-  flags: Record<string, unknown> | undefined,
-): number {
-  const pick = flags?.[PICK_FLAG];
-  if (typeof pick !== "string") return index + 1;
-  try {
-    return pickNumbers(pick, Number.MAX_SAFE_INTEGER, "")[index] ?? index + 1;
-  } catch {
-    return index + 1;
-  }
-}
-
 /** The samples file flags: replace (create and update), add (update), and test. */
 export const SAMPLES_FILE_FLAG = "expectation-samples-file";
 export const ADD_SAMPLES_FILE_FLAG = "add-expectation-samples-file";
 export const EXPECT_SAMPLES_FILE_FLAG = "expect-samples-file";
 export const PICK_FLAG = "pick";
-/** generate-look-alikes' flag for the file it writes them to. */
-export const LOOK_ALIKES_SAMPLES_FILE_FLAG = "samples-file";
 
 /** The samples a samples file flag names, only those --pick chooses if given. */
 function readSamplesFile(
@@ -437,15 +227,7 @@ function readSamplesFile(
 ): ExpectationSample[] {
   const source = `--${flag} ${path}`;
   const all = samplesFromJson(readJsonFileFlag(path, `--${flag}`), source);
-  const samples =
-    typeof pick === "string" ? pickSamples(all, pick, source) : all;
-  if (samples.length > SAMPLES_MAX)
-    throw usageError(
-      `${source} holds ${samples.length} samples, and a rule or a test takes at most ${SAMPLES_MAX}; take some with --pick.`,
-    );
-  const note = unknownFieldsNote(source, samples, all);
-  if (note) process.stderr.write(`${note}\n`);
-  return samples;
+  return typeof pick === "string" ? pickSamples(all, pick, source) : all;
 }
 
 /** The one of `names` given as a file path, or null; --pick without one is refused. */
@@ -519,79 +301,31 @@ export function pickFlagHelp(flags: readonly string[]): string {
 // generate-look-alikes
 
 /**
- * What the rule decided for a look-alike, and what its status makes of it,
- * against what it should do: leave it (`no_match`), or take it (`match`).
+ * The stderr report of generate-look-alikes: each look-alike numbered as
+ * --pick takes it (the answer saved with --json is a samples file), with its
+ * status, kind, subject and sender, why the rule should (or should not)
+ * match it, and what the rule decided; the counts; then the server's notes.
  */
-function decidedLine(
-  outcome: unknown,
-  status: unknown,
-  expected: "match" | "no_match",
-): string {
-  if (outcome === "not_decided")
-    return "The rule did not decide it: it was not reached in time, or deciding it failed.";
-  if (outcome === "matched")
-    return status === "undecided"
-      ? "The rule matched it, but it reads a spam score, which a look-alike does not carry, so this one is undecided."
-      : expected === "match"
-        ? "The rule matched it, as it should."
-        : "The rule matched it, so mail like it would be shared.";
-  const decided =
-    outcome === "near_miss"
-      ? "The rule nearly matched it, but did not"
-      : "The rule did not match it";
-  if (status === "undecided")
-    return `${decided}, on something it could not decide (its classification failed, a fact or a question's answer is missing, or it reads a spam score, which a look-alike does not carry), so this one is undecided.`;
-  if (expected === "no_match") return `${decided}.`;
-  // A must-match one it nearly took reads "nearly matched it, but did not", so the miss is said with "though".
-  return `${decided}, ${outcome === "near_miss" ? "though" : "but"} it should: mail like it would be missed.`;
-}
-
-/**
- * The stderr report of generate-look-alikes: each look-alike numbered as the
- * samples file numbers it, with its status, kind, subject, sender, why the
- * rule should (or should not) match it and what the rule decided; the
- * counts; the answer's note; and how to save the ones you choose. With
- * --samples-file it writes every look-alike there as a sample keeping its
- * expected, in that order.
- */
-export function lookAlikesReport(
-  data: unknown,
-  request: { body: unknown; flags?: Record<string, unknown> },
-): OperationReport {
-  const file = request.flags?.[LOOK_ALIKES_SAMPLES_FILE_FLAG];
-  if (!isRecord(data)) {
-    if (typeof file !== "string") return { lines: [] };
-    const message = `Did not write --${LOOK_ALIKES_SAMPLES_FILE_FLAG} ${file}: the answer held no look-alikes to write.`;
-    return {
-      lines: [message],
-      exitCode: 1,
-      error: { code: "samples_file_not_written", message },
-    };
-  }
-  const entries = lookAlikeEntries(data);
+export function lookAlikesReport(data: unknown): OperationReport {
+  if (!isRecord(data)) return { lines: [] };
   const lines: string[] = [];
-  entries.forEach(({ lookAlike }, index) => {
+  lookAlikeEntries(data).forEach(({ lookAlike }, index) => {
     const email = lookAlike.email as Record<string, unknown>;
-    const from =
-      isRecord(email.from) && typeof email.from.address === "string"
-        ? email.from.address
-        : "an unknown sender";
-    const subject =
-      typeof email.subject === "string" && email.subject
-        ? `"${email.subject}"`
-        : "(no subject)";
-    const status =
-      typeof lookAlike.status === "string" ? lookAlike.status : "undecided";
-    const kind = typeof lookAlike.kind === "string" ? lookAlike.kind : "other";
-    const outcome =
-      typeof lookAlike.outcome === "string" ? lookAlike.outcome : "not_decided";
+    const from = isRecord(email.from) ? shownText(email.from.address) : "";
+    const subject = shownText(email.subject);
+    const status = shownLine(lookAlike.status) || "undecided";
+    const kind = shownLine(lookAlike.kind) || "other";
+    const outcome = shownLine(lookAlike.outcome) || "not_decided";
     const expected = lookAlikeExpected(lookAlike);
-    lines.push(`${index + 1}. ${status}  ${kind}  ${subject} from ${from}`);
-    if (typeof lookAlike.why === "string" && lookAlike.why.trim())
+    lines.push(
+      `${index + 1}. ${status}  ${kind}  ${subject ? `"${subject}"` : "(no subject)"} from ${from || "an unknown sender"}`,
+    );
+    const why = shownLine(lookAlike.why);
+    if (why)
       lines.push(
-        `   Why it should ${expected === "match" ? "" : "not "}match: ${lookAlike.why.trim()}`,
+        `   Why it should ${expected === "match" ? "" : "not "}match: ${why}`,
       );
-    lines.push(`   ${decidedLine(outcome, status, expected)}`);
+    lines.push(`   ${outcome} (expected ${expected})`);
   });
   const counts = isRecord(data.counts) ? data.counts : {};
   const count = (key: string) =>
@@ -599,100 +333,7 @@ export function lookAlikesReport(
   const dropped = count("dropped");
   lines.push(
     `Counts: ${count("passed")} passed, ${count("failed")} failed, ${count("undecided")} undecided${dropped > 0 ? `; ${dropped} asked for did not come back` : ""}.`,
+    ...ruleNotesLines(data),
   );
-  if (typeof data.note === "string" && data.note.trim())
-    lines.push(data.note.trim());
-
-  // Which to keep: those it decided the wrong way (it matched one it must
-  // not, or missed one it must match); else, when some are undecided (and
-  // would stay so as samples), those it decided as each should be.
-  const numbered = (status: string) =>
-    entries
-      .map(({ lookAlike }, index) =>
-        lookAlike.status === status ? index + 1 : 0,
-      )
-      .filter((n) => n > 0);
-  const wanted = (n: number) => entries[n - 1]?.sample.expected === "match";
-  const failed = numbered("failed");
-  const missed = failed.filter(wanted);
-  const matched = failed.filter((n) => !wanted(n));
-  const undecided = numbered("undecided");
-  const chosen =
-    failed.length > 0 ? failed : undecided.length > 0 ? numbered("passed") : [];
-  const pick = chosen.length > 0 ? ` --pick ${chosen.join(",")}` : "";
-  const body = isRecord(request.body) ? request.body : {};
-  const ruleId = typeof body.rule_id === "string" ? body.rule_id : null;
-  const requestId =
-    typeof body.request_id === "string" ? body.request_id : null;
-  const target = typeof file === "string" ? shellWord(file) : "<file>";
-  // A saved rule keeps them now; a request's rule, once accepted; a tree's,
-  // once created.
-  const save = ruleId
-    ? `\`primitive email-rules update-email-rule ${ruleId} --${ADD_SAMPLES_FILE_FLAG} ${target}${pick}\``
-    : requestId
-      ? `\`primitive email-rules accept-email-rule-request ${requestId} --${SAMPLES_FILE_FLAG} ${target}${pick}\` when the member the request asks accepts it`
-      : `\`primitive email-rules create-email-rule ... --${SAMPLES_FILE_FLAG} ${target}${pick}\` when you save the rule`;
-  const one = (count: number, single: string, many: string) =>
-    count === 1 ? single : many;
-  // None decided: saved as they are, they would stay undecided.
-  const noneDecided =
-    entries.length > 0 && undecided.length === entries.length
-      ? `None of them was decided (each says why above), so saved as they are they may stay undecided; if the rule reads a spam score, give each email a spam_score${typeof file === "string" ? " in the file" : ""} first.`
-      : "";
-  const keepMatched = `${one(matched.length, "the one it matched as an email", "the ones it matched as emails")} it must not match`;
-  const keepMissed = `${one(missed.length, "the one it missed as an email", "the ones it missed as emails")} it must match`;
-  const which =
-    failed.length > 0
-      ? `Keep ${matched.length > 0 && missed.length > 0 ? `${keepMatched}, and ${keepMissed}` : matched.length > 0 ? keepMatched : keepMissed}`
-      : chosen.length > 0
-        ? chosen.some(wanted)
-          ? `Keep ${one(chosen.length, "the one", "the ones")} it decided as expected (each keeps whether it must match; an undecided one may stay undecided as a sample)`
-          : `Keep ${one(chosen.length, "the one it did not match as an email", "the ones it did not match as emails")} it must not match (an undecided one may stay undecided as a sample)`
-        : entries.some((_, index) => wanted(index + 1))
-          ? `Keep ${one(entries.length, "it as an email", "them as emails")} the rule must match or not, as each says`
-          : `Keep ${one(entries.length, "it as an email", "them as emails")} the rule must not match`;
-  const test =
-    failed.length > 0
-      ? ` Test an edited rule on ${one(failed.length, "it", "them")} with \`primitive email-rules test-email-rule ${ruleId ? `--rule-id ${ruleId}` : "--body-file <body.json>"} --${EXPECT_SAMPLES_FILE_FLAG} ${target}${pick}\`.`
-      : "";
-  if (typeof file === "string") {
-    const samples = entries.map((entry) => entry.sample);
-    // Nothing to write: leave the file as it is, since an empty list would
-    // remove a rule's samples where a file replaces them.
-    if (samples.length === 0) {
-      const message = `Did not write --${LOOK_ALIKES_SAMPLES_FILE_FLAG} ${file}: no look-alikes came back, so it was left as it was.`;
-      return {
-        lines: [...lines, message],
-        exitCode: 1,
-        error: { code: "samples_file_not_written", message },
-      };
-    }
-    try {
-      writeFileSync(file, `${JSON.stringify(samples, null, 2)}\n`);
-    } catch (error) {
-      const message = `Could not write --${LOOK_ALIKES_SAMPLES_FILE_FLAG} ${file}: ${errorDetail(error)}`;
-      return {
-        lines: [
-          ...lines,
-          message,
-          "The JSON printed above holds these same look-alikes: save it to a file and give that file instead. Running generate-look-alikes again writes new ones.",
-        ],
-        exitCode: 1,
-        error: { code: "samples_file_not_written", message },
-      };
-    }
-    const wrote = `Wrote ${one(samples.length, "the look-alike", `the ${samples.length} look-alikes`)} to ${file}, numbered as above.`;
-    lines.push(
-      noneDecided
-        ? `${wrote} ${noneDecided}`
-        : `${wrote} ${which}, with ${save}; --pick takes any of the numbers.${test}`,
-    );
-  } else if (noneDecided) {
-    lines.push(noneDecided);
-  } else if (entries.length > 0) {
-    lines.push(
-      `${which}: save the JSON printed above to a file and give it to ${save}; --pick takes any of the numbers above.${test}`,
-    );
-  }
-  return { lines };
+  return { lines: lines.map(terminalLine) };
 }

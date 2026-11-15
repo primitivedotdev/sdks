@@ -70,8 +70,8 @@ export default class SentGetCommand extends Command {
   been deleted while the key stays reserved. If you retry, retry with the
   same --idempotency-key, never a new one.
 
-  Without --json, stdout is the sent email record (or the full response
-  envelope with --envelope). With --json, stdout is exactly one JSON
+  Without --json, stdout is the sent email record. With --json, stdout is
+  exactly one JSON
   document { success, data, meta } on success and { error, exit_code }
   on failure, and stderr stays empty. A key lookup sets
   meta.idempotency_key and meta.matches.`;
@@ -102,10 +102,6 @@ export default class SentGetCommand extends Command {
       description:
         "Idempotency key the send used (the idempotency_key field of a send, reply or chat --json envelope). Prints the newest send with this key.",
       exactlyOne: ["id", "idempotency-key"],
-    }),
-    envelope: Flags.boolean({
-      description:
-        "Print the full response envelope instead of only the sent email record. Ignored with --json, which always prints the envelope.",
     }),
     json: Flags.boolean({
       description:
@@ -184,7 +180,7 @@ export default class SentGetCommand extends Command {
         return;
       }
       const envelope = (result.data ?? {}) as SentEnvelope;
-      if (flags.json || flags.envelope) {
+      if (flags.json) {
         const document: SentEnvelope = lookupMeta
           ? { ...envelope, meta: { ...envelope.meta, ...lookupMeta } }
           : envelope;

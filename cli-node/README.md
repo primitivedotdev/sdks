@@ -493,16 +493,20 @@ With `--json`, stdout is exactly one JSON document, on success and on failure,
 and stderr stays empty. Output merged with `2>&1` therefore still parses:
 
 - Notices the command would otherwise print on stderr (hints, progress, prior
-  reply warnings) go in the document's `warnings` array.
+  reply warnings) go in the document's `warnings` array, or in `cli_warnings`
+  when the document already has a `warnings` of its own.
 - A failure adds `error` and `exit_code`. If the command printed no document of
-  its own, the CLI prints `{ "error": ..., "exit_code": ... }`.
+  its own, the CLI prints `{ "error": ..., "exit_code": ... }`. An error the
+  CLI raises itself carries a `code`: `usage_error` (exit 2) when it refused
+  before sending anything, such as a bad flag or an unreadable file, and
+  `cli_error` otherwise.
 - Generated API commands (`primitive sent list`, `primitive emails list`, ...)
-  keep printing only the data payload with `--json`, the same stdout as
-  without it, but do not write the `next cursor: <cursor>` line to stderr. To
-  page, add `--envelope`: it prints the full response envelope, with
-  `meta.cursor` for the next page and, in `summary`, empty-result hints and
-  what a list's default filters left out.
-- Commands whose `--json` output is a bare array keep that shape.
+  print the API's response body with `--json`: `data`, and `meta` with
+  `meta.cursor` for the next page where the route sends it, plus the CLI's own
+  `summary` (such as an empty-result hint). Read a list as `.data[]` and an
+  object's fields as `.data.<field>`. Without `--json`, stdout is the data
+  payload and the `next cursor: <cursor>` line goes to stderr.
+- Hand-written commands whose `--json` output is a bare array keep that shape.
 - `primitive listen` streams JSONL and is not covered by this rule.
 
 ## Searching mail
@@ -515,7 +519,7 @@ prints a table (header on stderr). Each result in `--json` output carries
 primitive search "invoice" --from acme.com
 primitive search "contract" --thread-id <thread-uuid>   # one conversation
 primitive search "quarterly invoi" --prefix             # last word matches as a prefix
-primitive search "a" --prefix --no-count --envelope     # skip the total count
+primitive search "a" --prefix --no-count                # skip the total count
 ```
 
 - `--thread-id <uuid>` only returns emails in that thread. It combines with
@@ -524,11 +528,11 @@ primitive search "a" --prefix --no-count --envelope     # skip the total count
   `invoi` matches invoice and invoicing. Only the final unquoted word is
   affected.
 - `--no-count` skips computing the total match count, which makes broad
-  queries cheaper. `meta.total` is then null in `--json` output, and
-  `--envelope` prints `Total: not counted (--no-count)`. Use `meta.cursor`
+  queries cheaper. `meta.total` is then null in `--json` output, and the
+  table's footer says `Total: not counted (--no-count)`. Use `meta.cursor`
   to tell whether another page exists.
-- `--envelope` prints the total (with `+` when the count was capped) and the
-  next-page cursor on stderr below the table.
+- Below the table, stderr gives the total (with `+` when the count was capped)
+  and the next-page cursor.
 
 These flags apply to the default lexical search only and are rejected with
 `--mode`.
@@ -1144,6 +1148,25 @@ bound profile through `agent disconnect` once the new setup's local checks
 pass, immediately before claiming. To keep both on
 purpose, rerun with `--keep-existing`. `--resume` continues a claim that
 already happened and is never refused.
+
+### Install the bundled skills
+
+`primitive skills install` copies the skills bundled in this package into a
+runtime's skills folder, for sessions that use a member login instead of
+`agent connect`:
+
+```sh
+primitive skills install --runtime claude
+primitive skills install primitive-connect --runtime codex --json
+```
+
+It installs every bundled skill, or only the one named, into the runtime's
+`skills` folder (`$CLAUDE_CONFIG_DIR` or `~/.claude` for Claude, `$CODEX_HOME`
+or `~/.codex` for Codex; `--project` uses `.claude/skills`
+or `.agents/skills` in the current directory), and reports each skill's path,
+state (`installed`, `updated`, `unchanged` or `failed`) and content version.
+A copy already at the bundled version is left unchanged, and a symlinked copy
+is replaced by a real directory. A name that is not bundled exits 2.
 
 ### Set up a machine for every coding session
 

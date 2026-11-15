@@ -5,7 +5,7 @@ import {
   commandForRoute,
   withCliCommands,
 } from "../../src/oclif/api-path-commands.js";
-import { scopeWarningLine } from "../../src/oclif/email-rule-authoring.js";
+import { ruleNotesLines } from "../../src/oclif/rule-notes.js";
 // Importing the command table registers the commands the helper may name.
 import "../../src/oclif/index.js";
 
@@ -79,12 +79,16 @@ describe("API routes named in server messages", () => {
       "See GET /v1/no-such-route.",
     );
     expect(
-      scopeWarningLine({
-        name: "gmail.com",
-        kind: "domain",
-        reason: "unknown_domain",
-        message,
-      } as never),
+      ruleNotesLines({
+        scope_warnings: [
+          {
+            name: "gmail.com",
+            kind: "domain",
+            reason: "unknown_domain",
+            message,
+          },
+        ],
+      })[0],
     ).toContain(
       "GET /v1/email-rule-scope-options (primitive email-rules list-email-rule-scope-options)",
     );

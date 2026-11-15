@@ -20,7 +20,16 @@ import type { AgentRuntime } from "./runtime-session.js";
 
 export const CONNECT_SKILL_NAME = "primitive-connect";
 
-export function connectSkillTarget(options: {
+/** A bundled skill's name is also a directory name, so it stays this plain. */
+const SKILL_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
+export function isSkillName(value: string): boolean {
+  return SKILL_NAME_PATTERN.test(value);
+}
+
+/** Where one skill is installed for a runtime, user-level or in the project. */
+export function skillTarget(options: {
+  name: string;
   runtime: AgentRuntime;
   project?: boolean;
   cwd?: string;
@@ -36,7 +45,16 @@ export function connectSkillTarget(options: {
       : options.project
         ? join(cwd, ".agents")
         : resolve(env.CODEX_HOME || join(homedir(), ".codex"));
-  return join(root, "skills", CONNECT_SKILL_NAME);
+  return join(root, "skills", options.name);
+}
+
+export function connectSkillTarget(options: {
+  runtime: AgentRuntime;
+  project?: boolean;
+  cwd?: string;
+  env?: Record<string, string | undefined>;
+}): string {
+  return skillTarget({ ...options, name: CONNECT_SKILL_NAME });
 }
 
 /** A path printed into agent instructions stays on one line. */
@@ -119,28 +137,54 @@ function hashFiles(root: string, files = listFiles(root)) {
   return hashes;
 }
 
-export function connectSkillVersion(hashes: Record<string, string>): string {
+export function skillVersion(hashes: Record<string, string>): string {
   const digest = createHash("sha256");
   for (const file of Object.keys(hashes).sort())
     digest.update(`${file}\0${hashes[file]}\n`);
   return digest.digest("hex").slice(0, 16);
 }
 
-export type BundledConnectSkill = {
+export type BundledSkill = {
+  name: string;
   directory: string;
   version: string;
   commit: string | null;
   files: Record<string, string>;
 };
 
-/** Read the copy shipped in this CLI package and refuse one that does not match its manifest. */
-export function readBundledConnectSkill(
-  packageRoot: string,
-): BundledConnectSkill {
+/** Names of the skills shipped in this CLI package, sorted. */
+export function bundledSkillNames(packageRoot: string): string[] {
   const skillsDir = join(packageRoot, "dist", "skills");
-  const directory = join(skillsDir, CONNECT_SKILL_NAME);
+  let entries: string[];
+  try {
+    entries = readdirSync(skillsDir);
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((entry) => entry.endsWith(".json"))
+    .map((entry) => entry.slice(0, -".json".length))
+    .filter((name) => {
+      if (!isSkillName(name)) return false;
+      try {
+        return statSync(join(skillsDir, name)).isDirectory();
+      } catch {
+        return false;
+      }
+    })
+    .sort();
+}
+
+/** Read one skill shipped in this CLI package and refuse one that does not match its manifest. */
+export function readBundledSkill(
+  packageRoot: string,
+  name: string,
+): BundledSkill {
+  if (!isSkillName(name)) throw new Error(`Not a skill name: ${name}`);
+  const skillsDir = join(packageRoot, "dist", "skills");
+  const directory = join(skillsDir, name);
   const manifest = JSON.parse(
-    readFileSync(join(skillsDir, `${CONNECT_SKILL_NAME}.json`), "utf8"),
+    readFileSync(join(skillsDir, `${name}.json`), "utf8"),
   ) as {
     name?: unknown;
     version?: unknown;
@@ -155,14 +199,15 @@ export function readBundledConnectSkill(
       : null;
   const actual = hashFiles(directory);
   if (
-    manifest.name !== CONNECT_SKILL_NAME ||
+    manifest.name !== name ||
     !expected ||
     typeof manifest.version !== "string" ||
-    connectSkillVersion(actual) !== manifest.version ||
-    connectSkillVersion(expected) !== manifest.version
+    skillVersion(actual) !== manifest.version ||
+    skillVersion(expected) !== manifest.version
   )
     throw new Error("The bundled skill does not match its manifest.");
   return {
+    name,
     directory,
     version: manifest.version,
     commit:
@@ -173,7 +218,11 @@ export function readBundledConnectSkill(
   };
 }
 
-export type ConnectSkillInstall = {
+export function readBundledConnectSkill(packageRoot: string): BundledSkill {
+  return readBundledSkill(packageRoot, CONNECT_SKILL_NAME);
+}
+
+export type SkillInstall = {
   state: "installed" | "updated" | "unchanged" | "skipped" | "failed";
   runtime: AgentRuntime | null;
   path: string | null;
@@ -212,24 +261,28 @@ const STALE_LEFTOVER_MS = 60_000;
  * process stopped between those renames, put the old copy back so the skill
  * path is never left empty, and remove abandoned staging and retired copies.
  */
-function recoverInterruptedInstall(root: string, target: string): boolean {
+function recoverInterruptedInstall(
+  root: string,
+  target: string,
+  name: string,
+): boolean {
   let entries: string[];
   try {
     entries = readdirSync(root);
   } catch {
     return false;
   }
-  const stale = (name: string) => {
+  const stale = (entry: string) => {
     try {
       return (
-        Date.now() - lstatSync(join(root, name)).mtimeMs > STALE_LEFTOVER_MS
+        Date.now() - lstatSync(join(root, entry)).mtimeMs > STALE_LEFTOVER_MS
       );
     } catch {
       return false;
     }
   };
   const retired = entries
-    .filter((name) => name.startsWith(`.${CONNECT_SKILL_NAME}.retired-`))
+    .filter((entry) => entry.startsWith(`.${name}.retired-`))
     .filter(stale)
     .sort(
       (a, b) =>
@@ -260,13 +313,13 @@ function recoverInterruptedInstall(root: string, target: string): boolean {
   } catch {
     realDirectory = false;
   }
-  for (const name of retired) {
-    const deps = join(root, name, "node_modules");
+  for (const copy of retired) {
+    const deps = join(root, copy, "node_modules");
     if (
       realDirectory &&
       existsSync(deps) &&
       !existsSync(join(target, "node_modules")) &&
-      sameDependencies(join(root, name), target)
+      sameDependencies(join(root, copy), target)
     ) {
       try {
         renameSync(deps, join(target, "node_modules"));
@@ -275,38 +328,40 @@ function recoverInterruptedInstall(root: string, target: string): boolean {
       }
     }
   }
-  for (const name of [
+  for (const leftover of [
     ...retired,
     ...entries
-      .filter((entry) => entry.startsWith(`.${CONNECT_SKILL_NAME}.staging-`))
+      .filter((entry) => entry.startsWith(`.${name}.staging-`))
       .filter(stale),
   ])
-    rmSync(join(root, name), { recursive: true, force: true });
+    rmSync(join(root, leftover), { recursive: true, force: true });
   return recovered;
 }
 
-function declaresConnectSkill(directory: string): boolean {
+function declaresSkill(directory: string, name: string): boolean {
   try {
     const text = readFileSync(join(directory, "SKILL.md"), "utf8");
     const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1] ?? "";
-    return /^name:\s*["']?primitive-connect["']?\s*$/m.test(frontmatter);
+    return new RegExp(`^name:\\s*["']?${name}["']?\\s*$`, "m").test(
+      frontmatter,
+    );
   } catch {
     return false;
   }
 }
 
-function otherCopies(target: string): string[] {
+function otherCopies(target: string, name: string): string[] {
   const root = dirname(target);
   try {
     return readdirSync(root, { withFileTypes: true })
       .filter(
         (entry) =>
           !entry.name.startsWith(".") &&
-          entry.name !== CONNECT_SKILL_NAME &&
+          entry.name !== name &&
           (entry.isDirectory() || entry.isSymbolicLink()),
       )
       .map((entry) => join(root, entry.name))
-      .filter(declaresConnectSkill)
+      .filter((directory) => declaresSkill(directory, name))
       .sort();
   } catch {
     return [];
@@ -317,7 +372,7 @@ function otherCopies(target: string): string[] {
 export function installedVersion(target: string): string | null {
   try {
     if (!statSync(target).isDirectory()) return null;
-    return connectSkillVersion(hashFiles(target));
+    return skillVersion(hashFiles(target));
   } catch {
     return null;
   }
@@ -328,25 +383,26 @@ export function installedVersion(target: string): string | null {
  * left untouched. A different copy is replaced in one rename, never beside a
  * second directory, and a symlink is replaced without touching its target.
  */
-export function installConnectSkill(options: {
-  bundle: BundledConnectSkill;
+export function installSkill(options: {
+  bundle: BundledSkill;
   runtime: AgentRuntime;
   project?: boolean;
   cwd?: string;
   env?: Record<string, string | undefined>;
-}): ConnectSkillInstall {
-  const target = connectSkillTarget(options);
+}): SkillInstall {
+  const name = options.bundle.name;
+  const target = skillTarget({ ...options, name });
   const base = {
     runtime: options.runtime,
     path: target,
     version: options.bundle.version,
   };
   const copies = () => {
-    const found = otherCopies(target);
+    const found = otherCopies(target, name);
     return found.length ? { otherCopies: found } : {};
   };
   const root = dirname(target);
-  const recovered = recoverInterruptedInstall(root, target);
+  const recovered = recoverInterruptedInstall(root, target, name);
   let existing: ReturnType<typeof lstatSync> | null = null;
   try {
     existing = lstatSync(target);
@@ -363,15 +419,15 @@ export function installConnectSkill(options: {
   };
   if (link === null && previous === options.bundle.version)
     return { ...base, state: "unchanged", ...notes, ...copies() };
-  const staging = join(root, `.${CONNECT_SKILL_NAME}.staging-${randomUUID()}`);
-  const retired = join(root, `.${CONNECT_SKILL_NAME}.retired-${randomUUID()}`);
+  const staging = join(root, `.${name}.staging-${randomUUID()}`);
+  const retired = join(root, `.${name}.retired-${randomUUID()}`);
   try {
     mkdirSync(root, { recursive: true });
     for (const file of Object.keys(options.bundle.files)) {
       mkdirSync(dirname(join(staging, file)), { recursive: true });
       copyFileSync(join(options.bundle.directory, file), join(staging, file));
     }
-    if (connectSkillVersion(hashFiles(staging)) !== options.bundle.version)
+    if (skillVersion(hashFiles(staging)) !== options.bundle.version)
       throw new Error("Copied skill files do not match the bundle.");
     // Helper dependencies an agent installed with npm ci survive a refresh
     // when the lockfile is unchanged; otherwise the result says to reinstall.

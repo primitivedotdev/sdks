@@ -39,10 +39,10 @@ import {
   writeCodexHooks,
 } from "./codex-machine-hooks.js";
 import {
-  type BundledConnectSkill,
+  type BundledSkill,
   connectSkillTarget,
-  installConnectSkill,
   installedVersion,
+  installSkill,
   readBundledConnectSkill,
 } from "./connect-skill.js";
 import {
@@ -237,7 +237,7 @@ export type MachineDoctorOptions = {
   stopReceiver?: (
     target: BackgroundListenTarget,
   ) => Promise<BackgroundListenStatus>;
-  bundle?: () => BundledConnectSkill;
+  bundle?: () => BundledSkill;
   /** How ended sessions' agents are disconnected when a retry is due. */
   sessionDisconnect?: Partial<SessionDisconnectDependencies>;
 };
@@ -754,7 +754,7 @@ export async function runMachineDoctor(
     CLAUDE_CONFIG_DIR: paths.claudeDir,
     CODEX_HOME: paths.codexHome,
   };
-  let bundle: BundledConnectSkill | null | undefined;
+  let bundle: BundledSkill | null | undefined;
   const loadBundle = () => {
     if (bundle !== undefined) return bundle;
     try {
@@ -898,7 +898,7 @@ export async function runMachineDoctor(
         mkdirSync(backup, { mode: 0o700 });
         cpSync(target, backup, { recursive: true, verbatimSymlinks: true });
       }
-      const result = installConnectSkill({
+      const result = installSkill({
         bundle: current,
         runtime,
         env: skillEnv,

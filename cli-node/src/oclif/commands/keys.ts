@@ -40,6 +40,7 @@ import {
   terminalApprovalIo,
   withApproval,
 } from "../step-up-approval.js";
+import { shownLine } from "../terminal-text.js";
 
 // The approval helpers moved to step-up-approval.ts; re-exported for callers
 // that imported them from here.
@@ -252,84 +253,12 @@ export function keyNotes(key: KeyView): string[] {
   });
 }
 
-/** Whether a note says the key reads a whole mailbox beside its email rules. */
-function isWholeMailboxNote(note: unknown): boolean {
-  return (
-    note !== null &&
-    typeof note === "object" &&
-    (note as { reason?: unknown }).reason === "whole_mailbox"
-  );
-}
-
 /**
- * The addresses and domains a key reads in full beside its email rules: the
- * whole_mailbox notes of its address_warnings, read loosely.
+ * A key's name as printed. A key can be transferred to you, so its name may
+ * be someone else's: no terminal control sequences or reordering marks.
  */
-export function wholeMailboxAddresses(notes: unknown): string[] {
-  if (!Array.isArray(notes)) return [];
-  return notes.flatMap((note: unknown) => {
-    if (!isWholeMailboxNote(note)) return [];
-    const address = (note as { address?: unknown }).address;
-    return typeof address === "string" && address ? [address] : [];
-  });
-}
-
-/**
- * What a key create or update says when the key reads whole mailboxes beside
- * its email rules: first, on stderr as a Warning line, or under --json as the
- * document's first field, whole_mailbox_warning, and the first entry of its
- * warnings (the JSON guard keeps stderr empty). Null when it does not. The
- * exit code is not changed: the key is made or changed as asked.
- */
-export function wholeMailboxWarning(
-  keyId: string,
-  notes: unknown,
-): string | null {
-  if (!Array.isArray(notes) || !notes.some(isWholeMailboxNote)) return null;
-  const addresses = wholeMailboxAddresses(notes);
-  const where =
-    addresses.length > 0
-      ? `every email at ${addresses.join(", ")}`
-      : "every email at an address or domain it lists";
-  return `This key reads ${where}, not only the emails its rules grant. An address or domain listed beside a rule is read in full. To limit a key to the rules' emails, create one with the same permissions and only --rule for its mail (no --address or --domain), then revoke this one with \`primitive keys revoke ${keyId}\`.`;
-}
-
-/**
- * A --json document led by the whole-mailbox warning: whole_mailbox_warning
- * as its first field, and the warning first in its warnings, before the
- * server's own, as an object with a description as theirs have (reason
- * whole_mailbox, with the addresses and domains read in full). Unchanged when
- * there is no warning.
- */
-export function ledByWholeMailboxWarning(
-  document: Record<string, unknown>,
-  whole: string | null,
-  notes: unknown,
-): Record<string, unknown> {
-  if (!whole) return document;
-  const { whole_mailbox_warning: _shown, ...rest } = document;
-  const warnings = Array.isArray(rest.warnings) ? rest.warnings : [];
-  return {
-    whole_mailbox_warning: whole,
-    ...rest,
-    warnings: [
-      {
-        reason: "whole_mailbox",
-        addresses: wholeMailboxAddresses(notes),
-        description: whole,
-      },
-      ...warnings,
-    ],
-  };
-}
-
-/** The notes other than whole_mailbox, which wholeMailboxWarning says instead. */
-function otherNotes(notes: unknown): Array<{ description?: unknown }> {
-  if (!Array.isArray(notes)) return [];
-  return notes.filter(
-    (note): note is { description?: unknown } =>
-      note !== null && typeof note === "object" && !isWholeMailboxNote(note),
-  );
+function keyName(key: KeyView): string {
+  return shownLine(key.name) || "(unnamed)";
 }
 
 export function formatKeyRows(
@@ -355,38 +284,22 @@ export function formatKeyRows(
         count > 0
           ? ` [${count} ${count === 1 ? "note" : "notes"}: primitive keys get ${row.id}]`
           : "";
-      const inFull = wholeMailboxAddresses(
-        (row as { address_warnings?: unknown }).address_warnings,
-      );
-      const whole =
-        inFull.length > 0
-          ? ` [reads all mail at ${inFull.join(", ")}, not only its rules' emails]`
-          : "";
-      return `${row.id}  ${row.key_prefix}  ${row.name ?? "(unnamed)"}  ${describePermissions(row.grant)}  mail: ${describeMailScope(row.grant)}  expires ${row.expires_at ?? "never"}  last used ${row.last_used_at ?? "never"}${suspended}${revoked}${whole}${notes}`;
+      const rotated = [
+        row.rotated_to ? ` [rotated to ${row.rotated_to}]` : "",
+        row.rotated_from ? ` [rotated from ${row.rotated_from}]` : "",
+      ].join("");
+      return `${row.id}  ${row.key_prefix}  ${keyName(row)}  ${describePermissions(row.grant)}  mail: ${describeMailScope(row.grant)}  expires ${row.expires_at ?? "never"}  last used ${row.last_used_at ?? "never"}${suspended}${revoked}${rotated}${notes}`;
     })
     .join("\n");
 }
 
-/** The detail line for the mailboxes a key reads in full beside its rules. */
-function wholeMailboxLines(key: KeyView): string[] {
-  const inFull = wholeMailboxAddresses(
-    (key as { address_warnings?: unknown }).address_warnings,
-  );
-  return inFull.length > 0
-    ? [
-        `In full:      ${inFull.join(", ")} (listed beside its rules, so every email there is read, not only what the rules grant)`,
-      ]
-    : [];
-}
-
 export function formatKeyDetail(key: KeyView): string {
   const lines = [
-    `Name:         ${key.name ?? "(unnamed)"}`,
+    `Name:         ${keyName(key)}`,
     `Id:           ${key.id}`,
     `Prefix:       ${key.key_prefix}`,
     `Kind:         ${key.kind}`,
     `Mail:         ${describeMailScope(key.grant)}`,
-    ...wholeMailboxLines(key),
     `Created:      ${key.created_at ?? "unknown"}`,
     `Expires:      ${key.expires_at ?? "never"}`,
     `Last used:    ${key.last_used_at ?? "never"}`,
@@ -397,6 +310,8 @@ export function formatKeyDetail(key: KeyView): string {
     const by = key.revoked_by ? ` by user ${key.revoked_by}` : "";
     lines.push(`Revoked:      ${key.revoked_at ?? "yes"}${by}`);
   }
+  if (key.rotated_to) lines.push(`Rotated to:   ${key.rotated_to}`);
+  if (key.rotated_from) lines.push(`Rotated from: ${key.rotated_from}`);
   if (key.agent_address) lines.push(`Agent:        ${key.agent_address}`);
   if (key.grant.template) {
     lines.push(`Permissions:  ${describePermissions(key.grant)}`);
@@ -455,15 +370,6 @@ export function buildCreateGrant(
     ...(choice.domains.length > 0 ? { domains: choice.domains } : {}),
     ...(choice.rules.length > 0 ? { rules: choice.rules } : {}),
   };
-  // A key reads every email on a domain it lists, so a domain beside a rule
-  // would read far more than the rule's emails. The API refuses it too.
-  const domainBesideRule =
-    choice.rules.length > 0 && choice.domains.length > 0
-      ? {
-          ok: false as const,
-          message: `--rule cannot be combined with --domain: the key would read every email on ${choice.domains.join(", ")}, not only what the rules granted. Create a key with --rule alone, or one with --domain alone.`,
-        }
-      : null;
   if (choice.permissions.length > 0) {
     if (choice.preset) {
       return {
@@ -479,7 +385,6 @@ export function buildCreateGrant(
           : "Say which mail the key reaches: --address, --domain or --rule (each repeatable), or --all-mailboxes.",
       };
     }
-    if (domainBesideRule) return domainBesideRule;
     return {
       ok: true,
       grant: {
@@ -518,7 +423,6 @@ export function buildCreateGrant(
         message: `${choice.preset} needs --address, --domain or --rule.`,
       };
     }
-    if (domainBesideRule) return domainBesideRule;
     return {
       ok: true,
       grant: {
@@ -828,7 +732,7 @@ function writeWarnings(
 ): void {
   for (const warning of warnings ?? []) {
     if (typeof warning.description === "string") {
-      process.stderr.write(`Note: ${warning.description}\n`);
+      process.stderr.write(`Note: ${shownLine(warning.description)}\n`);
     }
   }
 }
@@ -959,7 +863,7 @@ export class KeysCreateCommand extends Command {
 
   The secret is printed once, on its own line on stdout (in the JSON with --json). Store it right away: it is not shown again and the CLI does not save it.
 
-  A key limited to email rules (--rule, repeatable) reaches only the mail those rules match. Give it mail:read with --permission, or use --preset own_addresses_read_only. A key reads every email at an address or domain it lists, not only what the rules match, so --domain cannot be given beside --rule, and the API refuses an --address beside it that is another member's mailbox, a former member's included, or a retired address. Your own address, an agent's or a shared one may be given beside --rule, for example so the key reads your own mail beside a share, or replies from an agent's address; each is read in full, and the command says so first: on stderr, or with --json in whole_mailbox_warning.
+  A key limited to email rules (--rule, repeatable) reaches only the mail those rules match. Give it mail:read with --permission, or use --preset own_addresses_read_only. A key reads every email at an address or domain it lists, not only what the rules match; the API says which may be listed beside --rule, and address_warnings say what each listed one reads.
 
   ${keyPermissionsHelp()}`;
 
@@ -1059,19 +963,15 @@ export class KeysCreateCommand extends Command {
     }
     const key = result.data;
     // address_warnings say what a listed address or domain reads; --json
-    // carries them as is. One beside --rule, which the key reads in full, is
-    // said first: on stderr, or with --json as whole_mailbox_warning, the
-    // document's first field, and the first of its warnings.
-    const whole = wholeMailboxWarning(key.id, key.address_warnings);
+    // carries them as is.
     if (!flags.json) {
-      if (whole) process.stderr.write(`Warning: ${whole}\n\n`);
       writeWarnings(key.warnings);
-      writeWarnings(otherNotes(key.address_warnings));
+      writeWarnings(key.address_warnings);
     }
     printSecret(
       this,
       Boolean(flags.json),
-      ledByWholeMailboxWarning(key, whole, key.address_warnings),
+      key,
       key.key,
       [
         `Created API key ${key.name ?? "(unnamed)"} (${key.id}), prefix ${key.key_prefix}.`,
@@ -1170,11 +1070,11 @@ export class KeysUpdateCommand extends Command {
   static description =
     `Change an API key's permissions, email rules, name or expiry. It keeps its id and secret.
 
-  --add and --remove take permissions (repeatable, or comma-separated); \`primitive keys create --help-full\` lists the permissions a key can hold. --add-rule and --remove-rule add email rules to the key or take them off, and keep its other rules. --rule replaces every rule the key has with the ones given, so pass all the rules it should keep; it cannot be combined with --add-rule or --remove-rule. A change to the permissions or rules of a key that lists a share made with you (--add, --remove, --rule, --add-rule) is refused through the CLI unless it takes the share off; make it from your own dashboard session. --name, --expires-at and --no-expiry work as usual. --expires-at gives it a new expiry: a later one extends it, within your organization's credential policy, and is how to keep a key working past its expiry (rotating keeps the expiry). --no-expiry removes it where the policy allows. An expired key cannot be extended. Everything else about the key stays as it is, and the output lists any rules a change took off. A rule cannot be added to a key that lists a domain. The API refuses a rule added beside a retired address or the mailbox of a member other than the key's holder (its creator, or whoever it was transferred to), a former member's included, and a permission added to a key that already lists rules beside such an address or a domain. It judges this by the key's holder, not by whoever makes the change. When the key's grant is written and it lists an address or domain beside its rules, which it reads in full, the command says so before the result: on stderr, or with --json in whole_mailbox_warning.
+  --add and --remove take permissions (repeatable, or comma-separated); \`primitive keys create --help-full\` lists the permissions a key can hold. --add-rule and --remove-rule add email rules to the key or take them off, and keep its other rules. --rule replaces every rule the key has with the ones given, so pass all the rules it should keep; it cannot be combined with --add-rule or --remove-rule. A change to the permissions or rules of a key that lists a share made with you (--add, --remove, --rule, --add-rule) is refused through the CLI unless it takes the share off; make it from your own dashboard session. --name, --expires-at and --no-expiry work as usual. --expires-at gives it a new expiry: a later one extends it, within your organization's credential policy, and is how to keep a key working past its expiry (rotating keeps the expiry). --no-expiry removes it where the policy allows. An expired key cannot be extended. Everything else about the key stays as it is, and the output lists any rules a change took off.
 
   The change runs directly; if your organization requires approval, the command prints the approval link and takes --step-up-token, as for a new key. A key never holds more than you do.
 
-  With --json it prints the key as it is now, in the shape keys get prints, with changed, warnings and address_warnings alongside, notice when its permissions or mail changed, rules_added when a change put rules on it (each with granted_emails, how many emails the rule has already shared), rules_removed when a change took rules off, rules_not_on_key for rules asked to be taken off that it did not have, and whole_mailbox_warning when the grant written reads a whole mailbox beside its rules. A permission or rule change that leaves the grant as it is, with no --name, --expires-at or --no-expiry, sends nothing and prints the key with changed: []. If the key cannot be read back after the change, key_error says why and only the change's fields are printed.`;
+  With --json it prints the key as it is now, in the shape keys get prints, with changed, warnings and address_warnings alongside, notice when its permissions or mail changed, rules_added when a change put rules on it (each with granted_emails, how many emails the rule has already shared), rules_removed when a change took rules off, and rules_not_on_key for rules asked to be taken off that it did not have. A permission or rule change that leaves the grant as it is, with no --name, --expires-at or --no-expiry, sends nothing and prints the key with changed: []. If the key cannot be read back after the change, key_error says why and only the change's fields are printed.`;
 
   static summary = "Change an API key";
 
@@ -1410,51 +1310,35 @@ export class KeysUpdateCommand extends Command {
     const standingNotes = after?.ok
       ? (after.data as { address_warnings?: unknown }).address_warnings
       : undefined;
-    // A grant written that reads a whole mailbox beside its rules is said
-    // first: on stderr, or with --json as whole_mailbox_warning, the
-    // document's first field, and the first of its warnings.
-    const whole = grantChanged
-      ? wholeMailboxWarning(args.id, result.data.address_warnings)
-      : null;
     if (flags.json) {
       this.log(
         JSON.stringify(
-          ledByWholeMailboxWarning(
-            {
-              ...(after?.ok ? after.data : {}),
-              ...result.data,
-              // A change that wrote no grant answers no notes on it; the key's
-              // standing notes are the ones read back, as keys get prints them.
-              ...(!grantChanged && Array.isArray(standingNotes)
-                ? { address_warnings: standingNotes }
-                : {}),
-              ...(grantChanged ? { notice: HELD_REQUEST_NOTICE } : {}),
-              ...(grantChanged && rulesRemoved.length > 0
-                ? { rules_removed: rulesRemoved }
-                : {}),
-              ...(rulesNotOnKey.length > 0
-                ? { rules_not_on_key: rulesNotOnKey }
-                : {}),
-              // The change was made; only reading the key back failed.
-              ...(after && !after.ok ? { key_error: after.payload } : {}),
-            },
-            whole,
-            result.data.address_warnings,
-          ),
+          {
+            ...(after?.ok ? after.data : {}),
+            ...result.data,
+            // A change that wrote no grant answers no notes on it; the key's
+            // standing notes are the ones read back, as keys get prints them.
+            ...(!grantChanged && Array.isArray(standingNotes)
+              ? { address_warnings: standingNotes }
+              : {}),
+            ...(grantChanged ? { notice: HELD_REQUEST_NOTICE } : {}),
+            ...(grantChanged && rulesRemoved.length > 0
+              ? { rules_removed: rulesRemoved }
+              : {}),
+            ...(rulesNotOnKey.length > 0
+              ? { rules_not_on_key: rulesNotOnKey }
+              : {}),
+            // The change was made; only reading the key back failed.
+            ...(after && !after.ok ? { key_error: after.payload } : {}),
+          },
           null,
           2,
         ),
       );
       return;
     }
-    if (whole) process.stderr.write(`Warning: ${whole}\n\n`);
     writeWarnings(result.data.warnings);
-    // A note the warning above does not say is printed as it came.
-    writeWarnings(
-      whole
-        ? otherNotes(result.data.address_warnings)
-        : result.data.address_warnings,
-    );
+    writeWarnings(result.data.address_warnings);
     const changed = result.data.changed;
     this.log(
       changed.length > 0

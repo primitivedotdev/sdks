@@ -14,7 +14,7 @@ function command(id: string): Described {
 }
 
 describe("where the help points a reader of email rules", () => {
-  it("says --body-file takes the compile answer unchanged on the writes that take one", () => {
+  it("says --body-file takes the data of a saved compile answer on the writes that take one", () => {
     for (const [id, sdkName] of [
       ["email-rules:create-email-rule", "createEmailRule"],
       ["email-rules:update-email-rule", "updateEmailRule"],
@@ -23,7 +23,7 @@ describe("where the help points a reader of email rules", () => {
     ] as const) {
       const help = command(id).flags?.["body-file"]?.description ?? "";
       expect(help, id).toContain(
-        "the answer `compile-email-rule --json` printed (without --include-sql), unchanged",
+        "the data of the answer `compile-email-rule --json` printed (without --include-sql), saved to a file: `compile-email-rule ... --json | jq .data > rule.json`",
       );
       expect(help, id).toContain(BODY_FILE_HELP[sdkName]);
     }
@@ -34,12 +34,11 @@ describe("where the help points a reader of email rules", () => {
     ).not.toContain("compile-email-rule");
   });
 
-  it("says a create leaves expectations on questions undecided until a test asks them", () => {
-    expect(
-      command("email-rules:create-email-rule").flags?.["fail-on-expectations"]
-        ?.description,
-    ).toContain(
-      "on a new rule with questions an email whose conditions hold stays undecided (exit 3) until `test-email-rule --rule-id` asks them",
-    );
+  it("has no --fail-on-expectations on create or update", () => {
+    for (const id of [
+      "email-rules:create-email-rule",
+      "email-rules:update-email-rule",
+    ])
+      expect(command(id).flags?.["fail-on-expectations"]).toBeUndefined();
   });
 });

@@ -222,7 +222,14 @@ export function composeJsonDocument(input: ComposeJsonDocumentInput): unknown {
   const failure = (): Record<string, unknown> => {
     if (errorPayload !== null) return errorPayload;
     if (input.thrown && !isExitSignal(input.thrown.error)) {
-      return thrownErrorBody(input.thrown.error);
+      const body = thrownErrorBody(input.thrown.error);
+      // Every error the CLI throws carries a code. Exit 2 from a throw is
+      // always a refusal before anything was sent.
+      if (body.code === undefined) {
+        body.code =
+          errorExitCode(input.thrown.error) === 2 ? "usage_error" : "cli_error";
+      }
+      return body;
     }
     return {
       message:
@@ -276,14 +283,10 @@ export function composeJsonDocument(input: ComposeJsonDocumentInput): unknown {
     if (merged.exit_code === undefined) merged.exit_code = input.exitCode;
   }
   if (warnings.length > 0) {
-    const existing = merged.warnings;
-    if (existing === undefined || existing === null) {
+    // A document's own `warnings` (such as the API's) is never mixed with
+    // the CLI's lines; those go beside it.
+    if (merged.warnings === undefined || merged.warnings === null) {
       merged.warnings = warnings;
-    } else if (Array.isArray(existing)) {
-      merged.warnings = [
-        ...existing,
-        ...warnings.filter((warning) => !existing.includes(warning)),
-      ];
     } else {
       merged.cli_warnings = warnings;
     }
