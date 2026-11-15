@@ -96,16 +96,11 @@ def sync_detailed(
 
      What each rule you can see decided about this email (matched, not matched, or not run), in the words
     of the deciding version. A do_not_share rule that matched it blocks sharing while active; earlier
-    shares stay. Only a caller who can read the email gets an answer. classification is every fact the
-    classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed
-    counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard
-    and CLI only), with who receives what it shares (receivers) while it covers you; hidden counts
-    deciding rules you cannot see. Whether a rule delivered the email by webhook is not in the rule
-    results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id>
-    --json) counts each rule's webhook deliveries; on another member's mail, GET
-    /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id <email-
-    id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token).
+    shares stay. Only a caller who can read the email gets an answer. At most 50 rules are listed,
+    results first; not_listed counts the rest. Another member's rule that decided on your own mail is
+    listed read_only (dashboard and CLI only), with who receives what it shares (receivers) while it
+    covers you; hidden counts deciding rules you cannot see. Needs mail:read, the email rules feature,
+    and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -140,16 +135,11 @@ def sync(
 
      What each rule you can see decided about this email (matched, not matched, or not run), in the words
     of the deciding version. A do_not_share rule that matched it blocks sharing while active; earlier
-    shares stay. Only a caller who can read the email gets an answer. classification is every fact the
-    classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed
-    counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard
-    and CLI only), with who receives what it shares (receivers) while it covers you; hidden counts
-    deciding rules you cannot see. Whether a rule delivered the email by webhook is not in the rule
-    results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id>
-    --json) counts each rule's webhook deliveries; on another member's mail, GET
-    /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id <email-
-    id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token).
+    shares stay. Only a caller who can read the email gets an answer. At most 50 rules are listed,
+    results first; not_listed counts the rest. Another member's rule that decided on your own mail is
+    listed read_only (dashboard and CLI only), with who receives what it shares (receivers) while it
+    covers you; hidden counts deciding rules you cannot see. Needs mail:read, the email rules feature,
+    and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -179,16 +169,11 @@ async def asyncio_detailed(
 
      What each rule you can see decided about this email (matched, not matched, or not run), in the words
     of the deciding version. A do_not_share rule that matched it blocks sharing while active; earlier
-    shares stay. Only a caller who can read the email gets an answer. classification is every fact the
-    classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed
-    counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard
-    and CLI only), with who receives what it shares (receivers) while it covers you; hidden counts
-    deciding rules you cannot see. Whether a rule delivered the email by webhook is not in the rule
-    results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id>
-    --json) counts each rule's webhook deliveries; on another member's mail, GET
-    /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id <email-
-    id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token).
+    shares stay. Only a caller who can read the email gets an answer. At most 50 rules are listed,
+    results first; not_listed counts the rest. Another member's rule that decided on your own mail is
+    listed read_only (dashboard and CLI only), with who receives what it shares (receivers) while it
+    covers you; hidden counts deciding rules you cannot see. Needs mail:read, the email rules feature,
+    and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -223,16 +208,11 @@ async def asyncio(
 
      What each rule you can see decided about this email (matched, not matched, or not run), in the words
     of the deciding version. A do_not_share rule that matched it blocks sharing while active; earlier
-    shares stay. Only a caller who can read the email gets an answer. classification is every fact the
-    classifier read, as rule conditions read it. At most 50 rules are listed, results first; not_listed
-    counts the rest. Another member's rule that decided on your own mail is listed read_only (dashboard
-    and CLI only), with who receives what it shares (receivers) while it covers you; hidden counts
-    deciding rules you cannot see. Whether a rule delivered the email by webhook is not in the rule
-    results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id>
-    --json) counts each rule's webhook deliveries; on another member's mail, GET
-    /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id <email-
-    id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token).
+    shares stay. Only a caller who can read the email gets an answer. At most 50 rules are listed,
+    results first; not_listed counts the rest. Another member's rule that decided on your own mail is
+    listed read_only (dashboard and CLI only), with who receives what it shares (receivers) while it
+    covers you; hidden counts deciding rules you cannot see. Needs mail:read, the email rules feature,
+    and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):

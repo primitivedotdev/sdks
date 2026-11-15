@@ -35,8 +35,12 @@ class EmailRuleWithVersion:
             id (UUID):
             name (str):
             state (EmailRuleWithVersionState):
+            evaluation_scope (EmailRuleWithVersionEvaluationScope): Whose mail it runs over, as stored (GET /email-
+                rules/{id}/scope: what that is now).
+            scope_selection (EmailRuleScopeNames | None): What a selected rule names; null for any other scope.
             current_version (int | None):
-            author_user_id (UUID):
+            revision (int): Moves on by one with every update. Send it as if_revision.
+            author (EmailRuleAuthor):
             is_author (bool): Whether you are its author, in your current membership. Only its author edits it.
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
@@ -46,35 +50,25 @@ class EmailRuleWithVersion:
                 what it matches.
             protection_note (str | Unset): On a do_not_share rule only: it protects nothing yet (not active), a classifier
                 fact narrows it, or its several questions are alternatives.
-            evaluation_scope (EmailRuleWithVersionEvaluationScope | Unset): Whose mail it runs over, as stored (GET /email-
-                rules/{id}/scope: what that is now).
-            scope_selection (EmailRuleScopeNames | None | Unset): What a selected rule names; null for any other scope.
-            revision (int | Unset): Moves on by one with every update. Send it as if_revision.
-            author (EmailRuleAuthor | Unset):
-            pending_objections (int | Unset): To its author, on the dashboard or the Primitive CLI: objections to it waiting
-                for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time:
-                absent is not 0.
-            objection_notice (str | Unset): With pending_objections above 0: that members objected (each message says what
-                they ask: to turn it off, narrow it or explain it), and how to answer.
+            pending_objections (int | Unset): To its author, on the dashboard or the Primitive CLI, on GET, the list and a
+                create: objections to it waiting for their answer (GET /email-rule-objections).
      """
 
     id: UUID
     name: str
     state: EmailRuleWithVersionState
+    evaluation_scope: EmailRuleWithVersionEvaluationScope
+    scope_selection: EmailRuleScopeNames | None
     current_version: int | None
-    author_user_id: UUID
+    revision: int
+    author: EmailRuleAuthor
     is_author: bool
     created_at: datetime.datetime
     updated_at: datetime.datetime
     current: EmailRuleVersion | None
     kind: EmailRuleWithVersionKind | Unset = UNSET
     protection_note: str | Unset = UNSET
-    evaluation_scope: EmailRuleWithVersionEvaluationScope | Unset = UNSET
-    scope_selection: EmailRuleScopeNames | None | Unset = UNSET
-    revision: int | Unset = UNSET
-    author: EmailRuleAuthor | Unset = UNSET
     pending_objections: int | Unset = UNSET
-    objection_notice: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -91,10 +85,20 @@ class EmailRuleWithVersion:
 
         state = self.state.value
 
+        evaluation_scope = self.evaluation_scope.value
+
+        scope_selection: dict[str, Any] | None
+        if isinstance(self.scope_selection, EmailRuleScopeNames):
+            scope_selection = self.scope_selection.to_dict()
+        else:
+            scope_selection = self.scope_selection
+
         current_version: int | None
         current_version = self.current_version
 
-        author_user_id = str(self.author_user_id)
+        revision = self.revision
+
+        author = self.author.to_dict()
 
         is_author = self.is_author
 
@@ -115,28 +119,7 @@ class EmailRuleWithVersion:
 
         protection_note = self.protection_note
 
-        evaluation_scope: str | Unset = UNSET
-        if not isinstance(self.evaluation_scope, Unset):
-            evaluation_scope = self.evaluation_scope.value
-
-
-        scope_selection: dict[str, Any] | None | Unset
-        if isinstance(self.scope_selection, Unset):
-            scope_selection = UNSET
-        elif isinstance(self.scope_selection, EmailRuleScopeNames):
-            scope_selection = self.scope_selection.to_dict()
-        else:
-            scope_selection = self.scope_selection
-
-        revision = self.revision
-
-        author: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.author, Unset):
-            author = self.author.to_dict()
-
         pending_objections = self.pending_objections
-
-        objection_notice = self.objection_notice
 
 
         field_dict: dict[str, Any] = {}
@@ -145,8 +128,11 @@ class EmailRuleWithVersion:
             "id": id,
             "name": name,
             "state": state,
+            "evaluation_scope": evaluation_scope,
+            "scope_selection": scope_selection,
             "current_version": current_version,
-            "author_user_id": author_user_id,
+            "revision": revision,
+            "author": author,
             "is_author": is_author,
             "created_at": created_at,
             "updated_at": updated_at,
@@ -156,18 +142,8 @@ class EmailRuleWithVersion:
             field_dict["kind"] = kind
         if protection_note is not UNSET:
             field_dict["protection_note"] = protection_note
-        if evaluation_scope is not UNSET:
-            field_dict["evaluation_scope"] = evaluation_scope
-        if scope_selection is not UNSET:
-            field_dict["scope_selection"] = scope_selection
-        if revision is not UNSET:
-            field_dict["revision"] = revision
-        if author is not UNSET:
-            field_dict["author"] = author
         if pending_objections is not UNSET:
             field_dict["pending_objections"] = pending_objections
-        if objection_notice is not UNSET:
-            field_dict["objection_notice"] = objection_notice
 
         return field_dict
 
@@ -191,6 +167,29 @@ class EmailRuleWithVersion:
 
 
 
+        evaluation_scope = EmailRuleWithVersionEvaluationScope(d.pop("evaluation_scope"))
+
+
+
+
+        def _parse_scope_selection(data: object) -> EmailRuleScopeNames | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                scope_selection_type_1 = EmailRuleScopeNames.from_dict(data)
+
+
+
+                return scope_selection_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleScopeNames | None, data)
+
+        scope_selection = _parse_scope_selection(d.pop("scope_selection"))
+
+
         def _parse_current_version(data: object) -> int | None:
             if data is None:
                 return data
@@ -199,7 +198,9 @@ class EmailRuleWithVersion:
         current_version = _parse_current_version(d.pop("current_version"))
 
 
-        author_user_id = UUID(d.pop("author_user_id"))
+        revision = d.pop("revision")
+
+        author = EmailRuleAuthor.from_dict(d.pop("author"))
 
 
 
@@ -246,70 +247,24 @@ class EmailRuleWithVersion:
 
         protection_note = d.pop("protection_note", UNSET)
 
-        _evaluation_scope = d.pop("evaluation_scope", UNSET)
-        evaluation_scope: EmailRuleWithVersionEvaluationScope | Unset
-        if isinstance(_evaluation_scope,  Unset):
-            evaluation_scope = UNSET
-        else:
-            evaluation_scope = EmailRuleWithVersionEvaluationScope(_evaluation_scope)
-
-
-
-
-        def _parse_scope_selection(data: object) -> EmailRuleScopeNames | None | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                scope_selection_type_1 = EmailRuleScopeNames.from_dict(data)
-
-
-
-                return scope_selection_type_1
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(EmailRuleScopeNames | None | Unset, data)
-
-        scope_selection = _parse_scope_selection(d.pop("scope_selection", UNSET))
-
-
-        revision = d.pop("revision", UNSET)
-
-        _author = d.pop("author", UNSET)
-        author: EmailRuleAuthor | Unset
-        if isinstance(_author,  Unset):
-            author = UNSET
-        else:
-            author = EmailRuleAuthor.from_dict(_author)
-
-
-
-
         pending_objections = d.pop("pending_objections", UNSET)
-
-        objection_notice = d.pop("objection_notice", UNSET)
 
         email_rule_with_version = cls(
             id=id,
             name=name,
             state=state,
+            evaluation_scope=evaluation_scope,
+            scope_selection=scope_selection,
             current_version=current_version,
-            author_user_id=author_user_id,
+            revision=revision,
+            author=author,
             is_author=is_author,
             created_at=created_at,
             updated_at=updated_at,
             current=current,
             kind=kind,
             protection_note=protection_note,
-            evaluation_scope=evaluation_scope,
-            scope_selection=scope_selection,
-            revision=revision,
-            author=author,
             pending_objections=pending_objections,
-            objection_notice=objection_notice,
         )
 
 

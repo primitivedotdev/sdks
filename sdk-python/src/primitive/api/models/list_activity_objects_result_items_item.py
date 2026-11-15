@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.list_activity_objects_result_items_item_owned_now import ListActivityObjectsResultItemsItemOwnedNow
-from ..models.list_activity_objects_result_items_item_rule_now import ListActivityObjectsResultItemsItemRuleNow
 from ..models.list_activity_objects_result_items_item_stop_reason import ListActivityObjectsResultItemsItemStopReason
 from typing import cast
 from uuid import UUID
@@ -43,27 +42,21 @@ class ListActivityObjectsResultItemsItem:
                 disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating
                 sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed,
                 connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn
-                (rule requests and objections; an objection may also be amended), and for a coverage notice what it told:
-                started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per
-                rule, not per mailbox), new_version, stopped (it no longer covers you, why in stop_reason), or baseline (it
-                already covered you when notices began). pending: a rule started covering your mailbox and the notices have not
-                recorded that start yet (a restart within an hour of the last start notice, or within 5 minutes of the notices
-                finding the rule stopped, is recorded without a new one, unless you were told it stopped since); its id is then
-                the rule's, and created_at when the rule last changed.
+                (rule requests and objections; an objection may also be amended or closed), and for a coverage notice what it
+                told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once
+                per rule, not per mailbox), new_version, stopped (it no longer covers you, why in stop_reason), or baseline (it
+                already covered you when notices began).
             created_at (datetime.datetime):
             ended_at (datetime.datetime | None): When it was deleted, replaced or revoked, when an API key expired, when a
                 repeating send stopped, or when a rule request or objection was decided (accepted, declined, withdrawn or, for
-                an objection, amended); null otherwise, as on every coverage notice (rule_now marks one whose rule was deleted).
+                an objection, amended); null otherwise, a closed objection included, as on every coverage notice.
             owned_now (ListActivityObjectsResultItemsItemOwnedNow): you: it is still yours: never transferred, or
                 transferred back to you. someone_else: it was transferred and another person holds it now, or, with
                 relation=asked or concerning, another member made it.
             created_through (ListActivityObjectsResultItemsItemCreatedThrough):
-            rule_id (UUID | Unset): For email_rule_coverage, always: the rule it is about, since names need not be unique
-                (for pending, the same as id). GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or
-                as it last decided on your mail; otherwise it answers not_found, with details.reason rule_deleted once a rule
-                you were told of is deleted.
-            rule_now (ListActivityObjectsResultItemsItemRuleNow | Unset): For email_rule_coverage: deleted once the rule it
-                is about has been deleted. Left out while it exists, or when that could not be checked.
+            rule_id (UUID | Unset): For email_rule_coverage, always: the rule it is about, since names need not be unique.
+                GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or as it last decided on your
+                mail; otherwise it answers not_found. A deleted rule is told by a stopped notice with stop_reason deleted.
             stop_reason (ListActivityObjectsResultItemsItemStopReason | Unset): For a stopped notice: deleted, turned_off
                 (no longer active), or no_longer_covers (active, reaching none of your mailboxes now).
      """
@@ -77,7 +70,6 @@ class ListActivityObjectsResultItemsItem:
     owned_now: ListActivityObjectsResultItemsItemOwnedNow
     created_through: ListActivityObjectsResultItemsItemCreatedThrough
     rule_id: UUID | Unset = UNSET
-    rule_now: ListActivityObjectsResultItemsItemRuleNow | Unset = UNSET
     stop_reason: ListActivityObjectsResultItemsItemStopReason | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -112,11 +104,6 @@ class ListActivityObjectsResultItemsItem:
         if not isinstance(self.rule_id, Unset):
             rule_id = str(self.rule_id)
 
-        rule_now: str | Unset = UNSET
-        if not isinstance(self.rule_now, Unset):
-            rule_now = self.rule_now.value
-
-
         stop_reason: str | Unset = UNSET
         if not isinstance(self.stop_reason, Unset):
             stop_reason = self.stop_reason.value
@@ -137,8 +124,6 @@ class ListActivityObjectsResultItemsItem:
         })
         if rule_id is not UNSET:
             field_dict["rule_id"] = rule_id
-        if rule_now is not UNSET:
-            field_dict["rule_now"] = rule_now
         if stop_reason is not UNSET:
             field_dict["stop_reason"] = stop_reason
 
@@ -207,16 +192,6 @@ class ListActivityObjectsResultItemsItem:
 
 
 
-        _rule_now = d.pop("rule_now", UNSET)
-        rule_now: ListActivityObjectsResultItemsItemRuleNow | Unset
-        if isinstance(_rule_now,  Unset):
-            rule_now = UNSET
-        else:
-            rule_now = ListActivityObjectsResultItemsItemRuleNow(_rule_now)
-
-
-
-
         _stop_reason = d.pop("stop_reason", UNSET)
         stop_reason: ListActivityObjectsResultItemsItemStopReason | Unset
         if isinstance(_stop_reason,  Unset):
@@ -237,7 +212,6 @@ class ListActivityObjectsResultItemsItem:
             owned_now=owned_now,
             created_through=created_through,
             rule_id=rule_id,
-            rule_now=rule_now,
             stop_reason=stop_reason,
         )
 

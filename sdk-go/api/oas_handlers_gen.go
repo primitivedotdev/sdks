@@ -6384,10 +6384,11 @@ func (s *Server) handleCreateEmailRuleRequest(args [0]string, argsEscaped bool, 
 // accepts it, turning the rule off, declines it (optionally with a reason the objector sees), or
 // answers it amended once they have saved a newer version of the rule, or the member who made it
 // withdraws it, which clears its message (not from an email to the author already sent or being
-// sent). It never changes after that. You may have one pending objection per rule and 50 in all, and
-// object to the same rule again only 10 minutes after you last did, whatever became of it. Needs
-// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
-// key or narrowed token).
+// sent). It never changes after that. It reads closed once nobody can answer it (its rule was
+// deleted, or its author is no longer a member). You may have one pending objection per rule and 50
+// in all, and object to the same rule again only 10 minutes after you last did, whatever became of
+// it. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
+// key, agent key or narrowed token).
 //
 // POST /email-rule-objections
 func (s *Server) handleCreateEmailRuleObjectionRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -6596,9 +6597,8 @@ func (s *Server) handleCreateEmailRuleObjectionRequest(args [0]string, argsEscap
 // fixed once sent) tells them why you ask. With an Idempotency-Key, asking again for exactly what a
 // pending request of yours to the same member asks (name, english, tree and message, naming them the
 // same way) returns that request with existing: true (200), so a retry never asks them twice. At
-// most 5 pending requests to one member and 50 in all. With members:read the answer says whether
-// they can accept it under their role (target_can_accept, target_warning); POST
-// /v1/email-rule-requests/target-check checks first. Needs mail:read, the email rules feature, and a
+// most 5 pending requests to one member and 50 in all. POST /v1/email-rule-requests/target-check
+// says whether they can accept it under their role. Needs mail:read, the email rules feature, and a
 // member's own full-access credential (no API key, agent key or narrowed token).
 //
 // POST /email-rule-requests
@@ -11256,12 +11256,12 @@ func (s *Server) handleDeleteEmailRequest(args [1]string, argsEscaped bool, w ht
 //
 // Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
 // (end_reason rule_deleted), and the member who shared can still list what it handed over. The
-// answer lists the shares it ended (ended_shares), says whom with (share_notice), and lists the
-// unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out
-// when they could not be read). The author or a reader of all the organization's mail may delete it;
-// while it is shared, only the author or someone who manages members from the dashboard. Needs
-// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
-// key or narrowed token).
+// answer lists the shares it ended (ended_shares), and lists the unrevoked keys that still list it,
+// which now read nothing through it (keys, other_keys; left out when they could not be read). The
+// author or a reader of all the organization's mail may delete it; while it is shared, only the
+// author or someone who manages members from the dashboard. Needs mail:read, the email rules feature,
+//
+//	and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // DELETE /email-rules/{id}
 func (s *Server) handleDeleteEmailRuleRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -20655,11 +20655,7 @@ func (s *Server) handleGetEmailRuleRequest(args [1]string, argsEscaped bool, w h
 // the site), the other inboxes and domains its scope names, or its saved expectations. For what
 // happened to one email of yours, every rule's decision on it and, for another member's rule
 // covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules
-// list-email-rule-results --email-id <email-id>). Whether a rule delivered the email by webhook is
-// not in the rule results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive
-// emails get <email-id> --json) counts each rule's webhook deliveries; on another member's mail, GET
-// /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id
-// <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a
+// list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
 // member's own full-access credential (no API key, agent key or narrowed token).
 //
 // GET /email-rules/covering-me/{id}
@@ -20852,8 +20848,9 @@ func (s *Server) handleGetEmailRuleCoveringMeRequest(args [1]string, argsEscaped
 // the rule off, declines it (optionally with a reason the objector sees), or answers it amended once
 // they have saved a newer version of the rule, or the member who made it withdraws it, which clears
 // its message (not from an email to the author already sent or being sent). It never changes after
-// that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
-// key, agent key or narrowed token).
+// that. It reads closed once nobody can answer it (its rule was deleted, or its author is no longer
+// a member). Needs mail:read, the email rules feature, and a member's own full-access credential (no
+// API key, agent key or narrowed token).
 //
 // GET /email-rule-objections/{id}
 func (s *Server) handleGetEmailRuleObjectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -30840,11 +30837,10 @@ func (s *Server) handleLeaveOrganizationRequest(args [0]string, argsEscaped bool
 // then, naming its author in created_through, under their current membership; only on the dashboard
 // or the Primitive CLI. A key, an app or an agent has none, and gets email_rule_coverage in withheld.
 //
-//	A notice never reads as ended. Notices are written by a periodic job and can lag: until the
+//	A notice never reads as ended. Notices are written by a periodic job and can lag, a held new
 //
-// notices record a rule starting to cover you, the first page lists that rule as pending
-// (pending_complete says whether that check finished), and as_of says about when the notices last
-// looked. For what covers you now, read GET /email-rules/covering-me.
+// version by up to about 15 minutes; GET /v1/email-rules/covering-me is the live view. For what
+// covers you now, read GET /email-rules/covering-me.
 //
 // GET /activity/objects
 func (s *Server) handleListActivityObjectsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -34672,7 +34668,8 @@ func (s *Server) handleListEmailRuleDecisionsOnMyMailRequest(args [1]string, arg
 // it, turning the rule off, declines it (optionally with a reason the objector sees), or answers it
 // amended once they have saved a newer version of the rule, or the member who made it withdraws it,
 // which clears its message (not from an email to the author already sent or being sent). It never
-// changes after that. Needs mail:read, the email rules feature, and a member's own full-access
+// changes after that. It reads closed once nobody can answer it (its rule was deleted, or its author
+// is no longer a member). Needs mail:read, the email rules feature, and a member's own full-access
 // credential (no API key, agent key or narrowed token).
 //
 // GET /email-rule-objections
@@ -35079,16 +35076,11 @@ func (s *Server) handleListEmailRuleRequestsRequest(args [0]string, argsEscaped 
 //
 // What each rule you can see decided about this email (matched, not matched, or not run), in the
 // words of the deciding version. A do_not_share rule that matched it blocks sharing while active;
-// earlier shares stay. Only a caller who can read the email gets an answer. classification is every
-// fact the classifier read, as rule conditions read it. At most 50 rules are listed, results first;
-// not_listed counts the rest. Another member's rule that decided on your own mail is listed
-// read_only (dashboard and CLI only), with who receives what it shares (receivers) while it covers
-// you; hidden counts deciding rules you cannot see. Whether a rule delivered the email by webhook is
-// not in the rule results: on your own mail, rule_deliveries on GET /v1/emails/{id} (primitive
-// emails get <email-id> --json) counts each rule's webhook deliveries; on another member's mail, GET
-// /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id
-// <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a
-// member's own full-access credential (no API key, agent key or narrowed token).
+// earlier shares stay. Only a caller who can read the email gets an answer. At most 50 rules are
+// listed, results first; not_listed counts the rest. Another member's rule that decided on your own
+// mail is listed read_only (dashboard and CLI only), with who receives what it shares (receivers)
+// while it covers you; hidden counts deciding rules you cannot see. Needs mail:read, the email rules
+// feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // GET /emails/{id}/rule-results
 func (s *Server) handleListEmailRuleResultsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -35672,9 +35664,10 @@ func (s *Server) handleListEmailRuleShareEmailsRequest(args [1]string, argsEscap
 
 // handleListEmailRuleSharesRequest handles listEmailRuleShares operation.
 //
-// Lists rules shared with you, rules you share, or every share you can see. A share is visible to
-// its two people and the organization's owners and admins. Needs mail:read, the email rules feature,
-// and a member's own full-access credential (no API key, agent key or narrowed token).
+// Lists rules shared with you (box=received), or, for an owner or admin acting as themselves, every
+// share in the organization (box=all); rules you share are listed at /email-rule-shares/given. Needs
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token).
 //
 // GET /email-rule-shares
 func (s *Server) handleListEmailRuleSharesRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -36501,12 +36494,8 @@ func (s *Server) handleListEmailRulesRequest(args [0]string, argsEscaped bool, w
 // a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null.
 // For what happened to one email of yours, every rule's decision on it and, for another member's
 // rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive
-// email-rules list-email-rule-results --email-id <email-id>). Whether a rule delivered the email by
-// webhook is not in the rule results: on your own mail, rule_deliveries on GET /v1/emails/{id}
-// (primitive emails get <email-id> --json) counts each rule's webhook deliveries; on another
-// member's mail, GET /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list
-// --email-id <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules feature,
-// and a member's own full-access credential (no API key, agent key or narrowed token).
+// email-rules list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules
+// feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // GET /email-rules/covering-me
 func (s *Server) handleListEmailRulesCoveringMeRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -61608,12 +61597,11 @@ func (s *Server) handleUpdateEmailNotificationSettingsRequest(args [0]string, ar
 // expectations_check). Anyone but its author who sees it may only set state draft, and while it is
 // shared only if they manage members from the dashboard. A scope change saves a new version; a
 // shared rule keeps its scope, and a kind never changes. A saved version takes effect at once, on
-// the rule's share too, which goes on under it. if_version refuses a write once a version was saved
-// since you read it; if_revision, once anything changed. A write that leaves the rule active and
-// saves a version or turns it active is first judged against the expectations it leaves (up to about
-// 95 seconds): a failure refuses it, and so does an undecided one on a grant rule. Needs mail:read,
-// the email rules feature, and a member's own full-access credential (no API key, agent key or
-// narrowed token).
+// the rule's share too, which goes on under it. if_revision refuses a write once anything changed
+// since you read it. A write that leaves the rule active and saves a version or turns it active is
+// first judged against the expectations it leaves (up to about 95 seconds): a failure refuses it,
+// and so does an undecided one on a grant rule. Needs mail:read, the email rules feature, and a
+// member's own full-access credential (no API key, agent key or narrowed token).
 //
 // PATCH /email-rules/{id}
 func (s *Server) handleUpdateEmailRuleRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -66664,9 +66652,10 @@ func (s *Server) handleWhoamiRequest(args [0]string, argsEscaped bool, w http.Re
 
 // handleWithdrawEmailRuleObjectionRequest handles withdrawEmailRuleObjection operation.
 //
-// Withdraws a pending objection you made, and clears its message; an email to the rule's author
-// already sent or being sent keeps it. Needs mail:read, the email rules feature, and a member's own
-// full-access credential (no API key, agent key or narrowed token).
+// Withdraws a pending objection you made, or a closed one (nobody can answer it any more), and
+// clears its message; an email to the rule's author already sent or being sent keeps it. Needs
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token).
 //
 // POST /email-rule-objections/{id}/withdraw
 func (s *Server) handleWithdrawEmailRuleObjectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

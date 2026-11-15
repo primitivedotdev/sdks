@@ -37,8 +37,12 @@ class ListEmailRuleDecisionsResultItem:
                 is_false). Decisions recorded under the earlier definition counted an exclusion too.
             parts (list[Any]): How each top-level part of the rule decided.
             question_answers (list[Any]): The answers to the rule's own questions, when they were asked: each with question,
-                answer, confidence, the deprecated probability and, when unanswered, error_class, as a test gives them.
+                answer, confidence and, when unanswered, error_class, as a test gives them.
             created_at (datetime.datetime):
+            from_address (None | str): The decided email's sender address, as GET /v1/emails/{id} shows it.
+            subject (None | str): The decided email's subject, as GET /v1/emails/{id} shows it.
+            received_at (datetime.datetime | None): When the decided email arrived. Null, with the other two, when you are
+                not shown the email (it awaits sender authentication).
             detail_withheld (bool | Unset): Present, as true, on a decision about an email whose content cannot be read
                 (withheld, failed to parse, discarded, or still awaiting sender authentication): matched still says what the
                 rule decided, but how it got there was read from that content, so parts and question_answers are empty and
@@ -47,10 +51,6 @@ class ListEmailRuleDecisionsResultItem:
                 so no key or webhook got it through the rule: those you can see, and why.
             withheld_by_hidden (int | Unset): With withheld_by: how many more kept it back that you cannot see, or that were
                 deleted since. Those rules are not shown; an admin can see them.
-            from_address (None | str | Unset): The decided email's sender address, as GET /v1/emails/{id} shows it.
-            subject (None | str | Unset): The decided email's subject, as GET /v1/emails/{id} shows it.
-            received_at (datetime.datetime | None | Unset): When the decided email arrived. Null, with the other two, when
-                you are not shown the email (it awaits sender authentication).
      """
 
     id: UUID
@@ -62,12 +62,12 @@ class ListEmailRuleDecisionsResultItem:
     parts: list[Any]
     question_answers: list[Any]
     created_at: datetime.datetime
+    from_address: None | str
+    subject: None | str
+    received_at: datetime.datetime | None
     detail_withheld: bool | Unset = UNSET
     withheld_by: list[EmailRuleWithheldBy] | Unset = UNSET
     withheld_by_hidden: int | Unset = UNSET
-    from_address: None | str | Unset = UNSET
-    subject: None | str | Unset = UNSET
-    received_at: datetime.datetime | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -98,6 +98,18 @@ class ListEmailRuleDecisionsResultItem:
 
         created_at = self.created_at.isoformat()
 
+        from_address: None | str
+        from_address = self.from_address
+
+        subject: None | str
+        subject = self.subject
+
+        received_at: None | str
+        if isinstance(self.received_at, datetime.datetime):
+            received_at = self.received_at.isoformat()
+        else:
+            received_at = self.received_at
+
         detail_withheld = self.detail_withheld
 
         withheld_by: list[dict[str, Any]] | Unset = UNSET
@@ -110,26 +122,6 @@ class ListEmailRuleDecisionsResultItem:
 
 
         withheld_by_hidden = self.withheld_by_hidden
-
-        from_address: None | str | Unset
-        if isinstance(self.from_address, Unset):
-            from_address = UNSET
-        else:
-            from_address = self.from_address
-
-        subject: None | str | Unset
-        if isinstance(self.subject, Unset):
-            subject = UNSET
-        else:
-            subject = self.subject
-
-        received_at: None | str | Unset
-        if isinstance(self.received_at, Unset):
-            received_at = UNSET
-        elif isinstance(self.received_at, datetime.datetime):
-            received_at = self.received_at.isoformat()
-        else:
-            received_at = self.received_at
 
 
         field_dict: dict[str, Any] = {}
@@ -144,6 +136,9 @@ class ListEmailRuleDecisionsResultItem:
             "parts": parts,
             "question_answers": question_answers,
             "created_at": created_at,
+            "from_address": from_address,
+            "subject": subject,
+            "received_at": received_at,
         })
         if detail_withheld is not UNSET:
             field_dict["detail_withheld"] = detail_withheld
@@ -151,12 +146,6 @@ class ListEmailRuleDecisionsResultItem:
             field_dict["withheld_by"] = withheld_by
         if withheld_by_hidden is not UNSET:
             field_dict["withheld_by_hidden"] = withheld_by_hidden
-        if from_address is not UNSET:
-            field_dict["from_address"] = from_address
-        if subject is not UNSET:
-            field_dict["subject"] = subject
-        if received_at is not UNSET:
-            field_dict["received_at"] = received_at
 
         return field_dict
 
@@ -198,6 +187,40 @@ class ListEmailRuleDecisionsResultItem:
 
 
 
+        def _parse_from_address(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        from_address = _parse_from_address(d.pop("from_address"))
+
+
+        def _parse_subject(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        subject = _parse_subject(d.pop("subject"))
+
+
+        def _parse_received_at(data: object) -> datetime.datetime | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                received_at_type_0 = datetime.datetime.fromisoformat(data)
+
+
+
+                return received_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None, data)
+
+        received_at = _parse_received_at(d.pop("received_at"))
+
+
         detail_withheld = d.pop("detail_withheld", UNSET)
 
         _withheld_by = d.pop("withheld_by", UNSET)
@@ -214,46 +237,6 @@ class ListEmailRuleDecisionsResultItem:
 
         withheld_by_hidden = d.pop("withheld_by_hidden", UNSET)
 
-        def _parse_from_address(data: object) -> None | str | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            return cast(None | str | Unset, data)
-
-        from_address = _parse_from_address(d.pop("from_address", UNSET))
-
-
-        def _parse_subject(data: object) -> None | str | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            return cast(None | str | Unset, data)
-
-        subject = _parse_subject(d.pop("subject", UNSET))
-
-
-        def _parse_received_at(data: object) -> datetime.datetime | None | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            try:
-                if not isinstance(data, str):
-                    raise TypeError()
-                received_at_type_0 = datetime.datetime.fromisoformat(data)
-
-
-
-                return received_at_type_0
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(datetime.datetime | None | Unset, data)
-
-        received_at = _parse_received_at(d.pop("received_at", UNSET))
-
-
         list_email_rule_decisions_result_item = cls(
             id=id,
             email_id=email_id,
@@ -264,12 +247,12 @@ class ListEmailRuleDecisionsResultItem:
             parts=parts,
             question_answers=question_answers,
             created_at=created_at,
-            detail_withheld=detail_withheld,
-            withheld_by=withheld_by,
-            withheld_by_hidden=withheld_by_hidden,
             from_address=from_address,
             subject=subject,
             received_at=received_at,
+            detail_withheld=detail_withheld,
+            withheld_by=withheld_by,
+            withheld_by_hidden=withheld_by_hidden,
         )
 
 

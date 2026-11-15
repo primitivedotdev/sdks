@@ -15899,8 +15899,7 @@ type ListActivityObjectsParams struct {
 	Kind OptString `json:",omitempty,omitzero"`
 	// All (the default), live (still there, enabled or not) or ended (deleted, replaced or finished).
 	State OptListActivityObjectsState `json:",omitempty,omitzero"`
-	// Objects per page, from 1 to 200; defaults to 50. With relation=concerning the first page may also
-	// hold pending items beyond it.
+	// Objects per page, from 1 to 200; defaults to 50.
 	Limit OptInt `json:",omitempty,omitzero"`
 	// Next_cursor from the preceding page. Omit for the first page.
 	Cursor OptString `json:",omitempty,omitzero"`
@@ -20573,7 +20572,7 @@ type ListEmailRuleObjectionsParams struct {
 	// (is_objector, is_author). outgoing: only those you made. incoming: only those to rules you wrote.
 	// all: every objection you can see.
 	Box OptListEmailRuleObjectionsBox `json:",omitempty,omitzero"`
-	// Pending (the default), decided, or any.
+	// Pending (the default; not closed ones), decided (closed ones included), or any.
 	Status OptListEmailRuleObjectionsStatus `json:",omitempty,omitzero"`
 	// Objections per page, from 1 to 100; defaults to 25.
 	Limit OptInt `json:",omitempty,omitzero"`
@@ -21595,7 +21594,7 @@ func decodeListEmailRuleShareEmailsParams(args [1]string, argsEscaped bool, r *h
 
 // ListEmailRuleSharesParams is parameters of listEmailRuleShares operation.
 type ListEmailRuleSharesParams struct {
-	// Received, given or all.
+	// Received (the default) or all (owners and admins acting as themselves only).
 	Box OptListEmailRuleSharesBox `json:",omitempty,omitzero"`
 	// True, false or any.
 	Live OptListEmailRuleSharesLive `json:",omitempty,omitzero"`

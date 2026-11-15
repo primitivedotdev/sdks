@@ -38,11 +38,11 @@ class GetEmailRuleRequestResult:
             explanation (None | str): What the rule as asked actually does, as a grant rule: Primitive's reading of its
                 tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.
             warnings (list[str]): Primitive's notes on the rule as asked, from its tree and english, worked out on every
-                read.
+                read. To the member asked while pending, also that it carries no made-up emails it was tested on, and how to
+                test it on look-alikes and on their own mail.
             vocabulary (str):
             created_at (datetime.datetime):
             decided_at (datetime.datetime | None):
-            decided_by_user_id (None | UUID):
             proposer (EmailRuleRequestProposer):
             target (EmailRuleRequestTarget):
             target_address_typed (None | str): The address the proposer typed to name the target; null for anyone else, and
@@ -50,15 +50,10 @@ class GetEmailRuleRequestResult:
             is_proposer (bool):
             is_target (bool):
             share_id (None | UUID): The share accepting created, while it exists.
-            message (None | str | Unset): What the member asking wrote about why; null when they wrote nothing.
-            decline_reason (None | str | Unset): Why the member asked declined it; null unless they gave a reason when
-                declining.
-            edited_on_accept (bool | None | Unset): Once accepted: whether the rule was changed first, as on the share. Null
-                until then, or when unreadable.
-            notice (None | str | Unset): For the member asked, while pending: who asked (as proposer names them), what the
-                rule actually does (explanation), Primitive's warnings, what accepting would share, then where to see what
-                becomes of one email (rule-results and rule_deliveries). For the member who asked, once accepted with changes:
-                that the request is not what is shared. Else null.
+            message (None | str): What the member asking wrote about why; null when they wrote nothing.
+            decline_reason (None | str): Why the member asked declined it; null unless they gave a reason when declining.
+            share_terms (None | str): For the member asked, while pending: what accepting would share. Null otherwise.
+                Whether it was accepted with changes is edited_on_accept on the share.
      """
 
     id: UUID
@@ -71,17 +66,15 @@ class GetEmailRuleRequestResult:
     vocabulary: str
     created_at: datetime.datetime
     decided_at: datetime.datetime | None
-    decided_by_user_id: None | UUID
     proposer: EmailRuleRequestProposer
     target: EmailRuleRequestTarget
     target_address_typed: None | str
     is_proposer: bool
     is_target: bool
     share_id: None | UUID
-    message: None | str | Unset = UNSET
-    decline_reason: None | str | Unset = UNSET
-    edited_on_accept: bool | None | Unset = UNSET
-    notice: None | str | Unset = UNSET
+    message: None | str
+    decline_reason: None | str
+    share_terms: None | str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -119,12 +112,6 @@ class GetEmailRuleRequestResult:
         else:
             decided_at = self.decided_at
 
-        decided_by_user_id: None | str
-        if isinstance(self.decided_by_user_id, UUID):
-            decided_by_user_id = str(self.decided_by_user_id)
-        else:
-            decided_by_user_id = self.decided_by_user_id
-
         proposer = self.proposer.to_dict()
 
         target = self.target.to_dict()
@@ -142,29 +129,14 @@ class GetEmailRuleRequestResult:
         else:
             share_id = self.share_id
 
-        message: None | str | Unset
-        if isinstance(self.message, Unset):
-            message = UNSET
-        else:
-            message = self.message
+        message: None | str
+        message = self.message
 
-        decline_reason: None | str | Unset
-        if isinstance(self.decline_reason, Unset):
-            decline_reason = UNSET
-        else:
-            decline_reason = self.decline_reason
+        decline_reason: None | str
+        decline_reason = self.decline_reason
 
-        edited_on_accept: bool | None | Unset
-        if isinstance(self.edited_on_accept, Unset):
-            edited_on_accept = UNSET
-        else:
-            edited_on_accept = self.edited_on_accept
-
-        notice: None | str | Unset
-        if isinstance(self.notice, Unset):
-            notice = UNSET
-        else:
-            notice = self.notice
+        share_terms: None | str
+        share_terms = self.share_terms
 
 
         field_dict: dict[str, Any] = {}
@@ -180,22 +152,16 @@ class GetEmailRuleRequestResult:
             "vocabulary": vocabulary,
             "created_at": created_at,
             "decided_at": decided_at,
-            "decided_by_user_id": decided_by_user_id,
             "proposer": proposer,
             "target": target,
             "target_address_typed": target_address_typed,
             "is_proposer": is_proposer,
             "is_target": is_target,
             "share_id": share_id,
+            "message": message,
+            "decline_reason": decline_reason,
+            "share_terms": share_terms,
         })
-        if message is not UNSET:
-            field_dict["message"] = message
-        if decline_reason is not UNSET:
-            field_dict["decline_reason"] = decline_reason
-        if edited_on_accept is not UNSET:
-            field_dict["edited_on_accept"] = edited_on_accept
-        if notice is not UNSET:
-            field_dict["notice"] = notice
 
         return field_dict
 
@@ -262,24 +228,6 @@ class GetEmailRuleRequestResult:
         decided_at = _parse_decided_at(d.pop("decided_at"))
 
 
-        def _parse_decided_by_user_id(data: object) -> None | UUID:
-            if data is None:
-                return data
-            try:
-                if not isinstance(data, str):
-                    raise TypeError()
-                decided_by_user_id_type_0 = UUID(data)
-
-
-
-                return decided_by_user_id_type_0
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(None | UUID, data)
-
-        decided_by_user_id = _parse_decided_by_user_id(d.pop("decided_by_user_id"))
-
-
         proposer = EmailRuleRequestProposer.from_dict(d.pop("proposer"))
 
 
@@ -320,44 +268,28 @@ class GetEmailRuleRequestResult:
         share_id = _parse_share_id(d.pop("share_id"))
 
 
-        def _parse_message(data: object) -> None | str | Unset:
+        def _parse_message(data: object) -> None | str:
             if data is None:
                 return data
-            if isinstance(data, Unset):
-                return data
-            return cast(None | str | Unset, data)
+            return cast(None | str, data)
 
-        message = _parse_message(d.pop("message", UNSET))
+        message = _parse_message(d.pop("message"))
 
 
-        def _parse_decline_reason(data: object) -> None | str | Unset:
+        def _parse_decline_reason(data: object) -> None | str:
             if data is None:
                 return data
-            if isinstance(data, Unset):
-                return data
-            return cast(None | str | Unset, data)
+            return cast(None | str, data)
 
-        decline_reason = _parse_decline_reason(d.pop("decline_reason", UNSET))
+        decline_reason = _parse_decline_reason(d.pop("decline_reason"))
 
 
-        def _parse_edited_on_accept(data: object) -> bool | None | Unset:
+        def _parse_share_terms(data: object) -> None | str:
             if data is None:
                 return data
-            if isinstance(data, Unset):
-                return data
-            return cast(bool | None | Unset, data)
+            return cast(None | str, data)
 
-        edited_on_accept = _parse_edited_on_accept(d.pop("edited_on_accept", UNSET))
-
-
-        def _parse_notice(data: object) -> None | str | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            return cast(None | str | Unset, data)
-
-        notice = _parse_notice(d.pop("notice", UNSET))
+        share_terms = _parse_share_terms(d.pop("share_terms"))
 
 
         get_email_rule_request_result = cls(
@@ -371,7 +303,6 @@ class GetEmailRuleRequestResult:
             vocabulary=vocabulary,
             created_at=created_at,
             decided_at=decided_at,
-            decided_by_user_id=decided_by_user_id,
             proposer=proposer,
             target=target,
             target_address_typed=target_address_typed,
@@ -380,8 +311,7 @@ class GetEmailRuleRequestResult:
             share_id=share_id,
             message=message,
             decline_reason=decline_reason,
-            edited_on_accept=edited_on_accept,
-            notice=notice,
+            share_terms=share_terms,
         )
 
 

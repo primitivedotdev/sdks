@@ -214,7 +214,6 @@ from .create_email_rule_result_affects import CreateEmailRuleResultAffects
 from .create_email_rule_result_evaluation_scope import CreateEmailRuleResultEvaluationScope
 from .create_email_rule_result_expectations import CreateEmailRuleResultExpectations
 from .create_email_rule_result_kind import CreateEmailRuleResultKind
-from .create_email_rule_result_restored_from import CreateEmailRuleResultRestoredFrom
 from .create_email_rule_result_state import CreateEmailRuleResultState
 from .create_endpoint_input import CreateEndpointInput
 from .create_endpoint_input_kind import CreateEndpointInputKind
@@ -481,8 +480,6 @@ from .email_detail_relay_type_0 import EmailDetailRelayType0
 from .email_detail_relay_type_0_delivery_item import EmailDetailRelayType0DeliveryItem
 from .email_detail_repeat_type_0 import EmailDetailRepeatType0
 from .email_detail_reply import EmailDetailReply
-from .email_detail_rule_deliveries_type_0 import EmailDetailRuleDeliveriesType0
-from .email_detail_rule_deliveries_type_0_rules_item import EmailDetailRuleDeliveriesType0RulesItem
 from .email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
 from .email_detail_shared_through_type_0 import EmailDetailSharedThroughType0
 from .email_detail_shared_through_type_0_sharer import EmailDetailSharedThroughType0Sharer
@@ -636,7 +633,6 @@ from .email_rule_written_affects import EmailRuleWrittenAffects
 from .email_rule_written_evaluation_scope import EmailRuleWrittenEvaluationScope
 from .email_rule_written_expectations import EmailRuleWrittenExpectations
 from .email_rule_written_kind import EmailRuleWrittenKind
-from .email_rule_written_restored_from import EmailRuleWrittenRestoredFrom
 from .email_rule_written_state import EmailRuleWrittenState
 from .email_search_facet_bucket import EmailSearchFacetBucket
 from .email_search_facets import EmailSearchFacets
@@ -970,7 +966,6 @@ from .list_activity_objects_result import ListActivityObjectsResult
 from .list_activity_objects_result_items_item import ListActivityObjectsResultItemsItem
 from .list_activity_objects_result_items_item_created_through import ListActivityObjectsResultItemsItemCreatedThrough
 from .list_activity_objects_result_items_item_owned_now import ListActivityObjectsResultItemsItemOwnedNow
-from .list_activity_objects_result_items_item_rule_now import ListActivityObjectsResultItemsItemRuleNow
 from .list_activity_objects_result_items_item_stop_reason import ListActivityObjectsResultItemsItemStopReason
 from .list_activity_objects_result_withheld_item import ListActivityObjectsResultWithheldItem
 from .list_activity_objects_result_withheld_item_reason import ListActivityObjectsResultWithheldItemReason
@@ -1034,19 +1029,11 @@ from .list_email_rule_requests_response_200 import ListEmailRuleRequestsResponse
 from .list_email_rule_requests_status import ListEmailRuleRequestsStatus
 from .list_email_rule_results_response_200 import ListEmailRuleResultsResponse200
 from .list_email_rule_results_result import ListEmailRuleResultsResult
-from .list_email_rule_results_result_classification_type_0 import ListEmailRuleResultsResultClassificationType0
-from .list_email_rule_results_result_classification_type_0_facts import ListEmailRuleResultsResultClassificationType0Facts
-from .list_email_rule_results_result_classification_type_0_facts_additional_property import ListEmailRuleResultsResultClassificationType0FactsAdditionalProperty
-from .list_email_rule_results_result_classification_type_0_facts_additional_property_value_confidences import ListEmailRuleResultsResultClassificationType0FactsAdditionalPropertyValueConfidences
-from .list_email_rule_results_result_email import ListEmailRuleResultsResultEmail
 from .list_email_rule_results_result_rules_item import ListEmailRuleResultsResultRulesItem
 from .list_email_rule_results_result_rules_item_decision_type_0 import ListEmailRuleResultsResultRulesItemDecisionType0
 from .list_email_rule_results_result_rules_item_decision_type_0_parts_item import ListEmailRuleResultsResultRulesItemDecisionType0PartsItem
 from .list_email_rule_results_result_rules_item_decision_type_0_question_answers_item import ListEmailRuleResultsResultRulesItemDecisionType0QuestionAnswersItem
 from .list_email_rule_results_result_rules_item_kind import ListEmailRuleResultsResultRulesItemKind
-from .list_email_rule_results_result_rules_item_not_run_reason_type_1 import ListEmailRuleResultsResultRulesItemNotRunReasonType1
-from .list_email_rule_results_result_rules_item_not_run_reason_type_2_type_1 import ListEmailRuleResultsResultRulesItemNotRunReasonType2Type1
-from .list_email_rule_results_result_rules_item_not_run_reason_type_3_type_1 import ListEmailRuleResultsResultRulesItemNotRunReasonType3Type1
 from .list_email_rule_results_result_rules_item_state import ListEmailRuleResultsResultRulesItemState
 from .list_email_rule_scope_options_response_200 import ListEmailRuleScopeOptionsResponse200
 from .list_email_rule_scope_options_result import ListEmailRuleScopeOptionsResult
@@ -1758,10 +1745,6 @@ from .test_email_rule_on_sample_result_facts import TestEmailRuleOnSampleResultF
 from .test_email_rule_on_sample_result_facts_additional_property import TestEmailRuleOnSampleResultFactsAdditionalProperty
 from .test_email_rule_on_sample_result_outcome import TestEmailRuleOnSampleResultOutcome
 from .test_email_rule_on_sample_result_parts_item import TestEmailRuleOnSampleResultPartsItem
-from .test_email_rule_on_sample_result_protection import TestEmailRuleOnSampleResultProtection
-from .test_email_rule_on_sample_result_protection_outcome import TestEmailRuleOnSampleResultProtectionOutcome
-from .test_email_rule_on_sample_result_protection_withheld_by_item import TestEmailRuleOnSampleResultProtectionWithheldByItem
-from .test_email_rule_on_sample_result_protection_withheld_by_item_reason import TestEmailRuleOnSampleResultProtectionWithheldByItemReason
 from .test_email_rule_on_sample_result_question_answers_item import TestEmailRuleOnSampleResultQuestionAnswersItem
 from .test_email_rule_on_sample_result_values import TestEmailRuleOnSampleResultValues
 from .test_email_rule_on_sample_result_values_additional_property import TestEmailRuleOnSampleResultValuesAdditionalProperty
@@ -1865,7 +1848,6 @@ from .update_email_rule_result_affects import UpdateEmailRuleResultAffects
 from .update_email_rule_result_evaluation_scope import UpdateEmailRuleResultEvaluationScope
 from .update_email_rule_result_expectations import UpdateEmailRuleResultExpectations
 from .update_email_rule_result_kind import UpdateEmailRuleResultKind
-from .update_email_rule_result_restored_from import UpdateEmailRuleResultRestoredFrom
 from .update_email_rule_result_state import UpdateEmailRuleResultState
 from .update_endpoint_input import UpdateEndpointInput
 from .update_endpoint_input_rules import UpdateEndpointInputRules
@@ -2162,7 +2144,6 @@ __all__ = (
     "CreateEmailRuleResultEvaluationScope",
     "CreateEmailRuleResultExpectations",
     "CreateEmailRuleResultKind",
-    "CreateEmailRuleResultRestoredFrom",
     "CreateEmailRuleResultState",
     "CreateEndpointInput",
     "CreateEndpointInputKind",
@@ -2428,8 +2409,6 @@ __all__ = (
     "EmailDetailRelayType0DeliveryItem",
     "EmailDetailRepeatType0",
     "EmailDetailReply",
-    "EmailDetailRuleDeliveriesType0",
-    "EmailDetailRuleDeliveriesType0RulesItem",
     "EmailDetailSenderMemberType0",
     "EmailDetailSharedThroughType0",
     "EmailDetailSharedThroughType0Sharer",
@@ -2583,7 +2562,6 @@ __all__ = (
     "EmailRuleWrittenEvaluationScope",
     "EmailRuleWrittenExpectations",
     "EmailRuleWrittenKind",
-    "EmailRuleWrittenRestoredFrom",
     "EmailRuleWrittenState",
     "EmailSearchFacetBucket",
     "EmailSearchFacets",
@@ -2917,7 +2895,6 @@ __all__ = (
     "ListActivityObjectsResultItemsItem",
     "ListActivityObjectsResultItemsItemCreatedThrough",
     "ListActivityObjectsResultItemsItemOwnedNow",
-    "ListActivityObjectsResultItemsItemRuleNow",
     "ListActivityObjectsResultItemsItemStopReason",
     "ListActivityObjectsResultWithheldItem",
     "ListActivityObjectsResultWithheldItemReason",
@@ -2981,19 +2958,11 @@ __all__ = (
     "ListEmailRuleRequestsStatus",
     "ListEmailRuleResultsResponse200",
     "ListEmailRuleResultsResult",
-    "ListEmailRuleResultsResultClassificationType0",
-    "ListEmailRuleResultsResultClassificationType0Facts",
-    "ListEmailRuleResultsResultClassificationType0FactsAdditionalProperty",
-    "ListEmailRuleResultsResultClassificationType0FactsAdditionalPropertyValueConfidences",
-    "ListEmailRuleResultsResultEmail",
     "ListEmailRuleResultsResultRulesItem",
     "ListEmailRuleResultsResultRulesItemDecisionType0",
     "ListEmailRuleResultsResultRulesItemDecisionType0PartsItem",
     "ListEmailRuleResultsResultRulesItemDecisionType0QuestionAnswersItem",
     "ListEmailRuleResultsResultRulesItemKind",
-    "ListEmailRuleResultsResultRulesItemNotRunReasonType1",
-    "ListEmailRuleResultsResultRulesItemNotRunReasonType2Type1",
-    "ListEmailRuleResultsResultRulesItemNotRunReasonType3Type1",
     "ListEmailRuleResultsResultRulesItemState",
     "ListEmailRuleScopeOptionsResponse200",
     "ListEmailRuleScopeOptionsResult",
@@ -3705,10 +3674,6 @@ __all__ = (
     "TestEmailRuleOnSampleResultFactsAdditionalProperty",
     "TestEmailRuleOnSampleResultOutcome",
     "TestEmailRuleOnSampleResultPartsItem",
-    "TestEmailRuleOnSampleResultProtection",
-    "TestEmailRuleOnSampleResultProtectionOutcome",
-    "TestEmailRuleOnSampleResultProtectionWithheldByItem",
-    "TestEmailRuleOnSampleResultProtectionWithheldByItemReason",
     "TestEmailRuleOnSampleResultQuestionAnswersItem",
     "TestEmailRuleOnSampleResultValues",
     "TestEmailRuleOnSampleResultValuesAdditionalProperty",
@@ -3815,7 +3780,6 @@ __all__ = (
     "UpdateEmailRuleResultEvaluationScope",
     "UpdateEmailRuleResultExpectations",
     "UpdateEmailRuleResultKind",
-    "UpdateEmailRuleResultRestoredFrom",
     "UpdateEmailRuleResultState",
     "UpdateEndpointInput",
     "UpdateEndpointInputRules",

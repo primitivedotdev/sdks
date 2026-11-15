@@ -7,6 +7,16 @@
     "current_version": 2,
     "author_user_id": "5e1a2b3c-4d5e-4f60-8a1b-2c3d4e5f6a7b",
     "is_author": true,
+    "author": {
+      "user_id": "5e1a2b3c-4d5e-4f60-8a1b-2c3d4e5f6a7b",
+      "name": "Sam Rivera",
+      "email": "sam@example.test"
+    },
+    "evaluation_scope": "author",
+    "scope_selection": null,
+    "revision": 3,
+    "expectations": { "match": [], "no_match": [] },
+    "expectation_samples": [],
     "created_at": "2026-11-02T14:00:00.000Z",
     "updated_at": "2026-11-02T14:30:00.000Z",
     "current": {

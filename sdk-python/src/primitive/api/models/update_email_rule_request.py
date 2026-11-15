@@ -45,8 +45,6 @@ class UpdateEmailRuleRequest:
                 with the same conditions, and is refused while the rule is shared.
             scope_selection (EmailRuleScopeSelection | Unset): For a selected rule: inboxes, and domains (each address at
                 them the author reads); each one you can read.
-            if_version (int | Unset): The current_version you read: if it has moved, nothing is saved (409
-                email_rule_conflict, version_moved). It guards versions only; if_revision guards every update.
             expectations (None | Unset | UpdateEmailRuleRequestExpectationsType0): Replaces its saved expectations (author
                 only); null removes them.
             expectation_samples (list[EmailRuleExpectationSampleInput] | None | Unset): Replaces its saved made-up emails
@@ -67,7 +65,6 @@ class UpdateEmailRuleRequest:
     kind: UpdateEmailRuleRequestKind | Unset = UNSET
     evaluation_scope: UpdateEmailRuleRequestEvaluationScope | Unset = UNSET
     scope_selection: EmailRuleScopeSelection | Unset = UNSET
-    if_version: int | Unset = UNSET
     expectations: None | Unset | UpdateEmailRuleRequestExpectationsType0 = UNSET
     expectation_samples: list[EmailRuleExpectationSampleInput] | None | Unset = UNSET
     add_expectation_samples: list[EmailRuleExpectationSampleInput] | Unset = UNSET
@@ -109,8 +106,6 @@ class UpdateEmailRuleRequest:
         scope_selection: dict[str, Any] | Unset = UNSET
         if not isinstance(self.scope_selection, Unset):
             scope_selection = self.scope_selection.to_dict()
-
-        if_version = self.if_version
 
         expectations: dict[str, Any] | None | Unset
         if isinstance(self.expectations, Unset):
@@ -165,8 +160,6 @@ class UpdateEmailRuleRequest:
             field_dict["evaluation_scope"] = evaluation_scope
         if scope_selection is not UNSET:
             field_dict["scope_selection"] = scope_selection
-        if if_version is not UNSET:
-            field_dict["if_version"] = if_version
         if expectations is not UNSET:
             field_dict["expectations"] = expectations
         if expectation_samples is not UNSET:
@@ -243,8 +236,6 @@ class UpdateEmailRuleRequest:
 
 
 
-        if_version = d.pop("if_version", UNSET)
-
         def _parse_expectations(data: object) -> None | Unset | UpdateEmailRuleRequestExpectationsType0:
             if data is None:
                 return data
@@ -314,7 +305,6 @@ class UpdateEmailRuleRequest:
             kind=kind,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
-            if_version=if_version,
             expectations=expectations,
             expectation_samples=expectation_samples,
             add_expectation_samples=add_expectation_samples,

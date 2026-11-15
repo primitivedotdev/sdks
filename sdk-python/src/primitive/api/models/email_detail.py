@@ -30,7 +30,6 @@ if TYPE_CHECKING:
   from ..models.email_detail_relay_type_0 import EmailDetailRelayType0
   from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0
   from ..models.email_detail_reply import EmailDetailReply
-  from ..models.email_detail_rule_deliveries_type_0 import EmailDetailRuleDeliveriesType0
   from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
   from ..models.email_detail_shared_through_type_0 import EmailDetailSharedThroughType0
   from ..models.email_detail_understanding_type_0 import EmailDetailUnderstandingType0
@@ -94,8 +93,7 @@ class EmailDetail:
             received_at (datetime.datetime):
             webhook_attempt_count (int): Only this email's routed delivery (the webhook or Function routing sent it to),
                 never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST
-                /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET
-                /emails/{id}, for the mailbox's owner. Its attempts.
+                /emails/{id}/replay), and says nothing about rule deliveries. Its attempts.
             from_email (str): Bare email address parsed from the `From:` header, with
                 display name stripped (e.g. `alice@example.com`). Falls
                 back to `sender` (the SMTP envelope MAIL FROM) when the
@@ -243,20 +241,16 @@ class EmailDetail:
                 of the word `pending` for distinct lifecycle phases.
             webhook_last_attempt_at (datetime.datetime | None | Unset): Only this email's routed delivery (the webhook or
                 Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless
-                the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in
-                `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its last attempt.
+                the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries. Its last attempt.
             webhook_last_status_code (int | None | Unset): Only this email's routed delivery (the webhook or Function
                 routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email
-                is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries`
-                on GET /emails/{id}, for the mailbox's owner. What it last answered.
+                is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries. What it last answered.
             webhook_last_error (None | str | Unset): Only this email's routed delivery (the webhook or Function routing sent
                 it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later
-                (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET
-                /emails/{id}, for the mailbox's owner. Its last error.
+                (POST /emails/{id}/replay), and says nothing about rule deliveries. Its last error.
             webhook_fired_at (datetime.datetime | None | Unset): Only this email's routed delivery (the webhook or Function
                 routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email
-                is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries`
-                on GET /emails/{id}, for the mailbox's owner. When it was delivered.
+                is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries. When it was delivered.
             smtp_helo (None | str | Unset):
             smtp_mail_from (None | str | Unset): SMTP envelope MAIL FROM (return-path), as accepted by the
                 inbound mail server. Same value as `sender`; both fields
@@ -334,14 +328,8 @@ class EmailDetail:
                 withheld when the content is not available to your credential.
             shared_through (EmailDetailSharedThroughType0 | None | Unset): Only for a reader who has this email through a
                 colleague's share of their mail, when that share is their only way to it: the share and who gave it. Null for
-                everyone else, including on your own mail when a rule or share of yours gave it to someone: rule_deliveries
-                counts the webhooks rules delivered it to, and GET /v1/email-rule-shares/{id}/emails lists what a share you gave
-                has given.
-            rule_deliveries (EmailDetailRuleDeliveriesType0 | None | Unset): Where Email Rules delivered this email by
-                webhook, for the owner of the mailbox it is at, on their own dashboard session or the Primitive CLI. Null for
-                everyone else, including on another member's mail even for an organization owner or admin (GET
-                /v1/webhooks/deliveries?email_id=<email-id> lists its deliveries, a rule's included), and when it could not be
-                read in time. A key reading it through a rule is not a delivery.
+                everyone else, including on your own mail when a rule or share of yours gave it to someone: GET /v1/email-rule-
+                shares/{id}/emails lists what a share you gave has given.
             parse_status (EmailDetailParseStatusType1 | EmailDetailParseStatusType2Type1 | EmailDetailParseStatusType3Type1
                 | None | Unset): Parsing state on inbox, history, arrival and detail reads. Failed is terminal and differs from
                 valid empty content (complete). Null covers legacy rows. Optional on shared summaries for compatibility with
@@ -418,7 +406,6 @@ class EmailDetail:
     relay: EmailDetailRelayType0 | None | Unset = UNSET
     understanding: EmailDetailUnderstandingType0 | None | Unset = UNSET
     shared_through: EmailDetailSharedThroughType0 | None | Unset = UNSET
-    rule_deliveries: EmailDetailRuleDeliveriesType0 | None | Unset = UNSET
     parse_status: EmailDetailParseStatusType1 | EmailDetailParseStatusType2Type1 | EmailDetailParseStatusType3Type1 | None | Unset = UNSET
     delivery_report: EmailDetailDeliveryReportType0 | None | Unset = UNSET
     muted: bool | Unset = UNSET
@@ -439,7 +426,6 @@ class EmailDetail:
         from ..models.email_detail_relay_type_0 import EmailDetailRelayType0 # noqa: PLC0415
         from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0 # noqa: PLC0415
         from ..models.email_detail_reply import EmailDetailReply # noqa: PLC0415
-        from ..models.email_detail_rule_deliveries_type_0 import EmailDetailRuleDeliveriesType0 # noqa: PLC0415
         from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0 # noqa: PLC0415
         from ..models.email_detail_shared_through_type_0 import EmailDetailSharedThroughType0 # noqa: PLC0415
         from ..models.email_detail_understanding_type_0 import EmailDetailUnderstandingType0 # noqa: PLC0415
@@ -754,14 +740,6 @@ class EmailDetail:
         else:
             shared_through = self.shared_through
 
-        rule_deliveries: dict[str, Any] | None | Unset
-        if isinstance(self.rule_deliveries, Unset):
-            rule_deliveries = UNSET
-        elif isinstance(self.rule_deliveries, EmailDetailRuleDeliveriesType0):
-            rule_deliveries = self.rule_deliveries.to_dict()
-        else:
-            rule_deliveries = self.rule_deliveries
-
         parse_status: None | str | Unset
         if isinstance(self.parse_status, Unset):
             parse_status = UNSET
@@ -888,8 +866,6 @@ class EmailDetail:
             field_dict["understanding"] = understanding
         if shared_through is not UNSET:
             field_dict["shared_through"] = shared_through
-        if rule_deliveries is not UNSET:
-            field_dict["rule_deliveries"] = rule_deliveries
         if parse_status is not UNSET:
             field_dict["parse_status"] = parse_status
         if delivery_report is not UNSET:
@@ -914,7 +890,6 @@ class EmailDetail:
         from ..models.email_detail_relay_type_0 import EmailDetailRelayType0 # noqa: PLC0415
         from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0 # noqa: PLC0415
         from ..models.email_detail_reply import EmailDetailReply # noqa: PLC0415
-        from ..models.email_detail_rule_deliveries_type_0 import EmailDetailRuleDeliveriesType0 # noqa: PLC0415
         from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0 # noqa: PLC0415
         from ..models.email_detail_shared_through_type_0 import EmailDetailSharedThroughType0 # noqa: PLC0415
         from ..models.email_detail_understanding_type_0 import EmailDetailUnderstandingType0 # noqa: PLC0415
@@ -1568,26 +1543,6 @@ class EmailDetail:
         shared_through = _parse_shared_through(d.pop("shared_through", UNSET))
 
 
-        def _parse_rule_deliveries(data: object) -> EmailDetailRuleDeliveriesType0 | None | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                rule_deliveries_type_0 = EmailDetailRuleDeliveriesType0.from_dict(data)
-
-
-
-                return rule_deliveries_type_0
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(EmailDetailRuleDeliveriesType0 | None | Unset, data)
-
-        rule_deliveries = _parse_rule_deliveries(d.pop("rule_deliveries", UNSET))
-
-
         def _parse_parse_status(data: object) -> EmailDetailParseStatusType1 | EmailDetailParseStatusType2Type1 | EmailDetailParseStatusType3Type1 | None | Unset:
             if data is None:
                 return data
@@ -1721,7 +1676,6 @@ class EmailDetail:
             relay=relay,
             understanding=understanding,
             shared_through=shared_through,
-            rule_deliveries=rule_deliveries,
             parse_status=parse_status,
             delivery_report=delivery_report,
             muted=muted,

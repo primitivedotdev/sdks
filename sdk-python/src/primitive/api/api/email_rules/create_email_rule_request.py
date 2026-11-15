@@ -142,10 +142,9 @@ def sync_detailed(
     once sent) tells them why you ask. With an Idempotency-Key, asking again for exactly what a pending
     request of yours to the same member asks (name, english, tree and message, naming them the same way)
     returns that request with existing: true (200), so a retry never asks them twice. At most 5 pending
-    requests to one member and 50 in all. With members:read the answer says whether they can accept it
-    under their role (target_can_accept, target_warning); POST /v1/email-rule-requests/target-check
-    checks first. Needs mail:read, the email rules feature, and a member's own full-access credential
-    (no API key, agent key or narrowed token).
+    requests to one member and 50 in all. POST /v1/email-rule-requests/target-check says whether they
+    can accept it under their role. Needs mail:read, the email rules feature, and a member's own full-
+    access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -188,10 +187,9 @@ def sync(
     once sent) tells them why you ask. With an Idempotency-Key, asking again for exactly what a pending
     request of yours to the same member asks (name, english, tree and message, naming them the same way)
     returns that request with existing: true (200), so a retry never asks them twice. At most 5 pending
-    requests to one member and 50 in all. With members:read the answer says whether they can accept it
-    under their role (target_can_accept, target_warning); POST /v1/email-rule-requests/target-check
-    checks first. Needs mail:read, the email rules feature, and a member's own full-access credential
-    (no API key, agent key or narrowed token).
+    requests to one member and 50 in all. POST /v1/email-rule-requests/target-check says whether they
+    can accept it under their role. Needs mail:read, the email rules feature, and a member's own full-
+    access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -229,10 +227,9 @@ async def asyncio_detailed(
     once sent) tells them why you ask. With an Idempotency-Key, asking again for exactly what a pending
     request of yours to the same member asks (name, english, tree and message, naming them the same way)
     returns that request with existing: true (200), so a retry never asks them twice. At most 5 pending
-    requests to one member and 50 in all. With members:read the answer says whether they can accept it
-    under their role (target_can_accept, target_warning); POST /v1/email-rule-requests/target-check
-    checks first. Needs mail:read, the email rules feature, and a member's own full-access credential
-    (no API key, agent key or narrowed token).
+    requests to one member and 50 in all. POST /v1/email-rule-requests/target-check says whether they
+    can accept it under their role. Needs mail:read, the email rules feature, and a member's own full-
+    access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -275,10 +272,9 @@ async def asyncio(
     once sent) tells them why you ask. With an Idempotency-Key, asking again for exactly what a pending
     request of yours to the same member asks (name, english, tree and message, naming them the same way)
     returns that request with existing: true (200), so a retry never asks them twice. At most 5 pending
-    requests to one member and 50 in all. With members:read the answer says whether they can accept it
-    under their role (target_can_accept, target_warning); POST /v1/email-rule-requests/target-check
-    checks first. Needs mail:read, the email rules feature, and a member's own full-access credential
-    (no API key, agent key or narrowed token).
+    requests to one member and 50 in all. POST /v1/email-rule-requests/target-check says whether they
+    can accept it under their role. Needs mail:read, the email rules feature, and a member's own full-
+    access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):

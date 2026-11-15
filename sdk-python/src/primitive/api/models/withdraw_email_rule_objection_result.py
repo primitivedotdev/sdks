@@ -32,7 +32,8 @@ class WithdrawEmailRuleObjectionResult:
             id (UUID):
             status (WithdrawEmailRuleObjectionResultStatus): pending until the rule's author accepts it (turning the rule
                 off), declines it, or answers it amended (they saved a newer version of the rule), or the member who made it
-                withdraws it; never changes after.
+                withdraws it; never changes after. closed: nobody can answer it any more (its rule was deleted, or its author is
+                no longer a member); status=pending leaves it out.
             rule (WithdrawEmailRuleObjectionResultRule):
             objector (EmailRuleObjectionPerson):
             author (EmailRuleObjectionPerson):
@@ -46,7 +47,6 @@ class WithdrawEmailRuleObjectionResult:
                 given.
             created_at (datetime.datetime):
             decided_at (datetime.datetime | None):
-            decided_by_user_id (None | UUID):
      """
 
     id: UUID
@@ -61,7 +61,6 @@ class WithdrawEmailRuleObjectionResult:
     amend_note: None | str
     created_at: datetime.datetime
     decided_at: datetime.datetime | None
-    decided_by_user_id: None | UUID
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -102,12 +101,6 @@ class WithdrawEmailRuleObjectionResult:
         else:
             decided_at = self.decided_at
 
-        decided_by_user_id: None | str
-        if isinstance(self.decided_by_user_id, UUID):
-            decided_by_user_id = str(self.decided_by_user_id)
-        else:
-            decided_by_user_id = self.decided_by_user_id
-
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -124,7 +117,6 @@ class WithdrawEmailRuleObjectionResult:
             "amend_note": amend_note,
             "created_at": created_at,
             "decided_at": decided_at,
-            "decided_by_user_id": decided_by_user_id,
         })
 
         return field_dict
@@ -212,24 +204,6 @@ class WithdrawEmailRuleObjectionResult:
         decided_at = _parse_decided_at(d.pop("decided_at"))
 
 
-        def _parse_decided_by_user_id(data: object) -> None | UUID:
-            if data is None:
-                return data
-            try:
-                if not isinstance(data, str):
-                    raise TypeError()
-                decided_by_user_id_type_0 = UUID(data)
-
-
-
-                return decided_by_user_id_type_0
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(None | UUID, data)
-
-        decided_by_user_id = _parse_decided_by_user_id(d.pop("decided_by_user_id"))
-
-
         withdraw_email_rule_objection_result = cls(
             id=id,
             status=status,
@@ -243,7 +217,6 @@ class WithdrawEmailRuleObjectionResult:
             amend_note=amend_note,
             created_at=created_at,
             decided_at=decided_at,
-            decided_by_user_id=decided_by_user_id,
         )
 
 

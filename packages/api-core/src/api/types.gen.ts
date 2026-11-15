@@ -1226,7 +1226,7 @@ export type EmailSummary = {
     raw_size_bytes?: number | null;
     webhook_status?: EmailWebhookStatus;
     /**
-     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its attempts.
+     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries. Its attempts.
      */
     webhook_attempt_count: number;
     /**
@@ -1650,23 +1650,23 @@ export type EmailDetail = {
     rejection_reason?: string | null;
     webhook_status?: EmailWebhookStatus;
     /**
-     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its attempts.
+     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries. Its attempts.
      */
     webhook_attempt_count: number;
     /**
-     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its last attempt.
+     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries. Its last attempt.
      */
     webhook_last_attempt_at?: string | null;
     /**
-     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. What it last answered.
+     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries. What it last answered.
      */
     webhook_last_status_code?: number | null;
     /**
-     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. Its last error.
+     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries. Its last error.
      */
     webhook_last_error?: string | null;
     /**
-     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries: those are in `rule_deliveries` on GET /emails/{id}, for the mailbox's owner. When it was delivered.
+     * Only this email's routed delivery (the webhook or Function routing sent it to), never a rule's. On mail routing sent nowhere it stays pending, 0 or null unless the email is sent later (POST /emails/{id}/replay), and says nothing about rule deliveries. When it was delivered.
      */
     webhook_fired_at?: string | null;
     smtp_helo?: string | null;
@@ -1994,7 +1994,7 @@ export type EmailDetail = {
         };
     } | null;
     /**
-     * Only for a reader who has this email through a colleague's share of their mail, when that share is their only way to it: the share and who gave it. Null for everyone else, including on your own mail when a rule or share of yours gave it to someone: rule_deliveries counts the webhooks rules delivered it to, and GET /v1/email-rule-shares/{id}/emails lists what a share you gave has given.
+     * Only for a reader who has this email through a colleague's share of their mail, when that share is their only way to it: the share and who gave it. Null for everyone else, including on your own mail when a rule or share of yours gave it to someone: GET /v1/email-rule-shares/{id}/emails lists what a share you gave has given.
      */
     shared_through?: {
         /**
@@ -2012,53 +2012,6 @@ export type EmailDetail = {
             name: string | null;
             email: string | null;
         };
-    } | null;
-    /**
-     * Where Email Rules delivered this email by webhook, for the owner of the mailbox it is at, on their own dashboard session or the Primitive CLI. Null for everyone else, including on another member's mail even for an organization owner or admin (GET /v1/webhooks/deliveries?email_id=<email-id> lists its deliveries, a rule's included), and when it could not be read in time. A key reading it through a rule is not a delivery.
-     */
-    rule_deliveries?: {
-        /**
-         * Each rule over your mail that queued a webhook delivery of this email, newest rule first.
-         */
-        rules: Array<{
-            /**
-             * The rule. A webhook sent it through several rules counts under one.
-             */
-            rule_id: string;
-            name: string;
-            /**
-             * Webhooks it was delivered to.
-             */
-            delivered: number;
-            /**
-             * Webhooks still owed it.
-             */
-            pending: number;
-            /**
-             * Webhooks whose attempts gave up.
-             */
-            failed: number;
-            /**
-             * Webhooks it was not sent to after all.
-             */
-            not_sent: number;
-            /**
-             * The sites it was delivered to at the time, named as the covering view names sites; they may differ from the rule's current receivers there.
-             */
-            hosts: Array<string>;
-            /**
-             * Sites past the listed ones.
-             */
-            hosts_not_listed: number;
-        }>;
-        /**
-         * Rules that queued a delivery of it that are not listed: they do not cover your mailboxes now, or are past the 50 one answer judges.
-         */
-        hidden: number;
-        /**
-         * False when a delivery may be missing: the email is older than 14 days, or it has more deliveries or rules than one answer reads.
-         */
-        complete: boolean;
     } | null;
     /**
      * Display name from the `From:` header, decoded for display: RFC 2047 encoded words are decoded in their declared charset and folded lines are joined (e.g. `Dana Rúiz` for `=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when the header carries no display name. For display only: identify the sender by `from_email`, never by this name, which the sender chooses freely.
@@ -6359,12 +6312,12 @@ export type ListActivityObjectsResult = {
          */
         name: string | null;
         /**
-         * Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections; an objection may also be amended), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, stopped (it no longer covers you, why in stop_reason), or baseline (it already covered you when notices began). pending: a rule started covering your mailbox and the notices have not recorded that start yet (a restart within an hour of the last start notice, or within 5 minutes of the notices finding the rule stopped, is recorded without a new one, unless you were told it stopped since); its id is then the rule's, and created_at when the rule last changed.
+         * Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections; an objection may also be amended or closed), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, stopped (it no longer covers you, why in stop_reason), or baseline (it already covered you when notices began).
          */
         state: string;
         created_at: string;
         /**
-         * When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined, withdrawn or, for an objection, amended); null otherwise, as on every coverage notice (rule_now marks one whose rule was deleted).
+         * When it was deleted, replaced or revoked, when an API key expired, when a repeating send stopped, or when a rule request or objection was decided (accepted, declined, withdrawn or, for an objection, amended); null otherwise, a closed objection included, as on every coverage notice.
          */
         ended_at: string | null;
         /**
@@ -6386,13 +6339,9 @@ export type ListActivityObjectsResult = {
             name: string | null;
         };
         /**
-         * For email_rule_coverage, always: the rule it is about, since names need not be unique (for pending, the same as id). GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or as it last decided on your mail; otherwise it answers not_found, with details.reason rule_deleted once a rule you were told of is deleted.
+         * For email_rule_coverage, always: the rule it is about, since names need not be unique. GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or as it last decided on your mail; otherwise it answers not_found. A deleted rule is told by a stopped notice with stop_reason deleted.
          */
         rule_id?: string;
-        /**
-         * For email_rule_coverage: deleted once the rule it is about has been deleted. Left out while it exists, or when that could not be checked.
-         */
-        rule_now?: 'deleted';
         /**
          * For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active, reaching none of your mailboxes now).
          */
@@ -6413,14 +6362,6 @@ export type ListActivityObjectsResult = {
      * Pass as cursor to read the next page; null on the last page. A page can hold fewer items than limit, or none, while next_cursor is set.
      */
     next_cursor: string | null;
-    /**
-     * With relation=concerning only: about when the notices last looked at your organization; null if never or unread. Coverage since may have no notice yet. They look only while one of its rules could cover someone, or a stopped notice is still to be told, so this stops moving while neither.
-     */
-    as_of?: string | null;
-    /**
-     * With relation=concerning, on the first page only: whether the check for rules that started covering you without their start notice (state pending, listed ahead of the notices and beyond limit) was finished. false: some may be missing. Absent where there is nothing to check.
-     */
-    pending_complete?: boolean;
 };
 
 export type GetEmailRuleVocabularyResult = {
@@ -6599,13 +6540,7 @@ export type EmailRuleSampleJudgment = {
         /**
          * How sure the answer is, from 0 to 1: the chance of the answer given, as webhook payloads carry it. Null when unanswered.
          */
-        confidence?: number | null;
-        /**
-         * Deprecated: read confidence. The chance the answer is yes.
-         *
-         * @deprecated
-         */
-        probability: number | null;
+        confidence: number | null;
         error_class?: string;
     }>;
 };
@@ -6715,11 +6650,11 @@ export type TestEmailRuleResult = {
         /**
          * When the oldest email tested arrived, expected ones included; null when none was. The window is the newest 200 the scope reaches, so a narrower scope reaches further back: compare counts only over the same scope and span.
          */
-        oldest_at?: string | null;
+        oldest_at: string | null;
         /**
          * When the newest email tested arrived; null when none was.
          */
-        newest_at?: string | null;
+        newest_at: string | null;
     };
     counts: {
         emails: number;
@@ -6727,7 +6662,7 @@ export type TestEmailRuleResult = {
         near_miss: number;
         no_match: number;
         unclassified: number;
-        skipped?: number;
+        skipped: number;
         not_found: number;
     };
     classification: {
@@ -6810,13 +6745,7 @@ export type TestEmailRuleResult = {
             /**
              * How sure the answer is, from 0 to 1: the chance of the answer given, as webhook payloads carry it. Null when unanswered.
              */
-            confidence?: number | null;
-            /**
-             * Deprecated: read confidence. The chance the answer is yes.
-             *
-             * @deprecated
-             */
-            probability: number | null;
+            confidence: number | null;
             error_class?: string;
         }>;
         /**
@@ -6944,13 +6873,7 @@ export type EmailRuleLookAlike = {
         /**
          * How sure the answer is, from 0 to 1: the chance of the answer given, as webhook payloads carry it. Null when unanswered.
          */
-        confidence?: number | null;
-        /**
-         * Deprecated: read confidence. The chance the answer is yes.
-         *
-         * @deprecated
-         */
-        probability: number | null;
+        confidence: number | null;
         error_class?: string;
     }>;
 };
@@ -7004,10 +6927,6 @@ export type GenerateLookAlikesResult = {
          */
         dropped: number;
     };
-    /**
-     * That the emails are made up and were never sent or stored.
-     */
-    note: string;
 };
 
 export type TestEmailRuleOnSampleRequest = {
@@ -7072,10 +6991,6 @@ export type TestEmailRuleOnSampleRequest = {
          */
         spam_score?: number;
     };
-    /**
-     * With true, a grant rule that matches is also judged against the active do-not-share rules over the first recipient's mailbox, which you must read in full and the rule must run over; see protection. Limited to 20 an hour per member.
-     */
-    with_protection?: boolean;
 };
 
 export type TestEmailRuleOnSampleResult = {
@@ -7125,13 +7040,7 @@ export type TestEmailRuleOnSampleResult = {
         /**
          * How sure the answer is, from 0 to 1: the chance of the answer given, as webhook payloads carry it. Null when unanswered.
          */
-        confidence?: number | null;
-        /**
-         * Deprecated: read confidence. The chance the answer is yes.
-         *
-         * @deprecated
-         */
-        probability: number | null;
+        confidence: number | null;
         error_class?: string;
     }>;
     /**
@@ -7150,31 +7059,6 @@ export type TestEmailRuleOnSampleResult = {
             confidence: number;
         };
     };
-    /**
-     * With with_protection: whether a match would be shared. Nothing is stored.
-     */
-    protection?: {
-        /**
-         * The mailbox judged: the first recipient.
-         */
-        mailbox: string;
-        /**
-         * not_matched: the rule did not match, so nothing would be shared and no do-not-share rule was judged.
-         */
-        outcome: 'shared' | 'withheld' | 'not_matched';
-        /**
-         * Do-not-share rules you can see that would keep it from being shared. undecided: left undecided as real mail would leave it, or not reached by this test (past 50 rules, 10 rules' questions, or the time limit); it is held back either way.
-         */
-        withheld_by: Array<{
-            id: string;
-            name: string;
-            reason: 'matched' | 'undecided';
-        }>;
-        /**
-         * Rules you cannot see that would.
-         */
-        withheld_by_hidden: number;
-    };
 };
 
 export type EmailRuleWritten = {
@@ -7192,30 +7076,25 @@ export type EmailRuleWritten = {
     /**
      * Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
      */
-    evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
+    evaluation_scope: 'author' | 'own_mailboxes' | 'selected';
     /**
      * What a selected rule names; null for any other scope.
      */
-    scope_selection?: EmailRuleScopeNames | null;
+    scope_selection: EmailRuleScopeNames | null;
     current_version: number | null;
     /**
      * Moves on by one with every update. Send it as if_revision.
      */
-    revision?: number;
-    author_user_id: string;
-    author?: EmailRuleAuthor;
+    revision: number;
+    author: EmailRuleAuthor;
     /**
      * Whether you are its author, in your current membership. Only its author edits it.
      */
     is_author: boolean;
     /**
-     * To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0.
+     * To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to it waiting for their answer (GET /email-rule-objections).
      */
     pending_objections?: number;
-    /**
-     * With pending_objections above 0: that members objected (each message says what they ask: to turn it off, narrow it or explain it), and how to answer.
-     */
-    objection_notice?: string;
     created_at: string;
     updated_at: string;
     /**
@@ -7226,10 +7105,6 @@ export type EmailRuleWritten = {
      * Names in scope_selection that match nothing this organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
      */
     scope_warnings?: Array<EmailRuleScopeWarning>;
-    /**
-     * On a grant rule's create answer: that active do-not-share rules reaching an email run first: one that matches it keeps it from being shared through this rule, and one that cannot decide it holds it back while it is decided again for up to a day; it is shared through this rule only if none of them then matches it.
-     */
-    do_not_share_note?: string;
     /**
      * Its saved expectations, each list by email id, as stored: on every create, and on an update that set or removed them.
      */
@@ -7243,24 +7118,13 @@ export type EmailRuleWritten = {
     expectation_samples?: Array<EmailRuleExpectationSample>;
     expectations_check?: EmailRuleExpectationsCheck;
     /**
-     * When this write saved an earlier version again (restore_version): which, and that the scope is not part of a version.
-     */
-    restored_from?: {
-        version: number;
-        note: string;
-    };
-    /**
-     * After an update that saved a version, or turned a grant rule active: API keys listing the rule and the webhooks they own, which read and receive what a grant rule grants from now on. shares_ended is always 0: a new version keeps the rule's share (share_notice says so). Saving a version does not by itself change the rule's state. Absent after any other write, and if not read.
+     * After an update that saved a version, or turned a grant rule active: your own keys and webhooks that receive what it grants from now on, counted as receivers counts them, and how many live shares it has. Nothing about a colleague it is shared with is counted. All zero for a rule that is not an active grant rule. Absent after any other write, and if not read.
      */
     affects?: {
         keys: number;
-        endpoints: number;
-        shares_ended: number;
+        webhooks: number;
+        shares: number;
     };
-    /**
-     * After a write that saved a version of a rule with a live share: that the share goes on under it, given even when affects is not, with whom it is and the version they accepted when those can be read.
-     */
-    share_notice?: string;
 };
 
 export type EmailRuleScopeNames = {
@@ -7375,30 +7239,25 @@ export type EmailRule = {
     /**
      * Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
      */
-    evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
+    evaluation_scope: 'author' | 'own_mailboxes' | 'selected';
     /**
      * What a selected rule names; null for any other scope.
      */
-    scope_selection?: EmailRuleScopeNames | null;
+    scope_selection: EmailRuleScopeNames | null;
     current_version: number | null;
     /**
      * Moves on by one with every update. Send it as if_revision.
      */
-    revision?: number;
-    author_user_id: string;
-    author?: EmailRuleAuthor;
+    revision: number;
+    author: EmailRuleAuthor;
     /**
      * Whether you are its author, in your current membership. Only its author edits it.
      */
     is_author: boolean;
     /**
-     * To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0.
+     * To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to it waiting for their answer (GET /email-rule-objections).
      */
     pending_objections?: number;
-    /**
-     * With pending_objections above 0: that members objected (each message says what they ask: to turn it off, narrow it or explain it), and how to answer.
-     */
-    objection_notice?: string;
     created_at: string;
     updated_at: string;
 };
@@ -7434,30 +7293,25 @@ export type EmailRuleRead = {
     /**
      * Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
      */
-    evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
+    evaluation_scope: 'author' | 'own_mailboxes' | 'selected';
     /**
      * What a selected rule names; null for any other scope.
      */
-    scope_selection?: EmailRuleScopeNames | null;
+    scope_selection: EmailRuleScopeNames | null;
     current_version: number | null;
     /**
      * Moves on by one with every update. Send it as if_revision.
      */
-    revision?: number;
-    author_user_id: string;
-    author?: EmailRuleAuthor;
+    revision: number;
+    author: EmailRuleAuthor;
     /**
      * Whether you are its author, in your current membership. Only its author edits it.
      */
     is_author: boolean;
     /**
-     * To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0.
+     * To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to it waiting for their answer (GET /email-rule-objections).
      */
     pending_objections?: number;
-    /**
-     * With pending_objections above 0: that members objected (each message says what they ask: to turn it off, narrow it or explain it), and how to answer.
-     */
-    objection_notice?: string;
     created_at: string;
     updated_at: string;
     /**
@@ -7467,14 +7321,14 @@ export type EmailRuleRead = {
     /**
      * Its saved expectations, each list by email id.
      */
-    expectations?: {
+    expectations: {
         match: Array<string>;
         no_match: Array<string>;
     };
     /**
      * Its saved made-up emails, oldest first.
      */
-    expectation_samples?: Array<EmailRuleExpectationSample>;
+    expectation_samples: Array<EmailRuleExpectationSample>;
 };
 
 export type GetEmailRuleResult = EmailRuleRead;
@@ -7502,10 +7356,6 @@ export type UpdateEmailRuleRequest = {
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
-    /**
-     * The current_version you read: if it has moved, nothing is saved (409 email_rule_conflict, version_moved). It guards versions only; if_revision guards every update.
-     */
-    if_version?: number;
     /**
      * Replaces its saved expectations (author only); null removes them.
      */
@@ -7538,7 +7388,7 @@ export type DeleteEmailRuleResult = {
     /**
      * The shares of this rule that the delete ended (end_reason rule_deleted). Each keeps its record.
      */
-    ended_shares?: Array<string>;
+    ended_shares: Array<string>;
     /**
      * The API keys, not revoked, that still list the rule and that you may read (GET /v1/keys). They now read nothing through it; edit or revoke them. Left out, with other_keys, when the keys could not be read.
      */
@@ -7551,10 +7401,6 @@ export type DeleteEmailRuleResult = {
      * How many more keys, not revoked, list the rule that you may not read. They are not named.
      */
     other_keys?: number;
-    /**
-     * When the delete ended a share: that it did, with whom it was with and the version they accepted when those can be read.
-     */
-    share_notice?: string;
 };
 
 export type EmailRuleWithheldBy = {
@@ -7581,7 +7427,7 @@ export type ListEmailRuleDecisionsResult = Array<{
      */
     parts: Array<unknown>;
     /**
-     * The answers to the rule's own questions, when they were asked: each with question, answer, confidence, the deprecated probability and, when unanswered, error_class, as a test gives them.
+     * The answers to the rule's own questions, when they were asked: each with question, answer, confidence and, when unanswered, error_class, as a test gives them.
      */
     question_answers: Array<unknown>;
     /**
@@ -7600,15 +7446,15 @@ export type ListEmailRuleDecisionsResult = Array<{
     /**
      * The decided email's sender address, as GET /v1/emails/{id} shows it.
      */
-    from_address?: string | null;
+    from_address: string | null;
     /**
      * The decided email's subject, as GET /v1/emails/{id} shows it.
      */
-    subject?: string | null;
+    subject: string | null;
     /**
      * When the decided email arrived. Null, with the other two, when you are not shown the email (it awaits sender authentication).
      */
-    received_at?: string | null;
+    received_at: string | null;
 }>;
 
 export type EmailRuleCoveringAuthor = {
@@ -7624,7 +7470,7 @@ export type EmailRuleCoveringAuthor = {
 };
 
 /**
- * Who receives what the rule shares, by person and count. As receivers, empty unless it is an active grant rule.
+ * Who receives what the rule shares, by person and count. Empty unless it is an active grant rule.
  */
 export type EmailRuleReceivers = {
     /**
@@ -7643,14 +7489,6 @@ export type EmailRuleReceivers = {
             name?: string | null;
         };
         count: number;
-        /**
-         * On a rule over your mail: how many of these keys also list one of your own mailboxes, or its domain, so they read your mail there beyond what this rule matches. It counts what they can read, not whether any has read an email.
-         */
-        reads_in_full?: number;
-        /**
-         * When the newest of these was made, to the minute: a key, a webhook or the share, or the rule (the share, for what reaches it only through the share) if that was later. Not when a key was given access to this rule, or anything turned back on; a rotated key shows as newly made, and one key on two rules can show the same minute under both.
-         */
-        newest_at?: string;
     }>;
     /**
      * Webhooks taking received mail, bounces or reports that are sent what it matches: those of the key delivery acts as, when it lists the rule or its live share (owner: its holder, or the organization), and those of the member it is shared with (owner: that member).
@@ -7668,18 +7506,6 @@ export type EmailRuleReceivers = {
             name?: string | null;
         };
         count: number;
-        /**
-         * Distinct sites they deliver to (the domain a host is registered under, an app's own name on a known app platform, or a function URL service in its region), sorted, at most 10; "unknown host" (last) for any that cannot be named.
-         */
-        hosts?: Array<string>;
-        /**
-         * Hosts past those listed.
-         */
-        hosts_not_listed?: number;
-        /**
-         * When the newest of these was made, to the minute: a key, a webhook or the share, or the rule (the share, for what reaches it only through the share) if that was later. Not when a key was given access to this rule, or anything turned back on; a rotated key shows as newly made, and one key on two rules can show the same minute under both.
-         */
-        newest_at?: string;
     }>;
     /**
      * The rule's live share (at most one), by its member, if they can read it and it is among their newest 20 shares.
@@ -7697,30 +7523,10 @@ export type EmailRuleReceivers = {
             name: string | null;
         };
         count: number;
-        /**
-         * When the newest of these was made, to the minute: a key, a webhook or the share, or the rule (the share, for what reaches it only through the share) if that was later. Not when a key was given access to this rule, or anything turned back on; a rotated key shows as newly made, and one key on two rules can show the same minute under both.
-         */
-        newest_at?: string;
     }>;
 };
 
 export type ListEmailRuleResultsResult = {
-    /**
-     * The email these results are about, so a saved answer says which one it was.
-     */
-    email?: {
-        id: string;
-        /**
-         * The sender address, as GET /v1/emails/{id} shows it.
-         */
-        from_address: string | null;
-        /**
-         * The mailbox this copy of the email was received in, as GET /v1/emails/{id} shows it.
-         */
-        recipient: string;
-        subject: string | null;
-        received_at: string;
-    };
     /**
      * Rules you can see, and read_only ones: matched first, then not matched, then not run; newest first within each.
      */
@@ -7744,7 +7550,7 @@ export type ListEmailRuleResultsResult = {
             /**
              * Not matched, but nearly: its conditions held and its questions did not match it, or it needs several parts and exactly one failed while at least one part that held is not an exclusion (a top-level not, or is_false). False when detail_withheld is true. Decisions recorded under the earlier definition counted an exclusion too.
              */
-            near_miss?: boolean;
+            near_miss: boolean;
             /**
              * How each top-level part of the rule decided. Empty when a fact the rule reads was missing, so it was not evaluated, or when detail_withheld is true.
              */
@@ -7762,13 +7568,7 @@ export type ListEmailRuleResultsResult = {
                 /**
                  * How sure the answer is, from 0 to 1: the chance of the answer given, as webhook payloads carry it. Null when unanswered.
                  */
-                confidence?: number | null;
-                /**
-                 * Deprecated: read confidence. The chance the answer is yes.
-                 *
-                 * @deprecated
-                 */
-                probability: number | null;
+                confidence: number | null;
                 error_class?: string;
             }>;
             /**
@@ -7790,10 +7590,6 @@ export type ListEmailRuleResultsResult = {
             created_at: string;
         } | null;
         /**
-         * What is known about a rule with no result on this email. draft: the rule is a draft now. created_after_email: the rule was created after the email arrived. outside_scope: the mailbox this email is in is outside what its scope names (its author's own mailboxes, its selection, or all its author reads now), so it does not decide on it. Null when it has a result, or when nothing is known (it may not have decided yet).
-         */
-        not_run_reason: 'draft' | 'created_after_email' | 'outside_scope' | null;
-        /**
          * On a do-not-share rule whose author is no longer a member of the organization: it blocks nothing now, whatever it decided. Absent otherwise.
          */
         author_left?: boolean;
@@ -7814,30 +7610,7 @@ export type ListEmailRuleResultsResult = {
     /**
      * Rules you can see past the 50 listed.
      */
-    not_listed?: number;
-    /**
-     * What the classifier read from this email (one classification per vocabulary); null when it has none (not classified, or never will be), or while the email's content is withheld, discarded or failed to parse.
-     */
-    classification?: {
-        id: string;
-        vocabulary: string;
-        classified_at: string;
-        /**
-         * Every fact column, as rule conditions read it: the value (a multi's options lowercased; null if the classifier left it out or wrote another shape) and its confidence. It can differ from GET /emails/{id} understanding, which shows the facts as written.
-         */
-        facts: {
-            [key: string]: {
-                value: string | number | boolean | Array<string> | unknown;
-                confidence?: number | null;
-                /**
-                 * A multi fact's chosen values, each with its own confidence: what a min_confidence on the column tests. Given in rule test results.
-                 */
-                value_confidences?: {
-                    [key: string]: number;
-                };
-            };
-        };
-    } | null;
+    not_listed: number;
 };
 
 export type ListEmailRuleVersionsResult = Array<EmailRuleVersion>;
@@ -7887,7 +7660,7 @@ export type ListEmailRuleScopeOptionsResult = {
     /**
      * Whether a do_not_share rule over only your own mail would run for you: it covers every own mailbox you read, including ones you could not share.
      */
-    own_mail_to_block?: boolean;
+    own_mail_to_block: boolean;
     /**
      * Inboxes you can read, matching q. For someone who reads the whole organization, the inboxes known as someone's: member addresses, members' verified work emails at the organization's domains, agents' addresses and inboxes with shared access. Otherwise the inboxes your access lists (search with q for those past the first page). See may_name_unlisted for what else you may name.
      */
@@ -7901,9 +7674,9 @@ export type ListEmailRuleScopeOptionsResult = {
      */
     more: boolean;
     /**
-     * Whether you may also name an inbox this list never shows, however it is searched (more only says whether a search would show further ones): true when you read the whole organization (any address, such as an inbox at its domains nobody has claimed yet) or read a domain (any address there your access does not leave out). Name it in scope_selection.addresses as you would a listed one. Absent from a server that predates it.
+     * Whether you may also name an inbox this list never shows, however it is searched (more only says whether a search would show further ones): true when you read the whole organization (any address, such as an inbox at its domains nobody has claimed yet) or read a domain (any address there your access does not leave out). Name it in scope_selection.addresses as you would a listed one.
      */
-    may_name_unlisted?: boolean;
+    may_name_unlisted: boolean;
 };
 
 export type EmailRuleRequestProposer = {
@@ -7977,13 +7750,12 @@ export type CreateEmailRuleRequestResult = {
      */
     explanation: string | null;
     /**
-     * Primitive's notes on the rule as asked, from its tree and english, worked out on every read.
+     * Primitive's notes on the rule as asked, from its tree and english, worked out on every read. To the member asked while pending, also that it carries no made-up emails it was tested on, and how to test it on look-alikes and on their own mail.
      */
     warnings: Array<string>;
     vocabulary: string;
     created_at: string;
     decided_at: string | null;
-    decided_by_user_id: string | null;
     proposer: EmailRuleRequestProposer;
     target: EmailRuleRequestTarget;
     /**
@@ -7999,27 +7771,15 @@ export type CreateEmailRuleRequestResult = {
     /**
      * What the member asking wrote about why; null when they wrote nothing.
      */
-    message?: string | null;
+    message: string | null;
     /**
      * Why the member asked declined it; null unless they gave a reason when declining.
      */
-    decline_reason?: string | null;
+    decline_reason: string | null;
     /**
-     * Once accepted: whether the rule was changed first, as on the share. Null until then, or when unreadable.
+     * For the member asked, while pending: what accepting would share. Null otherwise. Whether it was accepted with changes is edited_on_accept on the share.
      */
-    edited_on_accept?: boolean | null;
-    /**
-     * For the member asked, while pending: who asked (as proposer names them), what the rule actually does (explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results and rule_deliveries). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
-     */
-    notice?: string | null;
-    /**
-     * Whether the member asked can accept it now under their role. Null unless you can list members and their roles (members:read), or when it could not be read.
-     */
-    target_can_accept?: boolean | null;
-    /**
-     * Why the member asked cannot accept it yet, naming the permission their role lacks. The request is still sent. Null when they can, or when target_can_accept is null.
-     */
-    target_warning?: string | null;
+    share_terms: string | null;
     /**
      * Present, as true, when the create carried an Idempotency-Key and you already had a pending request to this member asking exactly this (name, english, tree and message, naming the member the same way): that request is returned (200), and no second one is made or sent.
      */
@@ -8068,13 +7828,12 @@ export type EmailRuleRequest = {
      */
     explanation: string | null;
     /**
-     * Primitive's notes on the rule as asked, from its tree and english, worked out on every read.
+     * Primitive's notes on the rule as asked, from its tree and english, worked out on every read. To the member asked while pending, also that it carries no made-up emails it was tested on, and how to test it on look-alikes and on their own mail.
      */
     warnings: Array<string>;
     vocabulary: string;
     created_at: string;
     decided_at: string | null;
-    decided_by_user_id: string | null;
     proposer: EmailRuleRequestProposer;
     target: EmailRuleRequestTarget;
     /**
@@ -8090,19 +7849,15 @@ export type EmailRuleRequest = {
     /**
      * What the member asking wrote about why; null when they wrote nothing.
      */
-    message?: string | null;
+    message: string | null;
     /**
      * Why the member asked declined it; null unless they gave a reason when declining.
      */
-    decline_reason?: string | null;
+    decline_reason: string | null;
     /**
-     * Once accepted: whether the rule was changed first, as on the share. Null until then, or when unreadable.
+     * For the member asked, while pending: what accepting would share. Null otherwise. Whether it was accepted with changes is edited_on_accept on the share.
      */
-    edited_on_accept?: boolean | null;
-    /**
-     * For the member asked, while pending: who asked (as proposer names them), what the rule actually does (explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results and rule_deliveries). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
-     */
-    notice?: string | null;
+    share_terms: string | null;
 };
 
 export type ListEmailRuleRequestsResult = Array<EmailRuleRequest>;
@@ -8139,30 +7894,25 @@ export type EmailRuleWithVersion = {
     /**
      * Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
      */
-    evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
+    evaluation_scope: 'author' | 'own_mailboxes' | 'selected';
     /**
      * What a selected rule names; null for any other scope.
      */
-    scope_selection?: EmailRuleScopeNames | null;
+    scope_selection: EmailRuleScopeNames | null;
     current_version: number | null;
     /**
      * Moves on by one with every update. Send it as if_revision.
      */
-    revision?: number;
-    author_user_id: string;
-    author?: EmailRuleAuthor;
+    revision: number;
+    author: EmailRuleAuthor;
     /**
      * Whether you are its author, in your current membership. Only its author edits it.
      */
     is_author: boolean;
     /**
-     * To its author, on the dashboard or the Primitive CLI: objections to it waiting for their answer (GET /email-rule-objections). A write's answer leaves it out when it could not be read in time: absent is not 0.
+     * To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to it waiting for their answer (GET /email-rule-objections).
      */
     pending_objections?: number;
-    /**
-     * With pending_objections above 0: that members objected (each message says what they ask: to turn it off, narrow it or explain it), and how to answer.
-     */
-    objection_notice?: string;
     created_at: string;
     updated_at: string;
     /**
@@ -8177,9 +7927,9 @@ export type EmailRuleShare = {
     created_at: string;
     ended_at: string | null;
     /**
-     * Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin, rule_changed (a new version of the rule was saved, on a share that ended before new versions kept shares) or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not.
+     * Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not.
      */
-    end_reason: 'stopped_by_granter' | 'removed_by_beneficiary' | 'stopped_by_admin' | 'rule_changed' | 'rule_deleted' | null;
+    end_reason: 'stopped_by_granter' | 'removed_by_beneficiary' | 'stopped_by_admin' | 'rule_deleted' | null;
     /**
      * The version of the rule that was accepted. A later version keeps the share: what each version matches is shared from when it is saved.
      */
@@ -8197,9 +7947,9 @@ export type EmailRuleShare = {
      */
     delivery_paused: boolean | null;
     /**
-     * For the member it is shared with, on the dashboard or the Primitive CLI, while it is live and their access reads content: whether it is working, so a quiet mailbox can be told from a stopped share. Null otherwise.
+     * For the member it is shared with, on the dashboard or the Primitive CLI, while it is live and their access reads content: whether it is working, so a quiet mailbox can be told from a stopped share. Null otherwise, and when it could not be read.
      */
-    activity?: EmailRuleShareActivity | null;
+    activity: EmailRuleShareActivity | null;
     /**
      * Whether you are the member sharing their mail.
      */
@@ -8228,25 +7978,9 @@ export type EmailRuleShare = {
 
 export type EmailRuleShareActivity = {
     /**
-     * Whether the rule is active now: only an active rule shares.
-     */
-    rule_active: boolean;
-    /**
-     * The start of the hour in which the rule last decided on any email in the sharing member's mailboxes since the share began, counting only hours that have ended and the hour of the newest email shared; null if none, or not read.
+     * The start of the hour in which the rule last decided on any email in the sharing member's mailboxes since the share began, counting only hours that have ended and the hour of the newest email shared; null if none.
      */
     last_decided_at: string | null;
-    /**
-     * Emails this share has shared, counted up to 10,000; null when these could not be read.
-     */
-    shared_emails: number | null;
-    /**
-     * Present when it has shared more than 10,000.
-     */
-    shared_emails_more?: boolean;
-    /**
-     * When it last shared one; null if it has not, or not read.
-     */
-    last_shared_at: string | null;
 };
 
 export type EmailRuleShareGranter = {
@@ -8296,13 +8030,8 @@ export type AcceptEmailRuleRequestRequest = {
 };
 
 export type AcceptEmailRuleRequestResult = {
-    /**
-     * What is now shared, in words. When you changed the rule and it can now match mail the request left out by who it was sent to (such as mail where an address is only copied), that comes first; when you changed its english or tree (edited_on_accept; a new name alone is no change), that rule.current is what you agreed to and request what was asked.
-     */
-    notice?: string;
     rule: EmailRuleWithVersion;
     share: EmailRuleShare;
-    request: EmailRuleRequest;
 };
 
 export type ListEmailRuleSharesResult = Array<EmailRuleShare>;
@@ -8410,8 +8139,7 @@ export type ListEmailRuleShareEmailsResult = Array<{
 export type EndEmailRuleShareResult = {
     ended: boolean;
     rule_id?: string;
-    note?: string;
-    [key: string]: unknown;
+    note: string;
 };
 
 export type EmailRuleCoveringMe = {
@@ -8425,10 +8153,6 @@ export type EmailRuleCoveringMe = {
      * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
      */
     kind: 'grant' | 'do_not_share';
-    /**
-     * On a grant rule: that the active do-not-share rules over an email run first, keeping from it what they match and holding back what they cannot decide, which is decided again for up to a day and shared only if none of them then matches it.
-     */
-    do_not_share_note?: string;
     author: EmailRuleCoveringAuthor;
     /**
      * Whether you wrote it.
@@ -8437,13 +8161,9 @@ export type EmailRuleCoveringMe = {
     covers: EmailRuleCoverage;
     current_version: number | null;
     /**
-     * Null when it could not be read in time, or for a rule shown in draft or observe that turned active or was deleted after the page was read; try again.
+     * Who receives what it matches now (empty lists for a rule in draft or observe). Null when it could not be read in time; try again.
      */
     receivers: EmailRuleReceivers | null;
-    /**
-     * For a grant rule in draft or observe: who would receive what it matches once it is turned active. None of them receives anything yet. Null for any other rule, and as receivers is null.
-     */
-    receivers_once_active: EmailRuleReceivers | null;
     created_at: string;
     /**
      * What its author asked for, in their words, at its current version. Null when it has no version, was deleted after the page was read, or the words could not be read in time; GET /v1/email-rules/covering-me/{id} shows them with its tree.
@@ -8482,10 +8202,6 @@ export type EmailRuleCoveringMeRead = {
      * grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
      */
     kind: 'grant' | 'do_not_share';
-    /**
-     * On a grant rule: that the active do-not-share rules over an email run first, keeping from it what they match and holding back what they cannot decide, which is decided again for up to a day and shared only if none of them then matches it.
-     */
-    do_not_share_note?: string;
     author: EmailRuleCoveringAuthor;
     /**
      * Whether you wrote it.
@@ -8500,13 +8216,9 @@ export type EmailRuleCoveringMeRead = {
      */
     current_version: number | null;
     /**
-     * Null when covers_now is false (who receives it now is not about your mail), when it could not be read in time, or for a rule shown in draft or observe that turned active or was deleted after it was read; try again.
+     * As on the list; also null when covers_now is false (who receives it now is not about your mail).
      */
     receivers: EmailRuleReceivers | null;
-    /**
-     * As on the list; also null when covers_now is false.
-     */
-    receivers_once_active: EmailRuleReceivers | null;
     created_at: string;
     /**
      * Whether it covers one of your own mailboxes now. False for a rule you see only because it decided on mail at your own mailbox before.
@@ -8558,7 +8270,7 @@ export type EmailRuleDecisionOnMyMail = {
      */
     parts: Array<unknown>;
     /**
-     * The answers to the rule's own questions, when they were asked: each with question, answer, confidence, the deprecated probability and, when unanswered, error_class, as a test gives them.
+     * The answers to the rule's own questions, when they were asked: each with question, answer, confidence and, when unanswered, error_class, as a test gives them.
      */
     question_answers: Array<unknown>;
     /**
@@ -8584,9 +8296,9 @@ export type ListEmailRuleVersionsCoveringMeResult = Array<EmailRuleCoveringMeVer
 export type EmailRuleObjection = {
     id: string;
     /**
-     * pending until the rule's author accepts it (turning the rule off), declines it, or answers it amended (they saved a newer version of the rule), or the member who made it withdraws it; never changes after.
+     * pending until the rule's author accepts it (turning the rule off), declines it, or answers it amended (they saved a newer version of the rule), or the member who made it withdraws it; never changes after. closed: nobody can answer it any more (its rule was deleted, or its author is no longer a member); status=pending leaves it out.
      */
-    status: 'pending' | 'accepted' | 'declined' | 'withdrawn' | 'amended';
+    status: 'pending' | 'accepted' | 'declined' | 'withdrawn' | 'amended' | 'closed';
     rule: {
         /**
          * Null once the rule was deleted outright.
@@ -8629,7 +8341,6 @@ export type EmailRuleObjection = {
     amend_note: string | null;
     created_at: string;
     decided_at: string | null;
-    decided_by_user_id: string | null;
 };
 
 export type EmailRuleObjectionPerson = {
@@ -21394,7 +21105,7 @@ export type ListActivityObjectsData = {
          */
         state?: 'all' | 'live' | 'ended';
         /**
-         * Objects per page, from 1 to 200; defaults to 50. With relation=concerning the first page may also hold pending items beyond it.
+         * Objects per page, from 1 to 200; defaults to 50.
          */
         limit?: number;
         /**
@@ -21654,7 +21365,7 @@ export type TestEmailRuleOnSampleData = {
 
 export type TestEmailRuleOnSampleErrors = {
     /**
-     * validation_error: give exactly one of tree, rule_id and request_id (evaluation_scope, scope_selection and kind only with tree), an email with a sender, 1 to 50 To addresses (and up to 50 Cc), and a text body, and a tree that is valid for the column contract and within the size limits for a saved rule. A saved rule's current version or a request's rule that no longer renders answers details.reason version_not_renderable. With with_protection: not_a_grant_rule, or protection_mailbox_outside_rule when the rule does not run over the first recipient.
+     * validation_error: give exactly one of tree, rule_id and request_id (evaluation_scope, scope_selection and kind only with tree), an email with a sender, 1 to 50 To addresses (and up to 50 Cc), and a text body, and a tree that is valid for the column contract and within the size limits for a saved rule. A saved rule's current version or a request's rule that no longer renders answers details.reason version_not_renderable.
      */
     400: ErrorResponse;
     /**
@@ -21662,7 +21373,7 @@ export type TestEmailRuleOnSampleErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read. forbidden with details.reason covering_view_only: you read this rule only in the covering view, since it decided on your mail before and covers none of your mailboxes now (details.covering_view). grant_forbidden protection_mailbox_not_read: with_protection at a mailbox you do not read in full.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read. forbidden with details.reason covering_view_only: you read this rule only in the covering view, since it decided on your mail before and covers none of your mailboxes now (details.covering_view).
      */
     403: ErrorResponse;
     /**
@@ -21677,10 +21388,6 @@ export type TestEmailRuleOnSampleErrors = {
      * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
-    /**
-     * service_unavailable: with_protection could not read the do-not-share rules in time (protection_unavailable), or its limit could not be checked (protection_limit_unavailable).
-     */
-    503: ErrorResponse;
 };
 
 export type TestEmailRuleOnSampleError = TestEmailRuleOnSampleErrors[keyof TestEmailRuleOnSampleErrors];
@@ -22655,9 +22362,9 @@ export type ListEmailRuleSharesData = {
     path?: never;
     query?: {
         /**
-         * received: rules shared with you; given: rules you share; all: every share you can see (owners and admins see the organization's).
+         * received: rules shared with you; all: every share in the organization, for owners and admins acting as themselves only (403 with details.reason owner_or_admin_only otherwise). Rules you share: GET /email-rule-shares/given.
          */
-        box?: 'received' | 'given' | 'all';
+        box?: 'received' | 'all';
         /**
          * Whether to list live shares, ended ones, or both.
          */
@@ -22684,7 +22391,7 @@ export type ListEmailRuleSharesErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. Or forbidden with details.reason owner_or_admin_only: box=all from anyone but an owner or admin acting as themselves.
      */
     403: ErrorResponse;
     /**
@@ -22989,7 +22696,7 @@ export type GetEmailRuleCoveringMeErrors = {
      */
     403: ErrorResponse;
     /**
-     * not_found: no rule with this id covers your mailboxes or decided on your mail; details.reason rule_deleted (with details.rule_name) for one deleted after you were told it covered you.
+     * not_found: no rule with this id covers your mailboxes or decided on your mail.
      */
     404: ErrorResponse;
     /**
@@ -23050,7 +22757,7 @@ export type ListEmailRuleDecisionsOnMyMailErrors = {
      */
     403: ErrorResponse;
     /**
-     * not_found: no rule with this id covers your mailboxes or decided on your mail; details.reason rule_deleted (with details.rule_name) for one deleted after you were told it covered you.
+     * not_found: no rule with this id covers your mailboxes or decided on your mail.
      */
     404: ErrorResponse;
     /**
@@ -23112,7 +22819,7 @@ export type ListEmailRuleVersionsCoveringMeErrors = {
      */
     403: ErrorResponse;
     /**
-     * not_found: no rule with this id covers your mailboxes or decided on your mail; details.reason rule_deleted (with details.rule_name) for one deleted after you were told it covered you.
+     * not_found: no rule with this id covers your mailboxes or decided on your mail.
      */
     404: ErrorResponse;
     /**
@@ -23144,7 +22851,7 @@ export type ListEmailRuleObjectionsData = {
          */
         box?: 'mine' | 'outgoing' | 'incoming' | 'all';
         /**
-         * pending (the default), decided, or any.
+         * pending (the default; not closed ones), decided (closed ones included), or any.
          */
         status?: 'pending' | 'decided' | 'any';
         /**
@@ -23325,7 +23032,7 @@ export type WithdrawEmailRuleObjectionErrors = {
      */
     404: ErrorResponse;
     /**
-     * not_pending: it was already decided or withdrawn (details.status).
+     * not_pending: it was already accepted, declined, amended or withdrawn (details.status).
      */
     409: ErrorResponse;
     /**
@@ -23383,7 +23090,7 @@ export type DeclineEmailRuleObjectionErrors = {
      */
     404: ErrorResponse;
     /**
-     * not_pending: it was already decided or withdrawn (details.status).
+     * not_pending: it was already decided, withdrawn or closed (details.status).
      */
     409: ErrorResponse;
     /**
@@ -23437,7 +23144,7 @@ export type AcceptEmailRuleObjectionErrors = {
      */
     404: ErrorResponse;
     /**
-     * not_pending: it was already decided or withdrawn (details.status). conflict with details.reason rule_deleted: the rule was deleted; decline it instead.
+     * not_pending: it was already decided, withdrawn or closed (details.status). conflict with details.reason rule_deleted: the rule was deleted while it was being accepted.
      */
     409: ErrorResponse;
     /**
@@ -23495,7 +23202,7 @@ export type AmendEmailRuleObjectionErrors = {
      */
     404: ErrorResponse;
     /**
-     * not_pending: it was already decided or withdrawn (details.status). conflict with details.reason no_new_version: the rule has no version newer than details.objected_version (details.current_version is its version now); rule_deleted: the rule was deleted.
+     * not_pending: it was already decided, withdrawn or closed (details.status). conflict with details.reason no_new_version: the rule has no version newer than details.objected_version (details.current_version is its version now); rule_deleted: the rule was deleted.
      */
     409: ErrorResponse;
     /**

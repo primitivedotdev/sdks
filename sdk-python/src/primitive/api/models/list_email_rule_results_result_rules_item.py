@@ -9,9 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.list_email_rule_results_result_rules_item_kind import ListEmailRuleResultsResultRulesItemKind
-from ..models.list_email_rule_results_result_rules_item_not_run_reason_type_1 import ListEmailRuleResultsResultRulesItemNotRunReasonType1
-from ..models.list_email_rule_results_result_rules_item_not_run_reason_type_2_type_1 import ListEmailRuleResultsResultRulesItemNotRunReasonType2Type1
-from ..models.list_email_rule_results_result_rules_item_not_run_reason_type_3_type_1 import ListEmailRuleResultsResultRulesItemNotRunReasonType3Type1
 from ..models.list_email_rule_results_result_rules_item_state import ListEmailRuleResultsResultRulesItemState
 from typing import cast
 from uuid import UUID
@@ -38,13 +35,6 @@ class ListEmailRuleResultsResultRulesItem:
             state (ListEmailRuleResultsResultRulesItemState):
             decision (ListEmailRuleResultsResultRulesItemDecisionType0 | None): What the rule most recently decided about
                 this email; null when it has not run on it.
-            not_run_reason (ListEmailRuleResultsResultRulesItemNotRunReasonType1 |
-                ListEmailRuleResultsResultRulesItemNotRunReasonType2Type1 |
-                ListEmailRuleResultsResultRulesItemNotRunReasonType3Type1 | None): What is known about a rule with no result on
-                this email. draft: the rule is a draft now. created_after_email: the rule was created after the email arrived.
-                outside_scope: the mailbox this email is in is outside what its scope names (its author's own mailboxes, its
-                selection, or all its author reads now), so it does not decide on it. Null when it has a result, or when nothing
-                is known (it may not have decided yet).
             kind (ListEmailRuleResultsResultRulesItemKind | Unset): grant: the rule shares what it matches. do_not_share:
                 the rule blocks sharing of what it matches. While it is active, no rule shares an email it has matched from then
                 on; anything shared before, including while it was in observe, stays shared.
@@ -61,7 +51,6 @@ class ListEmailRuleResultsResultRulesItem:
     name: None | str
     state: ListEmailRuleResultsResultRulesItemState
     decision: ListEmailRuleResultsResultRulesItemDecisionType0 | None
-    not_run_reason: ListEmailRuleResultsResultRulesItemNotRunReasonType1 | ListEmailRuleResultsResultRulesItemNotRunReasonType2Type1 | ListEmailRuleResultsResultRulesItemNotRunReasonType3Type1 | None
     kind: ListEmailRuleResultsResultRulesItemKind | Unset = UNSET
     author_left: bool | Unset = UNSET
     read_only: bool | Unset = UNSET
@@ -89,16 +78,6 @@ class ListEmailRuleResultsResultRulesItem:
             decision = self.decision.to_dict()
         else:
             decision = self.decision
-
-        not_run_reason: None | str
-        if isinstance(self.not_run_reason, ListEmailRuleResultsResultRulesItemNotRunReasonType1):
-            not_run_reason = self.not_run_reason.value
-        elif isinstance(self.not_run_reason, ListEmailRuleResultsResultRulesItemNotRunReasonType2Type1):
-            not_run_reason = self.not_run_reason.value
-        elif isinstance(self.not_run_reason, ListEmailRuleResultsResultRulesItemNotRunReasonType3Type1):
-            not_run_reason = self.not_run_reason.value
-        else:
-            not_run_reason = self.not_run_reason
 
         kind: str | Unset = UNSET
         if not isinstance(self.kind, Unset):
@@ -129,7 +108,6 @@ class ListEmailRuleResultsResultRulesItem:
             "name": name,
             "state": state,
             "decision": decision,
-            "not_run_reason": not_run_reason,
         })
         if kind is not UNSET:
             field_dict["kind"] = kind
@@ -188,44 +166,6 @@ class ListEmailRuleResultsResultRulesItem:
         decision = _parse_decision(d.pop("decision"))
 
 
-        def _parse_not_run_reason(data: object) -> ListEmailRuleResultsResultRulesItemNotRunReasonType1 | ListEmailRuleResultsResultRulesItemNotRunReasonType2Type1 | ListEmailRuleResultsResultRulesItemNotRunReasonType3Type1 | None:
-            if data is None:
-                return data
-            try:
-                if not isinstance(data, str):
-                    raise TypeError()
-                not_run_reason_type_1 = ListEmailRuleResultsResultRulesItemNotRunReasonType1(data)
-
-
-
-                return not_run_reason_type_1
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            try:
-                if not isinstance(data, str):
-                    raise TypeError()
-                not_run_reason_type_2_type_1 = ListEmailRuleResultsResultRulesItemNotRunReasonType2Type1(data)
-
-
-
-                return not_run_reason_type_2_type_1
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            try:
-                if not isinstance(data, str):
-                    raise TypeError()
-                not_run_reason_type_3_type_1 = ListEmailRuleResultsResultRulesItemNotRunReasonType3Type1(data)
-
-
-
-                return not_run_reason_type_3_type_1
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(ListEmailRuleResultsResultRulesItemNotRunReasonType1 | ListEmailRuleResultsResultRulesItemNotRunReasonType2Type1 | ListEmailRuleResultsResultRulesItemNotRunReasonType3Type1 | None, data)
-
-        not_run_reason = _parse_not_run_reason(d.pop("not_run_reason"))
-
-
         _kind = d.pop("kind", UNSET)
         kind: ListEmailRuleResultsResultRulesItemKind | Unset
         if isinstance(_kind,  Unset):
@@ -275,7 +215,6 @@ class ListEmailRuleResultsResultRulesItem:
             name=name,
             state=state,
             decision=decision,
-            not_run_reason=not_run_reason,
             kind=kind,
             author_left=author_left,
             read_only=read_only,

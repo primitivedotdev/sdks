@@ -2,7 +2,6 @@ from enum import StrEnum
 
 class ListEmailRuleSharesBox(StrEnum):
     ALL = "all"
-    GIVEN = "given"
     RECEIVED = "received"
 
     def __str__(self) -> str:
