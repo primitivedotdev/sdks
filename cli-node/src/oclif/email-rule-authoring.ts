@@ -296,46 +296,15 @@ export function answerConfidence(answer: QuestionAnswer): number | null {
 /** Why an expectation is undecided, and whether testing again later can decide it. */
 type Undecided = { reason: string; retryable: boolean };
 
-/** Unclassified reasons a later test can get past. */
-const RETRYABLE_UNCLASSIFIED = new Set(["pending", "classifier_unavailable"]);
-/** Outcomes decided on an email's conditions: undecided then means a question went unanswered. */
-const DECIDED_OUTCOMES = new Set(["matched", "near_miss", "no_match"]);
-
 /**
- * The server's `retryable` and `reason` on an undecided entry when it gives
- * them. Otherwise read from the outcome: an email not classified yet, or
- * decided on its conditions with a question unanswered, and a sample not
- * reached or with a question unanswered, can be decided later; nothing else
- * can.
+ * The server's reason for an undecided entry, and whether testing again can
+ * decide it. An entry that does not say it can is taken as one that cannot.
  */
-export function undecidedOf(
-  entry: unknown,
-  result?: Pick<TestResult, "outcome" | "unclassified_reason">,
-  questionAnswers: readonly QuestionAnswer[] = [],
-): Undecided {
+export function undecidedOf(entry: unknown): Undecided {
   const given = isRecord(entry) ? entry : {};
-  const outcome = String(result?.outcome ?? given.outcome ?? "");
-  const unclassified = result?.unclassified_reason ?? "";
-  const unanswered =
-    (result !== undefined && DECIDED_OUTCOMES.has(outcome)) ||
-    questionAnswers.some((answer) => answer.answer === null);
-  const fallback: Undecided =
-    outcome === "unclassified"
-      ? {
-          reason: unclassified || "unclassified",
-          retryable: RETRYABLE_UNCLASSIFIED.has(unclassified),
-        }
-      : outcome === "not_decided"
-        ? { reason: "not_decided", retryable: true }
-        : unanswered
-          ? { reason: "question_unanswered", retryable: true }
-          : { reason: outcome || "undecided", retryable: false };
   return {
-    reason: typeof given.reason === "string" ? given.reason : fallback.reason,
-    retryable:
-      typeof given.retryable === "boolean"
-        ? given.retryable
-        : fallback.retryable,
+    reason: typeof given.reason === "string" ? given.reason : "undecided",
+    retryable: given.retryable === true,
   };
 }
 
@@ -392,25 +361,10 @@ function questionLines(
   ];
 }
 
-/** An undecided email expectation, read with its email's test result. */
-function emailUndecided(
-  expectation: Pick<ExpectationResult, "email_id" | "outcome">,
-  results: readonly TestResult[],
-): Undecided {
-  const result = results.find(
-    (entry) =>
-      entry.email_id.toLowerCase() === expectation.email_id.toLowerCase(),
-  );
-  return undecidedOf(expectation, result, result?.question_answers ?? []);
-}
-
-function expectationLine(
-  result: ExpectationResult,
-  results: readonly TestResult[],
-): string {
+function expectationLine(result: ExpectationResult): string {
   const note =
     result.status === "undecided"
-      ? undecidedNote(emailUndecided(result, results))
+      ? undecidedNote(undecidedOf(result))
       : undefined;
   return `  ${result.status}: ${result.email_id} expected ${result.expected}, got ${result.outcome}${note ? ` (${note})` : ""}`;
 }
@@ -463,7 +417,7 @@ const sampleNamer =
 function sampleLines(sample: SampleJudgment, name: SampleNamer): string[] {
   const note =
     sample.status === "undecided"
-      ? ` (${undecidedNote(undecidedOf(sample.entry, undefined, sample.question_answers))})`
+      ? ` (${undecidedNote(undecidedOf(sample.entry))})`
       : "";
   const lines = [
     `  ${sample.status}: ${name(sample)} expected ${sample.expected}, got ${sample.outcome}${note}`,
@@ -477,7 +431,6 @@ function sampleLines(sample: SampleJudgment, name: SampleNamer): string[] {
 
 function expectationsLines(
   expectations: TestEmailRuleResult["expectations"],
-  testResults: readonly TestResult[],
   name: SampleNamer = sampleNamer(),
 ): string[] {
   if (!expectations) return [];
@@ -498,7 +451,7 @@ function expectationsLines(
     `Expectations: ${parts.join(", ")}.`,
     ...results
       .filter((result) => result.status !== "passed")
-      .map((result) => expectationLine(result, testResults)),
+      .map(expectationLine),
     ...sampleJudgments(expectations)
       .filter((sample) => sample.status !== "passed")
       .flatMap((sample) => sampleLines(sample, name)),
@@ -520,12 +473,7 @@ function notMatchedLine(result: TestResult): string[] {
     ];
   if (result.outcome === "unclassified") {
     const reason = result.unclassified_reason;
-    const note = !reason
-      ? ""
-      : RETRYABLE_UNCLASSIFIED.has(reason)
-        ? `${reason}: test again later`
-        : reason;
-    return [`  ${result.email_id} unclassified${note ? ` (${note})` : ""}`];
+    return [`  ${result.email_id} unclassified${reason ? ` (${reason})` : ""}`];
   }
   if (result.outcome === "not_found") return [`  ${result.email_id} not_found`];
   const failedParts = (result.parts ?? [])
@@ -643,7 +591,6 @@ function notMatchedLines(
  */
 export function expectationsOutcome(
   expectations: TestEmailRuleResult["expectations"],
-  testResults: readonly TestResult[] = [],
   name: SampleNamer = sampleNamer(),
 ): Pick<OperationReport, "exitCode" | "error"> {
   if (!expectations) return {};
@@ -665,13 +612,13 @@ export function expectationsOutcome(
       .filter((result) => result.status === "undecided")
       .map((result) => ({
         id: result.email_id,
-        ...emailUndecided(result, testResults),
+        ...undecidedOf(result),
       })),
     ...samples
       .filter((sample) => sample.status === "undecided")
       .map((sample) => ({
         id: name({ index: sample.index, label: null }),
-        ...undecidedOf(sample.entry, undefined, sample.question_answers),
+        ...undecidedOf(sample.entry),
       })),
   ];
   const failedCount = Math.max(expectations.counts?.failed ?? 0, failed.length);
@@ -690,13 +637,19 @@ export function expectationsOutcome(
       },
     };
   if (undecidedCount === 0) return {};
+  // An undecided one the answer counts but does not list is not known to be
+  // retryable.
+  const unlisted = undecidedCount > undecided.length;
   const final = undecided.filter(({ retryable }) => !retryable);
-  if (final.length > 0)
+  if (final.length > 0 || unlisted)
     return {
       exitCode: EXIT_EXPECTATION_FAILED,
       error: {
         code: "expectations_undecided",
-        message: `${plural(undecidedCount, "expectation is", "expectations are")} undecided, and testing again will not decide ${final.length === 1 ? "this one" : "these"}: ${why(final)}.`,
+        message:
+          final.length > 0
+            ? `${plural(undecidedCount, "expectation is", "expectations are")} undecided, and testing again will not decide ${final.length === 1 ? "this one" : "these"}: ${why(final)}.`
+            : `${plural(undecidedCount, "expectation is", "expectations are")} undecided, and the answer does not say testing again can decide them.`,
       },
     };
   return {
@@ -746,317 +699,14 @@ export function testEmailRuleReport(data: unknown): OperationReport {
     ...ruleNotesLines(data),
     ...conditionLines(summary),
     ...questionLines(summary, results),
-    ...expectationsLines(result.expectations, results, name),
+    ...expectationsLines(result.expectations, name),
     ...matchedLines(results, result.expectations),
     ...notMatchedLines(results, result.expectations),
   ];
   return {
     lines: lines.map(terminalLine),
-    ...expectationsOutcome(result.expectations, results, name),
+    ...expectationsOutcome(result.expectations, name),
   };
-}
-
-// create-email-rule and update-email-rule
-
-/** A list of numbers from 0, as the API gives sample indexes. */
-function indexList(value: unknown): number[] {
-  return Array.isArray(value)
-    ? value.filter((n): n is number => typeof n === "number")
-    : [];
-}
-
-/**
- * The labels a write's check gives the made-up emails it names, by index
- * (failed_sample_details and undecided_sample_details), from a server that
- * sends them.
- */
-export function sampleDetailLabels(check: unknown): Map<number, string | null> {
-  const labels = new Map<number, string | null>();
-  if (!isRecord(check)) return labels;
-  for (const key of ["failed_sample_details", "undecided_sample_details"]) {
-    const details = check[key];
-    if (!Array.isArray(details)) continue;
-    for (const detail of details)
-      if (
-        isRecord(detail) &&
-        typeof detail.index === "number" &&
-        Number.isInteger(detail.index) &&
-        detail.index >= 0
-      )
-        labels.set(
-          detail.index,
-          typeof detail.label === "string" ? detail.label : null,
-        );
-  }
-  return labels;
-}
-
-/**
- * How a rule write names a made-up email its check gives by index: as every
- * report names it, with its label from the rule's samples after the write
- * (`saved`), from `labels` (sampleDetailLabels), or from what the write sent.
- */
-export function writtenSampleNamer(
-  body: unknown,
-  saved?: unknown,
-  labels: ReadonlyMap<number, string | null> = new Map(),
-): (index: number) => string {
-  const sent =
-    isRecord(body) && Array.isArray(body.expectation_samples)
-      ? body.expectation_samples
-      : [];
-  const kept = Array.isArray(saved) ? saved : [];
-  return (index) => {
-    const sample = kept[index] ?? sent[index];
-    return sampleName(
-      index,
-      labels.get(index) ?? (isRecord(sample) ? sample.label : undefined),
-    );
-  };
-}
-
-// update-email-rule's 409
-
-function errorDetails(payload: unknown): Record<string, unknown> {
-  if (!isRecord(payload)) return {};
-  if (isRecord(payload.details)) return payload.details;
-  if (isRecord(payload.error) && isRecord(payload.error.details))
-    return payload.error.details;
-  return {};
-}
-
-/**
- * The hint for update-email-rule's 409 `email_rule_conflict` with
- * `details.reason` `version_moved`: the rule's version is no longer the
- * if_version that was sent, so nothing was saved.
- */
-export function versionMovedHint(
-  payload: unknown,
-  ruleId: unknown,
-): string | undefined {
-  const details = errorDetails(payload);
-  if (details.reason !== "version_moved") return undefined;
-  const id = typeof ruleId === "string" && ruleId ? ruleId : "<rule-id>";
-  const current =
-    typeof details.current_version === "number"
-      ? details.current_version
-      : undefined;
-  const read = `Read it again with \`primitive email-rules get-email-rule ${id}\` and reapply your change to what it shows`;
-  return current === undefined
-    ? `Hint: the rule's version is not the if_version you sent, so nothing was saved, and the answer did not give its current version. ${read}.`
-    : `Hint: the rule's current version is ${current}, not the if_version you sent, so nothing was saved. ${read}, then retry with --if-version ${current}.`;
-}
-
-/** The read-again advice every conflict ends with. */
-function readAgain(id: string): string {
-  return `Read it again with \`primitive email-rules get-email-rule ${id}\` and send the write again`;
-}
-
-/**
- * Who reads an active rule, from a refusal's details.read_by: the server
- * sends it when it checked the write against the rule's expectations because
- * API keys, webhooks or a share read the rule, whether or not the write asked.
- * Undefined without it.
- */
-function readByText(details: Record<string, unknown>): string | undefined {
-  const readBy = details.read_by;
-  if (!isRecord(readBy)) return undefined;
-  const { keys, webhooks, shares } = readBy;
-  // Null when not counted in time.
-  if (
-    typeof keys !== "number" ||
-    typeof webhooks !== "number" ||
-    shares === null
-  )
-    return "API keys, webhooks or a share may read what it grants (they could not be counted in time)";
-  // A share counts as a reader too: a new version keeps it, so what the
-  // version matches reaches the member it is shared with.
-  const shared =
-    typeof shares === "number" && shares > 0
-      ? `it is shared with ${plural(shares, "member", "members")}`
-      : undefined;
-  if (keys + webhooks === 0 && shared) return shared;
-  return `${plural(keys, "API key", "API keys")} and ${plural(webhooks, "webhook", "webhooks")} read what it grants${shared ? `, and ${shared}` : ""}`;
-}
-
-/** How to save a write the default check refused, without the check. */
-function saveUncheckedText(): string {
-  return "send it again with --no-if-expectations-pass";
-}
-
-/**
- * The hint for update-email-rule's refusals: an email_rule_conflict by its
- * details.reason (version_moved, revision_moved, expectations_moved,
- * rule_changed, readers_changed), and the expectations guard's
- * expectations_failed, expectations_undecided, expectations_unreadable and
- * no_expectations. The guard runs when the write sends if_expectations_pass,
- * and by default (details.read_by) when it changes what an active rule that
- * API keys, webhooks or a share read grants. Nothing was saved in any of them.
- */
-export function updateEmailRuleErrorHint(
-  code: string | undefined,
-  payload: unknown,
-  ruleId: unknown,
-  body?: unknown,
-): string | undefined {
-  const id = typeof ruleId === "string" && ruleId ? ruleId : "<rule-id>";
-  const details = errorDetails(payload);
-  const guarded = isRecord(body) && body.if_expectations_pass === true;
-  const readBy = readByText(details);
-  // Why the write was judged: asked for, or by default for a rule that keys,
-  // webhooks or a share read; and, then, how to save it without the check.
-  const judged = readBy
-    ? "was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys, webhooks or a share read it, and nothing was saved"
-    : "was judged against its expectations before saving (if_expectations_pass), and nothing was saved";
-  const unchecked = readBy
-    ? ` The rule is active and ${readBy}; to save the write without the check, ${saveUncheckedText()}.`
-    : "";
-  if (code === "email_rule_conflict") {
-    switch (details.reason) {
-      case "version_moved":
-        return versionMovedHint(payload, ruleId);
-      case "revision_moved": {
-        const current =
-          typeof details.current_revision === "number"
-            ? details.current_revision
-            : undefined;
-        return current === undefined
-          ? `Hint: the rule was updated since the if_revision you sent, so nothing was saved. ${readAgain(id)} with --if-revision set to its revision.`
-          : `Hint: the rule is now at revision ${current}, not the if_revision you sent, so nothing was saved. ${readAgain(id)}, reapplying your change to what it shows, with --if-revision ${current}.`;
-      }
-      case "expectations_moved":
-        return `Hint: the rule's saved expectations changed while this write was checked against them, so nothing was saved. ${readAgain(id)}.`;
-      case "rule_changed":
-        return guarded
-          ? `Hint: the rule changed after this write was judged against its expectations and before it was saved, so saving it would have gone unchecked; nothing was saved. ${readAgain(id)}.`
-          : `Hint: the rule changed while this write was being saved, so nothing was saved. ${readAgain(id)}.`;
-      case "readers_changed":
-        return "Hint: API keys, webhooks or a share started reading this rule while this write was being saved, and saving it would have changed what they receive without checking it against the rule's expectations, so nothing was saved. Send the write again: it is then checked first.";
-      default:
-        return undefined;
-    }
-  }
-  if (code === "expectations_failed" || code === "expectations_undecided") {
-    const check = isRecord(details.expectations_check)
-      ? details.expectations_check
-      : {};
-    const failed = Array.isArray(check.failed) ? check.failed : [];
-    const undecided = Array.isArray(check.undecided) ? check.undecided : [];
-    const name = writtenSampleNamer(body, undefined, sampleDetailLabels(check));
-    const failedAll = [...failed, ...indexList(check.failed_samples).map(name)];
-    const undecidedSamples = indexList(check.undecided_samples);
-    const undecidedAll = [...undecided, ...undecidedSamples.map(name)];
-    const parts = [
-      ...(failedAll.length > 0 ? [`failed: ${failedAll.join(", ")}`] : []),
-      ...(undecidedAll.length > 0
-        ? [`undecided: ${undecidedAll.join(", ")}`]
-        : []),
-    ];
-    // A refused write answers without the rule's samples, so an added one is
-    // numbered in the set judged: said once, after the list.
-    const addedOrder =
-      isRecord(body) &&
-      Array.isArray(body.add_expectation_samples) &&
-      indexList(check.failed_samples).length + undecidedSamples.length > 0
-        ? " Made-up emails are numbered from 1: the rule's saved ones first, then those this write adds."
-        : "";
-    const which =
-      parts.length > 0 ? ` Expectations ${parts.join("; ")}.${addedOrder}` : "";
-    const reason = String(details.reason);
-    // A reason the answer gives says what to do; with none, a made-up email
-    // may stay undecided.
-    const samplesMayStay = undecidedSamplesMayStay(
-      undecidedSamples.length,
-      reason,
-    );
-    const byReason =
-      reason !== "none" && Object.hasOwn(UNDECIDED_NEXT_STEP, reason)
-        ? (UNDECIDED_NEXT_STEP[reason] as string)
-        : UNDECIDED_NEXT_STEP.none;
-    const next =
-      code === "expectations_failed"
-        ? ""
-        : samplesMayStay
-          ? `${undecided.length > 0 ? ` ${byReason}` : ""} ${UNDECIDED_SAMPLES_NEXT_STEP} ${refusedSampleTest(body, id)}`
-          : ` ${byReason}`;
-    return `Hint: the rule, as this write would leave it, ${judged}.${which}${next}${unchecked}`;
-  }
-  if (code === "expectations_unreadable") {
-    // Emails the rule cannot read (deleted, or outside its scope or its
-    // author's mail): no later write decides them.
-    const unreadable = Array.isArray(details.unreadable)
-      ? details.unreadable
-          .filter(
-            (entry) => entry !== null && entry !== undefined && entry !== "",
-          )
-          .map(String)
-      : [];
-    const one = unreadable.length === 1;
-    const named = unreadable.length > 0 ? `: ${unreadable.join(", ")}` : "";
-    const them = one ? "it" : "them";
-    return `Hint: the rule, as this write would leave it, ${judged}. ${one ? "An expectation names an email" : "Expectations name emails"} this rule cannot read (deleted, or outside its scope or its author's mail)${named}. Sending the write again will not decide ${them}: send --expectations-file without ${them}, or an evaluation_scope that reads ${them}.${unchecked}`;
-  }
-  if (code === "no_expectations")
-    return readBy
-      ? `Hint: nothing was saved: this write removes the rule's expectations, and the rule is active and ${readBy}, so a write that changes what it grants is checked against them first. Keep some with --expectations-file, --expectation-samples-file or --add-expectation-samples-file, or, to save the write without the check, ${saveUncheckedText()}.`
-      : "Hint: nothing was saved. Give the rule expectations with --expectations-file or made-up emails with --expectation-samples-file or --add-expectation-samples-file (in this write or before it), or send the write without if_expectations_pass.";
-  return undefined;
-}
-
-/** The reasons a guard's undecided judgment can be decided by sending the write again. */
-const RETRYABLE_REASONS: ReadonlySet<string> = new Set([
-  "deadline",
-  "error",
-  "client_gone",
-]);
-
-/**
- * A made-up email can stay undecided: one that reads a spam score it does
- * not carry, or whose classification failed or left out a fact the rule
- * needs, decides the same way every time.
- */
-const UNDECIDED_SAMPLES_NEXT_STEP =
-  "A made-up email undecided for no reason given may stay so (a spam score it does not carry, a fact its classification left out, or a failed classification), so sending the write again may not decide it.";
-
-/**
- * How to see why a refused write's made-up emails are undecided: only
- * test-email-rule-on-sample answers with what a made-up email lacked. Test
- * the tree this write sent (or the version it restores), else the rule, on
- * each. Nothing was saved, so a test by rule id would see neither.
- */
-function refusedSampleTest(body: unknown, ruleId: string): string {
-  const onSample = "`primitive email-rules test-email-rule-on-sample`";
-  if (isRecord(body) && isRecord(body.tree))
-    return `To see why, test the tree this write sent on each with ${onSample}.`;
-  if (isRecord(body) && typeof body.restore_version === "number")
-    return `To see why, test version ${body.restore_version}'s tree (\`primitive email-rules list-email-rule-versions ${ruleId} --versions ${body.restore_version}\`) on each with ${onSample}.`;
-  // Only samples sent in place of the rule's leave none of its saved ones
-  // to look up.
-  const sent = isRecord(body) && Array.isArray(body.expectation_samples);
-  return `To see why, test rule ${ruleId} on each with ${onSample}${sent ? "" : ` (\`primitive email-rules get-email-rule ${ruleId}\` lists its saved ones)`}.`;
-}
-
-/** What to do about an undecided judgment, by details.reason ("none": no reason given). */
-const UNDECIDED_NEXT_STEP: Readonly<Record<string, string>> = {
-  none: "Some could not be decided yet (mail not classified yet, or a question not answered yet); send the write again later.",
-  deadline: "The judgment ran out of time; send the write again.",
-  error: "The judgment could not finish; send the write again.",
-  client_gone: "The request ended before the write was saved; send it again.",
-  author_unresolvable:
-    "The rule cannot run as its author over the mail it would cover (details.author_reason), so sending the write again will not decide them.",
-};
-
-/**
- * Whether a guard's undecided made-up emails may stay undecided: some are,
- * and the answer gives no reason that sending the write again can change
- * (author_unresolvable has its own advice).
- */
-function undecidedSamplesMayStay(count: number, reason: string): boolean {
-  return (
-    count > 0 &&
-    !RETRYABLE_REASONS.has(reason) &&
-    reason !== "author_unresolvable"
-  );
 }
 
 // The flags and reports, by generated operation
@@ -1123,10 +773,10 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
     flags: {
       "expectations-file": Flags.string({
         description:
-          'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}. Sets expectations, over any in --body-file or --raw-body; the answer judges them in expectations_check (passed, decided, failed, undecided); the report test-email-rule answers with is named expectations instead.',
+          'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}. Sets expectations, over any in --body-file or --raw-body. A create judges them before saving only for a do_not_share rule created active, in expectations_check (passed, failed, undecided); test-email-rule --rule-id judges them otherwise.',
       }),
       [SAMPLES_FILE_FLAG]: Flags.string({
-        description: `${SAMPLES_FILE_SHAPE} Sets expectation_samples, over any in --body-file or --raw-body. A create does not judge them; test-email-rule --rule-id does.`,
+        description: `${SAMPLES_FILE_SHAPE} Sets expectation_samples, over any in --body-file or --raw-body. A create judges them only for a do_not_share rule created active; test-email-rule --rule-id does otherwise.`,
       }),
       [PICK_FLAG]: Flags.string({
         description: pickFlagHelp([SAMPLES_FILE_FLAG]),
@@ -1145,7 +795,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
     flags: {
       "expectations-file": Flags.string({
         description:
-          'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}, replacing its saved expectations; a file holding null removes them. Sets expectations, over any in --body-file or --raw-body; the answer judges them in expectations_check (passed, decided, failed, undecided); the report test-email-rule answers with is named expectations instead.',
+          'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}, replacing its saved expectations; a file holding null removes them. Sets expectations, over any in --body-file or --raw-body. An update that leaves the rule active on a new version, or turns it active, is judged against them before saving and refused if one fails or, for a grant rule, cannot be decided; a do_not_share rule is saved with undecided ones.',
       }),
       [SAMPLES_FILE_FLAG]: Flags.string({
         description: `${SAMPLES_FILE_SHAPE} They replace the rule's saved ones, and a file holding [] removes them. Sets expectation_samples, over any in --body-file or --raw-body. Not with --${ADD_SAMPLES_FILE_FLAG}.`,

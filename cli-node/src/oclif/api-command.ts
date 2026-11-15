@@ -32,10 +32,7 @@ import {
 } from "./automated-filter.js";
 import { withBooleanFlagValues } from "./boolean-flag-values.js";
 import { requireDefaultLoginProfile } from "./connected-agent-profile.js";
-import {
-  EMAIL_RULE_OPERATION_EXTENSIONS,
-  updateEmailRuleErrorHint,
-} from "./email-rule-authoring.js";
+import { EMAIL_RULE_OPERATION_EXTENSIONS } from "./email-rule-authoring.js";
 import {
   emptyEmailListHint,
   listFilters,
@@ -91,7 +88,6 @@ import {
   terminalApprovalIo,
   withApproval,
 } from "./step-up-approval.js";
-import { terminalLine } from "./terminal-text.js";
 import { parseRetryAfter } from "./transient-retry.js";
 
 type OperationName = keyof typeof operations;
@@ -1624,10 +1620,7 @@ export const OPERATION_ERROR_HINTS: Record<
 > = {
   inviteOrganizationMember: (code, body, payload) =>
     inviteRefusalHint(code, body, payload),
-  updateEmailRule: (code, body, payload, path) => {
-    const hint = updateEmailRuleErrorHint(code, payload, path?.id, body);
-    return hint === undefined ? undefined : terminalLine(hint);
-  },
+
   verifyDomain: (code, _body, payload) =>
     code === "dns_verification_failed"
       ? domainVerificationFailedHint(payload)
