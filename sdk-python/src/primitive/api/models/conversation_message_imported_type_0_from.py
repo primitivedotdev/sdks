@@ -2,6 +2,7 @@ from enum import StrEnum
 
 class ConversationMessageImportedType0From(StrEnum):
     GOOGLE_WORKSPACE = "google_workspace"
+    UNKNOWN = "unknown"
 
     def __str__(self) -> str:
         return str(self.value)

@@ -15,6 +15,7 @@ from .add_default_network_member_response_200_data import AddDefaultNetworkMembe
 from .add_default_network_member_response_200_data_owner_type_0 import AddDefaultNetworkMemberResponse200DataOwnerType0
 from .add_default_network_member_response_200_data_ownership_kind import AddDefaultNetworkMemberResponse200DataOwnershipKind
 from .add_default_network_member_response_200_data_presence_type_0 import AddDefaultNetworkMemberResponse200DataPresenceType0
+from .add_default_network_member_response_200_data_presence_type_0_basis import AddDefaultNetworkMemberResponse200DataPresenceType0Basis
 from .add_domain_input import AddDomainInput
 from .add_domain_response_201 import AddDomainResponse201
 from .address_note import AddressNote
@@ -33,6 +34,7 @@ from .agent_connection_hidden_reason_type_2_type_1 import AgentConnectionHiddenR
 from .agent_connection_hidden_reason_type_3_type_1 import AgentConnectionHiddenReasonType3Type1
 from .agent_connection_ownership_kind import AgentConnectionOwnershipKind
 from .agent_connection_presence_type_0 import AgentConnectionPresenceType0
+from .agent_connection_presence_type_0_basis import AgentConnectionPresenceType0Basis
 from .agent_connection_status import AgentConnectionStatus
 from .agent_connection_trusted_origins_response_200 import AgentConnectionTrustedOriginsResponse200
 from .agent_connection_trusted_origins_response_200_data import AgentConnectionTrustedOriginsResponse200Data
@@ -774,6 +776,7 @@ from .get_default_network_agent_response_200_data import GetDefaultNetworkAgentR
 from .get_default_network_agent_response_200_data_owner_type_0 import GetDefaultNetworkAgentResponse200DataOwnerType0
 from .get_default_network_agent_response_200_data_ownership_kind import GetDefaultNetworkAgentResponse200DataOwnershipKind
 from .get_default_network_agent_response_200_data_presence_type_0 import GetDefaultNetworkAgentResponse200DataPresenceType0
+from .get_default_network_agent_response_200_data_presence_type_0_basis import GetDefaultNetworkAgentResponse200DataPresenceType0Basis
 from .get_default_network_agent_response_200_data_receiver import GetDefaultNetworkAgentResponse200DataReceiver
 from .get_default_network_agent_response_200_data_receiver_state import GetDefaultNetworkAgentResponse200DataReceiverState
 from .get_delivery_response_200 import GetDeliveryResponse200
@@ -970,9 +973,6 @@ from .list_activity_objects_result import ListActivityObjectsResult
 from .list_activity_objects_result_items_item import ListActivityObjectsResultItemsItem
 from .list_activity_objects_result_items_item_created_through import ListActivityObjectsResultItemsItemCreatedThrough
 from .list_activity_objects_result_items_item_owned_now import ListActivityObjectsResultItemsItemOwnedNow
-from .list_activity_objects_result_items_item_receivers_change import ListActivityObjectsResultItemsItemReceiversChange
-from .list_activity_objects_result_items_item_receivers_change_after import ListActivityObjectsResultItemsItemReceiversChangeAfter
-from .list_activity_objects_result_items_item_receivers_change_before import ListActivityObjectsResultItemsItemReceiversChangeBefore
 from .list_activity_objects_result_items_item_rule_now import ListActivityObjectsResultItemsItemRuleNow
 from .list_activity_objects_result_items_item_stop_reason import ListActivityObjectsResultItemsItemStopReason
 from .list_activity_objects_result_withheld_item import ListActivityObjectsResultWithheldItem
@@ -1009,6 +1009,7 @@ from .list_default_network_agents_response_200_data_item import ListDefaultNetwo
 from .list_default_network_agents_response_200_data_item_owner_type_0 import ListDefaultNetworkAgentsResponse200DataItemOwnerType0
 from .list_default_network_agents_response_200_data_item_ownership_kind import ListDefaultNetworkAgentsResponse200DataItemOwnershipKind
 from .list_default_network_agents_response_200_data_item_presence_type_0 import ListDefaultNetworkAgentsResponse200DataItemPresenceType0
+from .list_default_network_agents_response_200_data_item_presence_type_0_basis import ListDefaultNetworkAgentsResponse200DataItemPresenceType0Basis
 from .list_default_network_agents_response_200_data_item_receiver import ListDefaultNetworkAgentsResponse200DataItemReceiver
 from .list_default_network_agents_response_200_data_item_receiver_state import ListDefaultNetworkAgentsResponse200DataItemReceiverState
 from .list_default_network_agents_response_200_meta import ListDefaultNetworkAgentsResponse200Meta
@@ -1017,6 +1018,7 @@ from .list_default_network_members_response_200_data_item import ListDefaultNetw
 from .list_default_network_members_response_200_data_item_owner_type_0 import ListDefaultNetworkMembersResponse200DataItemOwnerType0
 from .list_default_network_members_response_200_data_item_ownership_kind import ListDefaultNetworkMembersResponse200DataItemOwnershipKind
 from .list_default_network_members_response_200_data_item_presence_type_0 import ListDefaultNetworkMembersResponse200DataItemPresenceType0
+from .list_default_network_members_response_200_data_item_presence_type_0_basis import ListDefaultNetworkMembersResponse200DataItemPresenceType0Basis
 from .list_default_network_members_response_200_meta import ListDefaultNetworkMembersResponse200Meta
 from .list_deliveries_response_200 import ListDeliveriesResponse200
 from .list_deliveries_status import ListDeliveriesStatus
@@ -1085,6 +1087,7 @@ from .list_email_rules_response_200 import ListEmailRulesResponse200
 from .list_emails_automated import ListEmailsAutomated
 from .list_emails_awaiting import ListEmailsAwaiting
 from .list_emails_content_discarded import ListEmailsContentDiscarded
+from .list_emails_count import ListEmailsCount
 from .list_emails_exclude_fyi import ListEmailsExcludeFyi
 from .list_emails_exclude_muted import ListEmailsExcludeMuted
 from .list_emails_from_verified import ListEmailsFromVerified
@@ -1582,6 +1585,10 @@ from .send_permissions_meta import SendPermissionsMeta
 from .sent_email_detail import SentEmailDetail
 from .sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
 from .sent_email_detail_hold import SentEmailDetailHold
+from .sent_email_detail_imported_type_0 import SentEmailDetailImportedType0
+from .sent_email_detail_imported_type_0_from import SentEmailDetailImportedType0From
+from .sent_email_detail_imported_type_0_method import SentEmailDetailImportedType0Method
+from .sent_email_detail_imported_type_0_verification import SentEmailDetailImportedType0Verification
 from .sent_email_detail_repeat_type_0 import SentEmailDetailRepeatType0
 from .sent_email_detail_sender_member_type_0 import SentEmailDetailSenderMemberType0
 from .sent_email_detail_tags_type_0_item import SentEmailDetailTagsType0Item
@@ -1592,6 +1599,10 @@ from .sent_email_summary_attachments_item import SentEmailSummaryAttachmentsItem
 from .sent_email_summary_delivery_recipients_type_0_item import SentEmailSummaryDeliveryRecipientsType0Item
 from .sent_email_summary_delivery_recipients_type_0_item_result import SentEmailSummaryDeliveryRecipientsType0ItemResult
 from .sent_email_summary_hold import SentEmailSummaryHold
+from .sent_email_summary_imported_type_0 import SentEmailSummaryImportedType0
+from .sent_email_summary_imported_type_0_from import SentEmailSummaryImportedType0From
+from .sent_email_summary_imported_type_0_method import SentEmailSummaryImportedType0Method
+from .sent_email_summary_imported_type_0_verification import SentEmailSummaryImportedType0Verification
 from .sent_email_summary_interaction_hint import SentEmailSummaryInteractionHint
 from .sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0
 from .sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
@@ -1804,6 +1815,10 @@ from .thread import Thread
 from .thread_message import ThreadMessage
 from .thread_message_copies_item import ThreadMessageCopiesItem
 from .thread_message_direction import ThreadMessageDirection
+from .thread_message_imported_type_0 import ThreadMessageImportedType0
+from .thread_message_imported_type_0_from import ThreadMessageImportedType0From
+from .thread_message_imported_type_0_method import ThreadMessageImportedType0Method
+from .thread_message_imported_type_0_verification import ThreadMessageImportedType0Verification
 from .thread_message_repeat_type_0 import ThreadMessageRepeatType0
 from .thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0
 from .thread_mute import ThreadMute
@@ -1835,6 +1850,7 @@ from .update_default_network_member_response_200_data import UpdateDefaultNetwor
 from .update_default_network_member_response_200_data_owner_type_0 import UpdateDefaultNetworkMemberResponse200DataOwnerType0
 from .update_default_network_member_response_200_data_ownership_kind import UpdateDefaultNetworkMemberResponse200DataOwnershipKind
 from .update_default_network_member_response_200_data_presence_type_0 import UpdateDefaultNetworkMemberResponse200DataPresenceType0
+from .update_default_network_member_response_200_data_presence_type_0_basis import UpdateDefaultNetworkMemberResponse200DataPresenceType0Basis
 from .update_domain_input import UpdateDomainInput
 from .update_domain_response_200 import UpdateDomainResponse200
 from .update_email_notification_preferences_response_200 import UpdateEmailNotificationPreferencesResponse200
@@ -1949,6 +1965,7 @@ __all__ = (
     "AddDefaultNetworkMemberResponse200DataOwnershipKind",
     "AddDefaultNetworkMemberResponse200DataOwnerType0",
     "AddDefaultNetworkMemberResponse200DataPresenceType0",
+    "AddDefaultNetworkMemberResponse200DataPresenceType0Basis",
     "AddDomainInput",
     "AddDomainResponse201",
     "AddressNote",
@@ -1967,6 +1984,7 @@ __all__ = (
     "AgentConnectionHiddenReasonType3Type1",
     "AgentConnectionOwnershipKind",
     "AgentConnectionPresenceType0",
+    "AgentConnectionPresenceType0Basis",
     "AgentConnectionStatus",
     "AgentConnectionTrustedOriginsResponse200",
     "AgentConnectionTrustedOriginsResponse200Data",
@@ -2708,6 +2726,7 @@ __all__ = (
     "GetDefaultNetworkAgentResponse200DataOwnershipKind",
     "GetDefaultNetworkAgentResponse200DataOwnerType0",
     "GetDefaultNetworkAgentResponse200DataPresenceType0",
+    "GetDefaultNetworkAgentResponse200DataPresenceType0Basis",
     "GetDefaultNetworkAgentResponse200DataReceiver",
     "GetDefaultNetworkAgentResponse200DataReceiverState",
     "GetDeliveryResponse200",
@@ -2904,9 +2923,6 @@ __all__ = (
     "ListActivityObjectsResultItemsItem",
     "ListActivityObjectsResultItemsItemCreatedThrough",
     "ListActivityObjectsResultItemsItemOwnedNow",
-    "ListActivityObjectsResultItemsItemReceiversChange",
-    "ListActivityObjectsResultItemsItemReceiversChangeAfter",
-    "ListActivityObjectsResultItemsItemReceiversChangeBefore",
     "ListActivityObjectsResultItemsItemRuleNow",
     "ListActivityObjectsResultItemsItemStopReason",
     "ListActivityObjectsResultWithheldItem",
@@ -2943,6 +2959,7 @@ __all__ = (
     "ListDefaultNetworkAgentsResponse200DataItemOwnershipKind",
     "ListDefaultNetworkAgentsResponse200DataItemOwnerType0",
     "ListDefaultNetworkAgentsResponse200DataItemPresenceType0",
+    "ListDefaultNetworkAgentsResponse200DataItemPresenceType0Basis",
     "ListDefaultNetworkAgentsResponse200DataItemReceiver",
     "ListDefaultNetworkAgentsResponse200DataItemReceiverState",
     "ListDefaultNetworkAgentsResponse200Meta",
@@ -2951,6 +2968,7 @@ __all__ = (
     "ListDefaultNetworkMembersResponse200DataItemOwnershipKind",
     "ListDefaultNetworkMembersResponse200DataItemOwnerType0",
     "ListDefaultNetworkMembersResponse200DataItemPresenceType0",
+    "ListDefaultNetworkMembersResponse200DataItemPresenceType0Basis",
     "ListDefaultNetworkMembersResponse200Meta",
     "ListDeliveriesResponse200",
     "ListDeliveriesStatus",
@@ -3019,6 +3037,7 @@ __all__ = (
     "ListEmailsAutomated",
     "ListEmailsAwaiting",
     "ListEmailsContentDiscarded",
+    "ListEmailsCount",
     "ListEmailsExcludeFyi",
     "ListEmailsExcludeMuted",
     "ListEmailsFromVerified",
@@ -3516,6 +3535,10 @@ __all__ = (
     "SentEmailDetail",
     "SentEmailDetailAttachmentsItem",
     "SentEmailDetailHold",
+    "SentEmailDetailImportedType0",
+    "SentEmailDetailImportedType0From",
+    "SentEmailDetailImportedType0Method",
+    "SentEmailDetailImportedType0Verification",
     "SentEmailDetailRepeatType0",
     "SentEmailDetailSenderMemberType0",
     "SentEmailDetailTagsType0Item",
@@ -3526,6 +3549,10 @@ __all__ = (
     "SentEmailSummaryDeliveryRecipientsType0Item",
     "SentEmailSummaryDeliveryRecipientsType0ItemResult",
     "SentEmailSummaryHold",
+    "SentEmailSummaryImportedType0",
+    "SentEmailSummaryImportedType0From",
+    "SentEmailSummaryImportedType0Method",
+    "SentEmailSummaryImportedType0Verification",
     "SentEmailSummaryInteractionHint",
     "SentEmailSummaryRepeatType0",
     "SentEmailSummarySenderMemberType0",
@@ -3738,6 +3765,10 @@ __all__ = (
     "ThreadMessage",
     "ThreadMessageCopiesItem",
     "ThreadMessageDirection",
+    "ThreadMessageImportedType0",
+    "ThreadMessageImportedType0From",
+    "ThreadMessageImportedType0Method",
+    "ThreadMessageImportedType0Verification",
     "ThreadMessageRepeatType0",
     "ThreadMessageSenderMemberType0",
     "ThreadMute",
@@ -3771,6 +3802,7 @@ __all__ = (
     "UpdateDefaultNetworkMemberResponse200DataOwnershipKind",
     "UpdateDefaultNetworkMemberResponse200DataOwnerType0",
     "UpdateDefaultNetworkMemberResponse200DataPresenceType0",
+    "UpdateDefaultNetworkMemberResponse200DataPresenceType0Basis",
     "UpdatedEndpoint",
     "UpdateDomainInput",
     "UpdateDomainResponse200",

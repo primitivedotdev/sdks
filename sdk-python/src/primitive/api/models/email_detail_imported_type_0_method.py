@@ -1,6 +1,7 @@
 from enum import StrEnum
 
 class EmailDetailImportedType0Method(StrEnum):
+    API_UPLOAD = "api_upload"
     PRIMITIVE_DIRECT = "primitive_direct"
 
     def __str__(self) -> str:

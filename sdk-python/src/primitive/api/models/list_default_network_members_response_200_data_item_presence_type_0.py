@@ -8,6 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.list_default_network_members_response_200_data_item_presence_type_0_basis import ListDefaultNetworkMembersResponse200DataItemPresenceType0Basis
 from typing import cast
 import datetime
 
@@ -27,11 +28,13 @@ class ListDefaultNetworkMembersResponse200DataItemPresenceType0:
             last_checked_at (datetime.datetime):
             expires_at (datetime.datetime):
             valid_for_ms (int):
+            basis (ListDefaultNetworkMembersResponse200DataItemPresenceType0Basis | Unset):
      """
 
     last_checked_at: datetime.datetime
     expires_at: datetime.datetime
     valid_for_ms: int
+    basis: ListDefaultNetworkMembersResponse200DataItemPresenceType0Basis | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -45,6 +48,11 @@ class ListDefaultNetworkMembersResponse200DataItemPresenceType0:
 
         valid_for_ms = self.valid_for_ms
 
+        basis: str | Unset = UNSET
+        if not isinstance(self.basis, Unset):
+            basis = self.basis.value
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -53,6 +61,8 @@ class ListDefaultNetworkMembersResponse200DataItemPresenceType0:
             "expires_at": expires_at,
             "valid_for_ms": valid_for_ms,
         })
+        if basis is not UNSET:
+            field_dict["basis"] = basis
 
         return field_dict
 
@@ -73,10 +83,21 @@ class ListDefaultNetworkMembersResponse200DataItemPresenceType0:
 
         valid_for_ms = d.pop("valid_for_ms")
 
+        _basis = d.pop("basis", UNSET)
+        basis: ListDefaultNetworkMembersResponse200DataItemPresenceType0Basis | Unset
+        if isinstance(_basis,  Unset):
+            basis = UNSET
+        else:
+            basis = ListDefaultNetworkMembersResponse200DataItemPresenceType0Basis(_basis)
+
+
+
+
         list_default_network_members_response_200_data_item_presence_type_0 = cls(
             last_checked_at=last_checked_at,
             expires_at=expires_at,
             valid_for_ms=valid_for_ms,
+            basis=basis,
         )
 
 

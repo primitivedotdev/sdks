@@ -2245,12 +2245,19 @@ func (s *AddDefaultNetworkMemberOKDataPresence) encodeFields(e *jx.Encoder) {
 		e.FieldStart("valid_for_ms")
 		e.Int(s.ValidForMs)
 	}
+	{
+		if s.Basis.Set {
+			e.FieldStart("basis")
+			s.Basis.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfAddDefaultNetworkMemberOKDataPresence = [3]string{
+var jsonFieldsNameOfAddDefaultNetworkMemberOKDataPresence = [4]string{
 	0: "last_checked_at",
 	1: "expires_at",
 	2: "valid_for_ms",
+	3: "basis",
 }
 
 // Decode decodes AddDefaultNetworkMemberOKDataPresence from json.
@@ -2297,6 +2304,16 @@ func (s *AddDefaultNetworkMemberOKDataPresence) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"valid_for_ms\"")
+			}
+		case "basis":
+			if err := func() error {
+				s.Basis.Reset()
+				if err := s.Basis.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"basis\"")
 			}
 		default:
 			return d.Skip()
@@ -2350,6 +2367,46 @@ func (s *AddDefaultNetworkMemberOKDataPresence) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *AddDefaultNetworkMemberOKDataPresence) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes AddDefaultNetworkMemberOKDataPresenceBasis as json.
+func (s AddDefaultNetworkMemberOKDataPresenceBasis) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes AddDefaultNetworkMemberOKDataPresenceBasis from json.
+func (s *AddDefaultNetworkMemberOKDataPresenceBasis) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode AddDefaultNetworkMemberOKDataPresenceBasis to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch AddDefaultNetworkMemberOKDataPresenceBasis(v) {
+	case AddDefaultNetworkMemberOKDataPresenceBasisProbe:
+		*s = AddDefaultNetworkMemberOKDataPresenceBasisProbe
+	case AddDefaultNetworkMemberOKDataPresenceBasisOrganic:
+		*s = AddDefaultNetworkMemberOKDataPresenceBasisOrganic
+	default:
+		*s = AddDefaultNetworkMemberOKDataPresenceBasis(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s AddDefaultNetworkMemberOKDataPresenceBasis) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *AddDefaultNetworkMemberOKDataPresenceBasis) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -4283,12 +4340,19 @@ func (s *AgentConnectionPresence) encodeFields(e *jx.Encoder) {
 		e.FieldStart("valid_for_ms")
 		e.Int(s.ValidForMs)
 	}
+	{
+		if s.Basis.Set {
+			e.FieldStart("basis")
+			s.Basis.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfAgentConnectionPresence = [3]string{
+var jsonFieldsNameOfAgentConnectionPresence = [4]string{
 	0: "last_checked_at",
 	1: "expires_at",
 	2: "valid_for_ms",
+	3: "basis",
 }
 
 // Decode decodes AgentConnectionPresence from json.
@@ -4335,6 +4399,16 @@ func (s *AgentConnectionPresence) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"valid_for_ms\"")
+			}
+		case "basis":
+			if err := func() error {
+				s.Basis.Reset()
+				if err := s.Basis.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"basis\"")
 			}
 		default:
 			return d.Skip()
@@ -4388,6 +4462,46 @@ func (s *AgentConnectionPresence) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *AgentConnectionPresence) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes AgentConnectionPresenceBasis as json.
+func (s AgentConnectionPresenceBasis) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes AgentConnectionPresenceBasis from json.
+func (s *AgentConnectionPresenceBasis) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode AgentConnectionPresenceBasis to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch AgentConnectionPresenceBasis(v) {
+	case AgentConnectionPresenceBasisProbe:
+		*s = AgentConnectionPresenceBasisProbe
+	case AgentConnectionPresenceBasisOrganic:
+		*s = AgentConnectionPresenceBasisOrganic
+	default:
+		*s = AgentConnectionPresenceBasis(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s AgentConnectionPresenceBasis) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *AgentConnectionPresenceBasis) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -13672,6 +13786,8 @@ func (s *ChangeInboundMessageImportedFrom) Decode(d *jx.Decoder) error {
 	switch ChangeInboundMessageImportedFrom(v) {
 	case ChangeInboundMessageImportedFromGoogleWorkspace:
 		*s = ChangeInboundMessageImportedFromGoogleWorkspace
+	case ChangeInboundMessageImportedFromUnknown:
+		*s = ChangeInboundMessageImportedFromUnknown
 	default:
 		*s = ChangeInboundMessageImportedFrom(v)
 	}
@@ -13710,6 +13826,8 @@ func (s *ChangeInboundMessageImportedMethod) Decode(d *jx.Decoder) error {
 	switch ChangeInboundMessageImportedMethod(v) {
 	case ChangeInboundMessageImportedMethodPrimitiveDirect:
 		*s = ChangeInboundMessageImportedMethodPrimitiveDirect
+	case ChangeInboundMessageImportedMethodAPIUpload:
+		*s = ChangeInboundMessageImportedMethodAPIUpload
 	default:
 		*s = ChangeInboundMessageImportedMethod(v)
 	}
@@ -13748,6 +13866,8 @@ func (s *ChangeInboundMessageImportedVerification) Decode(d *jx.Decoder) error {
 	switch ChangeInboundMessageImportedVerification(v) {
 	case ChangeInboundMessageImportedVerificationProviderFetched:
 		*s = ChangeInboundMessageImportedVerificationProviderFetched
+	case ChangeInboundMessageImportedVerificationUnverified:
+		*s = ChangeInboundMessageImportedVerificationUnverified
 	default:
 		*s = ChangeInboundMessageImportedVerification(v)
 	}
@@ -14821,6 +14941,10 @@ func (s ChangeMessage) encodeFields(e *jx.Encoder) {
 				s.InteractionKind.Encode(e)
 			}
 			{
+				e.FieldStart("imported")
+				s.Imported.Encode(e)
+			}
+			{
 				e.FieldStart("snippet")
 				s.Snippet.Encode(e)
 			}
@@ -15158,6 +15282,10 @@ func (s *ChangeOutboundMessage) encodeFields(e *jx.Encoder) {
 		s.InteractionKind.Encode(e)
 	}
 	{
+		e.FieldStart("imported")
+		s.Imported.Encode(e)
+	}
+	{
 		e.FieldStart("snippet")
 		s.Snippet.Encode(e)
 	}
@@ -15179,7 +15307,7 @@ func (s *ChangeOutboundMessage) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfChangeOutboundMessage = [47]string{
+var jsonFieldsNameOfChangeOutboundMessage = [48]string{
 	0:  "id",
 	1:  "status",
 	2:  "status_changed_at",
@@ -15223,10 +15351,11 @@ var jsonFieldsNameOfChangeOutboundMessage = [47]string{
 	40: "truncated_fields",
 	41: "interaction_hint",
 	42: "interaction_kind",
-	43: "snippet",
-	44: "recipient_count",
-	45: "hold",
-	46: "direction",
+	43: "imported",
+	44: "snippet",
+	45: "recipient_count",
+	46: "hold",
+	47: "direction",
 }
 
 // Decode decodes ChangeOutboundMessage from json.
@@ -15702,8 +15831,18 @@ func (s *ChangeOutboundMessage) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"interaction_kind\"")
 			}
-		case "snippet":
+		case "imported":
 			requiredBitSet[5] |= 1 << 3
+			if err := func() error {
+				if err := s.Imported.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"imported\"")
+			}
+		case "snippet":
+			requiredBitSet[5] |= 1 << 4
 			if err := func() error {
 				if err := s.Snippet.Decode(d); err != nil {
 					return err
@@ -15733,7 +15872,7 @@ func (s *ChangeOutboundMessage) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"hold\"")
 			}
 		case "direction":
-			requiredBitSet[5] |= 1 << 6
+			requiredBitSet[5] |= 1 << 7
 			if err := func() error {
 				if err := s.Direction.Decode(d); err != nil {
 					return err
@@ -15757,7 +15896,7 @@ func (s *ChangeOutboundMessage) Decode(d *jx.Decoder) error {
 		0b00000000,
 		0b00000000,
 		0b00000000,
-		0b01001110,
+		0b10011110,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -16387,6 +16526,267 @@ func (s *ChangeOutboundMessageHold) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ChangeOutboundMessageHold) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ChangeOutboundMessageImported) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ChangeOutboundMessageImported) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("from")
+		s.From.Encode(e)
+	}
+	{
+		e.FieldStart("method")
+		s.Method.Encode(e)
+	}
+	{
+		e.FieldStart("verification")
+		s.Verification.Encode(e)
+	}
+	{
+		e.FieldStart("at")
+		json.EncodeDateTime(e, s.At)
+	}
+}
+
+var jsonFieldsNameOfChangeOutboundMessageImported = [4]string{
+	0: "from",
+	1: "method",
+	2: "verification",
+	3: "at",
+}
+
+// Decode decodes ChangeOutboundMessageImported from json.
+func (s *ChangeOutboundMessageImported) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ChangeOutboundMessageImported to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "from":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.From.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"from\"")
+			}
+		case "method":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Method.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"method\"")
+			}
+		case "verification":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				if err := s.Verification.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"verification\"")
+			}
+		case "at":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := json.DecodeDateTime(d)
+				s.At = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"at\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ChangeOutboundMessageImported")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfChangeOutboundMessageImported) {
+					name = jsonFieldsNameOfChangeOutboundMessageImported[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ChangeOutboundMessageImported) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ChangeOutboundMessageImported) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ChangeOutboundMessageImportedFrom as json.
+func (s ChangeOutboundMessageImportedFrom) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ChangeOutboundMessageImportedFrom from json.
+func (s *ChangeOutboundMessageImportedFrom) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ChangeOutboundMessageImportedFrom to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ChangeOutboundMessageImportedFrom(v) {
+	case ChangeOutboundMessageImportedFromGoogleWorkspace:
+		*s = ChangeOutboundMessageImportedFromGoogleWorkspace
+	case ChangeOutboundMessageImportedFromUnknown:
+		*s = ChangeOutboundMessageImportedFromUnknown
+	default:
+		*s = ChangeOutboundMessageImportedFrom(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ChangeOutboundMessageImportedFrom) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ChangeOutboundMessageImportedFrom) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ChangeOutboundMessageImportedMethod as json.
+func (s ChangeOutboundMessageImportedMethod) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ChangeOutboundMessageImportedMethod from json.
+func (s *ChangeOutboundMessageImportedMethod) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ChangeOutboundMessageImportedMethod to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ChangeOutboundMessageImportedMethod(v) {
+	case ChangeOutboundMessageImportedMethodPrimitiveDirect:
+		*s = ChangeOutboundMessageImportedMethodPrimitiveDirect
+	case ChangeOutboundMessageImportedMethodAPIUpload:
+		*s = ChangeOutboundMessageImportedMethodAPIUpload
+	default:
+		*s = ChangeOutboundMessageImportedMethod(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ChangeOutboundMessageImportedMethod) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ChangeOutboundMessageImportedMethod) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ChangeOutboundMessageImportedVerification as json.
+func (s ChangeOutboundMessageImportedVerification) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ChangeOutboundMessageImportedVerification from json.
+func (s *ChangeOutboundMessageImportedVerification) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ChangeOutboundMessageImportedVerification to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ChangeOutboundMessageImportedVerification(v) {
+	case ChangeOutboundMessageImportedVerificationProviderFetched:
+		*s = ChangeOutboundMessageImportedVerificationProviderFetched
+	case ChangeOutboundMessageImportedVerificationUnverified:
+		*s = ChangeOutboundMessageImportedVerificationUnverified
+	default:
+		*s = ChangeOutboundMessageImportedVerification(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ChangeOutboundMessageImportedVerification) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ChangeOutboundMessageImportedVerification) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -27770,6 +28170,8 @@ func (s *ConversationMessageImportedFrom) Decode(d *jx.Decoder) error {
 	switch ConversationMessageImportedFrom(v) {
 	case ConversationMessageImportedFromGoogleWorkspace:
 		*s = ConversationMessageImportedFromGoogleWorkspace
+	case ConversationMessageImportedFromUnknown:
+		*s = ConversationMessageImportedFromUnknown
 	default:
 		*s = ConversationMessageImportedFrom(v)
 	}
@@ -27808,6 +28210,8 @@ func (s *ConversationMessageImportedMethod) Decode(d *jx.Decoder) error {
 	switch ConversationMessageImportedMethod(v) {
 	case ConversationMessageImportedMethodPrimitiveDirect:
 		*s = ConversationMessageImportedMethodPrimitiveDirect
+	case ConversationMessageImportedMethodAPIUpload:
+		*s = ConversationMessageImportedMethodAPIUpload
 	default:
 		*s = ConversationMessageImportedMethod(v)
 	}
@@ -27846,6 +28250,8 @@ func (s *ConversationMessageImportedVerification) Decode(d *jx.Decoder) error {
 	switch ConversationMessageImportedVerification(v) {
 	case ConversationMessageImportedVerificationProviderFetched:
 		*s = ConversationMessageImportedVerificationProviderFetched
+	case ConversationMessageImportedVerificationUnverified:
+		*s = ConversationMessageImportedVerificationUnverified
 	default:
 		*s = ConversationMessageImportedVerification(v)
 	}
@@ -75575,6 +75981,8 @@ func (s *EmailDetailImportedFrom) Decode(d *jx.Decoder) error {
 	switch EmailDetailImportedFrom(v) {
 	case EmailDetailImportedFromGoogleWorkspace:
 		*s = EmailDetailImportedFromGoogleWorkspace
+	case EmailDetailImportedFromUnknown:
+		*s = EmailDetailImportedFromUnknown
 	default:
 		*s = EmailDetailImportedFrom(v)
 	}
@@ -75613,6 +76021,8 @@ func (s *EmailDetailImportedMethod) Decode(d *jx.Decoder) error {
 	switch EmailDetailImportedMethod(v) {
 	case EmailDetailImportedMethodPrimitiveDirect:
 		*s = EmailDetailImportedMethodPrimitiveDirect
+	case EmailDetailImportedMethodAPIUpload:
+		*s = EmailDetailImportedMethodAPIUpload
 	default:
 		*s = EmailDetailImportedMethod(v)
 	}
@@ -75651,6 +76061,8 @@ func (s *EmailDetailImportedVerification) Decode(d *jx.Decoder) error {
 	switch EmailDetailImportedVerification(v) {
 	case EmailDetailImportedVerificationProviderFetched:
 		*s = EmailDetailImportedVerificationProviderFetched
+	case EmailDetailImportedVerificationUnverified:
+		*s = EmailDetailImportedVerificationUnverified
 	default:
 		*s = EmailDetailImportedVerification(v)
 	}
@@ -77497,8 +77909,10 @@ func (s *EmailListMeta) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *EmailListMeta) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("total")
-		e.Int(s.Total)
+		if s.Total.Set {
+			e.FieldStart("total")
+			s.Total.Encode(e)
+		}
 	}
 	{
 		e.FieldStart("limit")
@@ -77520,14 +77934,21 @@ func (s *EmailListMeta) encodeFields(e *jx.Encoder) {
 			s.RecipientRulesOnly.Encode(e)
 		}
 	}
+	{
+		if s.HasMore.Set {
+			e.FieldStart("has_more")
+			s.HasMore.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfEmailListMeta = [5]string{
+var jsonFieldsNameOfEmailListMeta = [6]string{
 	0: "total",
 	1: "limit",
 	2: "cursor",
 	3: "recipient_outside_access",
 	4: "recipient_rules_only",
+	5: "has_more",
 }
 
 // Decode decodes EmailListMeta from json.
@@ -77540,11 +77961,9 @@ func (s *EmailListMeta) Decode(d *jx.Decoder) error {
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
 		case "total":
-			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				v, err := d.Int()
-				s.Total = int(v)
-				if err != nil {
+				s.Total.Reset()
+				if err := s.Total.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -77593,6 +78012,16 @@ func (s *EmailListMeta) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"recipient_rules_only\"")
 			}
+		case "has_more":
+			if err := func() error {
+				s.HasMore.Reset()
+				if err := s.HasMore.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"has_more\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -77603,7 +78032,7 @@ func (s *EmailListMeta) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000111,
+		0b00000110,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -78067,6 +78496,8 @@ func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass) 
 		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgRequirable
 	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOptional:
 		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOptional
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgOnly:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgOnly
 	default:
 		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass(v)
 	}
@@ -78593,6 +79024,8 @@ func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass) Dec
 		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgRequirable
 	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOptional:
 		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOptional
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgOnly:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgOnly
 	default:
 		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass(v)
 	}
@@ -79269,6 +79702,8 @@ func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClas
 		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgRequirable
 	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOptional:
 		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOptional
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgOnly:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgOnly
 	default:
 		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass(v)
 	}
@@ -79987,6 +80422,8 @@ func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass) 
 		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgRequirable
 	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOptional:
 		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOptional
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgOnly:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgOnly
 	default:
 		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass(v)
 	}
@@ -80861,6 +81298,8 @@ func (s *EmailReadableImportedFrom) Decode(d *jx.Decoder) error {
 	switch EmailReadableImportedFrom(v) {
 	case EmailReadableImportedFromGoogleWorkspace:
 		*s = EmailReadableImportedFromGoogleWorkspace
+	case EmailReadableImportedFromUnknown:
+		*s = EmailReadableImportedFromUnknown
 	default:
 		*s = EmailReadableImportedFrom(v)
 	}
@@ -80899,6 +81338,8 @@ func (s *EmailReadableImportedMethod) Decode(d *jx.Decoder) error {
 	switch EmailReadableImportedMethod(v) {
 	case EmailReadableImportedMethodPrimitiveDirect:
 		*s = EmailReadableImportedMethodPrimitiveDirect
+	case EmailReadableImportedMethodAPIUpload:
+		*s = EmailReadableImportedMethodAPIUpload
 	default:
 		*s = EmailReadableImportedMethod(v)
 	}
@@ -80937,6 +81378,8 @@ func (s *EmailReadableImportedVerification) Decode(d *jx.Decoder) error {
 	switch EmailReadableImportedVerification(v) {
 	case EmailReadableImportedVerificationProviderFetched:
 		*s = EmailReadableImportedVerificationProviderFetched
+	case EmailReadableImportedVerificationUnverified:
+		*s = EmailReadableImportedVerificationUnverified
 	default:
 		*s = EmailReadableImportedVerification(v)
 	}
@@ -82052,16 +82495,12 @@ func (s *EmailRuleCoveringMe) encodeFields(e *jx.Encoder) {
 		json.EncodeDateTime(e, s.CreatedAt)
 	}
 	{
-		if s.English.Set {
-			e.FieldStart("english")
-			s.English.Encode(e)
-		}
+		e.FieldStart("english")
+		s.English.Encode(e)
 	}
 	{
-		if s.Explanation.Set {
-			e.FieldStart("explanation")
-			s.Explanation.Encode(e)
-		}
+		e.FieldStart("explanation")
+		s.Explanation.Encode(e)
 	}
 }
 
@@ -82220,8 +82659,8 @@ func (s *EmailRuleCoveringMe) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"created_at\"")
 			}
 		case "english":
+			requiredBitSet[1] |= 1 << 4
 			if err := func() error {
-				s.English.Reset()
 				if err := s.English.Decode(d); err != nil {
 					return err
 				}
@@ -82230,8 +82669,8 @@ func (s *EmailRuleCoveringMe) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"english\"")
 			}
 		case "explanation":
+			requiredBitSet[1] |= 1 << 5
 			if err := func() error {
-				s.Explanation.Reset()
 				if err := s.Explanation.Decode(d); err != nil {
 					return err
 				}
@@ -82250,7 +82689,7 @@ func (s *EmailRuleCoveringMe) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
 		0b11101111,
-		0b00001111,
+		0b00111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -96717,6 +97156,8 @@ func (s *EmailSearchResultImportedFrom) Decode(d *jx.Decoder) error {
 	switch EmailSearchResultImportedFrom(v) {
 	case EmailSearchResultImportedFromGoogleWorkspace:
 		*s = EmailSearchResultImportedFromGoogleWorkspace
+	case EmailSearchResultImportedFromUnknown:
+		*s = EmailSearchResultImportedFromUnknown
 	default:
 		*s = EmailSearchResultImportedFrom(v)
 	}
@@ -96755,6 +97196,8 @@ func (s *EmailSearchResultImportedMethod) Decode(d *jx.Decoder) error {
 	switch EmailSearchResultImportedMethod(v) {
 	case EmailSearchResultImportedMethodPrimitiveDirect:
 		*s = EmailSearchResultImportedMethodPrimitiveDirect
+	case EmailSearchResultImportedMethodAPIUpload:
+		*s = EmailSearchResultImportedMethodAPIUpload
 	default:
 		*s = EmailSearchResultImportedMethod(v)
 	}
@@ -96793,6 +97236,8 @@ func (s *EmailSearchResultImportedVerification) Decode(d *jx.Decoder) error {
 	switch EmailSearchResultImportedVerification(v) {
 	case EmailSearchResultImportedVerificationProviderFetched:
 		*s = EmailSearchResultImportedVerificationProviderFetched
+	case EmailSearchResultImportedVerificationUnverified:
+		*s = EmailSearchResultImportedVerificationUnverified
 	default:
 		*s = EmailSearchResultImportedVerification(v)
 	}
@@ -99268,6 +99713,8 @@ func (s *EmailSummaryImportedFrom) Decode(d *jx.Decoder) error {
 	switch EmailSummaryImportedFrom(v) {
 	case EmailSummaryImportedFromGoogleWorkspace:
 		*s = EmailSummaryImportedFromGoogleWorkspace
+	case EmailSummaryImportedFromUnknown:
+		*s = EmailSummaryImportedFromUnknown
 	default:
 		*s = EmailSummaryImportedFrom(v)
 	}
@@ -99306,6 +99753,8 @@ func (s *EmailSummaryImportedMethod) Decode(d *jx.Decoder) error {
 	switch EmailSummaryImportedMethod(v) {
 	case EmailSummaryImportedMethodPrimitiveDirect:
 		*s = EmailSummaryImportedMethodPrimitiveDirect
+	case EmailSummaryImportedMethodAPIUpload:
+		*s = EmailSummaryImportedMethodAPIUpload
 	default:
 		*s = EmailSummaryImportedMethod(v)
 	}
@@ -99344,6 +99793,8 @@ func (s *EmailSummaryImportedVerification) Decode(d *jx.Decoder) error {
 	switch EmailSummaryImportedVerification(v) {
 	case EmailSummaryImportedVerificationProviderFetched:
 		*s = EmailSummaryImportedVerificationProviderFetched
+	case EmailSummaryImportedVerificationUnverified:
+		*s = EmailSummaryImportedVerificationUnverified
 	default:
 		*s = EmailSummaryImportedVerification(v)
 	}
@@ -104214,6 +104665,8 @@ func (s *ErrorResponseErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorResponseErrorCodeMailImportStorageFailed
 	case ErrorResponseErrorCodeMailImportStorageLimit:
 		*s = ErrorResponseErrorCodeMailImportStorageLimit
+	case ErrorResponseErrorCodeMailImportStorageNotReady:
+		*s = ErrorResponseErrorCodeMailImportStorageNotReady
 	case ErrorResponseErrorCodeMailImportTooLarge:
 		*s = ErrorResponseErrorCodeMailImportTooLarge
 	case ErrorResponseErrorCodeMailImportUnavailable:
@@ -115818,12 +116271,19 @@ func (s *GetDefaultNetworkAgentOKDataPresence) encodeFields(e *jx.Encoder) {
 		e.FieldStart("valid_for_ms")
 		e.Int(s.ValidForMs)
 	}
+	{
+		if s.Basis.Set {
+			e.FieldStart("basis")
+			s.Basis.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfGetDefaultNetworkAgentOKDataPresence = [3]string{
+var jsonFieldsNameOfGetDefaultNetworkAgentOKDataPresence = [4]string{
 	0: "last_checked_at",
 	1: "expires_at",
 	2: "valid_for_ms",
+	3: "basis",
 }
 
 // Decode decodes GetDefaultNetworkAgentOKDataPresence from json.
@@ -115870,6 +116330,16 @@ func (s *GetDefaultNetworkAgentOKDataPresence) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"valid_for_ms\"")
+			}
+		case "basis":
+			if err := func() error {
+				s.Basis.Reset()
+				if err := s.Basis.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"basis\"")
 			}
 		default:
 			return d.Skip()
@@ -115923,6 +116393,46 @@ func (s *GetDefaultNetworkAgentOKDataPresence) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *GetDefaultNetworkAgentOKDataPresence) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes GetDefaultNetworkAgentOKDataPresenceBasis as json.
+func (s GetDefaultNetworkAgentOKDataPresenceBasis) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes GetDefaultNetworkAgentOKDataPresenceBasis from json.
+func (s *GetDefaultNetworkAgentOKDataPresenceBasis) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetDefaultNetworkAgentOKDataPresenceBasis to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch GetDefaultNetworkAgentOKDataPresenceBasis(v) {
+	case GetDefaultNetworkAgentOKDataPresenceBasisProbe:
+		*s = GetDefaultNetworkAgentOKDataPresenceBasisProbe
+	case GetDefaultNetworkAgentOKDataPresenceBasisOrganic:
+		*s = GetDefaultNetworkAgentOKDataPresenceBasisOrganic
+	default:
+		*s = GetDefaultNetworkAgentOKDataPresenceBasis(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s GetDefaultNetworkAgentOKDataPresenceBasis) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetDefaultNetworkAgentOKDataPresenceBasis) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -142930,12 +143440,6 @@ func (s *ListActivityObjectsResultItemsItem) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.ReceiversChange.Set {
-			e.FieldStart("receivers_change")
-			s.ReceiversChange.Encode(e)
-		}
-	}
-	{
 		if s.StopReason.Set {
 			e.FieldStart("stop_reason")
 			s.StopReason.Encode(e)
@@ -142943,7 +143447,7 @@ func (s *ListActivityObjectsResultItemsItem) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfListActivityObjectsResultItemsItem = [12]string{
+var jsonFieldsNameOfListActivityObjectsResultItemsItem = [11]string{
 	0:  "kind",
 	1:  "id",
 	2:  "name",
@@ -142954,8 +143458,7 @@ var jsonFieldsNameOfListActivityObjectsResultItemsItem = [12]string{
 	7:  "created_through",
 	8:  "rule_id",
 	9:  "rule_now",
-	10: "receivers_change",
-	11: "stop_reason",
+	10: "stop_reason",
 }
 
 // Decode decodes ListActivityObjectsResultItemsItem from json.
@@ -143074,16 +143577,6 @@ func (s *ListActivityObjectsResultItemsItem) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"rule_now\"")
-			}
-		case "receivers_change":
-			if err := func() error {
-				s.ReceiversChange.Reset()
-				if err := s.ReceiversChange.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"receivers_change\"")
 			}
 		case "stop_reason":
 			if err := func() error {
@@ -143314,409 +143807,6 @@ func (s ListActivityObjectsResultItemsItemOwnedNow) MarshalJSON() ([]byte, error
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ListActivityObjectsResultItemsItemOwnedNow) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *ListActivityObjectsResultItemsItemReceiversChange) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *ListActivityObjectsResultItemsItemReceiversChange) encodeFields(e *jx.Encoder) {
-	{
-		e.FieldStart("before")
-		s.Before.Encode(e)
-	}
-	{
-		e.FieldStart("after")
-		s.After.Encode(e)
-	}
-}
-
-var jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChange = [2]string{
-	0: "before",
-	1: "after",
-}
-
-// Decode decodes ListActivityObjectsResultItemsItemReceiversChange from json.
-func (s *ListActivityObjectsResultItemsItemReceiversChange) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode ListActivityObjectsResultItemsItemReceiversChange to nil")
-	}
-	var requiredBitSet [1]uint8
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "before":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				if err := s.Before.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"before\"")
-			}
-		case "after":
-			requiredBitSet[0] |= 1 << 1
-			if err := func() error {
-				if err := s.After.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"after\"")
-			}
-		default:
-			return d.Skip()
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode ListActivityObjectsResultItemsItemReceiversChange")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00000011,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChange) {
-					name = jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChange[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *ListActivityObjectsResultItemsItemReceiversChange) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *ListActivityObjectsResultItemsItemReceiversChange) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) encodeFields(e *jx.Encoder) {
-	{
-		e.FieldStart("keys")
-		e.Int(s.Keys)
-	}
-	{
-		e.FieldStart("reads_in_full")
-		e.Int(s.ReadsInFull)
-	}
-	{
-		e.FieldStart("webhooks")
-		e.Int(s.Webhooks)
-	}
-	{
-		e.FieldStart("shares")
-		e.Int(s.Shares)
-	}
-}
-
-var jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChangeAfter = [4]string{
-	0: "keys",
-	1: "reads_in_full",
-	2: "webhooks",
-	3: "shares",
-}
-
-// Decode decodes ListActivityObjectsResultItemsItemReceiversChangeAfter from json.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode ListActivityObjectsResultItemsItemReceiversChangeAfter to nil")
-	}
-	var requiredBitSet [1]uint8
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "keys":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				v, err := d.Int()
-				s.Keys = int(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"keys\"")
-			}
-		case "reads_in_full":
-			requiredBitSet[0] |= 1 << 1
-			if err := func() error {
-				v, err := d.Int()
-				s.ReadsInFull = int(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"reads_in_full\"")
-			}
-		case "webhooks":
-			requiredBitSet[0] |= 1 << 2
-			if err := func() error {
-				v, err := d.Int()
-				s.Webhooks = int(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"webhooks\"")
-			}
-		case "shares":
-			requiredBitSet[0] |= 1 << 3
-			if err := func() error {
-				v, err := d.Int()
-				s.Shares = int(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"shares\"")
-			}
-		default:
-			return d.Skip()
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode ListActivityObjectsResultItemsItemReceiversChangeAfter")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00001111,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChangeAfter) {
-					name = jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChangeAfter[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) encodeFields(e *jx.Encoder) {
-	{
-		e.FieldStart("keys")
-		e.Int(s.Keys)
-	}
-	{
-		e.FieldStart("reads_in_full")
-		e.Int(s.ReadsInFull)
-	}
-	{
-		e.FieldStart("webhooks")
-		e.Int(s.Webhooks)
-	}
-	{
-		e.FieldStart("shares")
-		e.Int(s.Shares)
-	}
-}
-
-var jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChangeBefore = [4]string{
-	0: "keys",
-	1: "reads_in_full",
-	2: "webhooks",
-	3: "shares",
-}
-
-// Decode decodes ListActivityObjectsResultItemsItemReceiversChangeBefore from json.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode ListActivityObjectsResultItemsItemReceiversChangeBefore to nil")
-	}
-	var requiredBitSet [1]uint8
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "keys":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				v, err := d.Int()
-				s.Keys = int(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"keys\"")
-			}
-		case "reads_in_full":
-			requiredBitSet[0] |= 1 << 1
-			if err := func() error {
-				v, err := d.Int()
-				s.ReadsInFull = int(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"reads_in_full\"")
-			}
-		case "webhooks":
-			requiredBitSet[0] |= 1 << 2
-			if err := func() error {
-				v, err := d.Int()
-				s.Webhooks = int(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"webhooks\"")
-			}
-		case "shares":
-			requiredBitSet[0] |= 1 << 3
-			if err := func() error {
-				v, err := d.Int()
-				s.Shares = int(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"shares\"")
-			}
-		default:
-			return d.Skip()
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode ListActivityObjectsResultItemsItemReceiversChangeBefore")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00001111,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChangeBefore) {
-					name = jsonFieldsNameOfListActivityObjectsResultItemsItemReceiversChangeBefore[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -148467,12 +148557,19 @@ func (s *ListDefaultNetworkAgentsOKDataItemPresence) encodeFields(e *jx.Encoder)
 		e.FieldStart("valid_for_ms")
 		e.Int(s.ValidForMs)
 	}
+	{
+		if s.Basis.Set {
+			e.FieldStart("basis")
+			s.Basis.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfListDefaultNetworkAgentsOKDataItemPresence = [3]string{
+var jsonFieldsNameOfListDefaultNetworkAgentsOKDataItemPresence = [4]string{
 	0: "last_checked_at",
 	1: "expires_at",
 	2: "valid_for_ms",
+	3: "basis",
 }
 
 // Decode decodes ListDefaultNetworkAgentsOKDataItemPresence from json.
@@ -148519,6 +148616,16 @@ func (s *ListDefaultNetworkAgentsOKDataItemPresence) Decode(d *jx.Decoder) error
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"valid_for_ms\"")
+			}
+		case "basis":
+			if err := func() error {
+				s.Basis.Reset()
+				if err := s.Basis.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"basis\"")
 			}
 		default:
 			return d.Skip()
@@ -148572,6 +148679,46 @@ func (s *ListDefaultNetworkAgentsOKDataItemPresence) MarshalJSON() ([]byte, erro
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ListDefaultNetworkAgentsOKDataItemPresence) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ListDefaultNetworkAgentsOKDataItemPresenceBasis as json.
+func (s ListDefaultNetworkAgentsOKDataItemPresenceBasis) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ListDefaultNetworkAgentsOKDataItemPresenceBasis from json.
+func (s *ListDefaultNetworkAgentsOKDataItemPresenceBasis) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListDefaultNetworkAgentsOKDataItemPresenceBasis to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ListDefaultNetworkAgentsOKDataItemPresenceBasis(v) {
+	case ListDefaultNetworkAgentsOKDataItemPresenceBasisProbe:
+		*s = ListDefaultNetworkAgentsOKDataItemPresenceBasisProbe
+	case ListDefaultNetworkAgentsOKDataItemPresenceBasisOrganic:
+		*s = ListDefaultNetworkAgentsOKDataItemPresenceBasisOrganic
+	default:
+		*s = ListDefaultNetworkAgentsOKDataItemPresenceBasis(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ListDefaultNetworkAgentsOKDataItemPresenceBasis) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListDefaultNetworkAgentsOKDataItemPresenceBasis) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -149593,12 +149740,19 @@ func (s *ListDefaultNetworkMembersOKDataItemPresence) encodeFields(e *jx.Encoder
 		e.FieldStart("valid_for_ms")
 		e.Int(s.ValidForMs)
 	}
+	{
+		if s.Basis.Set {
+			e.FieldStart("basis")
+			s.Basis.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfListDefaultNetworkMembersOKDataItemPresence = [3]string{
+var jsonFieldsNameOfListDefaultNetworkMembersOKDataItemPresence = [4]string{
 	0: "last_checked_at",
 	1: "expires_at",
 	2: "valid_for_ms",
+	3: "basis",
 }
 
 // Decode decodes ListDefaultNetworkMembersOKDataItemPresence from json.
@@ -149645,6 +149799,16 @@ func (s *ListDefaultNetworkMembersOKDataItemPresence) Decode(d *jx.Decoder) erro
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"valid_for_ms\"")
+			}
+		case "basis":
+			if err := func() error {
+				s.Basis.Reset()
+				if err := s.Basis.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"basis\"")
 			}
 		default:
 			return d.Skip()
@@ -149698,6 +149862,46 @@ func (s *ListDefaultNetworkMembersOKDataItemPresence) MarshalJSON() ([]byte, err
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ListDefaultNetworkMembersOKDataItemPresence) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ListDefaultNetworkMembersOKDataItemPresenceBasis as json.
+func (s ListDefaultNetworkMembersOKDataItemPresenceBasis) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ListDefaultNetworkMembersOKDataItemPresenceBasis from json.
+func (s *ListDefaultNetworkMembersOKDataItemPresenceBasis) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListDefaultNetworkMembersOKDataItemPresenceBasis to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ListDefaultNetworkMembersOKDataItemPresenceBasis(v) {
+	case ListDefaultNetworkMembersOKDataItemPresenceBasisProbe:
+		*s = ListDefaultNetworkMembersOKDataItemPresenceBasisProbe
+	case ListDefaultNetworkMembersOKDataItemPresenceBasisOrganic:
+		*s = ListDefaultNetworkMembersOKDataItemPresenceBasisOrganic
+	default:
+		*s = ListDefaultNetworkMembersOKDataItemPresenceBasis(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ListDefaultNetworkMembersOKDataItemPresenceBasis) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListDefaultNetworkMembersOKDataItemPresenceBasis) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -156363,6 +156567,8 @@ func (s *ListEmailRuleShareEmailsResultItemImportedFrom) Decode(d *jx.Decoder) e
 	switch ListEmailRuleShareEmailsResultItemImportedFrom(v) {
 	case ListEmailRuleShareEmailsResultItemImportedFromGoogleWorkspace:
 		*s = ListEmailRuleShareEmailsResultItemImportedFromGoogleWorkspace
+	case ListEmailRuleShareEmailsResultItemImportedFromUnknown:
+		*s = ListEmailRuleShareEmailsResultItemImportedFromUnknown
 	default:
 		*s = ListEmailRuleShareEmailsResultItemImportedFrom(v)
 	}
@@ -156401,6 +156607,8 @@ func (s *ListEmailRuleShareEmailsResultItemImportedMethod) Decode(d *jx.Decoder)
 	switch ListEmailRuleShareEmailsResultItemImportedMethod(v) {
 	case ListEmailRuleShareEmailsResultItemImportedMethodPrimitiveDirect:
 		*s = ListEmailRuleShareEmailsResultItemImportedMethodPrimitiveDirect
+	case ListEmailRuleShareEmailsResultItemImportedMethodAPIUpload:
+		*s = ListEmailRuleShareEmailsResultItemImportedMethodAPIUpload
 	default:
 		*s = ListEmailRuleShareEmailsResultItemImportedMethod(v)
 	}
@@ -156439,6 +156647,8 @@ func (s *ListEmailRuleShareEmailsResultItemImportedVerification) Decode(d *jx.De
 	switch ListEmailRuleShareEmailsResultItemImportedVerification(v) {
 	case ListEmailRuleShareEmailsResultItemImportedVerificationProviderFetched:
 		*s = ListEmailRuleShareEmailsResultItemImportedVerificationProviderFetched
+	case ListEmailRuleShareEmailsResultItemImportedVerificationUnverified:
+		*s = ListEmailRuleShareEmailsResultItemImportedVerificationUnverified
 	default:
 		*s = ListEmailRuleShareEmailsResultItemImportedVerification(v)
 	}
@@ -181298,6 +181508,50 @@ func (s *NilChangeInboundMessageImported) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes ChangeOutboundMessageImported as json.
+func (o NilChangeOutboundMessageImported) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes ChangeOutboundMessageImported from json.
+func (o *NilChangeOutboundMessageImported) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilChangeOutboundMessageImported to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v ChangeOutboundMessageImported
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilChangeOutboundMessageImported) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilChangeOutboundMessageImported) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes ChangeReason as json.
 func (o NilChangeReason) Encode(e *jx.Encoder) {
 	if o.Null {
@@ -184122,6 +184376,94 @@ func (s *NilSemanticSearchCoverage) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes SentEmailDetailImported as json.
+func (o NilSentEmailDetailImported) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes SentEmailDetailImported from json.
+func (o *NilSentEmailDetailImported) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilSentEmailDetailImported to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v SentEmailDetailImported
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilSentEmailDetailImported) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilSentEmailDetailImported) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SentEmailSummaryImported as json.
+func (o NilSentEmailSummaryImported) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes SentEmailSummaryImported from json.
+func (o *NilSentEmailSummaryImported) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilSentEmailSummaryImported to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v SentEmailSummaryImported
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilSentEmailSummaryImported) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilSentEmailSummaryImported) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes SetMailboxAccessResultEntriesItemMailboxKind as json.
 func (o NilSetMailboxAccessResultEntriesItemMailboxKind) Encode(e *jx.Encoder) {
 	if o.Null {
@@ -184477,6 +184819,50 @@ func (s *NilTestResultDelivery) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes ThreadMessageImported as json.
+func (o NilThreadMessageImported) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes ThreadMessageImported from json.
+func (o *NilThreadMessageImported) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilThreadMessageImported to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v ThreadMessageImported
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilThreadMessageImported) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilThreadMessageImported) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes url.URL as json.
 func (o NilURI) Encode(e *jx.Encoder) {
 	if o.Null {
@@ -184759,6 +185145,72 @@ func (s OptAcceptEmailRuleRequestRequestKind) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptAcceptEmailRuleRequestRequestKind) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes AddDefaultNetworkMemberOKDataPresenceBasis as json.
+func (o OptAddDefaultNetworkMemberOKDataPresenceBasis) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes AddDefaultNetworkMemberOKDataPresenceBasis from json.
+func (o *OptAddDefaultNetworkMemberOKDataPresenceBasis) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptAddDefaultNetworkMemberOKDataPresenceBasis to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptAddDefaultNetworkMemberOKDataPresenceBasis) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptAddDefaultNetworkMemberOKDataPresenceBasis) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes AgentConnectionPresenceBasis as json.
+func (o OptAgentConnectionPresenceBasis) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes AgentConnectionPresenceBasis from json.
+func (o *OptAgentConnectionPresenceBasis) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptAgentConnectionPresenceBasis to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptAgentConnectionPresenceBasis) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptAgentConnectionPresenceBasis) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -188740,6 +189192,39 @@ func (s *OptGetAccessModeResultGate) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes GetDefaultNetworkAgentOKDataPresenceBasis as json.
+func (o OptGetDefaultNetworkAgentOKDataPresenceBasis) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes GetDefaultNetworkAgentOKDataPresenceBasis from json.
+func (o *OptGetDefaultNetworkAgentOKDataPresenceBasis) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptGetDefaultNetworkAgentOKDataPresenceBasis to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptGetDefaultNetworkAgentOKDataPresenceBasis) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptGetDefaultNetworkAgentOKDataPresenceBasis) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes GetOwnGrantOKDataGrantMailScope1Direction as json.
 func (o OptGetOwnGrantOKDataGrantMailScope1Direction) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -189108,39 +189593,6 @@ func (s *OptInt) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes ListActivityObjectsResultItemsItemReceiversChange as json.
-func (o OptListActivityObjectsResultItemsItemReceiversChange) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	o.Value.Encode(e)
-}
-
-// Decode decodes ListActivityObjectsResultItemsItemReceiversChange from json.
-func (o *OptListActivityObjectsResultItemsItemReceiversChange) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptListActivityObjectsResultItemsItemReceiversChange to nil")
-	}
-	o.Set = true
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptListActivityObjectsResultItemsItemReceiversChange) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptListActivityObjectsResultItemsItemReceiversChange) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes ListActivityObjectsResultItemsItemRuleNow as json.
 func (o OptListActivityObjectsResultItemsItemRuleNow) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -189269,6 +189721,72 @@ func (s OptListAddressNotesOKMeta) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptListAddressNotesOKMeta) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ListDefaultNetworkAgentsOKDataItemPresenceBasis as json.
+func (o OptListDefaultNetworkAgentsOKDataItemPresenceBasis) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes ListDefaultNetworkAgentsOKDataItemPresenceBasis from json.
+func (o *OptListDefaultNetworkAgentsOKDataItemPresenceBasis) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptListDefaultNetworkAgentsOKDataItemPresenceBasis to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptListDefaultNetworkAgentsOKDataItemPresenceBasis) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptListDefaultNetworkAgentsOKDataItemPresenceBasis) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ListDefaultNetworkMembersOKDataItemPresenceBasis as json.
+func (o OptListDefaultNetworkMembersOKDataItemPresenceBasis) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes ListDefaultNetworkMembersOKDataItemPresenceBasis from json.
+func (o *OptListDefaultNetworkMembersOKDataItemPresenceBasis) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptListDefaultNetworkMembersOKDataItemPresenceBasis to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptListDefaultNetworkMembersOKDataItemPresenceBasis) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptListDefaultNetworkMembersOKDataItemPresenceBasis) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -197908,6 +198426,39 @@ func (s OptUnverifiedDomainDkim) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptUnverifiedDomainDkim) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateDefaultNetworkMemberOKDataPresenceBasis as json.
+func (o OptUpdateDefaultNetworkMemberOKDataPresenceBasis) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes UpdateDefaultNetworkMemberOKDataPresenceBasis from json.
+func (o *OptUpdateDefaultNetworkMemberOKDataPresenceBasis) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptUpdateDefaultNetworkMemberOKDataPresenceBasis to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptUpdateDefaultNetworkMemberOKDataPresenceBasis) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptUpdateDefaultNetworkMemberOKDataPresenceBasis) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -240650,6 +241201,10 @@ func (s *SentEmailDetail) encodeFields(e *jx.Encoder) {
 		s.InteractionKind.Encode(e)
 	}
 	{
+		e.FieldStart("imported")
+		s.Imported.Encode(e)
+	}
+	{
 		e.FieldStart("snippet")
 		s.Snippet.Encode(e)
 	}
@@ -240715,7 +241270,7 @@ func (s *SentEmailDetail) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSentEmailDetail = [54]string{
+var jsonFieldsNameOfSentEmailDetail = [55]string{
 	0:  "id",
 	1:  "status",
 	2:  "status_changed_at",
@@ -240759,17 +241314,18 @@ var jsonFieldsNameOfSentEmailDetail = [54]string{
 	40: "truncated_fields",
 	41: "interaction_hint",
 	42: "interaction_kind",
-	43: "snippet",
-	44: "recipient_count",
-	45: "hold",
-	46: "to_addresses",
-	47: "cc",
-	48: "bcc",
-	49: "reply_to",
-	50: "tags",
-	51: "attachments_size_bytes",
-	52: "attachments_download_available",
-	53: "attachments_complete",
+	43: "imported",
+	44: "snippet",
+	45: "recipient_count",
+	46: "hold",
+	47: "to_addresses",
+	48: "cc",
+	49: "bcc",
+	50: "reply_to",
+	51: "tags",
+	52: "attachments_size_bytes",
+	53: "attachments_download_available",
+	54: "attachments_complete",
 }
 
 // Decode decodes SentEmailDetail from json.
@@ -241245,8 +241801,18 @@ func (s *SentEmailDetail) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"interaction_kind\"")
 			}
-		case "snippet":
+		case "imported":
 			requiredBitSet[5] |= 1 << 3
+			if err := func() error {
+				if err := s.Imported.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"imported\"")
+			}
+		case "snippet":
+			requiredBitSet[5] |= 1 << 4
 			if err := func() error {
 				if err := s.Snippet.Decode(d); err != nil {
 					return err
@@ -241370,7 +241936,7 @@ func (s *SentEmailDetail) Decode(d *jx.Decoder) error {
 		0b00000000,
 		0b00000000,
 		0b00000000,
-		0b00001110,
+		0b00011110,
 		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
@@ -241963,6 +242529,267 @@ func (s *SentEmailDetailHold) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SentEmailDetailHold) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SentEmailDetailImported) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SentEmailDetailImported) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("from")
+		s.From.Encode(e)
+	}
+	{
+		e.FieldStart("method")
+		s.Method.Encode(e)
+	}
+	{
+		e.FieldStart("verification")
+		s.Verification.Encode(e)
+	}
+	{
+		e.FieldStart("at")
+		json.EncodeDateTime(e, s.At)
+	}
+}
+
+var jsonFieldsNameOfSentEmailDetailImported = [4]string{
+	0: "from",
+	1: "method",
+	2: "verification",
+	3: "at",
+}
+
+// Decode decodes SentEmailDetailImported from json.
+func (s *SentEmailDetailImported) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SentEmailDetailImported to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "from":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.From.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"from\"")
+			}
+		case "method":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Method.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"method\"")
+			}
+		case "verification":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				if err := s.Verification.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"verification\"")
+			}
+		case "at":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := json.DecodeDateTime(d)
+				s.At = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"at\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SentEmailDetailImported")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfSentEmailDetailImported) {
+					name = jsonFieldsNameOfSentEmailDetailImported[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SentEmailDetailImported) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SentEmailDetailImported) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SentEmailDetailImportedFrom as json.
+func (s SentEmailDetailImportedFrom) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes SentEmailDetailImportedFrom from json.
+func (s *SentEmailDetailImportedFrom) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SentEmailDetailImportedFrom to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch SentEmailDetailImportedFrom(v) {
+	case SentEmailDetailImportedFromGoogleWorkspace:
+		*s = SentEmailDetailImportedFromGoogleWorkspace
+	case SentEmailDetailImportedFromUnknown:
+		*s = SentEmailDetailImportedFromUnknown
+	default:
+		*s = SentEmailDetailImportedFrom(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SentEmailDetailImportedFrom) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SentEmailDetailImportedFrom) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SentEmailDetailImportedMethod as json.
+func (s SentEmailDetailImportedMethod) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes SentEmailDetailImportedMethod from json.
+func (s *SentEmailDetailImportedMethod) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SentEmailDetailImportedMethod to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch SentEmailDetailImportedMethod(v) {
+	case SentEmailDetailImportedMethodPrimitiveDirect:
+		*s = SentEmailDetailImportedMethodPrimitiveDirect
+	case SentEmailDetailImportedMethodAPIUpload:
+		*s = SentEmailDetailImportedMethodAPIUpload
+	default:
+		*s = SentEmailDetailImportedMethod(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SentEmailDetailImportedMethod) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SentEmailDetailImportedMethod) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SentEmailDetailImportedVerification as json.
+func (s SentEmailDetailImportedVerification) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes SentEmailDetailImportedVerification from json.
+func (s *SentEmailDetailImportedVerification) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SentEmailDetailImportedVerification to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch SentEmailDetailImportedVerification(v) {
+	case SentEmailDetailImportedVerificationProviderFetched:
+		*s = SentEmailDetailImportedVerificationProviderFetched
+	case SentEmailDetailImportedVerificationUnverified:
+		*s = SentEmailDetailImportedVerificationUnverified
+	default:
+		*s = SentEmailDetailImportedVerification(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SentEmailDetailImportedVerification) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SentEmailDetailImportedVerification) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -242805,6 +243632,10 @@ func (s *SentEmailSummary) encodeFields(e *jx.Encoder) {
 		s.InteractionKind.Encode(e)
 	}
 	{
+		e.FieldStart("imported")
+		s.Imported.Encode(e)
+	}
+	{
 		e.FieldStart("snippet")
 		s.Snippet.Encode(e)
 	}
@@ -242822,7 +243653,7 @@ func (s *SentEmailSummary) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSentEmailSummary = [46]string{
+var jsonFieldsNameOfSentEmailSummary = [47]string{
 	0:  "id",
 	1:  "status",
 	2:  "status_changed_at",
@@ -242866,9 +243697,10 @@ var jsonFieldsNameOfSentEmailSummary = [46]string{
 	40: "truncated_fields",
 	41: "interaction_hint",
 	42: "interaction_kind",
-	43: "snippet",
-	44: "recipient_count",
-	45: "hold",
+	43: "imported",
+	44: "snippet",
+	45: "recipient_count",
+	46: "hold",
 }
 
 // Decode decodes SentEmailSummary from json.
@@ -243344,8 +244176,18 @@ func (s *SentEmailSummary) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"interaction_kind\"")
 			}
-		case "snippet":
+		case "imported":
 			requiredBitSet[5] |= 1 << 3
+			if err := func() error {
+				if err := s.Imported.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"imported\"")
+			}
+		case "snippet":
+			requiredBitSet[5] |= 1 << 4
 			if err := func() error {
 				if err := s.Snippet.Decode(d); err != nil {
 					return err
@@ -243389,7 +244231,7 @@ func (s *SentEmailSummary) Decode(d *jx.Decoder) error {
 		0b00000000,
 		0b00000000,
 		0b00000000,
-		0b00001110,
+		0b00011110,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -243981,6 +244823,267 @@ func (s *SentEmailSummaryHold) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SentEmailSummaryHold) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SentEmailSummaryImported) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SentEmailSummaryImported) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("from")
+		s.From.Encode(e)
+	}
+	{
+		e.FieldStart("method")
+		s.Method.Encode(e)
+	}
+	{
+		e.FieldStart("verification")
+		s.Verification.Encode(e)
+	}
+	{
+		e.FieldStart("at")
+		json.EncodeDateTime(e, s.At)
+	}
+}
+
+var jsonFieldsNameOfSentEmailSummaryImported = [4]string{
+	0: "from",
+	1: "method",
+	2: "verification",
+	3: "at",
+}
+
+// Decode decodes SentEmailSummaryImported from json.
+func (s *SentEmailSummaryImported) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SentEmailSummaryImported to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "from":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.From.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"from\"")
+			}
+		case "method":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Method.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"method\"")
+			}
+		case "verification":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				if err := s.Verification.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"verification\"")
+			}
+		case "at":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := json.DecodeDateTime(d)
+				s.At = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"at\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SentEmailSummaryImported")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfSentEmailSummaryImported) {
+					name = jsonFieldsNameOfSentEmailSummaryImported[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SentEmailSummaryImported) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SentEmailSummaryImported) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SentEmailSummaryImportedFrom as json.
+func (s SentEmailSummaryImportedFrom) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes SentEmailSummaryImportedFrom from json.
+func (s *SentEmailSummaryImportedFrom) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SentEmailSummaryImportedFrom to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch SentEmailSummaryImportedFrom(v) {
+	case SentEmailSummaryImportedFromGoogleWorkspace:
+		*s = SentEmailSummaryImportedFromGoogleWorkspace
+	case SentEmailSummaryImportedFromUnknown:
+		*s = SentEmailSummaryImportedFromUnknown
+	default:
+		*s = SentEmailSummaryImportedFrom(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SentEmailSummaryImportedFrom) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SentEmailSummaryImportedFrom) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SentEmailSummaryImportedMethod as json.
+func (s SentEmailSummaryImportedMethod) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes SentEmailSummaryImportedMethod from json.
+func (s *SentEmailSummaryImportedMethod) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SentEmailSummaryImportedMethod to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch SentEmailSummaryImportedMethod(v) {
+	case SentEmailSummaryImportedMethodPrimitiveDirect:
+		*s = SentEmailSummaryImportedMethodPrimitiveDirect
+	case SentEmailSummaryImportedMethodAPIUpload:
+		*s = SentEmailSummaryImportedMethodAPIUpload
+	default:
+		*s = SentEmailSummaryImportedMethod(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SentEmailSummaryImportedMethod) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SentEmailSummaryImportedMethod) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SentEmailSummaryImportedVerification as json.
+func (s SentEmailSummaryImportedVerification) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes SentEmailSummaryImportedVerification from json.
+func (s *SentEmailSummaryImportedVerification) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SentEmailSummaryImportedVerification to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch SentEmailSummaryImportedVerification(v) {
+	case SentEmailSummaryImportedVerificationProviderFetched:
+		*s = SentEmailSummaryImportedVerificationProviderFetched
+	case SentEmailSummaryImportedVerificationUnverified:
+		*s = SentEmailSummaryImportedVerificationUnverified
+	default:
+		*s = SentEmailSummaryImportedVerification(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SentEmailSummaryImportedVerification) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SentEmailSummaryImportedVerification) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -269869,6 +270972,10 @@ func (s *ThreadMessage) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		e.FieldStart("imported")
+		s.Imported.Encode(e)
+	}
+	{
 		if s.Copies != nil {
 			e.FieldStart("copies")
 			e.ArrStart()
@@ -269892,7 +270999,7 @@ func (s *ThreadMessage) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfThreadMessage = [15]string{
+var jsonFieldsNameOfThreadMessage = [16]string{
 	0:  "direction",
 	1:  "id",
 	2:  "message_id",
@@ -269905,9 +271012,10 @@ var jsonFieldsNameOfThreadMessage = [15]string{
 	9:  "sender_member",
 	10: "fyi",
 	11: "interaction_hint",
-	12: "copies",
-	13: "copies_truncated",
-	14: "sent_email_id",
+	12: "imported",
+	13: "copies",
+	14: "copies_truncated",
+	15: "sent_email_id",
 }
 
 // Decode decodes ThreadMessage from json.
@@ -270041,6 +271149,16 @@ func (s *ThreadMessage) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"interaction_hint\"")
 			}
+		case "imported":
+			requiredBitSet[1] |= 1 << 4
+			if err := func() error {
+				if err := s.Imported.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"imported\"")
+			}
 		case "copies":
 			if err := func() error {
 				s.Copies = make([]ThreadMessageCopiesItem, 0)
@@ -270089,7 +271207,7 @@ func (s *ThreadMessage) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
 		0b00000011,
-		0b00000000,
+		0b00010000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -270316,6 +271434,267 @@ func (s ThreadMessageDirection) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ThreadMessageDirection) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ThreadMessageImported) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ThreadMessageImported) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("from")
+		s.From.Encode(e)
+	}
+	{
+		e.FieldStart("method")
+		s.Method.Encode(e)
+	}
+	{
+		e.FieldStart("verification")
+		s.Verification.Encode(e)
+	}
+	{
+		e.FieldStart("at")
+		json.EncodeDateTime(e, s.At)
+	}
+}
+
+var jsonFieldsNameOfThreadMessageImported = [4]string{
+	0: "from",
+	1: "method",
+	2: "verification",
+	3: "at",
+}
+
+// Decode decodes ThreadMessageImported from json.
+func (s *ThreadMessageImported) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ThreadMessageImported to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "from":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.From.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"from\"")
+			}
+		case "method":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Method.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"method\"")
+			}
+		case "verification":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				if err := s.Verification.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"verification\"")
+			}
+		case "at":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := json.DecodeDateTime(d)
+				s.At = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"at\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ThreadMessageImported")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfThreadMessageImported) {
+					name = jsonFieldsNameOfThreadMessageImported[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ThreadMessageImported) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ThreadMessageImported) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ThreadMessageImportedFrom as json.
+func (s ThreadMessageImportedFrom) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ThreadMessageImportedFrom from json.
+func (s *ThreadMessageImportedFrom) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ThreadMessageImportedFrom to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ThreadMessageImportedFrom(v) {
+	case ThreadMessageImportedFromGoogleWorkspace:
+		*s = ThreadMessageImportedFromGoogleWorkspace
+	case ThreadMessageImportedFromUnknown:
+		*s = ThreadMessageImportedFromUnknown
+	default:
+		*s = ThreadMessageImportedFrom(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ThreadMessageImportedFrom) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ThreadMessageImportedFrom) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ThreadMessageImportedMethod as json.
+func (s ThreadMessageImportedMethod) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ThreadMessageImportedMethod from json.
+func (s *ThreadMessageImportedMethod) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ThreadMessageImportedMethod to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ThreadMessageImportedMethod(v) {
+	case ThreadMessageImportedMethodPrimitiveDirect:
+		*s = ThreadMessageImportedMethodPrimitiveDirect
+	case ThreadMessageImportedMethodAPIUpload:
+		*s = ThreadMessageImportedMethodAPIUpload
+	default:
+		*s = ThreadMessageImportedMethod(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ThreadMessageImportedMethod) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ThreadMessageImportedMethod) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ThreadMessageImportedVerification as json.
+func (s ThreadMessageImportedVerification) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ThreadMessageImportedVerification from json.
+func (s *ThreadMessageImportedVerification) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ThreadMessageImportedVerification to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ThreadMessageImportedVerification(v) {
+	case ThreadMessageImportedVerificationProviderFetched:
+		*s = ThreadMessageImportedVerificationProviderFetched
+	case ThreadMessageImportedVerificationUnverified:
+		*s = ThreadMessageImportedVerificationUnverified
+	default:
+		*s = ThreadMessageImportedVerification(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ThreadMessageImportedVerification) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ThreadMessageImportedVerification) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -274861,12 +276240,19 @@ func (s *UpdateDefaultNetworkMemberOKDataPresence) encodeFields(e *jx.Encoder) {
 		e.FieldStart("valid_for_ms")
 		e.Int(s.ValidForMs)
 	}
+	{
+		if s.Basis.Set {
+			e.FieldStart("basis")
+			s.Basis.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfUpdateDefaultNetworkMemberOKDataPresence = [3]string{
+var jsonFieldsNameOfUpdateDefaultNetworkMemberOKDataPresence = [4]string{
 	0: "last_checked_at",
 	1: "expires_at",
 	2: "valid_for_ms",
+	3: "basis",
 }
 
 // Decode decodes UpdateDefaultNetworkMemberOKDataPresence from json.
@@ -274913,6 +276299,16 @@ func (s *UpdateDefaultNetworkMemberOKDataPresence) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"valid_for_ms\"")
+			}
+		case "basis":
+			if err := func() error {
+				s.Basis.Reset()
+				if err := s.Basis.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"basis\"")
 			}
 		default:
 			return d.Skip()
@@ -274966,6 +276362,46 @@ func (s *UpdateDefaultNetworkMemberOKDataPresence) MarshalJSON() ([]byte, error)
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *UpdateDefaultNetworkMemberOKDataPresence) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateDefaultNetworkMemberOKDataPresenceBasis as json.
+func (s UpdateDefaultNetworkMemberOKDataPresenceBasis) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes UpdateDefaultNetworkMemberOKDataPresenceBasis from json.
+func (s *UpdateDefaultNetworkMemberOKDataPresenceBasis) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateDefaultNetworkMemberOKDataPresenceBasis to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch UpdateDefaultNetworkMemberOKDataPresenceBasis(v) {
+	case UpdateDefaultNetworkMemberOKDataPresenceBasisProbe:
+		*s = UpdateDefaultNetworkMemberOKDataPresenceBasisProbe
+	case UpdateDefaultNetworkMemberOKDataPresenceBasisOrganic:
+		*s = UpdateDefaultNetworkMemberOKDataPresenceBasisOrganic
+	default:
+		*s = UpdateDefaultNetworkMemberOKDataPresenceBasis(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s UpdateDefaultNetworkMemberOKDataPresenceBasis) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateDefaultNetworkMemberOKDataPresenceBasis) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

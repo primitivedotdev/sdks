@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import YAML from "yaml";
+import { dropNarrowingOneOf } from "./codegen-rules.ts";
 
 type HttpMethod =
   | "delete"
@@ -553,6 +554,8 @@ function normalizeForCodegen(value: unknown): unknown {
       delete next[key];
     }
   }
+
+  next = dropNarrowingOneOf(next);
 
   // The Go generator has no array or object defaults. The server applies
   // them, so a client that leaves the field out gets the same result.

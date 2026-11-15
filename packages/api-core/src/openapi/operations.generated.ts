@@ -1223,72 +1223,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "deleted"
                 ]
               },
-              "receivers_change": {
-                "description": "For a receivers_changed notice: who received the rule's matches before and after, in totals. They can be equal when only an owner or a webhook site changed; covering-me shows them by owner. A rotated key counts once here while the old one still works; covering-me counts both.",
-                "type": "object",
-                "properties": {
-                  "before": {
-                    "type": "object",
-                    "properties": {
-                      "keys": {
-                        "type": "integer",
-                        "minimum": 0
-                      },
-                      "reads_in_full": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "description": "Of the keys, how many also read your own mail beyond the rule."
-                      },
-                      "webhooks": {
-                        "type": "integer",
-                        "minimum": 0
-                      },
-                      "shares": {
-                        "type": "integer",
-                        "minimum": 0
-                      }
-                    },
-                    "required": [
-                      "keys",
-                      "reads_in_full",
-                      "webhooks",
-                      "shares"
-                    ]
-                  },
-                  "after": {
-                    "type": "object",
-                    "properties": {
-                      "keys": {
-                        "type": "integer",
-                        "minimum": 0
-                      },
-                      "reads_in_full": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "description": "Of the keys, how many also read your own mail beyond the rule."
-                      },
-                      "webhooks": {
-                        "type": "integer",
-                        "minimum": 0
-                      },
-                      "shares": {
-                        "type": "integer",
-                        "minimum": 0
-                      }
-                    },
-                    "required": [
-                      "keys",
-                      "reads_in_full",
-                      "webhooks",
-                      "shares"
-                    ]
-                  }
-                },
-                "required": [
-                  "before",
-                  "after"
-                ]
-              },
               "stop_reason": {
                 "description": "For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active, reaching none of your mailboxes now).",
                 "type": "string",
@@ -2920,6 +2854,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 600000
+                },
+                "basis": {
+                  "type": "string",
+                  "enum": [
+                    "probe",
+                    "organic"
+                  ]
                 }
               },
               "required": [
@@ -3254,6 +3195,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 600000
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "probe",
+                        "organic"
+                      ]
                     }
                   },
                   "required": [
@@ -3468,6 +3416,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 600000
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "probe",
+                        "organic"
+                      ]
                     }
                   },
                   "required": [
@@ -3734,6 +3689,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 600000
+                },
+                "basis": {
+                  "type": "string",
+                  "enum": [
+                    "probe",
+                    "organic"
+                  ]
                 }
               },
               "required": [
@@ -4023,6 +3985,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 600000
+                },
+                "basis": {
+                  "type": "string",
+                  "enum": [
+                    "probe",
+                    "organic"
+                  ]
                 }
               },
               "required": [
@@ -4293,6 +4262,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 600000
+              },
+              "basis": {
+                "type": "string",
+                "enum": [
+                  "probe",
+                  "organic"
+                ]
               }
             },
             "required": [
@@ -4578,6 +4554,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 600000
+                },
+                "basis": {
+                  "type": "string",
+                  "enum": [
+                    "probe",
+                    "organic"
+                  ]
                 }
               },
               "required": [
@@ -4803,6 +4786,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 600000
+                },
+                "basis": {
+                  "type": "string",
+                  "enum": [
+                    "probe",
+                    "organic"
+                  ]
                 }
               },
               "required": [
@@ -5039,6 +5029,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 600000
+                },
+                "basis": {
+                  "type": "string",
+                  "enum": [
+                    "probe",
+                    "organic"
+                  ]
                 }
               },
               "required": [
@@ -5269,6 +5266,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "type": "integer",
               "minimum": 0,
               "maximum": 600000
+            },
+            "basis": {
+              "type": "string",
+              "enum": [
+                "probe",
+                "organic"
+              ]
             }
           },
           "required": [
@@ -5484,6 +5488,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "type": "integer",
               "minimum": 0,
               "maximum": 600000
+            },
+            "basis": {
+              "type": "string",
+              "enum": [
+                "probe",
+                "organic"
+              ]
             }
           },
           "required": [
@@ -5710,6 +5721,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 600000
+              },
+              "basis": {
+                "type": "string",
+                "enum": [
+                  "probe",
+                  "organic"
+                ]
               }
             },
             "required": [
@@ -5897,6 +5915,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 600000
+              },
+              "basis": {
+                "type": "string",
+                "enum": [
+                  "probe",
+                  "organic"
+                ]
               }
             },
             "required": [
@@ -6096,6 +6121,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "type": "integer",
               "minimum": 0,
               "maximum": 600000
+            },
+            "basis": {
+              "type": "string",
+              "enum": [
+                "probe",
+                "organic"
+              ]
             }
           },
           "required": [
@@ -8528,7 +8560,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                                   "object",
                                   "null"
                                 ],
-                                "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+                                "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
                                 "required": [
                                   "from",
                                   "method",
@@ -8539,19 +8571,24 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                                   "from": {
                                     "type": "string",
                                     "enum": [
-                                      "google_workspace"
-                                    ]
+                                      "google_workspace",
+                                      "unknown"
+                                    ],
+                                    "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
                                   },
                                   "method": {
                                     "type": "string",
                                     "enum": [
-                                      "primitive_direct"
-                                    ]
+                                      "primitive_direct",
+                                      "api_upload"
+                                    ],
+                                    "description": "How Primitive acquired the historical message."
                                   },
                                   "verification": {
                                     "type": "string",
                                     "enum": [
-                                      "provider_fetched"
+                                      "provider_fetched",
+                                      "unverified"
                                     ]
                                   },
                                   "at": {
@@ -8559,7 +8596,60 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                                     "format": "date-time",
                                     "description": "When Primitive acquired this historical message."
                                   }
-                                }
+                                },
+                                "oneOf": [
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "from",
+                                      "method",
+                                      "verification",
+                                      "at"
+                                    ],
+                                    "properties": {
+                                      "from": {
+                                        "const": "google_workspace"
+                                      },
+                                      "method": {
+                                        "const": "primitive_direct"
+                                      },
+                                      "verification": {
+                                        "const": "provider_fetched"
+                                      },
+                                      "at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "from",
+                                      "method",
+                                      "verification",
+                                      "at"
+                                    ],
+                                    "properties": {
+                                      "from": {
+                                        "const": "unknown"
+                                      },
+                                      "method": {
+                                        "const": "api_upload"
+                                      },
+                                      "verification": {
+                                        "const": "unverified"
+                                      },
+                                      "at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      }
+                                    }
+                                  }
+                                ]
                               },
                               "snippet": {
                                 "type": [
@@ -9175,6 +9265,102 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                                 ],
                                 "description": "The `<protocol>/<version>` the hint was decided from when `interaction_hint` is `status` or `card`; null otherwise."
                               },
+                              "imported": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+                                "required": [
+                                  "from",
+                                  "method",
+                                  "verification",
+                                  "at"
+                                ],
+                                "properties": {
+                                  "from": {
+                                    "type": "string",
+                                    "enum": [
+                                      "google_workspace",
+                                      "unknown"
+                                    ],
+                                    "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+                                  },
+                                  "method": {
+                                    "type": "string",
+                                    "enum": [
+                                      "primitive_direct",
+                                      "api_upload"
+                                    ],
+                                    "description": "How Primitive acquired the historical message."
+                                  },
+                                  "verification": {
+                                    "type": "string",
+                                    "enum": [
+                                      "provider_fetched",
+                                      "unverified"
+                                    ]
+                                  },
+                                  "at": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "description": "When Primitive acquired this historical message."
+                                  }
+                                },
+                                "oneOf": [
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "from",
+                                      "method",
+                                      "verification",
+                                      "at"
+                                    ],
+                                    "properties": {
+                                      "from": {
+                                        "const": "google_workspace"
+                                      },
+                                      "method": {
+                                        "const": "primitive_direct"
+                                      },
+                                      "verification": {
+                                        "const": "provider_fetched"
+                                      },
+                                      "at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "from",
+                                      "method",
+                                      "verification",
+                                      "at"
+                                    ],
+                                    "properties": {
+                                      "from": {
+                                        "const": "unknown"
+                                      },
+                                      "method": {
+                                        "const": "api_upload"
+                                      },
+                                      "verification": {
+                                        "const": "unverified"
+                                      },
+                                      "at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
                               "snippet": {
                                 "type": [
                                   "string",
@@ -9228,6 +9414,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                               "body_size_bytes",
                               "interaction_hint",
                               "interaction_kind",
+                              "imported",
                               "snippet"
                             ]
                           },
@@ -15890,7 +16077,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": true,
     "bodyRequired": false,
     "command": "download-domain-zone-file",
-    "description": "Downloads a BIND-format DNS zone file containing the DNS records required for a domain claim. Agents should offer this after `addDomain` when users want to import DNS records instead of copying each record manually.",
+    "description": "Downloads a BIND-format DNS zone file for a domain claim. SPF is omitted when an existing SPF policy is observed or DNS lookup is inconclusive; read the file comments for the required manual SPF review. Agents should offer this after `addDomain` when users want to import DNS records instead of copying each record manually.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "downloadDomainZoneFile",
@@ -16706,7 +16893,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-notification-preferences",
-    "description": "The notification emails the calling member gets, and which of them they may turn on or off. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session or the person's own OAuth token (the CLI or an app they connected). The person's role must hold notifications:manage. API keys, agent connection keys and agents are refused.",
+    "description": "The notification emails the calling member gets, and which of them they may turn on or off. The org_only kinds, which the organization alone turns on or off, are not listed. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session or the person's own OAuth token (the CLI or an app they connected). The person's role must hold notifications:manage. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailNotificationPreferences",
@@ -16744,7 +16931,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "enum": [
                   "platform_required",
                   "org_requirable",
-                  "optional"
+                  "optional",
+                  "org_only"
                 ]
               },
               "entitlement_required": {
@@ -16856,7 +17044,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "enum": [
                   "platform_required",
                   "org_requirable",
-                  "optional"
+                  "optional",
+                  "org_only"
                 ]
               },
               "entitlement_required": {
@@ -16930,7 +17119,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-email-notification-preferences",
-    "description": "Turn one or more kinds on or off for the calling member. Only a kind whose organization mode is optional_on or optional_off can be changed: a platform_required kind, one the organization requires, and one it turned off are refused with 409 (conflict, details.reason not_member_choice, details.org_mode saying which), and nothing is changed. An unknown kind is refused with 400. Answers the preferences as they now stand. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session or the person's own OAuth token (the CLI or an app they connected). The person's role must hold notifications:manage. API keys, agent connection keys and agents are refused.",
+    "description": "Turn one or more kinds on or off for the calling member. Only a kind whose organization mode is optional_on or optional_off can be changed: a platform_required kind, an org_only kind, one the organization requires, and one it turned off are refused with 409 (conflict, details.reason not_member_choice, details.org_mode saying which: platform_required, org_only, required or off), and nothing is changed. An unknown kind is refused with 400. Answers the preferences as they now stand. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session or the person's own OAuth token (the CLI or an app they connected). The person's role must hold notifications:manage. API keys, agent connection keys and agents are refused.",
     "hasJsonBody": true,
     "method": "PUT",
     "operationId": "updateEmailNotificationPreferences",
@@ -16986,7 +17175,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "enum": [
                   "platform_required",
                   "org_requirable",
-                  "optional"
+                  "optional",
+                  "org_only"
                 ]
               },
               "entitlement_required": {
@@ -17060,7 +17250,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-email-notification-settings",
-    "description": "Set the organization's mode for one or more kinds: off (nobody gets it), optional_on (each member gets it unless they turn it off), optional_off (only members who turn it on get it) or required (every member gets it). Kinds left out keep their mode. An unknown kind is refused with 400 (validation_error, details.reason unknown_kind). A platform_required kind is refused with 409 (conflict, details.reason platform_required), and required for an optional kind with 409 (conflict, details.reason mode_not_allowed); nothing is changed. Answers the settings as they now stand. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session, or the person's own OAuth token with a step-up token for purpose `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role could not do it anyway). The person's role must hold notification_policy:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
+    "description": "Set the organization's mode for one or more kinds: off (nobody gets it), optional_on (each member gets it unless they turn it off), optional_off (only members who turn it on get it) or required (every member gets it). An org_only kind takes only off or required (on for every owner and admin). Kinds left out keep their mode. An unknown kind is refused with 400 (validation_error, details.reason unknown_kind). A platform_required kind is refused with 409 (conflict, details.reason platform_required), and a mode the kind does not take (required for an optional kind, optional_on or optional_off for an org_only kind) with 409 (conflict, details.reason mode_not_allowed); nothing is changed. Answers the settings as they now stand. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session, or the person's own OAuth token with a step-up token for purpose `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role could not do it anyway). The person's role must hold notification_policy:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
     "hasJsonBody": true,
     "method": "PUT",
     "operationId": "updateEmailNotificationSettings",
@@ -17130,7 +17320,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "enum": [
                   "platform_required",
                   "org_requirable",
-                  "optional"
+                  "optional",
+                  "org_only"
                 ]
               },
               "entitlement_required": {
@@ -20077,7 +20268,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "current_version",
           "receivers",
           "receivers_once_active",
-          "created_at"
+          "created_at",
+          "english",
+          "explanation"
         ]
       }
     },
@@ -27130,35 +27323,70 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "object",
         "properties": {
           "imported": {
-            "type": [
-              "object",
-              "null"
-            ],
-            "properties": {
-              "from": {
-                "type": "string",
-                "const": "google_workspace"
+            "default": null,
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "from": {
+                        "type": "string",
+                        "const": "google_workspace"
+                      },
+                      "method": {
+                        "type": "string",
+                        "const": "primitive_direct"
+                      },
+                      "verification": {
+                        "type": "string",
+                        "const": "provider_fetched"
+                      },
+                      "at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "from",
+                      "method",
+                      "verification",
+                      "at"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "from": {
+                        "type": "string",
+                        "const": "unknown"
+                      },
+                      "method": {
+                        "type": "string",
+                        "const": "api_upload"
+                      },
+                      "verification": {
+                        "type": "string",
+                        "const": "unverified"
+                      },
+                      "at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "from",
+                      "method",
+                      "verification",
+                      "at"
+                    ]
+                  }
+                ]
               },
-              "method": {
-                "type": "string",
-                "const": "primitive_direct"
-              },
-              "verification": {
-                "type": "string",
-                "const": "provider_fetched"
-              },
-              "at": {
-                "type": "string",
-                "format": "date-time"
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "from",
-              "method",
-              "verification",
-              "at"
-            ],
-            "default": null
+            ]
           },
           "delivery_report": {
             "type": [
@@ -32334,7 +32562,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "object",
                   "null"
                 ],
-                "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+                "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
                 "required": [
                   "from",
                   "method",
@@ -32345,19 +32573,24 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "from": {
                     "type": "string",
                     "enum": [
-                      "google_workspace"
-                    ]
+                      "google_workspace",
+                      "unknown"
+                    ],
+                    "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
                   },
                   "method": {
                     "type": "string",
                     "enum": [
-                      "primitive_direct"
-                    ]
+                      "primitive_direct",
+                      "api_upload"
+                    ],
+                    "description": "How Primitive acquired the historical message."
                   },
                   "verification": {
                     "type": "string",
                     "enum": [
-                      "provider_fetched"
+                      "provider_fetched",
+                      "unverified"
                     ]
                   },
                   "at": {
@@ -32365,7 +32598,60 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                     "format": "date-time",
                     "description": "When Primitive acquired this historical message."
                   }
-                }
+                },
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "from",
+                      "method",
+                      "verification",
+                      "at"
+                    ],
+                    "properties": {
+                      "from": {
+                        "const": "google_workspace"
+                      },
+                      "method": {
+                        "const": "primitive_direct"
+                      },
+                      "verification": {
+                        "const": "provider_fetched"
+                      },
+                      "at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "from",
+                      "method",
+                      "verification",
+                      "at"
+                    ],
+                    "properties": {
+                      "from": {
+                        "const": "unknown"
+                      },
+                      "method": {
+                        "const": "api_upload"
+                      },
+                      "verification": {
+                        "const": "unverified"
+                      },
+                      "at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                ]
               },
               "copies": {
                 "type": "array",
@@ -33753,7 +34039,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "object",
             "null"
           ],
-          "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+          "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
           "required": [
             "from",
             "method",
@@ -33764,19 +34050,24 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "from": {
               "type": "string",
               "enum": [
-                "google_workspace"
-              ]
+                "google_workspace",
+                "unknown"
+              ],
+              "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
             },
             "method": {
               "type": "string",
               "enum": [
-                "primitive_direct"
-              ]
+                "primitive_direct",
+                "api_upload"
+              ],
+              "description": "How Primitive acquired the historical message."
             },
             "verification": {
               "type": "string",
               "enum": [
-                "provider_fetched"
+                "provider_fetched",
+                "unverified"
               ]
             },
             "at": {
@@ -33784,7 +34075,60 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "format": "date-time",
               "description": "When Primitive acquired this historical message."
             }
-          }
+          },
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "const": "google_workspace"
+                },
+                "method": {
+                  "const": "primitive_direct"
+                },
+                "verification": {
+                  "const": "provider_fetched"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "const": "unknown"
+                },
+                "method": {
+                  "const": "api_upload"
+                },
+                "verification": {
+                  "const": "unverified"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          ]
         },
         "snippet": {
           "type": [
@@ -33910,7 +34254,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "object",
             "null"
           ],
-          "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+          "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
           "required": [
             "from",
             "method",
@@ -33921,19 +34265,24 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "from": {
               "type": "string",
               "enum": [
-                "google_workspace"
-              ]
+                "google_workspace",
+                "unknown"
+              ],
+              "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
             },
             "method": {
               "type": "string",
               "enum": [
-                "primitive_direct"
-              ]
+                "primitive_direct",
+                "api_upload"
+              ],
+              "description": "How Primitive acquired the historical message."
             },
             "verification": {
               "type": "string",
               "enum": [
-                "provider_fetched"
+                "provider_fetched",
+                "unverified"
               ]
             },
             "at": {
@@ -33941,7 +34290,60 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "format": "date-time",
               "description": "When Primitive acquired this historical message."
             }
-          }
+          },
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "const": "google_workspace"
+                },
+                "method": {
+                  "const": "primitive_direct"
+                },
+                "verification": {
+                  "const": "provider_fetched"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "const": "unknown"
+                },
+                "method": {
+                  "const": "api_upload"
+                },
+                "verification": {
+                  "const": "unverified"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          ]
         },
         "id": {
           "type": "string",
@@ -34539,6 +34941,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
+        "description": "With `false`, a history page runs no total count: `meta.total` and `meta.total_capped` are absent, and `meta.has_more` still says whether another page follows. Unset or `true`, a history page reports its total as before. The forward tail (`since`) and `search` report the page itself as the total and run no count either way.",
+        "enum": [
+          "true",
+          "false"
+        ],
+        "name": "count",
+        "required": false,
+        "type": "string"
+      },
+      {
         "description": "With `message`, one row per message instead of one per mailbox copy (a message to several mailboxes of the org is stored once per mailbox). The row is the copy in your own mailbox (the `recipient` filter, then your bound address, then your member address), else the copy that arrived first, rejected or not, the same row in history and forward-tail paging. A message is listed when at least one copy you can read matches every filter at once: `awaiting=you` means some copy awaits you, `status=completed` that some copy completed, `search` that some copy matches; the row shown is still the representative. Under a connected agent key, which reads one mailbox, filters test the row itself. A filter other than `recipient` is tested copy by copy, so such a page is a bounded walk and can answer 504 `search_timeout`. With `thread_id`, only copies in that thread are grouped. `meta.total` counts messages. Each row adds `copies` and, when you can read the send, `sent_email_id`. A row can be replaced by a better-ranked copy that becomes visible later: drop any row whose id is in a newer row's `copies`. Paging history, a message whose representative was deleted or outranked between pages can show again on a later page under another id.",
         "enum": [
           "message"
@@ -35130,7 +35542,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "object",
               "null"
             ],
-            "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+            "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
             "required": [
               "from",
               "method",
@@ -35141,19 +35553,24 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "from": {
                 "type": "string",
                 "enum": [
-                  "google_workspace"
-                ]
+                  "google_workspace",
+                  "unknown"
+                ],
+                "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
               },
               "method": {
                 "type": "string",
                 "enum": [
-                  "primitive_direct"
-                ]
+                  "primitive_direct",
+                  "api_upload"
+                ],
+                "description": "How Primitive acquired the historical message."
               },
               "verification": {
                 "type": "string",
                 "enum": [
-                  "provider_fetched"
+                  "provider_fetched",
+                  "unverified"
                 ]
               },
               "at": {
@@ -35161,7 +35578,60 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "format": "date-time",
                 "description": "When Primitive acquired this historical message."
               }
-            }
+            },
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "google_workspace"
+                  },
+                  "method": {
+                    "const": "primitive_direct"
+                  },
+                  "verification": {
+                    "const": "provider_fetched"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "unknown"
+                  },
+                  "method": {
+                    "const": "api_upload"
+                  },
+                  "verification": {
+                    "const": "unverified"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            ]
           },
           "snippet": {
             "type": [
@@ -36112,7 +36582,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "object",
                   "null"
                 ],
-                "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+                "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
                 "required": [
                   "from",
                   "method",
@@ -36123,19 +36593,24 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "from": {
                     "type": "string",
                     "enum": [
-                      "google_workspace"
-                    ]
+                      "google_workspace",
+                      "unknown"
+                    ],
+                    "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
                   },
                   "method": {
                     "type": "string",
                     "enum": [
-                      "primitive_direct"
-                    ]
+                      "primitive_direct",
+                      "api_upload"
+                    ],
+                    "description": "How Primitive acquired the historical message."
                   },
                   "verification": {
                     "type": "string",
                     "enum": [
-                      "provider_fetched"
+                      "provider_fetched",
+                      "unverified"
                     ]
                   },
                   "at": {
@@ -36143,7 +36618,60 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                     "format": "date-time",
                     "description": "When Primitive acquired this historical message."
                   }
-                }
+                },
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "from",
+                      "method",
+                      "verification",
+                      "at"
+                    ],
+                    "properties": {
+                      "from": {
+                        "const": "google_workspace"
+                      },
+                      "method": {
+                        "const": "primitive_direct"
+                      },
+                      "verification": {
+                        "const": "provider_fetched"
+                      },
+                      "at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "from",
+                      "method",
+                      "verification",
+                      "at"
+                    ],
+                    "properties": {
+                      "from": {
+                        "const": "unknown"
+                      },
+                      "method": {
+                        "const": "api_upload"
+                      },
+                      "verification": {
+                        "const": "unverified"
+                      },
+                      "at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                ]
               },
               "snippet": {
                 "type": [
@@ -57108,6 +57636,102 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ],
               "description": "The `<protocol>/<version>` the hint was decided from when `interaction_hint` is `status` or `card`; null otherwise."
             },
+            "imported": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "enum": [
+                    "google_workspace",
+                    "unknown"
+                  ],
+                  "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+                },
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "primitive_direct",
+                    "api_upload"
+                  ],
+                  "description": "How Primitive acquired the historical message."
+                },
+                "verification": {
+                  "type": "string",
+                  "enum": [
+                    "provider_fetched",
+                    "unverified"
+                  ]
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "When Primitive acquired this historical message."
+                }
+              },
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "method",
+                    "verification",
+                    "at"
+                  ],
+                  "properties": {
+                    "from": {
+                      "const": "google_workspace"
+                    },
+                    "method": {
+                      "const": "primitive_direct"
+                    },
+                    "verification": {
+                      "const": "provider_fetched"
+                    },
+                    "at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "method",
+                    "verification",
+                    "at"
+                  ],
+                  "properties": {
+                    "from": {
+                      "const": "unknown"
+                    },
+                    "method": {
+                      "const": "api_upload"
+                    },
+                    "verification": {
+                      "const": "unverified"
+                    },
+                    "at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              ]
+            },
             "snippet": {
               "type": [
                 "string",
@@ -57161,6 +57785,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "body_size_bytes",
             "interaction_hint",
             "interaction_kind",
+            "imported",
             "snippet"
           ]
         },
@@ -57441,6 +58066,102 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "name"
           ]
         },
+        "imported": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+          "required": [
+            "from",
+            "method",
+            "verification",
+            "at"
+          ],
+          "properties": {
+            "from": {
+              "type": "string",
+              "enum": [
+                "google_workspace",
+                "unknown"
+              ],
+              "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "primitive_direct",
+                "api_upload"
+              ],
+              "description": "How Primitive acquired the historical message."
+            },
+            "verification": {
+              "type": "string",
+              "enum": [
+                "provider_fetched",
+                "unverified"
+              ]
+            },
+            "at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When Primitive acquired this historical message."
+            }
+          },
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "const": "google_workspace"
+                },
+                "method": {
+                  "const": "primitive_direct"
+                },
+                "verification": {
+                  "const": "provider_fetched"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "const": "unknown"
+                },
+                "method": {
+                  "const": "api_upload"
+                },
+                "verification": {
+                  "const": "unverified"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          ]
+        },
         "hold": {
           "type": "object",
           "description": "Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold: its OAuth grant was revoked after refresh token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds); no release needed. On sent-email reads and conversation messages.",
@@ -57462,7 +58183,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           }
         }
-      }
+      },
+      "required": [
+        "imported"
+      ]
     },
     "sdkName": "cancelSentEmail",
     "summary": "Cancel a scheduled send",
@@ -58075,6 +58799,102 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ],
               "description": "The `<protocol>/<version>` the hint was decided from when `interaction_hint` is `status` or `card`; null otherwise."
             },
+            "imported": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "enum": [
+                    "google_workspace",
+                    "unknown"
+                  ],
+                  "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+                },
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "primitive_direct",
+                    "api_upload"
+                  ],
+                  "description": "How Primitive acquired the historical message."
+                },
+                "verification": {
+                  "type": "string",
+                  "enum": [
+                    "provider_fetched",
+                    "unverified"
+                  ]
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "When Primitive acquired this historical message."
+                }
+              },
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "method",
+                    "verification",
+                    "at"
+                  ],
+                  "properties": {
+                    "from": {
+                      "const": "google_workspace"
+                    },
+                    "method": {
+                      "const": "primitive_direct"
+                    },
+                    "verification": {
+                      "const": "provider_fetched"
+                    },
+                    "at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "method",
+                    "verification",
+                    "at"
+                  ],
+                  "properties": {
+                    "from": {
+                      "const": "unknown"
+                    },
+                    "method": {
+                      "const": "api_upload"
+                    },
+                    "verification": {
+                      "const": "unverified"
+                    },
+                    "at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              ]
+            },
             "snippet": {
               "type": [
                 "string",
@@ -58128,6 +58948,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "body_size_bytes",
             "interaction_hint",
             "interaction_kind",
+            "imported",
             "snippet"
           ]
         },
@@ -58408,6 +59229,102 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "name"
           ]
         },
+        "imported": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+          "required": [
+            "from",
+            "method",
+            "verification",
+            "at"
+          ],
+          "properties": {
+            "from": {
+              "type": "string",
+              "enum": [
+                "google_workspace",
+                "unknown"
+              ],
+              "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "primitive_direct",
+                "api_upload"
+              ],
+              "description": "How Primitive acquired the historical message."
+            },
+            "verification": {
+              "type": "string",
+              "enum": [
+                "provider_fetched",
+                "unverified"
+              ]
+            },
+            "at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When Primitive acquired this historical message."
+            }
+          },
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "const": "google_workspace"
+                },
+                "method": {
+                  "const": "primitive_direct"
+                },
+                "verification": {
+                  "const": "provider_fetched"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "const": "unknown"
+                },
+                "method": {
+                  "const": "api_upload"
+                },
+                "verification": {
+                  "const": "unverified"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          ]
+        },
         "hold": {
           "type": "object",
           "description": "Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold: its OAuth grant was revoked after refresh token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds); no release needed. On sent-email reads and conversation messages.",
@@ -58429,7 +59346,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           }
         }
-      }
+      },
+      "required": [
+        "imported"
+      ]
     },
     "sdkName": "cancelSentEmailByIdempotencyKey",
     "summary": "Cancel a scheduled send by idempotency key",
@@ -59640,6 +60560,102 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ],
               "description": "The `<protocol>/<version>` the hint was decided from when `interaction_hint` is `status` or `card`; null otherwise."
             },
+            "imported": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "enum": [
+                    "google_workspace",
+                    "unknown"
+                  ],
+                  "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+                },
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "primitive_direct",
+                    "api_upload"
+                  ],
+                  "description": "How Primitive acquired the historical message."
+                },
+                "verification": {
+                  "type": "string",
+                  "enum": [
+                    "provider_fetched",
+                    "unverified"
+                  ]
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "When Primitive acquired this historical message."
+                }
+              },
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "method",
+                    "verification",
+                    "at"
+                  ],
+                  "properties": {
+                    "from": {
+                      "const": "google_workspace"
+                    },
+                    "method": {
+                      "const": "primitive_direct"
+                    },
+                    "verification": {
+                      "const": "provider_fetched"
+                    },
+                    "at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "method",
+                    "verification",
+                    "at"
+                  ],
+                  "properties": {
+                    "from": {
+                      "const": "unknown"
+                    },
+                    "method": {
+                      "const": "api_upload"
+                    },
+                    "verification": {
+                      "const": "unverified"
+                    },
+                    "at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              ]
+            },
             "snippet": {
               "type": [
                 "string",
@@ -59693,6 +60709,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "body_size_bytes",
             "interaction_hint",
             "interaction_kind",
+            "imported",
             "snippet"
           ]
         },
@@ -59973,6 +60990,102 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "name"
           ]
         },
+        "imported": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+          "required": [
+            "from",
+            "method",
+            "verification",
+            "at"
+          ],
+          "properties": {
+            "from": {
+              "type": "string",
+              "enum": [
+                "google_workspace",
+                "unknown"
+              ],
+              "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "primitive_direct",
+                "api_upload"
+              ],
+              "description": "How Primitive acquired the historical message."
+            },
+            "verification": {
+              "type": "string",
+              "enum": [
+                "provider_fetched",
+                "unverified"
+              ]
+            },
+            "at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When Primitive acquired this historical message."
+            }
+          },
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "const": "google_workspace"
+                },
+                "method": {
+                  "const": "primitive_direct"
+                },
+                "verification": {
+                  "const": "provider_fetched"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "const": "unknown"
+                },
+                "method": {
+                  "const": "api_upload"
+                },
+                "verification": {
+                  "const": "unverified"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          ]
+        },
         "hold": {
           "type": "object",
           "description": "Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold: its OAuth grant was revoked after refresh token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds); no release needed. On sent-email reads and conversation messages.",
@@ -59994,7 +61107,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           }
         }
-      }
+      },
+      "required": [
+        "imported"
+      ]
     },
     "sdkName": "getSentEmail",
     "summary": "Get a sent email by id",
@@ -60780,6 +61896,102 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ],
             "description": "The `<protocol>/<version>` the hint was decided from when `interaction_hint` is `status` or `card`; null otherwise."
           },
+          "imported": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+            "required": [
+              "from",
+              "method",
+              "verification",
+              "at"
+            ],
+            "properties": {
+              "from": {
+                "type": "string",
+                "enum": [
+                  "google_workspace",
+                  "unknown"
+                ],
+                "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "primitive_direct",
+                  "api_upload"
+                ],
+                "description": "How Primitive acquired the historical message."
+              },
+              "verification": {
+                "type": "string",
+                "enum": [
+                  "provider_fetched",
+                  "unverified"
+                ]
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "When Primitive acquired this historical message."
+              }
+            },
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "google_workspace"
+                  },
+                  "method": {
+                    "const": "primitive_direct"
+                  },
+                  "verification": {
+                    "const": "provider_fetched"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "unknown"
+                  },
+                  "method": {
+                    "const": "api_upload"
+                  },
+                  "verification": {
+                    "const": "unverified"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            ]
+          },
           "snippet": {
             "type": [
               "string",
@@ -60833,6 +62045,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "body_size_bytes",
           "interaction_hint",
           "interaction_kind",
+          "imported",
           "snippet"
         ]
       }
@@ -61454,6 +62667,102 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ],
               "description": "The `<protocol>/<version>` the hint was decided from when `interaction_hint` is `status` or `card`; null otherwise."
             },
+            "imported": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "enum": [
+                    "google_workspace",
+                    "unknown"
+                  ],
+                  "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+                },
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "primitive_direct",
+                    "api_upload"
+                  ],
+                  "description": "How Primitive acquired the historical message."
+                },
+                "verification": {
+                  "type": "string",
+                  "enum": [
+                    "provider_fetched",
+                    "unverified"
+                  ]
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "When Primitive acquired this historical message."
+                }
+              },
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "method",
+                    "verification",
+                    "at"
+                  ],
+                  "properties": {
+                    "from": {
+                      "const": "google_workspace"
+                    },
+                    "method": {
+                      "const": "primitive_direct"
+                    },
+                    "verification": {
+                      "const": "provider_fetched"
+                    },
+                    "at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "method",
+                    "verification",
+                    "at"
+                  ],
+                  "properties": {
+                    "from": {
+                      "const": "unknown"
+                    },
+                    "method": {
+                      "const": "api_upload"
+                    },
+                    "verification": {
+                      "const": "unverified"
+                    },
+                    "at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              ]
+            },
             "snippet": {
               "type": [
                 "string",
@@ -61507,6 +62816,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "body_size_bytes",
             "interaction_hint",
             "interaction_kind",
+            "imported",
             "snippet"
           ]
         },
@@ -61787,6 +63097,102 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "name"
           ]
         },
+        "imported": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+          "required": [
+            "from",
+            "method",
+            "verification",
+            "at"
+          ],
+          "properties": {
+            "from": {
+              "type": "string",
+              "enum": [
+                "google_workspace",
+                "unknown"
+              ],
+              "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "primitive_direct",
+                "api_upload"
+              ],
+              "description": "How Primitive acquired the historical message."
+            },
+            "verification": {
+              "type": "string",
+              "enum": [
+                "provider_fetched",
+                "unverified"
+              ]
+            },
+            "at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When Primitive acquired this historical message."
+            }
+          },
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "const": "google_workspace"
+                },
+                "method": {
+                  "const": "primitive_direct"
+                },
+                "verification": {
+                  "const": "provider_fetched"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "const": "unknown"
+                },
+                "method": {
+                  "const": "api_upload"
+                },
+                "verification": {
+                  "const": "unverified"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          ]
+        },
         "hold": {
           "type": "object",
           "description": "Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold: its OAuth grant was revoked after refresh token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds); no release needed. On sent-email reads and conversation messages.",
@@ -61808,7 +63214,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           }
         }
-      }
+      },
+      "required": [
+        "imported"
+      ]
     },
     "sdkName": "releaseSentEmail",
     "summary": "Release a held scheduled send",
@@ -62816,6 +64225,102 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ],
               "description": "The `<protocol>/<version>` the hint was decided from when `interaction_hint` is `status` or `card`; null otherwise."
             },
+            "imported": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "enum": [
+                    "google_workspace",
+                    "unknown"
+                  ],
+                  "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+                },
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "primitive_direct",
+                    "api_upload"
+                  ],
+                  "description": "How Primitive acquired the historical message."
+                },
+                "verification": {
+                  "type": "string",
+                  "enum": [
+                    "provider_fetched",
+                    "unverified"
+                  ]
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "When Primitive acquired this historical message."
+                }
+              },
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "method",
+                    "verification",
+                    "at"
+                  ],
+                  "properties": {
+                    "from": {
+                      "const": "google_workspace"
+                    },
+                    "method": {
+                      "const": "primitive_direct"
+                    },
+                    "verification": {
+                      "const": "provider_fetched"
+                    },
+                    "at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "method",
+                    "verification",
+                    "at"
+                  ],
+                  "properties": {
+                    "from": {
+                      "const": "unknown"
+                    },
+                    "method": {
+                      "const": "api_upload"
+                    },
+                    "verification": {
+                      "const": "unverified"
+                    },
+                    "at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              ]
+            },
             "snippet": {
               "type": [
                 "string",
@@ -62869,6 +64374,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "body_size_bytes",
             "interaction_hint",
             "interaction_kind",
+            "imported",
             "snippet"
           ]
         },
@@ -63149,6 +64655,102 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "name"
           ]
         },
+        "imported": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+          "required": [
+            "from",
+            "method",
+            "verification",
+            "at"
+          ],
+          "properties": {
+            "from": {
+              "type": "string",
+              "enum": [
+                "google_workspace",
+                "unknown"
+              ],
+              "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "primitive_direct",
+                "api_upload"
+              ],
+              "description": "How Primitive acquired the historical message."
+            },
+            "verification": {
+              "type": "string",
+              "enum": [
+                "provider_fetched",
+                "unverified"
+              ]
+            },
+            "at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When Primitive acquired this historical message."
+            }
+          },
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "const": "google_workspace"
+                },
+                "method": {
+                  "const": "primitive_direct"
+                },
+                "verification": {
+                  "const": "provider_fetched"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "method",
+                "verification",
+                "at"
+              ],
+              "properties": {
+                "from": {
+                  "const": "unknown"
+                },
+                "method": {
+                  "const": "api_upload"
+                },
+                "verification": {
+                  "const": "unverified"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          ]
+        },
         "hold": {
           "type": "object",
           "description": "Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold: its OAuth grant was revoked after refresh token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds); no release needed. On sent-email reads and conversation messages.",
@@ -63170,7 +64772,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           }
         }
-      }
+      },
+      "required": [
+        "imported"
+      ]
     },
     "sdkName": "rescheduleSentEmail",
     "summary": "Reschedule a scheduled send",
@@ -66009,6 +67614,102 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "string",
                 "description": "Outbound messages only. How to place this send in a timeline: `status` (a pure status signal), `card` or `none`. Not declared as a closed enum so that a value added later does not fail decoding; treat an unknown value as `none`. Absent on inbound messages. Older servers omit it.\n"
               },
+              "imported": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "enum": [
+                      "google_workspace",
+                      "unknown"
+                    ],
+                    "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "primitive_direct",
+                      "api_upload"
+                    ],
+                    "description": "How Primitive acquired the historical message."
+                  },
+                  "verification": {
+                    "type": "string",
+                    "enum": [
+                      "provider_fetched",
+                      "unverified"
+                    ]
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When Primitive acquired this historical message."
+                  }
+                },
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "from",
+                      "method",
+                      "verification",
+                      "at"
+                    ],
+                    "properties": {
+                      "from": {
+                        "const": "google_workspace"
+                      },
+                      "method": {
+                        "const": "primitive_direct"
+                      },
+                      "verification": {
+                        "const": "provider_fetched"
+                      },
+                      "at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "from",
+                      "method",
+                      "verification",
+                      "at"
+                    ],
+                    "properties": {
+                      "from": {
+                        "const": "unknown"
+                      },
+                      "method": {
+                        "const": "api_upload"
+                      },
+                      "verification": {
+                        "const": "unverified"
+                      },
+                      "at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                ]
+              },
               "copies": {
                 "type": "array",
                 "items": {
@@ -66044,7 +67745,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "required": [
               "direction",
-              "id"
+              "id",
+              "imported"
             ]
           }
         },

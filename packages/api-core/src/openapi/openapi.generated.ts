@@ -166,7 +166,7 @@ export const openapiDocument: Record<string, unknown> = {
     },
     {
       "name": "Email notifications",
-      "description": "The notification emails Primitive sends an organization's members: the organization chooses, per kind, whether it is off, left to each member or required, and each member chooses where it is left to them. Some kinds are always sent. API keys, agent connection keys and agents are refused.",
+      "description": "The notification emails Primitive sends an organization's members: the organization chooses, per kind, whether it is off, left to each member or required, and each member chooses where it is left to them. Some kinds are always sent, and some (org_only) are the organization's alone: on for every owner and admin, or off. API keys, agent connection keys and agents are refused.",
       "x-openapi-spec": "https://api.primitive.dev/v1/openapi/tags/email-notifications"
     },
     {
@@ -4037,7 +4037,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "downloadDomainZoneFile",
         "summary": "Download domain DNS zone file",
-        "description": "Downloads a BIND-format DNS zone file containing the DNS records required for a domain claim. Agents should offer this after `addDomain` when users want to import DNS records instead of copying each record manually.",
+        "description": "Downloads a BIND-format DNS zone file for a domain claim. SPF is omitted when an existing SPF policy is observed or DNS lookup is inconclusive; read the file comments for the required manual SPF review. Agents should offer this after `addDomain` when users want to import DNS records instead of copying each record manually.",
         "tags": [
           "Domains"
         ],
@@ -4588,6 +4588,19 @@ export const openapiDocument: Record<string, unknown> = {
               ]
             },
             "description": "With `true`, only emails whose content was discarded after delivery; with `false`, only emails that still have it."
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "description": "With `false`, a history page runs no total count: `meta.total` and `meta.total_capped` are absent, and `meta.has_more` still says whether another page follows. Unset or `true`, a history page reports its total as before. The forward tail (`since`) and `search` report the page itself as the total and run no count either way."
           },
           {
             "name": "group",
@@ -21210,6 +21223,13 @@ export const openapiDocument: Record<string, unknown> = {
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 600000
+                              },
+                              "basis": {
+                                "type": "string",
+                                "enum": [
+                                  "probe",
+                                  "organic"
+                                ]
                               }
                             },
                             "required": [
@@ -21569,6 +21589,13 @@ export const openapiDocument: Record<string, unknown> = {
                               "type": "integer",
                               "minimum": 0,
                               "maximum": 600000
+                            },
+                            "basis": {
+                              "type": "string",
+                              "enum": [
+                                "probe",
+                                "organic"
+                              ]
                             }
                           },
                           "required": [
@@ -21922,6 +21949,13 @@ export const openapiDocument: Record<string, unknown> = {
                               "type": "integer",
                               "minimum": 0,
                               "maximum": 600000
+                            },
+                            "basis": {
+                              "type": "string",
+                              "enum": [
+                                "probe",
+                                "organic"
+                              ]
                             }
                           },
                           "required": [
@@ -22478,6 +22512,13 @@ export const openapiDocument: Record<string, unknown> = {
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 600000
+                              },
+                              "basis": {
+                                "type": "string",
+                                "enum": [
+                                  "probe",
+                                  "organic"
+                                ]
                               }
                             },
                             "required": [
@@ -22844,6 +22885,13 @@ export const openapiDocument: Record<string, unknown> = {
                               "type": "integer",
                               "minimum": 0,
                               "maximum": 600000
+                            },
+                            "basis": {
+                              "type": "string",
+                              "enum": [
+                                "probe",
+                                "organic"
+                              ]
                             }
                           },
                           "required": [
@@ -59381,7 +59429,7 @@ export const openapiDocument: Record<string, unknown> = {
             "BearerAuth": []
           }
         ],
-        "description": "Set the organization's mode for one or more kinds: off (nobody gets it), optional_on (each member gets it unless they turn it off), optional_off (only members who turn it on get it) or required (every member gets it). Kinds left out keep their mode. An unknown kind is refused with 400 (validation_error, details.reason unknown_kind). A platform_required kind is refused with 409 (conflict, details.reason platform_required), and required for an optional kind with 409 (conflict, details.reason mode_not_allowed); nothing is changed. Answers the settings as they now stand. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session, or the person's own OAuth token with a step-up token for purpose `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role could not do it anyway). The person's role must hold notification_policy:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
+        "description": "Set the organization's mode for one or more kinds: off (nobody gets it), optional_on (each member gets it unless they turn it off), optional_off (only members who turn it on get it) or required (every member gets it). An org_only kind takes only off or required (on for every owner and admin). Kinds left out keep their mode. An unknown kind is refused with 400 (validation_error, details.reason unknown_kind). A platform_required kind is refused with 409 (conflict, details.reason platform_required), and a mode the kind does not take (required for an optional kind, optional_on or optional_off for an org_only kind) with 409 (conflict, details.reason mode_not_allowed); nothing is changed. Answers the settings as they now stand. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session, or the person's own OAuth token with a step-up token for purpose `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role could not do it anyway). The person's role must hold notification_policy:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.",
         "x-primitive-person-only": {
           "access": "step_up",
           "step_up_purpose": "org_settings.write"
@@ -59600,7 +59648,7 @@ export const openapiDocument: Record<string, unknown> = {
             "BearerAuth": []
           }
         ],
-        "description": "The notification emails the calling member gets, and which of them they may turn on or off. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session or the person's own OAuth token (the CLI or an app they connected). The person's role must hold notifications:manage. API keys, agent connection keys and agents are refused.",
+        "description": "The notification emails the calling member gets, and which of them they may turn on or off. The org_only kinds, which the organization alone turns on or off, are not listed. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session or the person's own OAuth token (the CLI or an app they connected). The person's role must hold notifications:manage. API keys, agent connection keys and agents are refused.",
         "x-primitive-person-only": {
           "access": "person"
         },
@@ -59778,7 +59826,7 @@ export const openapiDocument: Record<string, unknown> = {
             "BearerAuth": []
           }
         ],
-        "description": "Turn one or more kinds on or off for the calling member. Only a kind whose organization mode is optional_on or optional_off can be changed: a platform_required kind, one the organization requires, and one it turned off are refused with 409 (conflict, details.reason not_member_choice, details.org_mode saying which), and nothing is changed. An unknown kind is refused with 400. Answers the preferences as they now stand. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session or the person's own OAuth token (the CLI or an app they connected). The person's role must hold notifications:manage. API keys, agent connection keys and agents are refused.",
+        "description": "Turn one or more kinds on or off for the calling member. Only a kind whose organization mode is optional_on or optional_off can be changed: a platform_required kind, an org_only kind, one the organization requires, and one it turned off are refused with 409 (conflict, details.reason not_member_choice, details.org_mode saying which: platform_required, org_only, required or off), and nothing is changed. An unknown kind is refused with 400. Answers the preferences as they now stand. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.\n\nPerson only: a dashboard session or the person's own OAuth token (the CLI or an app they connected). The person's role must hold notifications:manage. API keys, agent connection keys and agents are refused.",
         "x-primitive-person-only": {
           "access": "person"
         },
@@ -66566,6 +66614,7 @@ export const openapiDocument: Record<string, unknown> = {
                   "mail_import_provider_unavailable",
                   "mail_import_storage_failed",
                   "mail_import_storage_limit",
+                  "mail_import_storage_not_ready",
                   "mail_import_too_large",
                   "mail_import_unavailable",
                   "mail_relay_unavailable",
@@ -69335,7 +69384,7 @@ export const openapiDocument: Record<string, unknown> = {
               "object",
               "null"
             ],
-            "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+            "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
             "required": [
               "from",
               "method",
@@ -69346,19 +69395,24 @@ export const openapiDocument: Record<string, unknown> = {
               "from": {
                 "type": "string",
                 "enum": [
-                  "google_workspace"
-                ]
+                  "google_workspace",
+                  "unknown"
+                ],
+                "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
               },
               "method": {
                 "type": "string",
                 "enum": [
-                  "primitive_direct"
-                ]
+                  "primitive_direct",
+                  "api_upload"
+                ],
+                "description": "How Primitive acquired the historical message."
               },
               "verification": {
                 "type": "string",
                 "enum": [
-                  "provider_fetched"
+                  "provider_fetched",
+                  "unverified"
                 ]
               },
               "at": {
@@ -69366,7 +69420,60 @@ export const openapiDocument: Record<string, unknown> = {
                 "format": "date-time",
                 "description": "When Primitive acquired this historical message."
               }
-            }
+            },
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "google_workspace"
+                  },
+                  "method": {
+                    "const": "primitive_direct"
+                  },
+                  "verification": {
+                    "const": "provider_fetched"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "unknown"
+                  },
+                  "method": {
+                    "const": "api_upload"
+                  },
+                  "verification": {
+                    "const": "unverified"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            ]
           },
           "snippet": {
             "type": [
@@ -70411,7 +70518,7 @@ export const openapiDocument: Record<string, unknown> = {
               "object",
               "null"
             ],
-            "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+            "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
             "required": [
               "from",
               "method",
@@ -70422,19 +70529,24 @@ export const openapiDocument: Record<string, unknown> = {
               "from": {
                 "type": "string",
                 "enum": [
-                  "google_workspace"
-                ]
+                  "google_workspace",
+                  "unknown"
+                ],
+                "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
               },
               "method": {
                 "type": "string",
                 "enum": [
-                  "primitive_direct"
-                ]
+                  "primitive_direct",
+                  "api_upload"
+                ],
+                "description": "How Primitive acquired the historical message."
               },
               "verification": {
                 "type": "string",
                 "enum": [
-                  "provider_fetched"
+                  "provider_fetched",
+                  "unverified"
                 ]
               },
               "at": {
@@ -70442,7 +70554,60 @@ export const openapiDocument: Record<string, unknown> = {
                 "format": "date-time",
                 "description": "When Primitive acquired this historical message."
               }
-            }
+            },
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "google_workspace"
+                  },
+                  "method": {
+                    "const": "primitive_direct"
+                  },
+                  "verification": {
+                    "const": "provider_fetched"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "unknown"
+                  },
+                  "method": {
+                    "const": "api_upload"
+                  },
+                  "verification": {
+                    "const": "unverified"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            ]
           },
           "snippet": {
             "type": [
@@ -71023,6 +71188,102 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "string",
             "description": "Outbound messages only. How to place this send in a timeline: `status` (a pure status signal), `card` or `none`. Not declared as a closed enum so that a value added later does not fail decoding; treat an unknown value as `none`. Absent on inbound messages. Older servers omit it.\n"
           },
+          "imported": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+            "required": [
+              "from",
+              "method",
+              "verification",
+              "at"
+            ],
+            "properties": {
+              "from": {
+                "type": "string",
+                "enum": [
+                  "google_workspace",
+                  "unknown"
+                ],
+                "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "primitive_direct",
+                  "api_upload"
+                ],
+                "description": "How Primitive acquired the historical message."
+              },
+              "verification": {
+                "type": "string",
+                "enum": [
+                  "provider_fetched",
+                  "unverified"
+                ]
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "When Primitive acquired this historical message."
+              }
+            },
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "google_workspace"
+                  },
+                  "method": {
+                    "const": "primitive_direct"
+                  },
+                  "verification": {
+                    "const": "provider_fetched"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "unknown"
+                  },
+                  "method": {
+                    "const": "api_upload"
+                  },
+                  "verification": {
+                    "const": "unverified"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            ]
+          },
           "copies": {
             "type": "array",
             "items": {
@@ -71058,7 +71319,8 @@ export const openapiDocument: Record<string, unknown> = {
         },
         "required": [
           "direction",
-          "id"
+          "id",
+          "imported"
         ]
       },
       "Conversation": {
@@ -71275,7 +71537,7 @@ export const openapiDocument: Record<string, unknown> = {
               "object",
               "null"
             ],
-            "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+            "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
             "required": [
               "from",
               "method",
@@ -71286,19 +71548,24 @@ export const openapiDocument: Record<string, unknown> = {
               "from": {
                 "type": "string",
                 "enum": [
-                  "google_workspace"
-                ]
+                  "google_workspace",
+                  "unknown"
+                ],
+                "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
               },
               "method": {
                 "type": "string",
                 "enum": [
-                  "primitive_direct"
-                ]
+                  "primitive_direct",
+                  "api_upload"
+                ],
+                "description": "How Primitive acquired the historical message."
               },
               "verification": {
                 "type": "string",
                 "enum": [
-                  "provider_fetched"
+                  "provider_fetched",
+                  "unverified"
                 ]
               },
               "at": {
@@ -71306,7 +71573,60 @@ export const openapiDocument: Record<string, unknown> = {
                 "format": "date-time",
                 "description": "When Primitive acquired this historical message."
               }
-            }
+            },
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "google_workspace"
+                  },
+                  "method": {
+                    "const": "primitive_direct"
+                  },
+                  "verification": {
+                    "const": "provider_fetched"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "unknown"
+                  },
+                  "method": {
+                    "const": "api_upload"
+                  },
+                  "verification": {
+                    "const": "unverified"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            ]
           },
           "copies": {
             "type": "array",
@@ -72109,6 +72429,102 @@ export const openapiDocument: Record<string, unknown> = {
             ],
             "description": "The `<protocol>/<version>` the hint was decided from when `interaction_hint` is `status` or `card`; null otherwise."
           },
+          "imported": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+            "required": [
+              "from",
+              "method",
+              "verification",
+              "at"
+            ],
+            "properties": {
+              "from": {
+                "type": "string",
+                "enum": [
+                  "google_workspace",
+                  "unknown"
+                ],
+                "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "primitive_direct",
+                  "api_upload"
+                ],
+                "description": "How Primitive acquired the historical message."
+              },
+              "verification": {
+                "type": "string",
+                "enum": [
+                  "provider_fetched",
+                  "unverified"
+                ]
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "When Primitive acquired this historical message."
+              }
+            },
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "google_workspace"
+                  },
+                  "method": {
+                    "const": "primitive_direct"
+                  },
+                  "verification": {
+                    "const": "provider_fetched"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "unknown"
+                  },
+                  "method": {
+                    "const": "api_upload"
+                  },
+                  "verification": {
+                    "const": "unverified"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            ]
+          },
           "snippet": {
             "type": [
               "string",
@@ -72162,6 +72578,7 @@ export const openapiDocument: Record<string, unknown> = {
           "body_size_bytes",
           "interaction_hint",
           "interaction_kind",
+          "imported",
           "snippet"
         ]
       },
@@ -72737,6 +73154,102 @@ export const openapiDocument: Record<string, unknown> = {
               "name"
             ]
           },
+          "imported": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
+            "required": [
+              "from",
+              "method",
+              "verification",
+              "at"
+            ],
+            "properties": {
+              "from": {
+                "type": "string",
+                "enum": [
+                  "google_workspace",
+                  "unknown"
+                ],
+                "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "primitive_direct",
+                  "api_upload"
+                ],
+                "description": "How Primitive acquired the historical message."
+              },
+              "verification": {
+                "type": "string",
+                "enum": [
+                  "provider_fetched",
+                  "unverified"
+                ]
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "When Primitive acquired this historical message."
+              }
+            },
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "google_workspace"
+                  },
+                  "method": {
+                    "const": "primitive_direct"
+                  },
+                  "verification": {
+                    "const": "provider_fetched"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "unknown"
+                  },
+                  "method": {
+                    "const": "api_upload"
+                  },
+                  "verification": {
+                    "const": "unverified"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            ]
+          },
           "hold": {
             "type": "object",
             "description": "Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold: its OAuth grant was revoked after refresh token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds); no release needed. On sent-email reads and conversation messages.",
@@ -72758,7 +73271,10 @@ export const openapiDocument: Record<string, unknown> = {
               }
             }
           }
-        }
+        },
+        "required": [
+          "imported"
+        ]
       },
       "ReplyEmail": {
         "type": "object",
@@ -78534,6 +79050,13 @@ export const openapiDocument: Record<string, unknown> = {
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 600000
+              },
+              "basis": {
+                "type": "string",
+                "enum": [
+                  "probe",
+                  "organic"
+                ]
               }
             },
             "required": [
@@ -79161,7 +79684,28 @@ export const openapiDocument: Record<string, unknown> = {
       "EmailListMeta": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/PaginationMeta"
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "description": "Total number of matching records"
+              },
+              "limit": {
+                "type": "integer",
+                "description": "Page size used for this request"
+              },
+              "cursor": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Cursor for the next page, or null if no more results"
+              }
+            },
+            "required": [
+              "limit",
+              "cursor"
+            ]
           },
           {
             "type": "object",
@@ -79173,6 +79717,10 @@ export const openapiDocument: Record<string, unknown> = {
               "recipient_rules_only": {
                 "type": "boolean",
                 "description": "Present, as true, when your credential is limited to some mailboxes, recipient names one that is neither one of its addresses nor on one of its domains, and the credential reads some mail through email rules: the page holds only the mail those rules give it there. Absent otherwise."
+              },
+              "has_more": {
+                "type": "boolean",
+                "description": "Whether another page follows this one, read from the page itself, so it is there with or without a count (`count=false`)."
               }
             }
           }
@@ -79882,72 +80430,6 @@ export const openapiDocument: Record<string, unknown> = {
                   "type": "string",
                   "enum": [
                     "deleted"
-                  ]
-                },
-                "receivers_change": {
-                  "description": "For a receivers_changed notice: who received the rule's matches before and after, in totals. They can be equal when only an owner or a webhook site changed; covering-me shows them by owner. A rotated key counts once here while the old one still works; covering-me counts both.",
-                  "type": "object",
-                  "properties": {
-                    "before": {
-                      "type": "object",
-                      "properties": {
-                        "keys": {
-                          "type": "integer",
-                          "minimum": 0
-                        },
-                        "reads_in_full": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "description": "Of the keys, how many also read your own mail beyond the rule."
-                        },
-                        "webhooks": {
-                          "type": "integer",
-                          "minimum": 0
-                        },
-                        "shares": {
-                          "type": "integer",
-                          "minimum": 0
-                        }
-                      },
-                      "required": [
-                        "keys",
-                        "reads_in_full",
-                        "webhooks",
-                        "shares"
-                      ]
-                    },
-                    "after": {
-                      "type": "object",
-                      "properties": {
-                        "keys": {
-                          "type": "integer",
-                          "minimum": 0
-                        },
-                        "reads_in_full": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "description": "Of the keys, how many also read your own mail beyond the rule."
-                        },
-                        "webhooks": {
-                          "type": "integer",
-                          "minimum": 0
-                        },
-                        "shares": {
-                          "type": "integer",
-                          "minimum": 0
-                        }
-                      },
-                      "required": [
-                        "keys",
-                        "reads_in_full",
-                        "webhooks",
-                        "shares"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "before",
-                    "after"
                   ]
                 },
                 "stop_reason": {
@@ -85280,35 +85762,70 @@ export const openapiDocument: Record<string, unknown> = {
           "type": "object",
           "properties": {
             "imported": {
-              "type": [
-                "object",
-                "null"
-              ],
-              "properties": {
-                "from": {
-                  "type": "string",
-                  "const": "google_workspace"
+              "default": null,
+              "anyOf": [
+                {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "const": "google_workspace"
+                        },
+                        "method": {
+                          "type": "string",
+                          "const": "primitive_direct"
+                        },
+                        "verification": {
+                          "type": "string",
+                          "const": "provider_fetched"
+                        },
+                        "at": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "method",
+                        "verification",
+                        "at"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "const": "unknown"
+                        },
+                        "method": {
+                          "type": "string",
+                          "const": "api_upload"
+                        },
+                        "verification": {
+                          "type": "string",
+                          "const": "unverified"
+                        },
+                        "at": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "method",
+                        "verification",
+                        "at"
+                      ]
+                    }
+                  ]
                 },
-                "method": {
-                  "type": "string",
-                  "const": "primitive_direct"
-                },
-                "verification": {
-                  "type": "string",
-                  "const": "provider_fetched"
-                },
-                "at": {
-                  "type": "string",
-                  "format": "date-time"
+                {
+                  "type": "null"
                 }
-              },
-              "required": [
-                "from",
-                "method",
-                "verification",
-                "at"
-              ],
-              "default": null
+              ]
             },
             "delivery_report": {
               "type": [
@@ -85895,7 +86412,9 @@ export const openapiDocument: Record<string, unknown> = {
           "current_version",
           "receivers",
           "receivers_once_active",
-          "created_at"
+          "created_at",
+          "english",
+          "explanation"
         ]
       },
       "EmailRuleCoverage": {
@@ -86962,7 +87481,7 @@ export const openapiDocument: Record<string, unknown> = {
               "object",
               "null"
             ],
-            "description": "Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.",
+            "description": "Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.",
             "required": [
               "from",
               "method",
@@ -86973,19 +87492,24 @@ export const openapiDocument: Record<string, unknown> = {
               "from": {
                 "type": "string",
                 "enum": [
-                  "google_workspace"
-                ]
+                  "google_workspace",
+                  "unknown"
+                ],
+                "description": "Original mail provider. Unknown when Primitive has not established the provider of an uploaded file."
               },
               "method": {
                 "type": "string",
                 "enum": [
-                  "primitive_direct"
-                ]
+                  "primitive_direct",
+                  "api_upload"
+                ],
+                "description": "How Primitive acquired the historical message."
               },
               "verification": {
                 "type": "string",
                 "enum": [
-                  "provider_fetched"
+                  "provider_fetched",
+                  "unverified"
                 ]
               },
               "at": {
@@ -86993,7 +87517,60 @@ export const openapiDocument: Record<string, unknown> = {
                 "format": "date-time",
                 "description": "When Primitive acquired this historical message."
               }
-            }
+            },
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "google_workspace"
+                  },
+                  "method": {
+                    "const": "primitive_direct"
+                  },
+                  "verification": {
+                    "const": "provider_fetched"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "from",
+                  "method",
+                  "verification",
+                  "at"
+                ],
+                "properties": {
+                  "from": {
+                    "const": "unknown"
+                  },
+                  "method": {
+                    "const": "api_upload"
+                  },
+                  "verification": {
+                    "const": "unverified"
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            ]
           },
           "id": {
             "type": "string",
@@ -94648,7 +95225,8 @@ export const openapiDocument: Record<string, unknown> = {
                   "enum": [
                     "platform_required",
                     "org_requirable",
-                    "optional"
+                    "optional",
+                    "org_only"
                   ]
                 },
                 "entitlement_required": {
@@ -94738,7 +95316,8 @@ export const openapiDocument: Record<string, unknown> = {
                   "enum": [
                     "platform_required",
                     "org_requirable",
-                    "optional"
+                    "optional",
+                    "org_only"
                   ]
                 },
                 "entitlement_required": {
@@ -94853,7 +95432,8 @@ export const openapiDocument: Record<string, unknown> = {
                   "enum": [
                     "platform_required",
                     "org_requirable",
-                    "optional"
+                    "optional",
+                    "org_only"
                   ]
                 },
                 "entitlement_required": {
@@ -94943,7 +95523,8 @@ export const openapiDocument: Record<string, unknown> = {
                   "enum": [
                     "platform_required",
                     "org_requirable",
-                    "optional"
+                    "optional",
+                    "org_only"
                   ]
                 },
                 "entitlement_required": {

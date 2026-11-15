@@ -95,8 +95,9 @@ class ConversationMessage:
                 outbound, in the same order. Empty when there are none or an inbound message has no parsed content. No bytes or
                 download URLs; download a part with `/emails/{id}/attachments/{part_index}` or `/sent-
                 emails/{id}/attachments/{part_index}`.
-            imported (ConversationMessageImportedType0 | None | Unset): Historical acquisition; never sender or SMTP
-                delivery proof. Null for live mail. Excluded from live tails and deltas.
+            imported (ConversationMessageImportedType0 | None | Unset): Historical import; never sender or SMTP delivery
+                proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live
+                tails and deltas.
             copies (list[ConversationMessageCopiesItem] | Unset): Every inbound copy of this message you can read (a message
                 to several of the org's mailboxes is stored once per mailbox), in arrival order. At most 50; past that, the ones
                 listed are your own mailboxes' copies first, then the earliest. The entry's `id` is one of them unless the entry

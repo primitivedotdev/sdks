@@ -122,13 +122,15 @@ def sync_detailed(
 
      Set the organization's mode for one or more kinds: off (nobody gets it), optional_on (each member
     gets it unless they turn it off), optional_off (only members who turn it on get it) or required
-    (every member gets it). Kinds left out keep their mode. An unknown kind is refused with 400
-    (validation_error, details.reason unknown_kind). A platform_required kind is refused with 409
-    (conflict, details.reason platform_required), and required for an optional kind with 409 (conflict,
-    details.reason mode_not_allowed); nothing is changed. Answers the settings as they now stand. Each
-    kind lists its label and description, its class, whether it needs an entitlement and whether the
-    organization has it, the organization's mode (null for platform_required) and the modes it may
-    choose, and whether the calling member gets it and may change that.
+    (every member gets it). An org_only kind takes only off or required (on for every owner and admin).
+    Kinds left out keep their mode. An unknown kind is refused with 400 (validation_error,
+    details.reason unknown_kind). A platform_required kind is refused with 409 (conflict, details.reason
+    platform_required), and a mode the kind does not take (required for an optional kind, optional_on or
+    optional_off for an org_only kind) with 409 (conflict, details.reason mode_not_allowed); nothing is
+    changed. Answers the settings as they now stand. Each kind lists its label and description, its
+    class, whether it needs an entitlement and whether the organization has it, the organization's mode
+    (null for platform_required) and the modes it may choose, and whether the calling member gets it and
+    may change that.
 
     Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
     `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
@@ -173,13 +175,15 @@ def sync(
 
      Set the organization's mode for one or more kinds: off (nobody gets it), optional_on (each member
     gets it unless they turn it off), optional_off (only members who turn it on get it) or required
-    (every member gets it). Kinds left out keep their mode. An unknown kind is refused with 400
-    (validation_error, details.reason unknown_kind). A platform_required kind is refused with 409
-    (conflict, details.reason platform_required), and required for an optional kind with 409 (conflict,
-    details.reason mode_not_allowed); nothing is changed. Answers the settings as they now stand. Each
-    kind lists its label and description, its class, whether it needs an entitlement and whether the
-    organization has it, the organization's mode (null for platform_required) and the modes it may
-    choose, and whether the calling member gets it and may change that.
+    (every member gets it). An org_only kind takes only off or required (on for every owner and admin).
+    Kinds left out keep their mode. An unknown kind is refused with 400 (validation_error,
+    details.reason unknown_kind). A platform_required kind is refused with 409 (conflict, details.reason
+    platform_required), and a mode the kind does not take (required for an optional kind, optional_on or
+    optional_off for an org_only kind) with 409 (conflict, details.reason mode_not_allowed); nothing is
+    changed. Answers the settings as they now stand. Each kind lists its label and description, its
+    class, whether it needs an entitlement and whether the organization has it, the organization's mode
+    (null for platform_required) and the modes it may choose, and whether the calling member gets it and
+    may change that.
 
     Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
     `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
@@ -219,13 +223,15 @@ async def asyncio_detailed(
 
      Set the organization's mode for one or more kinds: off (nobody gets it), optional_on (each member
     gets it unless they turn it off), optional_off (only members who turn it on get it) or required
-    (every member gets it). Kinds left out keep their mode. An unknown kind is refused with 400
-    (validation_error, details.reason unknown_kind). A platform_required kind is refused with 409
-    (conflict, details.reason platform_required), and required for an optional kind with 409 (conflict,
-    details.reason mode_not_allowed); nothing is changed. Answers the settings as they now stand. Each
-    kind lists its label and description, its class, whether it needs an entitlement and whether the
-    organization has it, the organization's mode (null for platform_required) and the modes it may
-    choose, and whether the calling member gets it and may change that.
+    (every member gets it). An org_only kind takes only off or required (on for every owner and admin).
+    Kinds left out keep their mode. An unknown kind is refused with 400 (validation_error,
+    details.reason unknown_kind). A platform_required kind is refused with 409 (conflict, details.reason
+    platform_required), and a mode the kind does not take (required for an optional kind, optional_on or
+    optional_off for an org_only kind) with 409 (conflict, details.reason mode_not_allowed); nothing is
+    changed. Answers the settings as they now stand. Each kind lists its label and description, its
+    class, whether it needs an entitlement and whether the organization has it, the organization's mode
+    (null for platform_required) and the modes it may choose, and whether the calling member gets it and
+    may change that.
 
     Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
     `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
@@ -270,13 +276,15 @@ async def asyncio(
 
      Set the organization's mode for one or more kinds: off (nobody gets it), optional_on (each member
     gets it unless they turn it off), optional_off (only members who turn it on get it) or required
-    (every member gets it). Kinds left out keep their mode. An unknown kind is refused with 400
-    (validation_error, details.reason unknown_kind). A platform_required kind is refused with 409
-    (conflict, details.reason platform_required), and required for an optional kind with 409 (conflict,
-    details.reason mode_not_allowed); nothing is changed. Answers the settings as they now stand. Each
-    kind lists its label and description, its class, whether it needs an entitlement and whether the
-    organization has it, the organization's mode (null for platform_required) and the modes it may
-    choose, and whether the calling member gets it and may change that.
+    (every member gets it). An org_only kind takes only off or required (on for every owner and admin).
+    Kinds left out keep their mode. An unknown kind is refused with 400 (validation_error,
+    details.reason unknown_kind). A platform_required kind is refused with 409 (conflict, details.reason
+    platform_required), and a mode the kind does not take (required for an optional kind, optional_on or
+    optional_off for an org_only kind) with 409 (conflict, details.reason mode_not_allowed); nothing is
+    changed. Answers the settings as they now stand. Each kind lists its label and description, its
+    class, whether it needs an entitlement and whether the organization has it, the organization's mode
+    (null for platform_required) and the modes it may choose, and whether the calling member gets it and
+    may change that.
 
     Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
     `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403

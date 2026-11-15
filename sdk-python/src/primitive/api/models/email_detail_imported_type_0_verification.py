@@ -2,6 +2,7 @@ from enum import StrEnum
 
 class EmailDetailImportedType0Verification(StrEnum):
     PROVIDER_FETCHED = "provider_fetched"
+    UNVERIFIED = "unverified"
 
     def __str__(self) -> str:
         return str(self.value)

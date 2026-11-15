@@ -34,8 +34,9 @@ class EmailReadable:
     """ What an inbound email says, as plain text, with the fields that identify it.
 
         Attributes:
-            imported (EmailReadableImportedType0 | None): Historical acquisition; never sender or SMTP delivery proof. Null
-                for live mail. Excluded from live tails and deltas.
+            imported (EmailReadableImportedType0 | None): Historical import; never sender or SMTP delivery proof. EML
+                uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and
+                deltas.
             id (UUID): The inbound email id.
             thread_id (None | UUID): Its conversation, once it has been placed in one.
             received_at (datetime.datetime): When it was received.

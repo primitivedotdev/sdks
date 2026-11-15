@@ -499,7 +499,7 @@ export const checkDomainDns = <ThrowOnError extends boolean = false>(options: Op
 /**
  * Download domain DNS zone file
  *
- * Downloads a BIND-format DNS zone file containing the DNS records required for a domain claim. Agents should offer this after `addDomain` when users want to import DNS records instead of copying each record manually.
+ * Downloads a BIND-format DNS zone file for a domain claim. SPF is omitted when an existing SPF policy is observed or DNS lookup is inconclusive; read the file comments for the required manual SPF review. Agents should offer this after `addDomain` when users want to import DNS records instead of copying each record manually.
  */
 export const downloadDomainZoneFile = <ThrowOnError extends boolean = false>(options: Options<DownloadDomainZoneFileData, ThrowOnError>): RequestResult<DownloadDomainZoneFileResponses, DownloadDomainZoneFileErrors, ThrowOnError> => (options.client ?? client).get<DownloadDomainZoneFileResponses, DownloadDomainZoneFileErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -4507,7 +4507,7 @@ export const getEmailNotificationSettings = <ThrowOnError extends boolean = fals
 /**
  * Change the organization's email notification settings
  *
- * Set the organization's mode for one or more kinds: off (nobody gets it), optional_on (each member gets it unless they turn it off), optional_off (only members who turn it on get it) or required (every member gets it). Kinds left out keep their mode. An unknown kind is refused with 400 (validation_error, details.reason unknown_kind). A platform_required kind is refused with 409 (conflict, details.reason platform_required), and required for an optional kind with 409 (conflict, details.reason mode_not_allowed); nothing is changed. Answers the settings as they now stand. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.
+ * Set the organization's mode for one or more kinds: off (nobody gets it), optional_on (each member gets it unless they turn it off), optional_off (only members who turn it on get it) or required (every member gets it). An org_only kind takes only off or required (on for every owner and admin). Kinds left out keep their mode. An unknown kind is refused with 400 (validation_error, details.reason unknown_kind). A platform_required kind is refused with 409 (conflict, details.reason platform_required), and a mode the kind does not take (required for an optional kind, optional_on or optional_off for an org_only kind) with 409 (conflict, details.reason mode_not_allowed); nothing is changed. Answers the settings as they now stand. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.
  *
  * Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role could not do it anyway). The person's role must hold notification_policy:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.
  */
@@ -4524,7 +4524,7 @@ export const updateEmailNotificationSettings = <ThrowOnError extends boolean = f
 /**
  * Get my email notification preferences
  *
- * The notification emails the calling member gets, and which of them they may turn on or off. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.
+ * The notification emails the calling member gets, and which of them they may turn on or off. The org_only kinds, which the organization alone turns on or off, are not listed. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.
  *
  * Person only: a dashboard session or the person's own OAuth token (the CLI or an app they connected). The person's role must hold notifications:manage. API keys, agent connection keys and agents are refused.
  */
@@ -4537,7 +4537,7 @@ export const getEmailNotificationPreferences = <ThrowOnError extends boolean = f
 /**
  * Change my email notification preferences
  *
- * Turn one or more kinds on or off for the calling member. Only a kind whose organization mode is optional_on or optional_off can be changed: a platform_required kind, one the organization requires, and one it turned off are refused with 409 (conflict, details.reason not_member_choice, details.org_mode saying which), and nothing is changed. An unknown kind is refused with 400. Answers the preferences as they now stand. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.
+ * Turn one or more kinds on or off for the calling member. Only a kind whose organization mode is optional_on or optional_off can be changed: a platform_required kind, an org_only kind, one the organization requires, and one it turned off are refused with 409 (conflict, details.reason not_member_choice, details.org_mode saying which: platform_required, org_only, required or off), and nothing is changed. An unknown kind is refused with 400. Answers the preferences as they now stand. Each kind lists its label and description, its class, whether it needs an entitlement and whether the organization has it, the organization's mode (null for platform_required) and the modes it may choose, and whether the calling member gets it and may change that.
  *
  * Person only: a dashboard session or the person's own OAuth token (the CLI or an app they connected). The person's role must hold notifications:manage. API keys, agent connection keys and agents are refused.
  */

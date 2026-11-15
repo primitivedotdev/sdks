@@ -106,7 +106,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'ownership_proof_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'access_mode_unavailable' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_work_agreement_replay_conflict' | 'agent_work_deadline_not_future' | 'agent_work_inactive' | 'agent_work_not_found' | 'agent_work_replay_conflict' | 'agent_work_version_conflict' | 'already_claimed' | 'already_member' | 'always_sent' | 'archive_busy' | 'archive_invalid' | 'archive_limit_exceeded' | 'archive_unsafe_path' | 'archive_unsupported' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'authorization_unavailable' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'builtin_role' | 'chunk_size_mismatch' | 'chunk_too_large' | 'chunks_missing' | 'claim_failed' | 'claim_not_pending' | 'cleanup_incomplete' | 'cli_access_refused' | 'code_expired' | 'confirmation_required' | 'connection_already_claimed' | 'connection_cleanup_pending' | 'connection_create_request_conflict' | 'connection_owner_address_required' | 'connection_removed' | 'connection_revoked' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'delivery_held' | 'delivery_unavailable' | 'deploy_failed' | 'deploy_outcome_unknown' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_admission_unavailable' | 'email_in_use' | 'email_rule_author_only' | 'email_rule_author_unresolvable' | 'email_rule_compiler_unavailable' | 'email_rule_conflict' | 'email_rule_look_alikes_not_written' | 'email_rule_not_compiled' | 'email_rule_request_limit' | 'email_rule_request_not_pending' | 'email_rule_request_not_withdrawn' | 'email_rule_request_party_left' | 'email_rule_request_proposer_only' | 'email_rule_request_target_only' | 'email_rule_scope_locked' | 'email_rule_scope_not_readable' | 'email_rule_share_ended' | 'email_rule_share_limit' | 'embedding_provider_unavailable' | 'entitlement' | 'expectations_failed' | 'expectations_undecided' | 'expectations_unreadable' | 'expired' | 'feature_not_enabled' | 'fresh_send_not_authorized' | 'function_cannot_receive_mail' | 'function_delivery_refused' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_key_missing' | 'function_key_runtime_only' | 'function_not_deployed' | 'function_scope_forbidden' | 'function_signing_secret_missing' | 'function_suspended' | 'github_binding_owner_changed' | 'github_binding_paused' | 'grant_forbidden' | 'grant_not_available' | 'hash_mismatch' | 'hipaa_mode' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'host_key_limit' | 'idempotency_conflict' | 'idempotency_key_invalid' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_manifest' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_signature' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_accepting' | 'invitation_address_not_allowed' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'ip_not_allowed' | 'keep_refused' | 'key_change_superseded' | 'key_recently_created' | 'key_revoked' | 'last_owner' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'load_test_recipient_not_allowed' | 'mail_import_cap_exceeded' | 'mail_import_content_mismatch' | 'mail_import_deadline' | 'mail_import_disabled' | 'mail_import_fenced' | 'mail_import_forbidden' | 'mail_import_invalid_input' | 'mail_import_invalid_provider_response' | 'mail_import_out_of_window' | 'mail_import_policy_mismatch' | 'mail_import_provider_auth' | 'mail_import_provider_unavailable' | 'mail_import_storage_failed' | 'mail_import_storage_limit' | 'mail_import_too_large' | 'mail_import_unavailable' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_claimable' | 'mailbox_not_found' | 'mailbox_shared_with_others' | 'managed_build_failed' | 'managed_domain' | 'member_address_domain_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_reserved' | 'member_address_unavailable' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'no_expectations' | 'no_mail_read' | 'not_a_template_install' | 'not_available' | 'not_claimable' | 'not_held' | 'not_pending' | 'object_suspended' | 'onboarding_key_in_use' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'outbound_relay_unavailable' | 'outside_key_scope' | 'path_invalid' | 'payload_too_large' | 'pending_owner_confirmation' | 'plan_required' | 'policy_forbidden' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'pull_subscription_requires_agent_connection' | 'query_invalid' | 'recipient_changed' | 'recipient_suppressed' | 'redeploy_failed' | 'removal_failed' | 'removal_timeout' | 'request_expired' | 'required_by_organization' | 'resend_limit_exceeded' | 'resend_too_soon' | 'role_assigned' | 'role_assignment_unavailable' | 'role_key_taken' | 'rotate_instead' | 'rotation_in_progress' | 'rotation_incomplete' | 'rotation_refused' | 'rotation_unconfirmed' | 'runtime_grant_unavailable' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_at_required' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sending_ip_warmup_cap' | 'sent_email_tail_unavailable' | 'sent_mail_search_unavailable' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'signing_secret_unavailable' | 'signup_failed' | 'standing_owner_revoked' | 'step_up_invalid' | 'step_up_not_accepted' | 'step_up_refused' | 'step_up_required' | 'stop_changed' | 'storage_error' | 'storage_limit_exceeded' | 'suspension_undecided' | 'template_role' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'thread_busy' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_unavailable' | 'usage_limit_exceeded';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'ownership_proof_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'access_mode_unavailable' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_work_agreement_replay_conflict' | 'agent_work_deadline_not_future' | 'agent_work_inactive' | 'agent_work_not_found' | 'agent_work_replay_conflict' | 'agent_work_version_conflict' | 'already_claimed' | 'already_member' | 'always_sent' | 'archive_busy' | 'archive_invalid' | 'archive_limit_exceeded' | 'archive_unsafe_path' | 'archive_unsupported' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'authorization_unavailable' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'builtin_role' | 'chunk_size_mismatch' | 'chunk_too_large' | 'chunks_missing' | 'claim_failed' | 'claim_not_pending' | 'cleanup_incomplete' | 'cli_access_refused' | 'code_expired' | 'confirmation_required' | 'connection_already_claimed' | 'connection_cleanup_pending' | 'connection_create_request_conflict' | 'connection_owner_address_required' | 'connection_removed' | 'connection_revoked' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'delivery_held' | 'delivery_unavailable' | 'deploy_failed' | 'deploy_outcome_unknown' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_admission_unavailable' | 'email_in_use' | 'email_rule_author_only' | 'email_rule_author_unresolvable' | 'email_rule_compiler_unavailable' | 'email_rule_conflict' | 'email_rule_look_alikes_not_written' | 'email_rule_not_compiled' | 'email_rule_request_limit' | 'email_rule_request_not_pending' | 'email_rule_request_not_withdrawn' | 'email_rule_request_party_left' | 'email_rule_request_proposer_only' | 'email_rule_request_target_only' | 'email_rule_scope_locked' | 'email_rule_scope_not_readable' | 'email_rule_share_ended' | 'email_rule_share_limit' | 'embedding_provider_unavailable' | 'entitlement' | 'expectations_failed' | 'expectations_undecided' | 'expectations_unreadable' | 'expired' | 'feature_not_enabled' | 'fresh_send_not_authorized' | 'function_cannot_receive_mail' | 'function_delivery_refused' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_key_missing' | 'function_key_runtime_only' | 'function_not_deployed' | 'function_scope_forbidden' | 'function_signing_secret_missing' | 'function_suspended' | 'github_binding_owner_changed' | 'github_binding_paused' | 'grant_forbidden' | 'grant_not_available' | 'hash_mismatch' | 'hipaa_mode' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'host_key_limit' | 'idempotency_conflict' | 'idempotency_key_invalid' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_manifest' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_signature' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_accepting' | 'invitation_address_not_allowed' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'ip_not_allowed' | 'keep_refused' | 'key_change_superseded' | 'key_recently_created' | 'key_revoked' | 'last_owner' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'load_test_recipient_not_allowed' | 'mail_import_cap_exceeded' | 'mail_import_content_mismatch' | 'mail_import_deadline' | 'mail_import_disabled' | 'mail_import_fenced' | 'mail_import_forbidden' | 'mail_import_invalid_input' | 'mail_import_invalid_provider_response' | 'mail_import_out_of_window' | 'mail_import_policy_mismatch' | 'mail_import_provider_auth' | 'mail_import_provider_unavailable' | 'mail_import_storage_failed' | 'mail_import_storage_limit' | 'mail_import_storage_not_ready' | 'mail_import_too_large' | 'mail_import_unavailable' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_claimable' | 'mailbox_not_found' | 'mailbox_shared_with_others' | 'managed_build_failed' | 'managed_domain' | 'member_address_domain_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_reserved' | 'member_address_unavailable' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'no_expectations' | 'no_mail_read' | 'not_a_template_install' | 'not_available' | 'not_claimable' | 'not_held' | 'not_pending' | 'object_suspended' | 'onboarding_key_in_use' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'outbound_relay_unavailable' | 'outside_key_scope' | 'path_invalid' | 'payload_too_large' | 'pending_owner_confirmation' | 'plan_required' | 'policy_forbidden' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'pull_subscription_requires_agent_connection' | 'query_invalid' | 'recipient_changed' | 'recipient_suppressed' | 'redeploy_failed' | 'removal_failed' | 'removal_timeout' | 'request_expired' | 'required_by_organization' | 'resend_limit_exceeded' | 'resend_too_soon' | 'role_assigned' | 'role_assignment_unavailable' | 'role_key_taken' | 'rotate_instead' | 'rotation_in_progress' | 'rotation_incomplete' | 'rotation_refused' | 'rotation_unconfirmed' | 'runtime_grant_unavailable' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_at_required' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sending_ip_warmup_cap' | 'sent_email_tail_unavailable' | 'sent_mail_search_unavailable' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'signing_secret_unavailable' | 'signup_failed' | 'standing_owner_revoked' | 'step_up_invalid' | 'step_up_not_accepted' | 'step_up_refused' | 'step_up_required' | 'stop_changed' | 'storage_error' | 'storage_limit_exceeded' | 'suspension_undecided' | 'template_role' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'thread_busy' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_unavailable' | 'usage_limit_exceeded';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -1485,12 +1485,18 @@ export type EmailSummary = {
      */
     sent_email_id?: string;
     /**
-     * Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.
+     * Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
      */
     imported: {
-        from: 'google_workspace';
-        method: 'primitive_direct';
-        verification: 'provider_fetched';
+        /**
+         * Original mail provider. Unknown when Primitive has not established the provider of an uploaded file.
+         */
+        from: 'google_workspace' | 'unknown';
+        /**
+         * How Primitive acquired the historical message.
+         */
+        method: 'primitive_direct' | 'api_upload';
+        verification: 'provider_fetched' | 'unverified';
         /**
          * When Primitive acquired this historical message.
          */
@@ -2121,12 +2127,18 @@ export type EmailDetail = {
      */
     attachments: Array<EmailAttachment>;
     /**
-     * Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.
+     * Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
      */
     imported: {
-        from: 'google_workspace';
-        method: 'primitive_direct';
-        verification: 'provider_fetched';
+        /**
+         * Original mail provider. Unknown when Primitive has not established the provider of an uploaded file.
+         */
+        from: 'google_workspace' | 'unknown';
+        /**
+         * How Primitive acquired the historical message.
+         */
+        method: 'primitive_direct' | 'api_upload';
+        verification: 'provider_fetched' | 'unverified';
         /**
          * When Primitive acquired this historical message.
          */
@@ -2402,6 +2414,24 @@ export type ThreadMessage = {
      */
     interaction_hint?: string;
     /**
+     * Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
+     */
+    imported: {
+        /**
+         * Original mail provider. Unknown when Primitive has not established the provider of an uploaded file.
+         */
+        from: 'google_workspace' | 'unknown';
+        /**
+         * How Primitive acquired the historical message.
+         */
+        method: 'primitive_direct' | 'api_upload';
+        verification: 'provider_fetched' | 'unverified';
+        /**
+         * When Primitive acquired this historical message.
+         */
+        at: string;
+    } | null;
+    /**
      * Every inbound copy of this message you can read (a message to several of the org's mailboxes is stored once per mailbox), in arrival order. At most 50; past that, the ones listed are your own mailboxes' copies first, then the earliest. The entry's `id` is one of them unless the entry is the send. A later read can return the message again with more copies listed, or under another id when a better copy becomes visible: upsert entries by `id`, and drop any entry you hold whose id is in a newer entry's `copies` or `sent_email_id`.
      */
     copies?: Array<{
@@ -2551,12 +2581,18 @@ export type ConversationMessage = {
      */
     attachments?: Array<EmailAttachment>;
     /**
-     * Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.
+     * Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
      */
     imported?: {
-        from: 'google_workspace';
-        method: 'primitive_direct';
-        verification: 'provider_fetched';
+        /**
+         * Original mail provider. Unknown when Primitive has not established the provider of an uploaded file.
+         */
+        from: 'google_workspace' | 'unknown';
+        /**
+         * How Primitive acquired the historical message.
+         */
+        method: 'primitive_direct' | 'api_upload';
+        verification: 'provider_fetched' | 'unverified';
         /**
          * When Primitive acquired this historical message.
          */
@@ -3125,6 +3161,24 @@ export type SentEmailSummary = {
      */
     interaction_kind: string | null;
     /**
+     * Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
+     */
+    imported: {
+        /**
+         * Original mail provider. Unknown when Primitive has not established the provider of an uploaded file.
+         */
+        from: 'google_workspace' | 'unknown';
+        /**
+         * How Primitive acquired the historical message.
+         */
+        method: 'primitive_direct' | 'api_upload';
+        verification: 'provider_fetched' | 'unverified';
+        /**
+         * When Primitive acquired this historical message.
+         */
+        at: string;
+    } | null;
+    /**
      * A plain-text preview of `body_text` (never `body_html`), computed once when the message is stored: quoted replies (an "On ... wrote:" line, an "Original Message" separator, a From/Sent header block, `>` lines) and a `-- ` signature are cut off, whitespace is collapsed to single spaces, and the result is at most 200 characters. A message with no text body, or with nothing left once quotes and the signature are cut (a quote-only reply), has no snippet. It is not a summary and may end mid-word; read the full body from the detail endpoint. Null when the send has no text body or its content was discarded.
      */
     snippet: string | null;
@@ -3405,6 +3459,24 @@ export type SentEmailDetail = SentEmailSummary & {
         address: string;
         user_id: string;
         name: string | null;
+    } | null;
+    /**
+     * Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
+     */
+    imported: {
+        /**
+         * Original mail provider. Unknown when Primitive has not established the provider of an uploaded file.
+         */
+        from: 'google_workspace' | 'unknown';
+        /**
+         * How Primitive acquired the historical message.
+         */
+        method: 'primitive_direct' | 'api_upload';
+        verification: 'provider_fetched' | 'unverified';
+        /**
+         * When Primitive acquired this historical message.
+         */
+        at: string;
     } | null;
     /**
      * Only on a scheduled send that is not going out yet; status stays scheduled. credential_reuse_hold: its OAuth grant was revoked after refresh token reuse, so it waits until released (POST /sent-emails/{id}/release) or canceled; canceled after 7 days. sending_ip_warmup_cap: your dedicated sending address is at today's warm-up limit or paused, so it goes out on its own within the hour after the limit resets at 00:00 UTC (fails with sending_ip_warmup_cap after 7 such holds); no release needed. On sent-email reads and conversation messages.
@@ -5914,6 +5986,7 @@ export type AgentConnection = {
         last_checked_at: string;
         expires_at: string;
         valid_for_ms: number;
+        basis?: 'probe' | 'organic';
     } | null;
     ownership_kind: 'personal' | 'shared' | 'legacy_unknown';
     owner_user_id: string | null;
@@ -6099,7 +6172,20 @@ export type ArchiveMembers = {
     members: Array<ArchiveMember>;
 };
 
-export type EmailListMeta = PaginationMeta & {
+export type EmailListMeta = {
+    /**
+     * Total number of matching records
+     */
+    total?: number;
+    /**
+     * Page size used for this request
+     */
+    limit: number;
+    /**
+     * Cursor for the next page, or null if no more results
+     */
+    cursor: string | null;
+} & {
     /**
      * Present, as true, when your credential is limited to some mailboxes, recipient names one that is neither one of its addresses nor on one of its domains (or the credential reads no received mail at all), and it reads through no email rule: the page is then empty however much mail that mailbox holds. Absent otherwise, and for an address on one of your domains, which may still list nothing.
      */
@@ -6108,6 +6194,10 @@ export type EmailListMeta = PaginationMeta & {
      * Present, as true, when your credential is limited to some mailboxes, recipient names one that is neither one of its addresses nor on one of its domains, and the credential reads some mail through email rules: the page holds only the mail those rules give it there. Absent otherwise.
      */
     recipient_rules_only?: boolean;
+    /**
+     * Whether another page follows this one, read from the page itself, so it is there with or without a count (`count=false`).
+     */
+    has_more?: boolean;
 };
 
 /**
@@ -6303,29 +6393,6 @@ export type ListActivityObjectsResult = {
          * For email_rule_coverage: deleted once the rule it is about has been deleted. Left out while it exists, or when that could not be checked.
          */
         rule_now?: 'deleted';
-        /**
-         * For a receivers_changed notice: who received the rule's matches before and after, in totals. They can be equal when only an owner or a webhook site changed; covering-me shows them by owner. A rotated key counts once here while the old one still works; covering-me counts both.
-         */
-        receivers_change?: {
-            before: {
-                keys: number;
-                /**
-                 * Of the keys, how many also read your own mail beyond the rule.
-                 */
-                reads_in_full: number;
-                webhooks: number;
-                shares: number;
-            };
-            after: {
-                keys: number;
-                /**
-                 * Of the keys, how many also read your own mail beyond the rule.
-                 */
-                reads_in_full: number;
-                webhooks: number;
-                shares: number;
-            };
-        };
         /**
          * For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active, reaching none of your mailboxes now).
          */
@@ -8435,9 +8502,9 @@ export type GetEmailRuleShareResult = EmailRuleShare;
 
 export type ListEmailRuleShareEmailsResult = Array<{
     imported: {
-        from: 'google_workspace';
-        method: 'primitive_direct';
-        verification: 'provider_fetched';
+        from: 'google_workspace' | 'unknown';
+        method: 'primitive_direct' | 'api_upload';
+        verification: 'provider_fetched' | 'unverified';
         at: string;
     } | null;
     delivery_report?: {
@@ -8570,11 +8637,11 @@ export type EmailRuleCoveringMe = {
     /**
      * What its author asked for, in their words, at its current version. Null when it has no version, was deleted after the page was read, or the words could not be read in time; GET /v1/email-rules/covering-me/{id} shows them with its tree.
      */
-    english?: string | null;
+    english: string | null;
     /**
      * What its current version matches, as compiled. Null as english is.
      */
-    explanation?: string | null;
+    explanation: string | null;
 };
 
 export type EmailRuleCoverage = {
@@ -8992,12 +9059,18 @@ export type EmailReadableAttachment = {
  */
 export type EmailReadable = {
     /**
-     * Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from live tails and deltas.
+     * Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
      */
     imported: {
-        from: 'google_workspace';
-        method: 'primitive_direct';
-        verification: 'provider_fetched';
+        /**
+         * Original mail provider. Unknown when Primitive has not established the provider of an uploaded file.
+         */
+        from: 'google_workspace' | 'unknown';
+        /**
+         * How Primitive acquired the historical message.
+         */
+        method: 'primitive_direct' | 'api_upload';
+        verification: 'provider_fetched' | 'unverified';
         /**
          * When Primitive acquired this historical message.
          */
@@ -10810,7 +10883,7 @@ export type EmailNotificationsGetEmailNotificationSettingsResult = {
         kind: string;
         label: string;
         description: string;
-        class: 'platform_required' | 'org_requirable' | 'optional';
+        class: 'platform_required' | 'org_requirable' | 'optional' | 'org_only';
         entitlement_required: boolean;
         entitled: boolean;
         org_mode: 'off' | 'optional_on' | 'optional_off' | 'required' | null;
@@ -10827,7 +10900,7 @@ export type EmailNotificationsUpdateEmailNotificationSettingsResult = {
         kind: string;
         label: string;
         description: string;
-        class: 'platform_required' | 'org_requirable' | 'optional';
+        class: 'platform_required' | 'org_requirable' | 'optional' | 'org_only';
         entitlement_required: boolean;
         entitled: boolean;
         org_mode: 'off' | 'optional_on' | 'optional_off' | 'required' | null;
@@ -10850,7 +10923,7 @@ export type EmailNotificationsGetEmailNotificationPreferencesResult = {
         kind: string;
         label: string;
         description: string;
-        class: 'platform_required' | 'org_requirable' | 'optional';
+        class: 'platform_required' | 'org_requirable' | 'optional' | 'org_only';
         entitlement_required: boolean;
         entitled: boolean;
         org_mode: 'off' | 'optional_on' | 'optional_off' | 'required' | null;
@@ -10867,7 +10940,7 @@ export type EmailNotificationsUpdateEmailNotificationPreferencesResult = {
         kind: string;
         label: string;
         description: string;
-        class: 'platform_required' | 'org_requirable' | 'optional';
+        class: 'platform_required' | 'org_requirable' | 'optional' | 'org_only';
         entitlement_required: boolean;
         entitled: boolean;
         org_mode: 'off' | 'optional_on' | 'optional_off' | 'required' | null;
@@ -13027,6 +13100,10 @@ export type ListEmailsData = {
          * With `true`, only emails whose content was discarded after delivery; with `false`, only emails that still have it.
          */
         content_discarded?: 'true' | 'false';
+        /**
+         * With `false`, a history page runs no total count: `meta.total` and `meta.total_capped` are absent, and `meta.has_more` still says whether another page follows. Unset or `true`, a history page reports its total as before. The forward tail (`since`) and `search` report the page itself as the total and run no count either way.
+         */
+        count?: 'true' | 'false';
         /**
          * With `message`, one row per message instead of one per mailbox copy (a message to several mailboxes of the org is stored once per mailbox). The row is the copy in your own mailbox (the `recipient` filter, then your bound address, then your member address), else the copy that arrived first, rejected or not, the same row in history and forward-tail paging. A message is listed when at least one copy you can read matches every filter at once: `awaiting=you` means some copy awaits you, `status=completed` that some copy completed, `search` that some copy matches; the row shown is still the representative. Under a connected agent key, which reads one mailbox, filters test the row itself. A filter other than `recipient` is tested copy by copy, so such a page is a bounded walk and can answer 504 `search_timeout`. With `thread_id`, only copies in that thread are grouped. `meta.total` counts messages. Each row adds `copies` and, when you can read the send, `sent_email_id`. A row can be replaced by a better-ranked copy that becomes visible later: drop any row whose id is in a newer row's `copies`. Paging history, a message whose representative was deleted or outranked between pages can show again on a later page under another id.
          */
@@ -18110,6 +18187,7 @@ export type ListDefaultNetworkMembersResponses = {
                 last_checked_at: string;
                 expires_at: string;
                 valid_for_ms: number;
+                basis?: 'probe' | 'organic';
             } | null;
             ownership_kind: 'personal' | 'shared' | 'legacy_unknown';
             owner: {
@@ -18251,6 +18329,7 @@ export type UpdateDefaultNetworkMemberResponses = {
                 last_checked_at: string;
                 expires_at: string;
                 valid_for_ms: number;
+                basis?: 'probe' | 'organic';
             } | null;
             ownership_kind: 'personal' | 'shared' | 'legacy_unknown';
             owner: {
@@ -18330,6 +18409,7 @@ export type AddDefaultNetworkMemberResponses = {
                 last_checked_at: string;
                 expires_at: string;
                 valid_for_ms: number;
+                basis?: 'probe' | 'organic';
             } | null;
             ownership_kind: 'personal' | 'shared' | 'legacy_unknown';
             owner: {
@@ -18406,6 +18486,7 @@ export type ListDefaultNetworkAgentsResponses = {
                 last_checked_at: string;
                 expires_at: string;
                 valid_for_ms: number;
+                basis?: 'probe' | 'organic';
             } | null;
             /**
              * Whether this peer is currently reading its mail, from the server's record of its own successful mail reads (GET /emails list reads and pull endpoint pulls made with its connection key). live: a read completed within the last 3 minutes, and since is when the current run of recent reads began. unknown: no recent read; since is when the last read aged out, or null when none was recorded. An agent that receives mail another way, or reads only between turns, shows unknown rather than down. down is reserved for an explicit report that the receiver stopped. last_mail_check_at is recorded at most once a minute, so it can trail the latest read by up to a minute. None of this says whether a model has read a particular message.
@@ -18491,6 +18572,7 @@ export type GetDefaultNetworkAgentResponses = {
                 last_checked_at: string;
                 expires_at: string;
                 valid_for_ms: number;
+                basis?: 'probe' | 'organic';
             } | null;
             /**
              * Whether this peer is currently reading its mail, from the server's record of its own successful mail reads (GET /emails list reads and pull endpoint pulls made with its connection key). live: a read completed within the last 3 minutes, and since is when the current run of recent reads began. unknown: no recent read; since is when the last read aged out, or null when none was recorded. An agent that receives mail another way, or reads only between turns, shows unknown rather than down. down is reserved for an explicit report that the receiver stopped. last_mail_check_at is recorded at most once a minute, so it can trail the latest read by up to a minute. None of this says whether a model has read a particular message.

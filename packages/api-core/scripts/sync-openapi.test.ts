@@ -3,7 +3,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import YAML from "yaml";
-import { normalizeNode, renderYaml, syncOpenApi } from "./sync-openapi.ts";
+import {
+  normalizeNode,
+  optionalEmailListTotal,
+  renderYaml,
+  syncOpenApi,
+} from "./sync-openapi.ts";
 
 const NULL = { type: "null" };
 
@@ -171,5 +176,52 @@ describe("renderYaml", () => {
     assert.deepEqual(YAML.parse(text, { version: "1.1" }), doc);
     assert.deepEqual(YAML.parse(text), doc);
     assert.match(text, /^ {6}"yes":/m);
+  });
+});
+
+describe("corrections", () => {
+  it("makes EmailListMeta.total optional without changing PaginationMeta", () => {
+    const pagination = {
+      type: "object",
+      properties: {
+        total: { type: "integer" },
+        limit: { type: "integer" },
+        cursor: { type: ["string", "null"] },
+      },
+      required: ["total", "limit", "cursor"],
+    };
+    const extra = { type: "object", properties: { has_more: { type: "boolean" } } };
+    const doc = {
+      components: {
+        schemas: {
+          PaginationMeta: structuredClone(pagination),
+          EmailListMeta: {
+            allOf: [{ $ref: "#/components/schemas/PaginationMeta" }, extra],
+          },
+        },
+      },
+    };
+    assert.equal(optionalEmailListTotal.apply(doc), true);
+    assert.deepEqual(doc.components.schemas.PaginationMeta, pagination);
+    assert.deepEqual(doc.components.schemas.EmailListMeta, {
+      allOf: [{ ...pagination, required: ["limit", "cursor"] }, extra],
+    });
+    // Once the served document no longer has the defect, it reports so.
+    assert.equal(optionalEmailListTotal.apply(doc), false);
+  });
+
+  it("refuses an EmailListMeta that requires total some other way", () => {
+    const doc = {
+      components: {
+        schemas: {
+          EmailListMeta: {
+            type: "object",
+            properties: { total: { type: "integer" } },
+            required: ["total"],
+          },
+        },
+      },
+    };
+    assert.throws(() => optionalEmailListTotal.apply(doc), /does not handle/);
   });
 });

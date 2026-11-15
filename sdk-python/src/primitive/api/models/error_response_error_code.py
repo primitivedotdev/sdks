@@ -195,6 +195,7 @@ class ErrorResponseErrorCode(StrEnum):
     MAIL_IMPORT_PROVIDER_UNAVAILABLE = "mail_import_provider_unavailable"
     MAIL_IMPORT_STORAGE_FAILED = "mail_import_storage_failed"
     MAIL_IMPORT_STORAGE_LIMIT = "mail_import_storage_limit"
+    MAIL_IMPORT_STORAGE_NOT_READY = "mail_import_storage_not_ready"
     MAIL_IMPORT_TOO_LARGE = "mail_import_too_large"
     MAIL_IMPORT_UNAVAILABLE = "mail_import_unavailable"
     MAIL_RELAY_UNAVAILABLE = "mail_relay_unavailable"

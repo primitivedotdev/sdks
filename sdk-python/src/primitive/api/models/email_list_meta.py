@@ -23,9 +23,9 @@ T = TypeVar("T", bound="EmailListMeta")
 class EmailListMeta:
     """ 
         Attributes:
-            total (int): Total number of matching records
             limit (int): Page size used for this request
             cursor (None | str): Cursor for the next page, or null if no more results
+            total (int | Unset): Total number of matching records
             recipient_outside_access (bool | Unset): Present, as true, when your credential is limited to some mailboxes,
                 recipient names one that is neither one of its addresses nor on one of its domains (or the credential reads no
                 received mail at all), and it reads through no email rule: the page is then empty however much mail that mailbox
@@ -33,13 +33,16 @@ class EmailListMeta:
             recipient_rules_only (bool | Unset): Present, as true, when your credential is limited to some mailboxes,
                 recipient names one that is neither one of its addresses nor on one of its domains, and the credential reads
                 some mail through email rules: the page holds only the mail those rules give it there. Absent otherwise.
+            has_more (bool | Unset): Whether another page follows this one, read from the page itself, so it is there with
+                or without a count (`count=false`).
      """
 
-    total: int
     limit: int
     cursor: None | str
+    total: int | Unset = UNSET
     recipient_outside_access: bool | Unset = UNSET
     recipient_rules_only: bool | Unset = UNSET
+    has_more: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -47,29 +50,34 @@ class EmailListMeta:
 
 
     def to_dict(self) -> dict[str, Any]:
-        total = self.total
-
         limit = self.limit
 
         cursor: None | str
         cursor = self.cursor
 
+        total = self.total
+
         recipient_outside_access = self.recipient_outside_access
 
         recipient_rules_only = self.recipient_rules_only
+
+        has_more = self.has_more
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
-            "total": total,
             "limit": limit,
             "cursor": cursor,
         })
+        if total is not UNSET:
+            field_dict["total"] = total
         if recipient_outside_access is not UNSET:
             field_dict["recipient_outside_access"] = recipient_outside_access
         if recipient_rules_only is not UNSET:
             field_dict["recipient_rules_only"] = recipient_rules_only
+        if has_more is not UNSET:
+            field_dict["has_more"] = has_more
 
         return field_dict
 
@@ -78,8 +86,6 @@ class EmailListMeta:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        total = d.pop("total")
-
         limit = d.pop("limit")
 
         def _parse_cursor(data: object) -> None | str:
@@ -90,16 +96,21 @@ class EmailListMeta:
         cursor = _parse_cursor(d.pop("cursor"))
 
 
+        total = d.pop("total", UNSET)
+
         recipient_outside_access = d.pop("recipient_outside_access", UNSET)
 
         recipient_rules_only = d.pop("recipient_rules_only", UNSET)
 
+        has_more = d.pop("has_more", UNSET)
+
         email_list_meta = cls(
-            total=total,
             limit=limit,
             cursor=cursor,
+            total=total,
             recipient_outside_access=recipient_outside_access,
             recipient_rules_only=recipient_rules_only,
+            has_more=has_more,
         )
 
 

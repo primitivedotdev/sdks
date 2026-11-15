@@ -197,8 +197,8 @@ class EmailDetail:
                 order as `parsed.attachments`. Kept for a credential that reads headers only, where `parsed` is null. Empty when
                 the email has none, its content is withheld (read `status` and `rejection_reason`), or it is not parsed yet or
                 its parse failed (read `parse_status`). No bytes; download a part with `/emails/{id}/attachments/{part_index}`.
-            imported (EmailDetailImportedType0 | None): Historical acquisition; never sender or SMTP delivery proof. Null
-                for live mail. Excluded from live tails and deltas.
+            imported (EmailDetailImportedType0 | None): Historical import; never sender or SMTP delivery proof. EML uploads
+                are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
             snippet (None | str): A plain-text preview of `body_text` (never `body_html`), computed once when the message is
                 stored: quoted replies (an "On ... wrote:" line, an "Original Message" separator, a From/Sent header block, `>`
                 lines) and a `-- ` signature are cut off, whitespace is collapsed to single spaces, and the result is at most

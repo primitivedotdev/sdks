@@ -98,10 +98,11 @@ def sync_detailed(
 ) -> Response[ErrorResponse | GetEmailNotificationPreferencesResponse200]:
     """ Get my email notification preferences
 
-     The notification emails the calling member gets, and which of them they may turn on or off. Each
-    kind lists its label and description, its class, whether it needs an entitlement and whether the
-    organization has it, the organization's mode (null for platform_required) and the modes it may
-    choose, and whether the calling member gets it and may change that.
+     The notification emails the calling member gets, and which of them they may turn on or off. The
+    org_only kinds, which the organization alone turns on or off, are not listed. Each kind lists its
+    label and description, its class, whether it needs an entitlement and whether the organization has
+    it, the organization's mode (null for platform_required) and the modes it may choose, and whether
+    the calling member gets it and may change that.
 
     Person only: a dashboard session or the person's own OAuth token (the CLI or an app they connected).
     The person's role must hold notifications:manage. API keys, agent connection keys and agents are
@@ -133,10 +134,11 @@ def sync(
 ) -> ErrorResponse | GetEmailNotificationPreferencesResponse200 | None:
     """ Get my email notification preferences
 
-     The notification emails the calling member gets, and which of them they may turn on or off. Each
-    kind lists its label and description, its class, whether it needs an entitlement and whether the
-    organization has it, the organization's mode (null for platform_required) and the modes it may
-    choose, and whether the calling member gets it and may change that.
+     The notification emails the calling member gets, and which of them they may turn on or off. The
+    org_only kinds, which the organization alone turns on or off, are not listed. Each kind lists its
+    label and description, its class, whether it needs an entitlement and whether the organization has
+    it, the organization's mode (null for platform_required) and the modes it may choose, and whether
+    the calling member gets it and may change that.
 
     Person only: a dashboard session or the person's own OAuth token (the CLI or an app they connected).
     The person's role must hold notifications:manage. API keys, agent connection keys and agents are
@@ -163,10 +165,11 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | GetEmailNotificationPreferencesResponse200]:
     """ Get my email notification preferences
 
-     The notification emails the calling member gets, and which of them they may turn on or off. Each
-    kind lists its label and description, its class, whether it needs an entitlement and whether the
-    organization has it, the organization's mode (null for platform_required) and the modes it may
-    choose, and whether the calling member gets it and may change that.
+     The notification emails the calling member gets, and which of them they may turn on or off. The
+    org_only kinds, which the organization alone turns on or off, are not listed. Each kind lists its
+    label and description, its class, whether it needs an entitlement and whether the organization has
+    it, the organization's mode (null for platform_required) and the modes it may choose, and whether
+    the calling member gets it and may change that.
 
     Person only: a dashboard session or the person's own OAuth token (the CLI or an app they connected).
     The person's role must hold notifications:manage. API keys, agent connection keys and agents are
@@ -198,10 +201,11 @@ async def asyncio(
 ) -> ErrorResponse | GetEmailNotificationPreferencesResponse200 | None:
     """ Get my email notification preferences
 
-     The notification emails the calling member gets, and which of them they may turn on or off. Each
-    kind lists its label and description, its class, whether it needs an entitlement and whether the
-    organization has it, the organization's mode (null for platform_required) and the modes it may
-    choose, and whether the calling member gets it and may change that.
+     The notification emails the calling member gets, and which of them they may turn on or off. The
+    org_only kinds, which the organization alone turns on or off, are not listed. Each kind lists its
+    label and description, its class, whether it needs an entitlement and whether the organization has
+    it, the organization's mode (null for platform_required) and the modes it may choose, and whether
+    the calling member gets it and may change that.
 
     Person only: a dashboard session or the person's own OAuth token (the CLI or an app they connected).
     The person's role must hold notifications:manage. API keys, agent connection keys and agents are

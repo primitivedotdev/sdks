@@ -880,9 +880,10 @@ func (s *AddDefaultNetworkMemberOKDataOwnershipKind) UnmarshalText(data []byte) 
 }
 
 type AddDefaultNetworkMemberOKDataPresence struct {
-	LastCheckedAt time.Time `json:"last_checked_at"`
-	ExpiresAt     time.Time `json:"expires_at"`
-	ValidForMs    int       `json:"valid_for_ms"`
+	LastCheckedAt time.Time                                     `json:"last_checked_at"`
+	ExpiresAt     time.Time                                     `json:"expires_at"`
+	ValidForMs    int                                           `json:"valid_for_ms"`
+	Basis         OptAddDefaultNetworkMemberOKDataPresenceBasis `json:"basis"`
 }
 
 // GetLastCheckedAt returns the value of LastCheckedAt.
@@ -900,6 +901,11 @@ func (s *AddDefaultNetworkMemberOKDataPresence) GetValidForMs() int {
 	return s.ValidForMs
 }
 
+// GetBasis returns the value of Basis.
+func (s *AddDefaultNetworkMemberOKDataPresence) GetBasis() OptAddDefaultNetworkMemberOKDataPresenceBasis {
+	return s.Basis
+}
+
 // SetLastCheckedAt sets the value of LastCheckedAt.
 func (s *AddDefaultNetworkMemberOKDataPresence) SetLastCheckedAt(val time.Time) {
 	s.LastCheckedAt = val
@@ -913,6 +919,52 @@ func (s *AddDefaultNetworkMemberOKDataPresence) SetExpiresAt(val time.Time) {
 // SetValidForMs sets the value of ValidForMs.
 func (s *AddDefaultNetworkMemberOKDataPresence) SetValidForMs(val int) {
 	s.ValidForMs = val
+}
+
+// SetBasis sets the value of Basis.
+func (s *AddDefaultNetworkMemberOKDataPresence) SetBasis(val OptAddDefaultNetworkMemberOKDataPresenceBasis) {
+	s.Basis = val
+}
+
+type AddDefaultNetworkMemberOKDataPresenceBasis string
+
+const (
+	AddDefaultNetworkMemberOKDataPresenceBasisProbe   AddDefaultNetworkMemberOKDataPresenceBasis = "probe"
+	AddDefaultNetworkMemberOKDataPresenceBasisOrganic AddDefaultNetworkMemberOKDataPresenceBasis = "organic"
+)
+
+// AllValues returns all AddDefaultNetworkMemberOKDataPresenceBasis values.
+func (AddDefaultNetworkMemberOKDataPresenceBasis) AllValues() []AddDefaultNetworkMemberOKDataPresenceBasis {
+	return []AddDefaultNetworkMemberOKDataPresenceBasis{
+		AddDefaultNetworkMemberOKDataPresenceBasisProbe,
+		AddDefaultNetworkMemberOKDataPresenceBasisOrganic,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s AddDefaultNetworkMemberOKDataPresenceBasis) MarshalText() ([]byte, error) {
+	switch s {
+	case AddDefaultNetworkMemberOKDataPresenceBasisProbe:
+		return []byte(s), nil
+	case AddDefaultNetworkMemberOKDataPresenceBasisOrganic:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *AddDefaultNetworkMemberOKDataPresenceBasis) UnmarshalText(data []byte) error {
+	switch AddDefaultNetworkMemberOKDataPresenceBasis(data) {
+	case AddDefaultNetworkMemberOKDataPresenceBasisProbe:
+		*s = AddDefaultNetworkMemberOKDataPresenceBasisProbe
+		return nil
+	case AddDefaultNetworkMemberOKDataPresenceBasisOrganic:
+		*s = AddDefaultNetworkMemberOKDataPresenceBasisOrganic
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // AddDefaultNetworkMemberOKHeaders wraps AddDefaultNetworkMemberOK with response headers.
@@ -1888,9 +1940,10 @@ func (s *AgentConnectionOwnershipKind) UnmarshalText(data []byte) error {
 }
 
 type AgentConnectionPresence struct {
-	LastCheckedAt time.Time `json:"last_checked_at"`
-	ExpiresAt     time.Time `json:"expires_at"`
-	ValidForMs    int       `json:"valid_for_ms"`
+	LastCheckedAt time.Time                       `json:"last_checked_at"`
+	ExpiresAt     time.Time                       `json:"expires_at"`
+	ValidForMs    int                             `json:"valid_for_ms"`
+	Basis         OptAgentConnectionPresenceBasis `json:"basis"`
 }
 
 // GetLastCheckedAt returns the value of LastCheckedAt.
@@ -1908,6 +1961,11 @@ func (s *AgentConnectionPresence) GetValidForMs() int {
 	return s.ValidForMs
 }
 
+// GetBasis returns the value of Basis.
+func (s *AgentConnectionPresence) GetBasis() OptAgentConnectionPresenceBasis {
+	return s.Basis
+}
+
 // SetLastCheckedAt sets the value of LastCheckedAt.
 func (s *AgentConnectionPresence) SetLastCheckedAt(val time.Time) {
 	s.LastCheckedAt = val
@@ -1921,6 +1979,52 @@ func (s *AgentConnectionPresence) SetExpiresAt(val time.Time) {
 // SetValidForMs sets the value of ValidForMs.
 func (s *AgentConnectionPresence) SetValidForMs(val int) {
 	s.ValidForMs = val
+}
+
+// SetBasis sets the value of Basis.
+func (s *AgentConnectionPresence) SetBasis(val OptAgentConnectionPresenceBasis) {
+	s.Basis = val
+}
+
+type AgentConnectionPresenceBasis string
+
+const (
+	AgentConnectionPresenceBasisProbe   AgentConnectionPresenceBasis = "probe"
+	AgentConnectionPresenceBasisOrganic AgentConnectionPresenceBasis = "organic"
+)
+
+// AllValues returns all AgentConnectionPresenceBasis values.
+func (AgentConnectionPresenceBasis) AllValues() []AgentConnectionPresenceBasis {
+	return []AgentConnectionPresenceBasis{
+		AgentConnectionPresenceBasisProbe,
+		AgentConnectionPresenceBasisOrganic,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s AgentConnectionPresenceBasis) MarshalText() ([]byte, error) {
+	switch s {
+	case AgentConnectionPresenceBasisProbe:
+		return []byte(s), nil
+	case AgentConnectionPresenceBasisOrganic:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *AgentConnectionPresenceBasis) UnmarshalText(data []byte) error {
+	switch AgentConnectionPresenceBasis(data) {
+	case AgentConnectionPresenceBasisProbe:
+		*s = AgentConnectionPresenceBasisProbe
+		return nil
+	case AgentConnectionPresenceBasisOrganic:
+		*s = AgentConnectionPresenceBasisOrganic
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 type AgentConnectionSetupBadRequest ErrorResponse
@@ -5428,8 +5532,8 @@ type ChangeInboundMessage struct {
 	// With `group=message`: the send of this message, when you can read it (under a connected agent key,
 	// only its own sends).
 	SentEmailID OptUUID `json:"sent_email_id"`
-	// Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from
-	// live tails and deltas.
+	// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+	// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
 	Imported NilChangeInboundMessageImported `json:"imported"`
 	// A plain-text preview of `body_text` (never `body_html`), computed once when the message is stored:
 	// quoted replies (an "On ... wrote:" line, an "Original Message" separator, a From/Sent header block,
@@ -6308,10 +6412,13 @@ func (s *ChangeInboundMessageDirection) UnmarshalText(data []byte) error {
 	}
 }
 
-// Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from
-// live tails and deltas.
+// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
 type ChangeInboundMessageImported struct {
-	From         ChangeInboundMessageImportedFrom         `json:"from"`
+	// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+	// file.
+	From ChangeInboundMessageImportedFrom `json:"from"`
+	// How Primitive acquired the historical message.
 	Method       ChangeInboundMessageImportedMethod       `json:"method"`
 	Verification ChangeInboundMessageImportedVerification `json:"verification"`
 	// When Primitive acquired this historical message.
@@ -6358,16 +6465,20 @@ func (s *ChangeInboundMessageImported) SetAt(val time.Time) {
 	s.At = val
 }
 
+// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+// file.
 type ChangeInboundMessageImportedFrom string
 
 const (
 	ChangeInboundMessageImportedFromGoogleWorkspace ChangeInboundMessageImportedFrom = "google_workspace"
+	ChangeInboundMessageImportedFromUnknown         ChangeInboundMessageImportedFrom = "unknown"
 )
 
 // AllValues returns all ChangeInboundMessageImportedFrom values.
 func (ChangeInboundMessageImportedFrom) AllValues() []ChangeInboundMessageImportedFrom {
 	return []ChangeInboundMessageImportedFrom{
 		ChangeInboundMessageImportedFromGoogleWorkspace,
+		ChangeInboundMessageImportedFromUnknown,
 	}
 }
 
@@ -6375,6 +6486,8 @@ func (ChangeInboundMessageImportedFrom) AllValues() []ChangeInboundMessageImport
 func (s ChangeInboundMessageImportedFrom) MarshalText() ([]byte, error) {
 	switch s {
 	case ChangeInboundMessageImportedFromGoogleWorkspace:
+		return []byte(s), nil
+	case ChangeInboundMessageImportedFromUnknown:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -6387,21 +6500,27 @@ func (s *ChangeInboundMessageImportedFrom) UnmarshalText(data []byte) error {
 	case ChangeInboundMessageImportedFromGoogleWorkspace:
 		*s = ChangeInboundMessageImportedFromGoogleWorkspace
 		return nil
+	case ChangeInboundMessageImportedFromUnknown:
+		*s = ChangeInboundMessageImportedFromUnknown
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
 }
 
+// How Primitive acquired the historical message.
 type ChangeInboundMessageImportedMethod string
 
 const (
 	ChangeInboundMessageImportedMethodPrimitiveDirect ChangeInboundMessageImportedMethod = "primitive_direct"
+	ChangeInboundMessageImportedMethodAPIUpload       ChangeInboundMessageImportedMethod = "api_upload"
 )
 
 // AllValues returns all ChangeInboundMessageImportedMethod values.
 func (ChangeInboundMessageImportedMethod) AllValues() []ChangeInboundMessageImportedMethod {
 	return []ChangeInboundMessageImportedMethod{
 		ChangeInboundMessageImportedMethodPrimitiveDirect,
+		ChangeInboundMessageImportedMethodAPIUpload,
 	}
 }
 
@@ -6409,6 +6528,8 @@ func (ChangeInboundMessageImportedMethod) AllValues() []ChangeInboundMessageImpo
 func (s ChangeInboundMessageImportedMethod) MarshalText() ([]byte, error) {
 	switch s {
 	case ChangeInboundMessageImportedMethodPrimitiveDirect:
+		return []byte(s), nil
+	case ChangeInboundMessageImportedMethodAPIUpload:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -6421,6 +6542,9 @@ func (s *ChangeInboundMessageImportedMethod) UnmarshalText(data []byte) error {
 	case ChangeInboundMessageImportedMethodPrimitiveDirect:
 		*s = ChangeInboundMessageImportedMethodPrimitiveDirect
 		return nil
+	case ChangeInboundMessageImportedMethodAPIUpload:
+		*s = ChangeInboundMessageImportedMethodAPIUpload
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
@@ -6430,12 +6554,14 @@ type ChangeInboundMessageImportedVerification string
 
 const (
 	ChangeInboundMessageImportedVerificationProviderFetched ChangeInboundMessageImportedVerification = "provider_fetched"
+	ChangeInboundMessageImportedVerificationUnverified      ChangeInboundMessageImportedVerification = "unverified"
 )
 
 // AllValues returns all ChangeInboundMessageImportedVerification values.
 func (ChangeInboundMessageImportedVerification) AllValues() []ChangeInboundMessageImportedVerification {
 	return []ChangeInboundMessageImportedVerification{
 		ChangeInboundMessageImportedVerificationProviderFetched,
+		ChangeInboundMessageImportedVerificationUnverified,
 	}
 }
 
@@ -6443,6 +6569,8 @@ func (ChangeInboundMessageImportedVerification) AllValues() []ChangeInboundMessa
 func (s ChangeInboundMessageImportedVerification) MarshalText() ([]byte, error) {
 	switch s {
 	case ChangeInboundMessageImportedVerificationProviderFetched:
+		return []byte(s), nil
+	case ChangeInboundMessageImportedVerificationUnverified:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -6454,6 +6582,9 @@ func (s *ChangeInboundMessageImportedVerification) UnmarshalText(data []byte) er
 	switch ChangeInboundMessageImportedVerification(data) {
 	case ChangeInboundMessageImportedVerificationProviderFetched:
 		*s = ChangeInboundMessageImportedVerificationProviderFetched
+		return nil
+	case ChangeInboundMessageImportedVerificationUnverified:
+		*s = ChangeInboundMessageImportedVerificationUnverified
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -6993,6 +7124,9 @@ type ChangeOutboundMessage struct {
 	// The `<protocol>/<version>` the hint was decided from when `interaction_hint` is `status` or `card`;
 	//  null otherwise.
 	InteractionKind NilString `json:"interaction_kind"`
+	// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+	// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
+	Imported NilChangeOutboundMessageImported `json:"imported"`
 	// A plain-text preview of `body_text` (never `body_html`), computed once when the message is stored:
 	// quoted replies (an "On ... wrote:" line, an "Original Message" separator, a From/Sent header block,
 	//  `>` lines) and a `-- ` signature are cut off, whitespace is collapsed to single spaces, and the
@@ -7231,6 +7365,11 @@ func (s *ChangeOutboundMessage) GetInteractionKind() NilString {
 	return s.InteractionKind
 }
 
+// GetImported returns the value of Imported.
+func (s *ChangeOutboundMessage) GetImported() NilChangeOutboundMessageImported {
+	return s.Imported
+}
+
 // GetSnippet returns the value of Snippet.
 func (s *ChangeOutboundMessage) GetSnippet() NilString {
 	return s.Snippet
@@ -7464,6 +7603,11 @@ func (s *ChangeOutboundMessage) SetInteractionHint(val ChangeOutboundMessageInte
 // SetInteractionKind sets the value of InteractionKind.
 func (s *ChangeOutboundMessage) SetInteractionKind(val NilString) {
 	s.InteractionKind = val
+}
+
+// SetImported sets the value of Imported.
+func (s *ChangeOutboundMessage) SetImported(val NilChangeOutboundMessageImported) {
+	s.Imported = val
 }
 
 // SetSnippet sets the value of Snippet.
@@ -7737,6 +7881,185 @@ func (s *ChangeOutboundMessageHold) SetReason(val string) {
 // SetSince sets the value of Since.
 func (s *ChangeOutboundMessageHold) SetSince(val NilDateTime) {
 	s.Since = val
+}
+
+// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
+type ChangeOutboundMessageImported struct {
+	// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+	// file.
+	From ChangeOutboundMessageImportedFrom `json:"from"`
+	// How Primitive acquired the historical message.
+	Method       ChangeOutboundMessageImportedMethod       `json:"method"`
+	Verification ChangeOutboundMessageImportedVerification `json:"verification"`
+	// When Primitive acquired this historical message.
+	At time.Time `json:"at"`
+}
+
+// GetFrom returns the value of From.
+func (s *ChangeOutboundMessageImported) GetFrom() ChangeOutboundMessageImportedFrom {
+	return s.From
+}
+
+// GetMethod returns the value of Method.
+func (s *ChangeOutboundMessageImported) GetMethod() ChangeOutboundMessageImportedMethod {
+	return s.Method
+}
+
+// GetVerification returns the value of Verification.
+func (s *ChangeOutboundMessageImported) GetVerification() ChangeOutboundMessageImportedVerification {
+	return s.Verification
+}
+
+// GetAt returns the value of At.
+func (s *ChangeOutboundMessageImported) GetAt() time.Time {
+	return s.At
+}
+
+// SetFrom sets the value of From.
+func (s *ChangeOutboundMessageImported) SetFrom(val ChangeOutboundMessageImportedFrom) {
+	s.From = val
+}
+
+// SetMethod sets the value of Method.
+func (s *ChangeOutboundMessageImported) SetMethod(val ChangeOutboundMessageImportedMethod) {
+	s.Method = val
+}
+
+// SetVerification sets the value of Verification.
+func (s *ChangeOutboundMessageImported) SetVerification(val ChangeOutboundMessageImportedVerification) {
+	s.Verification = val
+}
+
+// SetAt sets the value of At.
+func (s *ChangeOutboundMessageImported) SetAt(val time.Time) {
+	s.At = val
+}
+
+// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+// file.
+type ChangeOutboundMessageImportedFrom string
+
+const (
+	ChangeOutboundMessageImportedFromGoogleWorkspace ChangeOutboundMessageImportedFrom = "google_workspace"
+	ChangeOutboundMessageImportedFromUnknown         ChangeOutboundMessageImportedFrom = "unknown"
+)
+
+// AllValues returns all ChangeOutboundMessageImportedFrom values.
+func (ChangeOutboundMessageImportedFrom) AllValues() []ChangeOutboundMessageImportedFrom {
+	return []ChangeOutboundMessageImportedFrom{
+		ChangeOutboundMessageImportedFromGoogleWorkspace,
+		ChangeOutboundMessageImportedFromUnknown,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ChangeOutboundMessageImportedFrom) MarshalText() ([]byte, error) {
+	switch s {
+	case ChangeOutboundMessageImportedFromGoogleWorkspace:
+		return []byte(s), nil
+	case ChangeOutboundMessageImportedFromUnknown:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ChangeOutboundMessageImportedFrom) UnmarshalText(data []byte) error {
+	switch ChangeOutboundMessageImportedFrom(data) {
+	case ChangeOutboundMessageImportedFromGoogleWorkspace:
+		*s = ChangeOutboundMessageImportedFromGoogleWorkspace
+		return nil
+	case ChangeOutboundMessageImportedFromUnknown:
+		*s = ChangeOutboundMessageImportedFromUnknown
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// How Primitive acquired the historical message.
+type ChangeOutboundMessageImportedMethod string
+
+const (
+	ChangeOutboundMessageImportedMethodPrimitiveDirect ChangeOutboundMessageImportedMethod = "primitive_direct"
+	ChangeOutboundMessageImportedMethodAPIUpload       ChangeOutboundMessageImportedMethod = "api_upload"
+)
+
+// AllValues returns all ChangeOutboundMessageImportedMethod values.
+func (ChangeOutboundMessageImportedMethod) AllValues() []ChangeOutboundMessageImportedMethod {
+	return []ChangeOutboundMessageImportedMethod{
+		ChangeOutboundMessageImportedMethodPrimitiveDirect,
+		ChangeOutboundMessageImportedMethodAPIUpload,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ChangeOutboundMessageImportedMethod) MarshalText() ([]byte, error) {
+	switch s {
+	case ChangeOutboundMessageImportedMethodPrimitiveDirect:
+		return []byte(s), nil
+	case ChangeOutboundMessageImportedMethodAPIUpload:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ChangeOutboundMessageImportedMethod) UnmarshalText(data []byte) error {
+	switch ChangeOutboundMessageImportedMethod(data) {
+	case ChangeOutboundMessageImportedMethodPrimitiveDirect:
+		*s = ChangeOutboundMessageImportedMethodPrimitiveDirect
+		return nil
+	case ChangeOutboundMessageImportedMethodAPIUpload:
+		*s = ChangeOutboundMessageImportedMethodAPIUpload
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ChangeOutboundMessageImportedVerification string
+
+const (
+	ChangeOutboundMessageImportedVerificationProviderFetched ChangeOutboundMessageImportedVerification = "provider_fetched"
+	ChangeOutboundMessageImportedVerificationUnverified      ChangeOutboundMessageImportedVerification = "unverified"
+)
+
+// AllValues returns all ChangeOutboundMessageImportedVerification values.
+func (ChangeOutboundMessageImportedVerification) AllValues() []ChangeOutboundMessageImportedVerification {
+	return []ChangeOutboundMessageImportedVerification{
+		ChangeOutboundMessageImportedVerificationProviderFetched,
+		ChangeOutboundMessageImportedVerificationUnverified,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ChangeOutboundMessageImportedVerification) MarshalText() ([]byte, error) {
+	switch s {
+	case ChangeOutboundMessageImportedVerificationProviderFetched:
+		return []byte(s), nil
+	case ChangeOutboundMessageImportedVerificationUnverified:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ChangeOutboundMessageImportedVerification) UnmarshalText(data []byte) error {
+	switch ChangeOutboundMessageImportedVerification(data) {
+	case ChangeOutboundMessageImportedVerificationProviderFetched:
+		*s = ChangeOutboundMessageImportedVerificationProviderFetched
+		return nil
+	case ChangeOutboundMessageImportedVerificationUnverified:
+		*s = ChangeOutboundMessageImportedVerificationUnverified
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // How to place this send in a timeline without downloading it, decided when it was sent from the
@@ -12129,8 +12452,8 @@ type ConversationMessage struct {
 	// download URLs; download a part with `/emails/{id}/attachments/{part_index}` or
 	// `/sent-emails/{id}/attachments/{part_index}`.
 	Attachments []EmailAttachment `json:"attachments"`
-	// Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from
-	// live tails and deltas.
+	// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+	// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
 	Imported OptNilConversationMessageImported `json:"imported"`
 	// Every inbound copy of this message you can read (a message to several of the org's mailboxes is
 	// stored once per mailbox), in arrival order. At most 50; past that, the ones listed are your own
@@ -12479,10 +12802,13 @@ func (s *ConversationMessageHold) SetSince(val NilDateTime) {
 	s.Since = val
 }
 
-// Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from
-// live tails and deltas.
+// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
 type ConversationMessageImported struct {
-	From         ConversationMessageImportedFrom         `json:"from"`
+	// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+	// file.
+	From ConversationMessageImportedFrom `json:"from"`
+	// How Primitive acquired the historical message.
 	Method       ConversationMessageImportedMethod       `json:"method"`
 	Verification ConversationMessageImportedVerification `json:"verification"`
 	// When Primitive acquired this historical message.
@@ -12529,16 +12855,20 @@ func (s *ConversationMessageImported) SetAt(val time.Time) {
 	s.At = val
 }
 
+// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+// file.
 type ConversationMessageImportedFrom string
 
 const (
 	ConversationMessageImportedFromGoogleWorkspace ConversationMessageImportedFrom = "google_workspace"
+	ConversationMessageImportedFromUnknown         ConversationMessageImportedFrom = "unknown"
 )
 
 // AllValues returns all ConversationMessageImportedFrom values.
 func (ConversationMessageImportedFrom) AllValues() []ConversationMessageImportedFrom {
 	return []ConversationMessageImportedFrom{
 		ConversationMessageImportedFromGoogleWorkspace,
+		ConversationMessageImportedFromUnknown,
 	}
 }
 
@@ -12546,6 +12876,8 @@ func (ConversationMessageImportedFrom) AllValues() []ConversationMessageImported
 func (s ConversationMessageImportedFrom) MarshalText() ([]byte, error) {
 	switch s {
 	case ConversationMessageImportedFromGoogleWorkspace:
+		return []byte(s), nil
+	case ConversationMessageImportedFromUnknown:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -12558,21 +12890,27 @@ func (s *ConversationMessageImportedFrom) UnmarshalText(data []byte) error {
 	case ConversationMessageImportedFromGoogleWorkspace:
 		*s = ConversationMessageImportedFromGoogleWorkspace
 		return nil
+	case ConversationMessageImportedFromUnknown:
+		*s = ConversationMessageImportedFromUnknown
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
 }
 
+// How Primitive acquired the historical message.
 type ConversationMessageImportedMethod string
 
 const (
 	ConversationMessageImportedMethodPrimitiveDirect ConversationMessageImportedMethod = "primitive_direct"
+	ConversationMessageImportedMethodAPIUpload       ConversationMessageImportedMethod = "api_upload"
 )
 
 // AllValues returns all ConversationMessageImportedMethod values.
 func (ConversationMessageImportedMethod) AllValues() []ConversationMessageImportedMethod {
 	return []ConversationMessageImportedMethod{
 		ConversationMessageImportedMethodPrimitiveDirect,
+		ConversationMessageImportedMethodAPIUpload,
 	}
 }
 
@@ -12580,6 +12918,8 @@ func (ConversationMessageImportedMethod) AllValues() []ConversationMessageImport
 func (s ConversationMessageImportedMethod) MarshalText() ([]byte, error) {
 	switch s {
 	case ConversationMessageImportedMethodPrimitiveDirect:
+		return []byte(s), nil
+	case ConversationMessageImportedMethodAPIUpload:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -12592,6 +12932,9 @@ func (s *ConversationMessageImportedMethod) UnmarshalText(data []byte) error {
 	case ConversationMessageImportedMethodPrimitiveDirect:
 		*s = ConversationMessageImportedMethodPrimitiveDirect
 		return nil
+	case ConversationMessageImportedMethodAPIUpload:
+		*s = ConversationMessageImportedMethodAPIUpload
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
@@ -12601,12 +12944,14 @@ type ConversationMessageImportedVerification string
 
 const (
 	ConversationMessageImportedVerificationProviderFetched ConversationMessageImportedVerification = "provider_fetched"
+	ConversationMessageImportedVerificationUnverified      ConversationMessageImportedVerification = "unverified"
 )
 
 // AllValues returns all ConversationMessageImportedVerification values.
 func (ConversationMessageImportedVerification) AllValues() []ConversationMessageImportedVerification {
 	return []ConversationMessageImportedVerification{
 		ConversationMessageImportedVerificationProviderFetched,
+		ConversationMessageImportedVerificationUnverified,
 	}
 }
 
@@ -12614,6 +12959,8 @@ func (ConversationMessageImportedVerification) AllValues() []ConversationMessage
 func (s ConversationMessageImportedVerification) MarshalText() ([]byte, error) {
 	switch s {
 	case ConversationMessageImportedVerificationProviderFetched:
+		return []byte(s), nil
+	case ConversationMessageImportedVerificationUnverified:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -12625,6 +12972,9 @@ func (s *ConversationMessageImportedVerification) UnmarshalText(data []byte) err
 	switch ConversationMessageImportedVerification(data) {
 	case ConversationMessageImportedVerificationProviderFetched:
 		*s = ConversationMessageImportedVerificationProviderFetched
+		return nil
+	case ConversationMessageImportedVerificationUnverified:
+		*s = ConversationMessageImportedVerificationUnverified
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -32335,8 +32685,8 @@ type EmailDetail struct {
 	// parsed yet or its parse failed (read `parse_status`). No bytes; download a part with
 	// `/emails/{id}/attachments/{part_index}`.
 	Attachments []EmailAttachment `json:"attachments"`
-	// Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from
-	// live tails and deltas.
+	// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+	// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
 	Imported NilEmailDetailImported `json:"imported"`
 	// A plain-text preview of `body_text` (never `body_html`), computed once when the message is stored:
 	// quoted replies (an "On ... wrote:" line, an "Original Message" separator, a From/Sent header block,
@@ -33504,10 +33854,13 @@ func (s *EmailDetailDeliveryReportType) UnmarshalText(data []byte) error {
 	}
 }
 
-// Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from
-// live tails and deltas.
+// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
 type EmailDetailImported struct {
-	From         EmailDetailImportedFrom         `json:"from"`
+	// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+	// file.
+	From EmailDetailImportedFrom `json:"from"`
+	// How Primitive acquired the historical message.
 	Method       EmailDetailImportedMethod       `json:"method"`
 	Verification EmailDetailImportedVerification `json:"verification"`
 	// When Primitive acquired this historical message.
@@ -33554,16 +33907,20 @@ func (s *EmailDetailImported) SetAt(val time.Time) {
 	s.At = val
 }
 
+// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+// file.
 type EmailDetailImportedFrom string
 
 const (
 	EmailDetailImportedFromGoogleWorkspace EmailDetailImportedFrom = "google_workspace"
+	EmailDetailImportedFromUnknown         EmailDetailImportedFrom = "unknown"
 )
 
 // AllValues returns all EmailDetailImportedFrom values.
 func (EmailDetailImportedFrom) AllValues() []EmailDetailImportedFrom {
 	return []EmailDetailImportedFrom{
 		EmailDetailImportedFromGoogleWorkspace,
+		EmailDetailImportedFromUnknown,
 	}
 }
 
@@ -33571,6 +33928,8 @@ func (EmailDetailImportedFrom) AllValues() []EmailDetailImportedFrom {
 func (s EmailDetailImportedFrom) MarshalText() ([]byte, error) {
 	switch s {
 	case EmailDetailImportedFromGoogleWorkspace:
+		return []byte(s), nil
+	case EmailDetailImportedFromUnknown:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -33583,21 +33942,27 @@ func (s *EmailDetailImportedFrom) UnmarshalText(data []byte) error {
 	case EmailDetailImportedFromGoogleWorkspace:
 		*s = EmailDetailImportedFromGoogleWorkspace
 		return nil
+	case EmailDetailImportedFromUnknown:
+		*s = EmailDetailImportedFromUnknown
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
 }
 
+// How Primitive acquired the historical message.
 type EmailDetailImportedMethod string
 
 const (
 	EmailDetailImportedMethodPrimitiveDirect EmailDetailImportedMethod = "primitive_direct"
+	EmailDetailImportedMethodAPIUpload       EmailDetailImportedMethod = "api_upload"
 )
 
 // AllValues returns all EmailDetailImportedMethod values.
 func (EmailDetailImportedMethod) AllValues() []EmailDetailImportedMethod {
 	return []EmailDetailImportedMethod{
 		EmailDetailImportedMethodPrimitiveDirect,
+		EmailDetailImportedMethodAPIUpload,
 	}
 }
 
@@ -33605,6 +33970,8 @@ func (EmailDetailImportedMethod) AllValues() []EmailDetailImportedMethod {
 func (s EmailDetailImportedMethod) MarshalText() ([]byte, error) {
 	switch s {
 	case EmailDetailImportedMethodPrimitiveDirect:
+		return []byte(s), nil
+	case EmailDetailImportedMethodAPIUpload:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -33617,6 +33984,9 @@ func (s *EmailDetailImportedMethod) UnmarshalText(data []byte) error {
 	case EmailDetailImportedMethodPrimitiveDirect:
 		*s = EmailDetailImportedMethodPrimitiveDirect
 		return nil
+	case EmailDetailImportedMethodAPIUpload:
+		*s = EmailDetailImportedMethodAPIUpload
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
@@ -33626,12 +33996,14 @@ type EmailDetailImportedVerification string
 
 const (
 	EmailDetailImportedVerificationProviderFetched EmailDetailImportedVerification = "provider_fetched"
+	EmailDetailImportedVerificationUnverified      EmailDetailImportedVerification = "unverified"
 )
 
 // AllValues returns all EmailDetailImportedVerification values.
 func (EmailDetailImportedVerification) AllValues() []EmailDetailImportedVerification {
 	return []EmailDetailImportedVerification{
 		EmailDetailImportedVerificationProviderFetched,
+		EmailDetailImportedVerificationUnverified,
 	}
 }
 
@@ -33639,6 +34011,8 @@ func (EmailDetailImportedVerification) AllValues() []EmailDetailImportedVerifica
 func (s EmailDetailImportedVerification) MarshalText() ([]byte, error) {
 	switch s {
 	case EmailDetailImportedVerificationProviderFetched:
+		return []byte(s), nil
+	case EmailDetailImportedVerificationUnverified:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -33650,6 +34024,9 @@ func (s *EmailDetailImportedVerification) UnmarshalText(data []byte) error {
 	switch EmailDetailImportedVerification(data) {
 	case EmailDetailImportedVerificationProviderFetched:
 		*s = EmailDetailImportedVerificationProviderFetched
+		return nil
+	case EmailDetailImportedVerificationUnverified:
+		*s = EmailDetailImportedVerificationUnverified
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -34431,7 +34808,7 @@ func NewStringArrayEmailDetailUnderstandingFactsItemValue(v []string) EmailDetai
 // Ref: #/components/schemas/EmailListMeta
 type EmailListMeta struct {
 	// Total number of matching records.
-	Total int `json:"total"`
+	Total OptInt `json:"total"`
 	// Page size used for this request.
 	Limit int `json:"limit"`
 	// Cursor for the next page, or null if no more results.
@@ -34445,10 +34822,13 @@ type EmailListMeta struct {
 	// neither one of its addresses nor on one of its domains, and the credential reads some mail through
 	// email rules: the page holds only the mail those rules give it there. Absent otherwise.
 	RecipientRulesOnly OptBool `json:"recipient_rules_only"`
+	// Whether another page follows this one, read from the page itself, so it is there with or without a
+	// count (`count=false`).
+	HasMore OptBool `json:"has_more"`
 }
 
 // GetTotal returns the value of Total.
-func (s *EmailListMeta) GetTotal() int {
+func (s *EmailListMeta) GetTotal() OptInt {
 	return s.Total
 }
 
@@ -34472,8 +34852,13 @@ func (s *EmailListMeta) GetRecipientRulesOnly() OptBool {
 	return s.RecipientRulesOnly
 }
 
+// GetHasMore returns the value of HasMore.
+func (s *EmailListMeta) GetHasMore() OptBool {
+	return s.HasMore
+}
+
 // SetTotal sets the value of Total.
-func (s *EmailListMeta) SetTotal(val int) {
+func (s *EmailListMeta) SetTotal(val OptInt) {
 	s.Total = val
 }
 
@@ -34495,6 +34880,11 @@ func (s *EmailListMeta) SetRecipientOutsideAccess(val OptBool) {
 // SetRecipientRulesOnly sets the value of RecipientRulesOnly.
 func (s *EmailListMeta) SetRecipientRulesOnly(val OptBool) {
 	s.RecipientRulesOnly = val
+}
+
+// SetHasMore sets the value of HasMore.
+func (s *EmailListMeta) SetHasMore(val OptBool) {
+	s.HasMore = val
 }
 
 // Ref: #/components/schemas/EmailNotifications_getEmailNotificationPreferences_Result
@@ -34653,6 +35043,7 @@ const (
 	EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassPlatformRequired EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass = "platform_required"
 	EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgRequirable    EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass = "org_requirable"
 	EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOptional         EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass = "optional"
+	EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgOnly          EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass = "org_only"
 )
 
 // AllValues returns all EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass values.
@@ -34661,6 +35052,7 @@ func (EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass) All
 		EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassPlatformRequired,
 		EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgRequirable,
 		EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOptional,
+		EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgOnly,
 	}
 }
 
@@ -34672,6 +35064,8 @@ func (s EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass) M
 	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgRequirable:
 		return []byte(s), nil
 	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOptional:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgOnly:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -34689,6 +35083,9 @@ func (s *EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClass) 
 		return nil
 	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOptional:
 		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOptional
+		return nil
+	case EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgOnly:
+		*s = EmailNotificationsGetEmailNotificationPreferencesResultKindsItemClassOrgOnly
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -34961,6 +35358,7 @@ const (
 	EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassPlatformRequired EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass = "platform_required"
 	EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgRequirable    EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass = "org_requirable"
 	EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOptional         EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass = "optional"
+	EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgOnly          EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass = "org_only"
 )
 
 // AllValues returns all EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass values.
@@ -34969,6 +35367,7 @@ func (EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass) AllVal
 		EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassPlatformRequired,
 		EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgRequirable,
 		EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOptional,
+		EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgOnly,
 	}
 }
 
@@ -34980,6 +35379,8 @@ func (s EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass) Mars
 	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgRequirable:
 		return []byte(s), nil
 	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOptional:
+		return []byte(s), nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgOnly:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -34997,6 +35398,9 @@ func (s *EmailNotificationsGetEmailNotificationSettingsResultKindsItemClass) Unm
 		return nil
 	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOptional:
 		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOptional
+		return nil
+	case EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgOnly:
+		*s = EmailNotificationsGetEmailNotificationSettingsResultKindsItemClassOrgOnly
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -35295,6 +35699,7 @@ const (
 	EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassPlatformRequired EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass = "platform_required"
 	EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgRequirable    EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass = "org_requirable"
 	EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOptional         EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass = "optional"
+	EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgOnly          EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass = "org_only"
 )
 
 // AllValues returns all EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass values.
@@ -35303,6 +35708,7 @@ func (EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass) 
 		EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassPlatformRequired,
 		EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgRequirable,
 		EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOptional,
+		EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgOnly,
 	}
 }
 
@@ -35314,6 +35720,8 @@ func (s EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClass
 	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgRequirable:
 		return []byte(s), nil
 	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOptional:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgOnly:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -35331,6 +35739,9 @@ func (s *EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClas
 		return nil
 	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOptional:
 		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOptional
+		return nil
+	case EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgOnly:
+		*s = EmailNotificationsUpdateEmailNotificationPreferencesResultKindsItemClassOrgOnly
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -35684,6 +36095,7 @@ const (
 	EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassPlatformRequired EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass = "platform_required"
 	EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgRequirable    EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass = "org_requirable"
 	EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOptional         EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass = "optional"
+	EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgOnly          EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass = "org_only"
 )
 
 // AllValues returns all EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass values.
@@ -35692,6 +36104,7 @@ func (EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass) All
 		EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassPlatformRequired,
 		EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgRequirable,
 		EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOptional,
+		EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgOnly,
 	}
 }
 
@@ -35703,6 +36116,8 @@ func (s EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass) M
 	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgRequirable:
 		return []byte(s), nil
 	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOptional:
+		return []byte(s), nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgOnly:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -35720,6 +36135,9 @@ func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClass) 
 		return nil
 	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOptional:
 		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOptional
+		return nil
+	case EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgOnly:
+		*s = EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemClassOrgOnly
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -35839,8 +36257,8 @@ func (s *EmailNotificationsUpdateEmailNotificationSettingsResultKindsItemOrgMode
 // What an inbound email says, as plain text, with the fields that identify it.
 // Ref: #/components/schemas/EmailReadable
 type EmailReadable struct {
-	// Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from
-	// live tails and deltas.
+	// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+	// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
 	Imported NilEmailReadableImported `json:"imported"`
 	// The inbound email id.
 	ID uuid.UUID `json:"id"`
@@ -36193,10 +36611,13 @@ func (s *EmailReadableBodySource) UnmarshalText(data []byte) error {
 	}
 }
 
-// Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from
-// live tails and deltas.
+// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
 type EmailReadableImported struct {
-	From         EmailReadableImportedFrom         `json:"from"`
+	// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+	// file.
+	From EmailReadableImportedFrom `json:"from"`
+	// How Primitive acquired the historical message.
 	Method       EmailReadableImportedMethod       `json:"method"`
 	Verification EmailReadableImportedVerification `json:"verification"`
 	// When Primitive acquired this historical message.
@@ -36243,16 +36664,20 @@ func (s *EmailReadableImported) SetAt(val time.Time) {
 	s.At = val
 }
 
+// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+// file.
 type EmailReadableImportedFrom string
 
 const (
 	EmailReadableImportedFromGoogleWorkspace EmailReadableImportedFrom = "google_workspace"
+	EmailReadableImportedFromUnknown         EmailReadableImportedFrom = "unknown"
 )
 
 // AllValues returns all EmailReadableImportedFrom values.
 func (EmailReadableImportedFrom) AllValues() []EmailReadableImportedFrom {
 	return []EmailReadableImportedFrom{
 		EmailReadableImportedFromGoogleWorkspace,
+		EmailReadableImportedFromUnknown,
 	}
 }
 
@@ -36260,6 +36685,8 @@ func (EmailReadableImportedFrom) AllValues() []EmailReadableImportedFrom {
 func (s EmailReadableImportedFrom) MarshalText() ([]byte, error) {
 	switch s {
 	case EmailReadableImportedFromGoogleWorkspace:
+		return []byte(s), nil
+	case EmailReadableImportedFromUnknown:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -36272,21 +36699,27 @@ func (s *EmailReadableImportedFrom) UnmarshalText(data []byte) error {
 	case EmailReadableImportedFromGoogleWorkspace:
 		*s = EmailReadableImportedFromGoogleWorkspace
 		return nil
+	case EmailReadableImportedFromUnknown:
+		*s = EmailReadableImportedFromUnknown
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
 }
 
+// How Primitive acquired the historical message.
 type EmailReadableImportedMethod string
 
 const (
 	EmailReadableImportedMethodPrimitiveDirect EmailReadableImportedMethod = "primitive_direct"
+	EmailReadableImportedMethodAPIUpload       EmailReadableImportedMethod = "api_upload"
 )
 
 // AllValues returns all EmailReadableImportedMethod values.
 func (EmailReadableImportedMethod) AllValues() []EmailReadableImportedMethod {
 	return []EmailReadableImportedMethod{
 		EmailReadableImportedMethodPrimitiveDirect,
+		EmailReadableImportedMethodAPIUpload,
 	}
 }
 
@@ -36294,6 +36727,8 @@ func (EmailReadableImportedMethod) AllValues() []EmailReadableImportedMethod {
 func (s EmailReadableImportedMethod) MarshalText() ([]byte, error) {
 	switch s {
 	case EmailReadableImportedMethodPrimitiveDirect:
+		return []byte(s), nil
+	case EmailReadableImportedMethodAPIUpload:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -36306,6 +36741,9 @@ func (s *EmailReadableImportedMethod) UnmarshalText(data []byte) error {
 	case EmailReadableImportedMethodPrimitiveDirect:
 		*s = EmailReadableImportedMethodPrimitiveDirect
 		return nil
+	case EmailReadableImportedMethodAPIUpload:
+		*s = EmailReadableImportedMethodAPIUpload
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
@@ -36315,12 +36753,14 @@ type EmailReadableImportedVerification string
 
 const (
 	EmailReadableImportedVerificationProviderFetched EmailReadableImportedVerification = "provider_fetched"
+	EmailReadableImportedVerificationUnverified      EmailReadableImportedVerification = "unverified"
 )
 
 // AllValues returns all EmailReadableImportedVerification values.
 func (EmailReadableImportedVerification) AllValues() []EmailReadableImportedVerification {
 	return []EmailReadableImportedVerification{
 		EmailReadableImportedVerificationProviderFetched,
+		EmailReadableImportedVerificationUnverified,
 	}
 }
 
@@ -36328,6 +36768,8 @@ func (EmailReadableImportedVerification) AllValues() []EmailReadableImportedVeri
 func (s EmailReadableImportedVerification) MarshalText() ([]byte, error) {
 	switch s {
 	case EmailReadableImportedVerificationProviderFetched:
+		return []byte(s), nil
+	case EmailReadableImportedVerificationUnverified:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -36339,6 +36781,9 @@ func (s *EmailReadableImportedVerification) UnmarshalText(data []byte) error {
 	switch EmailReadableImportedVerification(data) {
 	case EmailReadableImportedVerificationProviderFetched:
 		*s = EmailReadableImportedVerificationProviderFetched
+		return nil
+	case EmailReadableImportedVerificationUnverified:
+		*s = EmailReadableImportedVerificationUnverified
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -36844,9 +37289,9 @@ type EmailRuleCoveringMe struct {
 	// What its author asked for, in their words, at its current version. Null when it has no version,
 	// was deleted after the page was read, or the words could not be read in time; GET
 	// /v1/email-rules/covering-me/{id} shows them with its tree.
-	English OptNilString `json:"english"`
+	English NilString `json:"english"`
 	// What its current version matches, as compiled. Null as english is.
-	Explanation OptNilString `json:"explanation"`
+	Explanation NilString `json:"explanation"`
 }
 
 // GetID returns the value of ID.
@@ -36910,12 +37355,12 @@ func (s *EmailRuleCoveringMe) GetCreatedAt() time.Time {
 }
 
 // GetEnglish returns the value of English.
-func (s *EmailRuleCoveringMe) GetEnglish() OptNilString {
+func (s *EmailRuleCoveringMe) GetEnglish() NilString {
 	return s.English
 }
 
 // GetExplanation returns the value of Explanation.
-func (s *EmailRuleCoveringMe) GetExplanation() OptNilString {
+func (s *EmailRuleCoveringMe) GetExplanation() NilString {
 	return s.Explanation
 }
 
@@ -36980,12 +37425,12 @@ func (s *EmailRuleCoveringMe) SetCreatedAt(val time.Time) {
 }
 
 // SetEnglish sets the value of English.
-func (s *EmailRuleCoveringMe) SetEnglish(val OptNilString) {
+func (s *EmailRuleCoveringMe) SetEnglish(val NilString) {
 	s.English = val
 }
 
 // SetExplanation sets the value of Explanation.
-func (s *EmailRuleCoveringMe) SetExplanation(val OptNilString) {
+func (s *EmailRuleCoveringMe) SetExplanation(val NilString) {
 	s.Explanation = val
 }
 
@@ -43479,8 +43924,8 @@ type EmailSearchResult struct {
 	// With `group=message`: the send of this message, when you can read it (under a connected agent key,
 	// only its own sends).
 	SentEmailID OptUUID `json:"sent_email_id"`
-	// Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from
-	// live tails and deltas.
+	// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+	// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
 	Imported NilEmailSearchResultImported `json:"imported"`
 	// A plain-text preview of `body_text` (never `body_html`), computed once when the message is stored:
 	// quoted replies (an "On ... wrote:" line, an "Original Message" separator, a From/Sent header block,
@@ -44422,10 +44867,13 @@ func (s *EmailSearchResultDirection) UnmarshalText(data []byte) error {
 	}
 }
 
-// Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from
-// live tails and deltas.
+// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
 type EmailSearchResultImported struct {
-	From         EmailSearchResultImportedFrom         `json:"from"`
+	// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+	// file.
+	From EmailSearchResultImportedFrom `json:"from"`
+	// How Primitive acquired the historical message.
 	Method       EmailSearchResultImportedMethod       `json:"method"`
 	Verification EmailSearchResultImportedVerification `json:"verification"`
 	// When Primitive acquired this historical message.
@@ -44472,16 +44920,20 @@ func (s *EmailSearchResultImported) SetAt(val time.Time) {
 	s.At = val
 }
 
+// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+// file.
 type EmailSearchResultImportedFrom string
 
 const (
 	EmailSearchResultImportedFromGoogleWorkspace EmailSearchResultImportedFrom = "google_workspace"
+	EmailSearchResultImportedFromUnknown         EmailSearchResultImportedFrom = "unknown"
 )
 
 // AllValues returns all EmailSearchResultImportedFrom values.
 func (EmailSearchResultImportedFrom) AllValues() []EmailSearchResultImportedFrom {
 	return []EmailSearchResultImportedFrom{
 		EmailSearchResultImportedFromGoogleWorkspace,
+		EmailSearchResultImportedFromUnknown,
 	}
 }
 
@@ -44489,6 +44941,8 @@ func (EmailSearchResultImportedFrom) AllValues() []EmailSearchResultImportedFrom
 func (s EmailSearchResultImportedFrom) MarshalText() ([]byte, error) {
 	switch s {
 	case EmailSearchResultImportedFromGoogleWorkspace:
+		return []byte(s), nil
+	case EmailSearchResultImportedFromUnknown:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -44501,21 +44955,27 @@ func (s *EmailSearchResultImportedFrom) UnmarshalText(data []byte) error {
 	case EmailSearchResultImportedFromGoogleWorkspace:
 		*s = EmailSearchResultImportedFromGoogleWorkspace
 		return nil
+	case EmailSearchResultImportedFromUnknown:
+		*s = EmailSearchResultImportedFromUnknown
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
 }
 
+// How Primitive acquired the historical message.
 type EmailSearchResultImportedMethod string
 
 const (
 	EmailSearchResultImportedMethodPrimitiveDirect EmailSearchResultImportedMethod = "primitive_direct"
+	EmailSearchResultImportedMethodAPIUpload       EmailSearchResultImportedMethod = "api_upload"
 )
 
 // AllValues returns all EmailSearchResultImportedMethod values.
 func (EmailSearchResultImportedMethod) AllValues() []EmailSearchResultImportedMethod {
 	return []EmailSearchResultImportedMethod{
 		EmailSearchResultImportedMethodPrimitiveDirect,
+		EmailSearchResultImportedMethodAPIUpload,
 	}
 }
 
@@ -44523,6 +44983,8 @@ func (EmailSearchResultImportedMethod) AllValues() []EmailSearchResultImportedMe
 func (s EmailSearchResultImportedMethod) MarshalText() ([]byte, error) {
 	switch s {
 	case EmailSearchResultImportedMethodPrimitiveDirect:
+		return []byte(s), nil
+	case EmailSearchResultImportedMethodAPIUpload:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -44535,6 +44997,9 @@ func (s *EmailSearchResultImportedMethod) UnmarshalText(data []byte) error {
 	case EmailSearchResultImportedMethodPrimitiveDirect:
 		*s = EmailSearchResultImportedMethodPrimitiveDirect
 		return nil
+	case EmailSearchResultImportedMethodAPIUpload:
+		*s = EmailSearchResultImportedMethodAPIUpload
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
@@ -44544,12 +45009,14 @@ type EmailSearchResultImportedVerification string
 
 const (
 	EmailSearchResultImportedVerificationProviderFetched EmailSearchResultImportedVerification = "provider_fetched"
+	EmailSearchResultImportedVerificationUnverified      EmailSearchResultImportedVerification = "unverified"
 )
 
 // AllValues returns all EmailSearchResultImportedVerification values.
 func (EmailSearchResultImportedVerification) AllValues() []EmailSearchResultImportedVerification {
 	return []EmailSearchResultImportedVerification{
 		EmailSearchResultImportedVerificationProviderFetched,
+		EmailSearchResultImportedVerificationUnverified,
 	}
 }
 
@@ -44557,6 +45024,8 @@ func (EmailSearchResultImportedVerification) AllValues() []EmailSearchResultImpo
 func (s EmailSearchResultImportedVerification) MarshalText() ([]byte, error) {
 	switch s {
 	case EmailSearchResultImportedVerificationProviderFetched:
+		return []byte(s), nil
+	case EmailSearchResultImportedVerificationUnverified:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -44568,6 +45037,9 @@ func (s *EmailSearchResultImportedVerification) UnmarshalText(data []byte) error
 	switch EmailSearchResultImportedVerification(data) {
 	case EmailSearchResultImportedVerificationProviderFetched:
 		*s = EmailSearchResultImportedVerificationProviderFetched
+		return nil
+	case EmailSearchResultImportedVerificationUnverified:
+		*s = EmailSearchResultImportedVerificationUnverified
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -45154,8 +45626,8 @@ type EmailSummary struct {
 	// With `group=message`: the send of this message, when you can read it (under a connected agent key,
 	// only its own sends).
 	SentEmailID OptUUID `json:"sent_email_id"`
-	// Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from
-	// live tails and deltas.
+	// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+	// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
 	Imported NilEmailSummaryImported `json:"imported"`
 	// A plain-text preview of `body_text` (never `body_html`), computed once when the message is stored:
 	// quoted replies (an "On ... wrote:" line, an "Original Message" separator, a From/Sent header block,
@@ -45989,10 +46461,13 @@ func (s *EmailSummaryDeliveryReportType) UnmarshalText(data []byte) error {
 	}
 }
 
-// Historical acquisition; never sender or SMTP delivery proof. Null for live mail. Excluded from
-// live tails and deltas.
+// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
 type EmailSummaryImported struct {
-	From         EmailSummaryImportedFrom         `json:"from"`
+	// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+	// file.
+	From EmailSummaryImportedFrom `json:"from"`
+	// How Primitive acquired the historical message.
 	Method       EmailSummaryImportedMethod       `json:"method"`
 	Verification EmailSummaryImportedVerification `json:"verification"`
 	// When Primitive acquired this historical message.
@@ -46039,16 +46514,20 @@ func (s *EmailSummaryImported) SetAt(val time.Time) {
 	s.At = val
 }
 
+// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+// file.
 type EmailSummaryImportedFrom string
 
 const (
 	EmailSummaryImportedFromGoogleWorkspace EmailSummaryImportedFrom = "google_workspace"
+	EmailSummaryImportedFromUnknown         EmailSummaryImportedFrom = "unknown"
 )
 
 // AllValues returns all EmailSummaryImportedFrom values.
 func (EmailSummaryImportedFrom) AllValues() []EmailSummaryImportedFrom {
 	return []EmailSummaryImportedFrom{
 		EmailSummaryImportedFromGoogleWorkspace,
+		EmailSummaryImportedFromUnknown,
 	}
 }
 
@@ -46056,6 +46535,8 @@ func (EmailSummaryImportedFrom) AllValues() []EmailSummaryImportedFrom {
 func (s EmailSummaryImportedFrom) MarshalText() ([]byte, error) {
 	switch s {
 	case EmailSummaryImportedFromGoogleWorkspace:
+		return []byte(s), nil
+	case EmailSummaryImportedFromUnknown:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -46068,21 +46549,27 @@ func (s *EmailSummaryImportedFrom) UnmarshalText(data []byte) error {
 	case EmailSummaryImportedFromGoogleWorkspace:
 		*s = EmailSummaryImportedFromGoogleWorkspace
 		return nil
+	case EmailSummaryImportedFromUnknown:
+		*s = EmailSummaryImportedFromUnknown
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
 }
 
+// How Primitive acquired the historical message.
 type EmailSummaryImportedMethod string
 
 const (
 	EmailSummaryImportedMethodPrimitiveDirect EmailSummaryImportedMethod = "primitive_direct"
+	EmailSummaryImportedMethodAPIUpload       EmailSummaryImportedMethod = "api_upload"
 )
 
 // AllValues returns all EmailSummaryImportedMethod values.
 func (EmailSummaryImportedMethod) AllValues() []EmailSummaryImportedMethod {
 	return []EmailSummaryImportedMethod{
 		EmailSummaryImportedMethodPrimitiveDirect,
+		EmailSummaryImportedMethodAPIUpload,
 	}
 }
 
@@ -46090,6 +46577,8 @@ func (EmailSummaryImportedMethod) AllValues() []EmailSummaryImportedMethod {
 func (s EmailSummaryImportedMethod) MarshalText() ([]byte, error) {
 	switch s {
 	case EmailSummaryImportedMethodPrimitiveDirect:
+		return []byte(s), nil
+	case EmailSummaryImportedMethodAPIUpload:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -46102,6 +46591,9 @@ func (s *EmailSummaryImportedMethod) UnmarshalText(data []byte) error {
 	case EmailSummaryImportedMethodPrimitiveDirect:
 		*s = EmailSummaryImportedMethodPrimitiveDirect
 		return nil
+	case EmailSummaryImportedMethodAPIUpload:
+		*s = EmailSummaryImportedMethodAPIUpload
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
@@ -46111,12 +46603,14 @@ type EmailSummaryImportedVerification string
 
 const (
 	EmailSummaryImportedVerificationProviderFetched EmailSummaryImportedVerification = "provider_fetched"
+	EmailSummaryImportedVerificationUnverified      EmailSummaryImportedVerification = "unverified"
 )
 
 // AllValues returns all EmailSummaryImportedVerification values.
 func (EmailSummaryImportedVerification) AllValues() []EmailSummaryImportedVerification {
 	return []EmailSummaryImportedVerification{
 		EmailSummaryImportedVerificationProviderFetched,
+		EmailSummaryImportedVerificationUnverified,
 	}
 }
 
@@ -46124,6 +46618,8 @@ func (EmailSummaryImportedVerification) AllValues() []EmailSummaryImportedVerifi
 func (s EmailSummaryImportedVerification) MarshalText() ([]byte, error) {
 	switch s {
 	case EmailSummaryImportedVerificationProviderFetched:
+		return []byte(s), nil
+	case EmailSummaryImportedVerificationUnverified:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -46135,6 +46631,9 @@ func (s *EmailSummaryImportedVerification) UnmarshalText(data []byte) error {
 	switch EmailSummaryImportedVerification(data) {
 	case EmailSummaryImportedVerificationProviderFetched:
 		*s = EmailSummaryImportedVerificationProviderFetched
+		return nil
+	case EmailSummaryImportedVerificationUnverified:
+		*s = EmailSummaryImportedVerificationUnverified
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -48171,6 +48670,7 @@ const (
 	ErrorResponseErrorCodeMailImportProviderUnavailable            ErrorResponseErrorCode = "mail_import_provider_unavailable"
 	ErrorResponseErrorCodeMailImportStorageFailed                  ErrorResponseErrorCode = "mail_import_storage_failed"
 	ErrorResponseErrorCodeMailImportStorageLimit                   ErrorResponseErrorCode = "mail_import_storage_limit"
+	ErrorResponseErrorCodeMailImportStorageNotReady                ErrorResponseErrorCode = "mail_import_storage_not_ready"
 	ErrorResponseErrorCodeMailImportTooLarge                       ErrorResponseErrorCode = "mail_import_too_large"
 	ErrorResponseErrorCodeMailImportUnavailable                    ErrorResponseErrorCode = "mail_import_unavailable"
 	ErrorResponseErrorCodeMailRelayUnavailable                     ErrorResponseErrorCode = "mail_relay_unavailable"
@@ -48537,6 +49037,7 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeMailImportProviderUnavailable,
 		ErrorResponseErrorCodeMailImportStorageFailed,
 		ErrorResponseErrorCodeMailImportStorageLimit,
+		ErrorResponseErrorCodeMailImportStorageNotReady,
 		ErrorResponseErrorCodeMailImportTooLarge,
 		ErrorResponseErrorCodeMailImportUnavailable,
 		ErrorResponseErrorCodeMailRelayUnavailable,
@@ -49139,6 +49640,8 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeMailImportStorageFailed:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeMailImportStorageLimit:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeMailImportStorageNotReady:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeMailImportTooLarge:
 		return []byte(s), nil
@@ -50105,6 +50608,9 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeMailImportStorageLimit:
 		*s = ErrorResponseErrorCodeMailImportStorageLimit
+		return nil
+	case ErrorResponseErrorCodeMailImportStorageNotReady:
+		*s = ErrorResponseErrorCodeMailImportStorageNotReady
 		return nil
 	case ErrorResponseErrorCodeMailImportTooLarge:
 		*s = ErrorResponseErrorCodeMailImportTooLarge
@@ -55895,9 +56401,10 @@ func (s *GetDefaultNetworkAgentOKDataOwnershipKind) UnmarshalText(data []byte) e
 }
 
 type GetDefaultNetworkAgentOKDataPresence struct {
-	LastCheckedAt time.Time `json:"last_checked_at"`
-	ExpiresAt     time.Time `json:"expires_at"`
-	ValidForMs    int       `json:"valid_for_ms"`
+	LastCheckedAt time.Time                                    `json:"last_checked_at"`
+	ExpiresAt     time.Time                                    `json:"expires_at"`
+	ValidForMs    int                                          `json:"valid_for_ms"`
+	Basis         OptGetDefaultNetworkAgentOKDataPresenceBasis `json:"basis"`
 }
 
 // GetLastCheckedAt returns the value of LastCheckedAt.
@@ -55915,6 +56422,11 @@ func (s *GetDefaultNetworkAgentOKDataPresence) GetValidForMs() int {
 	return s.ValidForMs
 }
 
+// GetBasis returns the value of Basis.
+func (s *GetDefaultNetworkAgentOKDataPresence) GetBasis() OptGetDefaultNetworkAgentOKDataPresenceBasis {
+	return s.Basis
+}
+
 // SetLastCheckedAt sets the value of LastCheckedAt.
 func (s *GetDefaultNetworkAgentOKDataPresence) SetLastCheckedAt(val time.Time) {
 	s.LastCheckedAt = val
@@ -55928,6 +56440,52 @@ func (s *GetDefaultNetworkAgentOKDataPresence) SetExpiresAt(val time.Time) {
 // SetValidForMs sets the value of ValidForMs.
 func (s *GetDefaultNetworkAgentOKDataPresence) SetValidForMs(val int) {
 	s.ValidForMs = val
+}
+
+// SetBasis sets the value of Basis.
+func (s *GetDefaultNetworkAgentOKDataPresence) SetBasis(val OptGetDefaultNetworkAgentOKDataPresenceBasis) {
+	s.Basis = val
+}
+
+type GetDefaultNetworkAgentOKDataPresenceBasis string
+
+const (
+	GetDefaultNetworkAgentOKDataPresenceBasisProbe   GetDefaultNetworkAgentOKDataPresenceBasis = "probe"
+	GetDefaultNetworkAgentOKDataPresenceBasisOrganic GetDefaultNetworkAgentOKDataPresenceBasis = "organic"
+)
+
+// AllValues returns all GetDefaultNetworkAgentOKDataPresenceBasis values.
+func (GetDefaultNetworkAgentOKDataPresenceBasis) AllValues() []GetDefaultNetworkAgentOKDataPresenceBasis {
+	return []GetDefaultNetworkAgentOKDataPresenceBasis{
+		GetDefaultNetworkAgentOKDataPresenceBasisProbe,
+		GetDefaultNetworkAgentOKDataPresenceBasisOrganic,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s GetDefaultNetworkAgentOKDataPresenceBasis) MarshalText() ([]byte, error) {
+	switch s {
+	case GetDefaultNetworkAgentOKDataPresenceBasisProbe:
+		return []byte(s), nil
+	case GetDefaultNetworkAgentOKDataPresenceBasisOrganic:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *GetDefaultNetworkAgentOKDataPresenceBasis) UnmarshalText(data []byte) error {
+	switch GetDefaultNetworkAgentOKDataPresenceBasis(data) {
+	case GetDefaultNetworkAgentOKDataPresenceBasisProbe:
+		*s = GetDefaultNetworkAgentOKDataPresenceBasisProbe
+		return nil
+	case GetDefaultNetworkAgentOKDataPresenceBasisOrganic:
+		*s = GetDefaultNetworkAgentOKDataPresenceBasisOrganic
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Whether this peer is currently reading its mail, from the server's record of its own successful
@@ -65774,10 +66332,6 @@ type ListActivityObjectsResultItemsItem struct {
 	// For email_rule_coverage: deleted once the rule it is about has been deleted. Left out while it
 	// exists, or when that could not be checked.
 	RuleNow OptListActivityObjectsResultItemsItemRuleNow `json:"rule_now"`
-	// For a receivers_changed notice: who received the rule's matches before and after, in totals. They
-	// can be equal when only an owner or a webhook site changed; covering-me shows them by owner. A
-	// rotated key counts once here while the old one still works; covering-me counts both.
-	ReceiversChange OptListActivityObjectsResultItemsItemReceiversChange `json:"receivers_change"`
 	// For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active,
 	// reaching none of your mailboxes now).
 	StopReason OptListActivityObjectsResultItemsItemStopReason `json:"stop_reason"`
@@ -65833,11 +66387,6 @@ func (s *ListActivityObjectsResultItemsItem) GetRuleNow() OptListActivityObjects
 	return s.RuleNow
 }
 
-// GetReceiversChange returns the value of ReceiversChange.
-func (s *ListActivityObjectsResultItemsItem) GetReceiversChange() OptListActivityObjectsResultItemsItemReceiversChange {
-	return s.ReceiversChange
-}
-
 // GetStopReason returns the value of StopReason.
 func (s *ListActivityObjectsResultItemsItem) GetStopReason() OptListActivityObjectsResultItemsItemStopReason {
 	return s.StopReason
@@ -65891,11 +66440,6 @@ func (s *ListActivityObjectsResultItemsItem) SetRuleID(val OptUUID) {
 // SetRuleNow sets the value of RuleNow.
 func (s *ListActivityObjectsResultItemsItem) SetRuleNow(val OptListActivityObjectsResultItemsItemRuleNow) {
 	s.RuleNow = val
-}
-
-// SetReceiversChange sets the value of ReceiversChange.
-func (s *ListActivityObjectsResultItemsItem) SetReceiversChange(val OptListActivityObjectsResultItemsItemReceiversChange) {
-	s.ReceiversChange = val
 }
 
 // SetStopReason sets the value of StopReason.
@@ -65993,130 +66537,6 @@ func (s *ListActivityObjectsResultItemsItemOwnedNow) UnmarshalText(data []byte) 
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
-}
-
-// For a receivers_changed notice: who received the rule's matches before and after, in totals. They
-// can be equal when only an owner or a webhook site changed; covering-me shows them by owner. A
-// rotated key counts once here while the old one still works; covering-me counts both.
-type ListActivityObjectsResultItemsItemReceiversChange struct {
-	Before ListActivityObjectsResultItemsItemReceiversChangeBefore `json:"before"`
-	After  ListActivityObjectsResultItemsItemReceiversChangeAfter  `json:"after"`
-}
-
-// GetBefore returns the value of Before.
-func (s *ListActivityObjectsResultItemsItemReceiversChange) GetBefore() ListActivityObjectsResultItemsItemReceiversChangeBefore {
-	return s.Before
-}
-
-// GetAfter returns the value of After.
-func (s *ListActivityObjectsResultItemsItemReceiversChange) GetAfter() ListActivityObjectsResultItemsItemReceiversChangeAfter {
-	return s.After
-}
-
-// SetBefore sets the value of Before.
-func (s *ListActivityObjectsResultItemsItemReceiversChange) SetBefore(val ListActivityObjectsResultItemsItemReceiversChangeBefore) {
-	s.Before = val
-}
-
-// SetAfter sets the value of After.
-func (s *ListActivityObjectsResultItemsItemReceiversChange) SetAfter(val ListActivityObjectsResultItemsItemReceiversChangeAfter) {
-	s.After = val
-}
-
-type ListActivityObjectsResultItemsItemReceiversChangeAfter struct {
-	Keys int `json:"keys"`
-	// Of the keys, how many also read your own mail beyond the rule.
-	ReadsInFull int `json:"reads_in_full"`
-	Webhooks    int `json:"webhooks"`
-	Shares      int `json:"shares"`
-}
-
-// GetKeys returns the value of Keys.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) GetKeys() int {
-	return s.Keys
-}
-
-// GetReadsInFull returns the value of ReadsInFull.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) GetReadsInFull() int {
-	return s.ReadsInFull
-}
-
-// GetWebhooks returns the value of Webhooks.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) GetWebhooks() int {
-	return s.Webhooks
-}
-
-// GetShares returns the value of Shares.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) GetShares() int {
-	return s.Shares
-}
-
-// SetKeys sets the value of Keys.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) SetKeys(val int) {
-	s.Keys = val
-}
-
-// SetReadsInFull sets the value of ReadsInFull.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) SetReadsInFull(val int) {
-	s.ReadsInFull = val
-}
-
-// SetWebhooks sets the value of Webhooks.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) SetWebhooks(val int) {
-	s.Webhooks = val
-}
-
-// SetShares sets the value of Shares.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeAfter) SetShares(val int) {
-	s.Shares = val
-}
-
-type ListActivityObjectsResultItemsItemReceiversChangeBefore struct {
-	Keys int `json:"keys"`
-	// Of the keys, how many also read your own mail beyond the rule.
-	ReadsInFull int `json:"reads_in_full"`
-	Webhooks    int `json:"webhooks"`
-	Shares      int `json:"shares"`
-}
-
-// GetKeys returns the value of Keys.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) GetKeys() int {
-	return s.Keys
-}
-
-// GetReadsInFull returns the value of ReadsInFull.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) GetReadsInFull() int {
-	return s.ReadsInFull
-}
-
-// GetWebhooks returns the value of Webhooks.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) GetWebhooks() int {
-	return s.Webhooks
-}
-
-// GetShares returns the value of Shares.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) GetShares() int {
-	return s.Shares
-}
-
-// SetKeys sets the value of Keys.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) SetKeys(val int) {
-	s.Keys = val
-}
-
-// SetReadsInFull sets the value of ReadsInFull.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) SetReadsInFull(val int) {
-	s.ReadsInFull = val
-}
-
-// SetWebhooks sets the value of Webhooks.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) SetWebhooks(val int) {
-	s.Webhooks = val
-}
-
-// SetShares sets the value of Shares.
-func (s *ListActivityObjectsResultItemsItemReceiversChangeBefore) SetShares(val int) {
-	s.Shares = val
 }
 
 // For email_rule_coverage: deleted once the rule it is about has been deleted. Left out while it
@@ -68522,9 +68942,10 @@ func (s *ListDefaultNetworkAgentsOKDataItemOwnershipKind) UnmarshalText(data []b
 }
 
 type ListDefaultNetworkAgentsOKDataItemPresence struct {
-	LastCheckedAt time.Time `json:"last_checked_at"`
-	ExpiresAt     time.Time `json:"expires_at"`
-	ValidForMs    int       `json:"valid_for_ms"`
+	LastCheckedAt time.Time                                          `json:"last_checked_at"`
+	ExpiresAt     time.Time                                          `json:"expires_at"`
+	ValidForMs    int                                                `json:"valid_for_ms"`
+	Basis         OptListDefaultNetworkAgentsOKDataItemPresenceBasis `json:"basis"`
 }
 
 // GetLastCheckedAt returns the value of LastCheckedAt.
@@ -68542,6 +68963,11 @@ func (s *ListDefaultNetworkAgentsOKDataItemPresence) GetValidForMs() int {
 	return s.ValidForMs
 }
 
+// GetBasis returns the value of Basis.
+func (s *ListDefaultNetworkAgentsOKDataItemPresence) GetBasis() OptListDefaultNetworkAgentsOKDataItemPresenceBasis {
+	return s.Basis
+}
+
 // SetLastCheckedAt sets the value of LastCheckedAt.
 func (s *ListDefaultNetworkAgentsOKDataItemPresence) SetLastCheckedAt(val time.Time) {
 	s.LastCheckedAt = val
@@ -68555,6 +68981,52 @@ func (s *ListDefaultNetworkAgentsOKDataItemPresence) SetExpiresAt(val time.Time)
 // SetValidForMs sets the value of ValidForMs.
 func (s *ListDefaultNetworkAgentsOKDataItemPresence) SetValidForMs(val int) {
 	s.ValidForMs = val
+}
+
+// SetBasis sets the value of Basis.
+func (s *ListDefaultNetworkAgentsOKDataItemPresence) SetBasis(val OptListDefaultNetworkAgentsOKDataItemPresenceBasis) {
+	s.Basis = val
+}
+
+type ListDefaultNetworkAgentsOKDataItemPresenceBasis string
+
+const (
+	ListDefaultNetworkAgentsOKDataItemPresenceBasisProbe   ListDefaultNetworkAgentsOKDataItemPresenceBasis = "probe"
+	ListDefaultNetworkAgentsOKDataItemPresenceBasisOrganic ListDefaultNetworkAgentsOKDataItemPresenceBasis = "organic"
+)
+
+// AllValues returns all ListDefaultNetworkAgentsOKDataItemPresenceBasis values.
+func (ListDefaultNetworkAgentsOKDataItemPresenceBasis) AllValues() []ListDefaultNetworkAgentsOKDataItemPresenceBasis {
+	return []ListDefaultNetworkAgentsOKDataItemPresenceBasis{
+		ListDefaultNetworkAgentsOKDataItemPresenceBasisProbe,
+		ListDefaultNetworkAgentsOKDataItemPresenceBasisOrganic,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListDefaultNetworkAgentsOKDataItemPresenceBasis) MarshalText() ([]byte, error) {
+	switch s {
+	case ListDefaultNetworkAgentsOKDataItemPresenceBasisProbe:
+		return []byte(s), nil
+	case ListDefaultNetworkAgentsOKDataItemPresenceBasisOrganic:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListDefaultNetworkAgentsOKDataItemPresenceBasis) UnmarshalText(data []byte) error {
+	switch ListDefaultNetworkAgentsOKDataItemPresenceBasis(data) {
+	case ListDefaultNetworkAgentsOKDataItemPresenceBasisProbe:
+		*s = ListDefaultNetworkAgentsOKDataItemPresenceBasisProbe
+		return nil
+	case ListDefaultNetworkAgentsOKDataItemPresenceBasisOrganic:
+		*s = ListDefaultNetworkAgentsOKDataItemPresenceBasisOrganic
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Whether this peer is currently reading its mail, from the server's record of its own successful
@@ -69051,9 +69523,10 @@ func (s *ListDefaultNetworkMembersOKDataItemOwnershipKind) UnmarshalText(data []
 }
 
 type ListDefaultNetworkMembersOKDataItemPresence struct {
-	LastCheckedAt time.Time `json:"last_checked_at"`
-	ExpiresAt     time.Time `json:"expires_at"`
-	ValidForMs    int       `json:"valid_for_ms"`
+	LastCheckedAt time.Time                                           `json:"last_checked_at"`
+	ExpiresAt     time.Time                                           `json:"expires_at"`
+	ValidForMs    int                                                 `json:"valid_for_ms"`
+	Basis         OptListDefaultNetworkMembersOKDataItemPresenceBasis `json:"basis"`
 }
 
 // GetLastCheckedAt returns the value of LastCheckedAt.
@@ -69071,6 +69544,11 @@ func (s *ListDefaultNetworkMembersOKDataItemPresence) GetValidForMs() int {
 	return s.ValidForMs
 }
 
+// GetBasis returns the value of Basis.
+func (s *ListDefaultNetworkMembersOKDataItemPresence) GetBasis() OptListDefaultNetworkMembersOKDataItemPresenceBasis {
+	return s.Basis
+}
+
 // SetLastCheckedAt sets the value of LastCheckedAt.
 func (s *ListDefaultNetworkMembersOKDataItemPresence) SetLastCheckedAt(val time.Time) {
 	s.LastCheckedAt = val
@@ -69084,6 +69562,52 @@ func (s *ListDefaultNetworkMembersOKDataItemPresence) SetExpiresAt(val time.Time
 // SetValidForMs sets the value of ValidForMs.
 func (s *ListDefaultNetworkMembersOKDataItemPresence) SetValidForMs(val int) {
 	s.ValidForMs = val
+}
+
+// SetBasis sets the value of Basis.
+func (s *ListDefaultNetworkMembersOKDataItemPresence) SetBasis(val OptListDefaultNetworkMembersOKDataItemPresenceBasis) {
+	s.Basis = val
+}
+
+type ListDefaultNetworkMembersOKDataItemPresenceBasis string
+
+const (
+	ListDefaultNetworkMembersOKDataItemPresenceBasisProbe   ListDefaultNetworkMembersOKDataItemPresenceBasis = "probe"
+	ListDefaultNetworkMembersOKDataItemPresenceBasisOrganic ListDefaultNetworkMembersOKDataItemPresenceBasis = "organic"
+)
+
+// AllValues returns all ListDefaultNetworkMembersOKDataItemPresenceBasis values.
+func (ListDefaultNetworkMembersOKDataItemPresenceBasis) AllValues() []ListDefaultNetworkMembersOKDataItemPresenceBasis {
+	return []ListDefaultNetworkMembersOKDataItemPresenceBasis{
+		ListDefaultNetworkMembersOKDataItemPresenceBasisProbe,
+		ListDefaultNetworkMembersOKDataItemPresenceBasisOrganic,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListDefaultNetworkMembersOKDataItemPresenceBasis) MarshalText() ([]byte, error) {
+	switch s {
+	case ListDefaultNetworkMembersOKDataItemPresenceBasisProbe:
+		return []byte(s), nil
+	case ListDefaultNetworkMembersOKDataItemPresenceBasisOrganic:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListDefaultNetworkMembersOKDataItemPresenceBasis) UnmarshalText(data []byte) error {
+	switch ListDefaultNetworkMembersOKDataItemPresenceBasis(data) {
+	case ListDefaultNetworkMembersOKDataItemPresenceBasisProbe:
+		*s = ListDefaultNetworkMembersOKDataItemPresenceBasisProbe
+		return nil
+	case ListDefaultNetworkMembersOKDataItemPresenceBasisOrganic:
+		*s = ListDefaultNetworkMembersOKDataItemPresenceBasisOrganic
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // ListDefaultNetworkMembersOKHeaders wraps ListDefaultNetworkMembersOK with response headers.
@@ -72160,12 +72684,14 @@ type ListEmailRuleShareEmailsResultItemImportedFrom string
 
 const (
 	ListEmailRuleShareEmailsResultItemImportedFromGoogleWorkspace ListEmailRuleShareEmailsResultItemImportedFrom = "google_workspace"
+	ListEmailRuleShareEmailsResultItemImportedFromUnknown         ListEmailRuleShareEmailsResultItemImportedFrom = "unknown"
 )
 
 // AllValues returns all ListEmailRuleShareEmailsResultItemImportedFrom values.
 func (ListEmailRuleShareEmailsResultItemImportedFrom) AllValues() []ListEmailRuleShareEmailsResultItemImportedFrom {
 	return []ListEmailRuleShareEmailsResultItemImportedFrom{
 		ListEmailRuleShareEmailsResultItemImportedFromGoogleWorkspace,
+		ListEmailRuleShareEmailsResultItemImportedFromUnknown,
 	}
 }
 
@@ -72173,6 +72699,8 @@ func (ListEmailRuleShareEmailsResultItemImportedFrom) AllValues() []ListEmailRul
 func (s ListEmailRuleShareEmailsResultItemImportedFrom) MarshalText() ([]byte, error) {
 	switch s {
 	case ListEmailRuleShareEmailsResultItemImportedFromGoogleWorkspace:
+		return []byte(s), nil
+	case ListEmailRuleShareEmailsResultItemImportedFromUnknown:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -72185,6 +72713,9 @@ func (s *ListEmailRuleShareEmailsResultItemImportedFrom) UnmarshalText(data []by
 	case ListEmailRuleShareEmailsResultItemImportedFromGoogleWorkspace:
 		*s = ListEmailRuleShareEmailsResultItemImportedFromGoogleWorkspace
 		return nil
+	case ListEmailRuleShareEmailsResultItemImportedFromUnknown:
+		*s = ListEmailRuleShareEmailsResultItemImportedFromUnknown
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
@@ -72194,12 +72725,14 @@ type ListEmailRuleShareEmailsResultItemImportedMethod string
 
 const (
 	ListEmailRuleShareEmailsResultItemImportedMethodPrimitiveDirect ListEmailRuleShareEmailsResultItemImportedMethod = "primitive_direct"
+	ListEmailRuleShareEmailsResultItemImportedMethodAPIUpload       ListEmailRuleShareEmailsResultItemImportedMethod = "api_upload"
 )
 
 // AllValues returns all ListEmailRuleShareEmailsResultItemImportedMethod values.
 func (ListEmailRuleShareEmailsResultItemImportedMethod) AllValues() []ListEmailRuleShareEmailsResultItemImportedMethod {
 	return []ListEmailRuleShareEmailsResultItemImportedMethod{
 		ListEmailRuleShareEmailsResultItemImportedMethodPrimitiveDirect,
+		ListEmailRuleShareEmailsResultItemImportedMethodAPIUpload,
 	}
 }
 
@@ -72207,6 +72740,8 @@ func (ListEmailRuleShareEmailsResultItemImportedMethod) AllValues() []ListEmailR
 func (s ListEmailRuleShareEmailsResultItemImportedMethod) MarshalText() ([]byte, error) {
 	switch s {
 	case ListEmailRuleShareEmailsResultItemImportedMethodPrimitiveDirect:
+		return []byte(s), nil
+	case ListEmailRuleShareEmailsResultItemImportedMethodAPIUpload:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -72219,6 +72754,9 @@ func (s *ListEmailRuleShareEmailsResultItemImportedMethod) UnmarshalText(data []
 	case ListEmailRuleShareEmailsResultItemImportedMethodPrimitiveDirect:
 		*s = ListEmailRuleShareEmailsResultItemImportedMethodPrimitiveDirect
 		return nil
+	case ListEmailRuleShareEmailsResultItemImportedMethodAPIUpload:
+		*s = ListEmailRuleShareEmailsResultItemImportedMethodAPIUpload
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
@@ -72228,12 +72766,14 @@ type ListEmailRuleShareEmailsResultItemImportedVerification string
 
 const (
 	ListEmailRuleShareEmailsResultItemImportedVerificationProviderFetched ListEmailRuleShareEmailsResultItemImportedVerification = "provider_fetched"
+	ListEmailRuleShareEmailsResultItemImportedVerificationUnverified      ListEmailRuleShareEmailsResultItemImportedVerification = "unverified"
 )
 
 // AllValues returns all ListEmailRuleShareEmailsResultItemImportedVerification values.
 func (ListEmailRuleShareEmailsResultItemImportedVerification) AllValues() []ListEmailRuleShareEmailsResultItemImportedVerification {
 	return []ListEmailRuleShareEmailsResultItemImportedVerification{
 		ListEmailRuleShareEmailsResultItemImportedVerificationProviderFetched,
+		ListEmailRuleShareEmailsResultItemImportedVerificationUnverified,
 	}
 }
 
@@ -72241,6 +72781,8 @@ func (ListEmailRuleShareEmailsResultItemImportedVerification) AllValues() []List
 func (s ListEmailRuleShareEmailsResultItemImportedVerification) MarshalText() ([]byte, error) {
 	switch s {
 	case ListEmailRuleShareEmailsResultItemImportedVerificationProviderFetched:
+		return []byte(s), nil
+	case ListEmailRuleShareEmailsResultItemImportedVerificationUnverified:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -72252,6 +72794,9 @@ func (s *ListEmailRuleShareEmailsResultItemImportedVerification) UnmarshalText(d
 	switch ListEmailRuleShareEmailsResultItemImportedVerification(data) {
 	case ListEmailRuleShareEmailsResultItemImportedVerificationProviderFetched:
 		*s = ListEmailRuleShareEmailsResultItemImportedVerificationProviderFetched
+		return nil
+	case ListEmailRuleShareEmailsResultItemImportedVerificationUnverified:
+		*s = ListEmailRuleShareEmailsResultItemImportedVerificationUnverified
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -73216,6 +73761,47 @@ func (s *ListEmailsContentDiscarded) UnmarshalText(data []byte) error {
 		return nil
 	case ListEmailsContentDiscardedFalse:
 		*s = ListEmailsContentDiscardedFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ListEmailsCount string
+
+const (
+	ListEmailsCountTrue  ListEmailsCount = "true"
+	ListEmailsCountFalse ListEmailsCount = "false"
+)
+
+// AllValues returns all ListEmailsCount values.
+func (ListEmailsCount) AllValues() []ListEmailsCount {
+	return []ListEmailsCount{
+		ListEmailsCountTrue,
+		ListEmailsCountFalse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListEmailsCount) MarshalText() ([]byte, error) {
+	switch s {
+	case ListEmailsCountTrue:
+		return []byte(s), nil
+	case ListEmailsCountFalse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListEmailsCount) UnmarshalText(data []byte) error {
+	switch ListEmailsCount(data) {
+	case ListEmailsCountTrue:
+		*s = ListEmailsCountTrue
+		return nil
+	case ListEmailsCountFalse:
+		*s = ListEmailsCountFalse
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -81938,6 +82524,51 @@ func (o NilChangeInboundMessageImported) Or(d ChangeInboundMessageImported) Chan
 	return d
 }
 
+// NewNilChangeOutboundMessageImported returns new NilChangeOutboundMessageImported with value set to v.
+func NewNilChangeOutboundMessageImported(v ChangeOutboundMessageImported) NilChangeOutboundMessageImported {
+	return NilChangeOutboundMessageImported{
+		Value: v,
+	}
+}
+
+// NilChangeOutboundMessageImported is nullable ChangeOutboundMessageImported.
+type NilChangeOutboundMessageImported struct {
+	Value ChangeOutboundMessageImported
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilChangeOutboundMessageImported) SetTo(v ChangeOutboundMessageImported) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilChangeOutboundMessageImported) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilChangeOutboundMessageImported) SetToNull() {
+	o.Null = true
+	var v ChangeOutboundMessageImported
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilChangeOutboundMessageImported) Get() (v ChangeOutboundMessageImported, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilChangeOutboundMessageImported) Or(d ChangeOutboundMessageImported) ChangeOutboundMessageImported {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilChangeReason returns new NilChangeReason with value set to v.
 func NewNilChangeReason(v ChangeReason) NilChangeReason {
 	return NilChangeReason{
@@ -84826,6 +85457,96 @@ func (o NilSemanticSearchCoverage) Or(d SemanticSearchCoverage) SemanticSearchCo
 	return d
 }
 
+// NewNilSentEmailDetailImported returns new NilSentEmailDetailImported with value set to v.
+func NewNilSentEmailDetailImported(v SentEmailDetailImported) NilSentEmailDetailImported {
+	return NilSentEmailDetailImported{
+		Value: v,
+	}
+}
+
+// NilSentEmailDetailImported is nullable SentEmailDetailImported.
+type NilSentEmailDetailImported struct {
+	Value SentEmailDetailImported
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilSentEmailDetailImported) SetTo(v SentEmailDetailImported) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilSentEmailDetailImported) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilSentEmailDetailImported) SetToNull() {
+	o.Null = true
+	var v SentEmailDetailImported
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilSentEmailDetailImported) Get() (v SentEmailDetailImported, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilSentEmailDetailImported) Or(d SentEmailDetailImported) SentEmailDetailImported {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilSentEmailSummaryImported returns new NilSentEmailSummaryImported with value set to v.
+func NewNilSentEmailSummaryImported(v SentEmailSummaryImported) NilSentEmailSummaryImported {
+	return NilSentEmailSummaryImported{
+		Value: v,
+	}
+}
+
+// NilSentEmailSummaryImported is nullable SentEmailSummaryImported.
+type NilSentEmailSummaryImported struct {
+	Value SentEmailSummaryImported
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilSentEmailSummaryImported) SetTo(v SentEmailSummaryImported) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilSentEmailSummaryImported) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilSentEmailSummaryImported) SetToNull() {
+	o.Null = true
+	var v SentEmailSummaryImported
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilSentEmailSummaryImported) Get() (v SentEmailSummaryImported, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilSentEmailSummaryImported) Or(d SentEmailSummaryImported) SentEmailSummaryImported {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilSetMailboxAccessResultEntriesItemMailboxKind returns new NilSetMailboxAccessResultEntriesItemMailboxKind with value set to v.
 func NewNilSetMailboxAccessResultEntriesItemMailboxKind(v SetMailboxAccessResultEntriesItemMailboxKind) NilSetMailboxAccessResultEntriesItemMailboxKind {
 	return NilSetMailboxAccessResultEntriesItemMailboxKind{
@@ -85186,6 +85907,51 @@ func (o NilTestResultDelivery) Or(d TestResultDelivery) TestResultDelivery {
 	return d
 }
 
+// NewNilThreadMessageImported returns new NilThreadMessageImported with value set to v.
+func NewNilThreadMessageImported(v ThreadMessageImported) NilThreadMessageImported {
+	return NilThreadMessageImported{
+		Value: v,
+	}
+}
+
+// NilThreadMessageImported is nullable ThreadMessageImported.
+type NilThreadMessageImported struct {
+	Value ThreadMessageImported
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilThreadMessageImported) SetTo(v ThreadMessageImported) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilThreadMessageImported) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilThreadMessageImported) SetToNull() {
+	o.Null = true
+	var v ThreadMessageImported
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilThreadMessageImported) Get() (v ThreadMessageImported, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilThreadMessageImported) Or(d ThreadMessageImported) ThreadMessageImported {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilURI returns new NilURI with value set to v.
 func NewNilURI(v url.URL) NilURI {
 	return NilURI{
@@ -85500,6 +86266,98 @@ func (o OptAddDefaultNetworkMemberOKCacheControl) Get() (v AddDefaultNetworkMemb
 
 // Or returns value if set, or given parameter if does not.
 func (o OptAddDefaultNetworkMemberOKCacheControl) Or(d AddDefaultNetworkMemberOKCacheControl) AddDefaultNetworkMemberOKCacheControl {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptAddDefaultNetworkMemberOKDataPresenceBasis returns new OptAddDefaultNetworkMemberOKDataPresenceBasis with value set to v.
+func NewOptAddDefaultNetworkMemberOKDataPresenceBasis(v AddDefaultNetworkMemberOKDataPresenceBasis) OptAddDefaultNetworkMemberOKDataPresenceBasis {
+	return OptAddDefaultNetworkMemberOKDataPresenceBasis{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptAddDefaultNetworkMemberOKDataPresenceBasis is optional AddDefaultNetworkMemberOKDataPresenceBasis.
+type OptAddDefaultNetworkMemberOKDataPresenceBasis struct {
+	Value AddDefaultNetworkMemberOKDataPresenceBasis
+	Set   bool
+}
+
+// IsSet returns true if OptAddDefaultNetworkMemberOKDataPresenceBasis was set.
+func (o OptAddDefaultNetworkMemberOKDataPresenceBasis) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptAddDefaultNetworkMemberOKDataPresenceBasis) Reset() {
+	var v AddDefaultNetworkMemberOKDataPresenceBasis
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptAddDefaultNetworkMemberOKDataPresenceBasis) SetTo(v AddDefaultNetworkMemberOKDataPresenceBasis) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptAddDefaultNetworkMemberOKDataPresenceBasis) Get() (v AddDefaultNetworkMemberOKDataPresenceBasis, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptAddDefaultNetworkMemberOKDataPresenceBasis) Or(d AddDefaultNetworkMemberOKDataPresenceBasis) AddDefaultNetworkMemberOKDataPresenceBasis {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptAgentConnectionPresenceBasis returns new OptAgentConnectionPresenceBasis with value set to v.
+func NewOptAgentConnectionPresenceBasis(v AgentConnectionPresenceBasis) OptAgentConnectionPresenceBasis {
+	return OptAgentConnectionPresenceBasis{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptAgentConnectionPresenceBasis is optional AgentConnectionPresenceBasis.
+type OptAgentConnectionPresenceBasis struct {
+	Value AgentConnectionPresenceBasis
+	Set   bool
+}
+
+// IsSet returns true if OptAgentConnectionPresenceBasis was set.
+func (o OptAgentConnectionPresenceBasis) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptAgentConnectionPresenceBasis) Reset() {
+	var v AgentConnectionPresenceBasis
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptAgentConnectionPresenceBasis) SetTo(v AgentConnectionPresenceBasis) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptAgentConnectionPresenceBasis) Get() (v AgentConnectionPresenceBasis, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptAgentConnectionPresenceBasis) Or(d AgentConnectionPresenceBasis) AgentConnectionPresenceBasis {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -92406,6 +93264,52 @@ func (o OptGetDefaultNetworkAgentOKCacheControl) Or(d GetDefaultNetworkAgentOKCa
 	return d
 }
 
+// NewOptGetDefaultNetworkAgentOKDataPresenceBasis returns new OptGetDefaultNetworkAgentOKDataPresenceBasis with value set to v.
+func NewOptGetDefaultNetworkAgentOKDataPresenceBasis(v GetDefaultNetworkAgentOKDataPresenceBasis) OptGetDefaultNetworkAgentOKDataPresenceBasis {
+	return OptGetDefaultNetworkAgentOKDataPresenceBasis{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptGetDefaultNetworkAgentOKDataPresenceBasis is optional GetDefaultNetworkAgentOKDataPresenceBasis.
+type OptGetDefaultNetworkAgentOKDataPresenceBasis struct {
+	Value GetDefaultNetworkAgentOKDataPresenceBasis
+	Set   bool
+}
+
+// IsSet returns true if OptGetDefaultNetworkAgentOKDataPresenceBasis was set.
+func (o OptGetDefaultNetworkAgentOKDataPresenceBasis) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptGetDefaultNetworkAgentOKDataPresenceBasis) Reset() {
+	var v GetDefaultNetworkAgentOKDataPresenceBasis
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptGetDefaultNetworkAgentOKDataPresenceBasis) SetTo(v GetDefaultNetworkAgentOKDataPresenceBasis) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptGetDefaultNetworkAgentOKDataPresenceBasis) Get() (v GetDefaultNetworkAgentOKDataPresenceBasis, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptGetDefaultNetworkAgentOKDataPresenceBasis) Or(d GetDefaultNetworkAgentOKDataPresenceBasis) GetDefaultNetworkAgentOKDataPresenceBasis {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptGetEmailRuleIncludeSQL returns new OptGetEmailRuleIncludeSQL with value set to v.
 func NewOptGetEmailRuleIncludeSQL(v GetEmailRuleIncludeSQL) OptGetEmailRuleIncludeSQL {
 	return OptGetEmailRuleIncludeSQL{
@@ -93228,52 +94132,6 @@ func (o OptListActivityObjectsRelation) Get() (v ListActivityObjectsRelation, ok
 
 // Or returns value if set, or given parameter if does not.
 func (o OptListActivityObjectsRelation) Or(d ListActivityObjectsRelation) ListActivityObjectsRelation {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptListActivityObjectsResultItemsItemReceiversChange returns new OptListActivityObjectsResultItemsItemReceiversChange with value set to v.
-func NewOptListActivityObjectsResultItemsItemReceiversChange(v ListActivityObjectsResultItemsItemReceiversChange) OptListActivityObjectsResultItemsItemReceiversChange {
-	return OptListActivityObjectsResultItemsItemReceiversChange{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptListActivityObjectsResultItemsItemReceiversChange is optional ListActivityObjectsResultItemsItemReceiversChange.
-type OptListActivityObjectsResultItemsItemReceiversChange struct {
-	Value ListActivityObjectsResultItemsItemReceiversChange
-	Set   bool
-}
-
-// IsSet returns true if OptListActivityObjectsResultItemsItemReceiversChange was set.
-func (o OptListActivityObjectsResultItemsItemReceiversChange) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptListActivityObjectsResultItemsItemReceiversChange) Reset() {
-	var v ListActivityObjectsResultItemsItemReceiversChange
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptListActivityObjectsResultItemsItemReceiversChange) SetTo(v ListActivityObjectsResultItemsItemReceiversChange) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptListActivityObjectsResultItemsItemReceiversChange) Get() (v ListActivityObjectsResultItemsItemReceiversChange, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptListActivityObjectsResultItemsItemReceiversChange) Or(d ListActivityObjectsResultItemsItemReceiversChange) ListActivityObjectsResultItemsItemReceiversChange {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -94154,6 +95012,52 @@ func (o OptListDefaultNetworkAgentsOKCacheControl) Or(d ListDefaultNetworkAgents
 	return d
 }
 
+// NewOptListDefaultNetworkAgentsOKDataItemPresenceBasis returns new OptListDefaultNetworkAgentsOKDataItemPresenceBasis with value set to v.
+func NewOptListDefaultNetworkAgentsOKDataItemPresenceBasis(v ListDefaultNetworkAgentsOKDataItemPresenceBasis) OptListDefaultNetworkAgentsOKDataItemPresenceBasis {
+	return OptListDefaultNetworkAgentsOKDataItemPresenceBasis{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListDefaultNetworkAgentsOKDataItemPresenceBasis is optional ListDefaultNetworkAgentsOKDataItemPresenceBasis.
+type OptListDefaultNetworkAgentsOKDataItemPresenceBasis struct {
+	Value ListDefaultNetworkAgentsOKDataItemPresenceBasis
+	Set   bool
+}
+
+// IsSet returns true if OptListDefaultNetworkAgentsOKDataItemPresenceBasis was set.
+func (o OptListDefaultNetworkAgentsOKDataItemPresenceBasis) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListDefaultNetworkAgentsOKDataItemPresenceBasis) Reset() {
+	var v ListDefaultNetworkAgentsOKDataItemPresenceBasis
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListDefaultNetworkAgentsOKDataItemPresenceBasis) SetTo(v ListDefaultNetworkAgentsOKDataItemPresenceBasis) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListDefaultNetworkAgentsOKDataItemPresenceBasis) Get() (v ListDefaultNetworkAgentsOKDataItemPresenceBasis, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListDefaultNetworkAgentsOKDataItemPresenceBasis) Or(d ListDefaultNetworkAgentsOKDataItemPresenceBasis) ListDefaultNetworkAgentsOKDataItemPresenceBasis {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptListDefaultNetworkMembersOKCacheControl returns new OptListDefaultNetworkMembersOKCacheControl with value set to v.
 func NewOptListDefaultNetworkMembersOKCacheControl(v ListDefaultNetworkMembersOKCacheControl) OptListDefaultNetworkMembersOKCacheControl {
 	return OptListDefaultNetworkMembersOKCacheControl{
@@ -94194,6 +95098,52 @@ func (o OptListDefaultNetworkMembersOKCacheControl) Get() (v ListDefaultNetworkM
 
 // Or returns value if set, or given parameter if does not.
 func (o OptListDefaultNetworkMembersOKCacheControl) Or(d ListDefaultNetworkMembersOKCacheControl) ListDefaultNetworkMembersOKCacheControl {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListDefaultNetworkMembersOKDataItemPresenceBasis returns new OptListDefaultNetworkMembersOKDataItemPresenceBasis with value set to v.
+func NewOptListDefaultNetworkMembersOKDataItemPresenceBasis(v ListDefaultNetworkMembersOKDataItemPresenceBasis) OptListDefaultNetworkMembersOKDataItemPresenceBasis {
+	return OptListDefaultNetworkMembersOKDataItemPresenceBasis{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListDefaultNetworkMembersOKDataItemPresenceBasis is optional ListDefaultNetworkMembersOKDataItemPresenceBasis.
+type OptListDefaultNetworkMembersOKDataItemPresenceBasis struct {
+	Value ListDefaultNetworkMembersOKDataItemPresenceBasis
+	Set   bool
+}
+
+// IsSet returns true if OptListDefaultNetworkMembersOKDataItemPresenceBasis was set.
+func (o OptListDefaultNetworkMembersOKDataItemPresenceBasis) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListDefaultNetworkMembersOKDataItemPresenceBasis) Reset() {
+	var v ListDefaultNetworkMembersOKDataItemPresenceBasis
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListDefaultNetworkMembersOKDataItemPresenceBasis) SetTo(v ListDefaultNetworkMembersOKDataItemPresenceBasis) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListDefaultNetworkMembersOKDataItemPresenceBasis) Get() (v ListDefaultNetworkMembersOKDataItemPresenceBasis, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListDefaultNetworkMembersOKDataItemPresenceBasis) Or(d ListDefaultNetworkMembersOKDataItemPresenceBasis) ListDefaultNetworkMembersOKDataItemPresenceBasis {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -94886,6 +95836,52 @@ func (o OptListEmailsContentDiscarded) Get() (v ListEmailsContentDiscarded, ok b
 
 // Or returns value if set, or given parameter if does not.
 func (o OptListEmailsContentDiscarded) Or(d ListEmailsContentDiscarded) ListEmailsContentDiscarded {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListEmailsCount returns new OptListEmailsCount with value set to v.
+func NewOptListEmailsCount(v ListEmailsCount) OptListEmailsCount {
+	return OptListEmailsCount{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListEmailsCount is optional ListEmailsCount.
+type OptListEmailsCount struct {
+	Value ListEmailsCount
+	Set   bool
+}
+
+// IsSet returns true if OptListEmailsCount was set.
+func (o OptListEmailsCount) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListEmailsCount) Reset() {
+	var v ListEmailsCount
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListEmailsCount) SetTo(v ListEmailsCount) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListEmailsCount) Get() (v ListEmailsCount, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListEmailsCount) Or(d ListEmailsCount) ListEmailsCount {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -107969,6 +108965,52 @@ func (o OptUpdateDefaultNetworkMemberOKCacheControl) Get() (v UpdateDefaultNetwo
 
 // Or returns value if set, or given parameter if does not.
 func (o OptUpdateDefaultNetworkMemberOKCacheControl) Or(d UpdateDefaultNetworkMemberOKCacheControl) UpdateDefaultNetworkMemberOKCacheControl {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptUpdateDefaultNetworkMemberOKDataPresenceBasis returns new OptUpdateDefaultNetworkMemberOKDataPresenceBasis with value set to v.
+func NewOptUpdateDefaultNetworkMemberOKDataPresenceBasis(v UpdateDefaultNetworkMemberOKDataPresenceBasis) OptUpdateDefaultNetworkMemberOKDataPresenceBasis {
+	return OptUpdateDefaultNetworkMemberOKDataPresenceBasis{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptUpdateDefaultNetworkMemberOKDataPresenceBasis is optional UpdateDefaultNetworkMemberOKDataPresenceBasis.
+type OptUpdateDefaultNetworkMemberOKDataPresenceBasis struct {
+	Value UpdateDefaultNetworkMemberOKDataPresenceBasis
+	Set   bool
+}
+
+// IsSet returns true if OptUpdateDefaultNetworkMemberOKDataPresenceBasis was set.
+func (o OptUpdateDefaultNetworkMemberOKDataPresenceBasis) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptUpdateDefaultNetworkMemberOKDataPresenceBasis) Reset() {
+	var v UpdateDefaultNetworkMemberOKDataPresenceBasis
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptUpdateDefaultNetworkMemberOKDataPresenceBasis) SetTo(v UpdateDefaultNetworkMemberOKDataPresenceBasis) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptUpdateDefaultNetworkMemberOKDataPresenceBasis) Get() (v UpdateDefaultNetworkMemberOKDataPresenceBasis, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptUpdateDefaultNetworkMemberOKDataPresenceBasis) Or(d UpdateDefaultNetworkMemberOKDataPresenceBasis) UpdateDefaultNetworkMemberOKDataPresenceBasis {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -126989,6 +128031,9 @@ type SentEmailDetail struct {
 	// The `<protocol>/<version>` the hint was decided from when `interaction_hint` is `status` or `card`;
 	//  null otherwise.
 	InteractionKind NilString `json:"interaction_kind"`
+	// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+	// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
+	Imported NilSentEmailDetailImported `json:"imported"`
 	// A plain-text preview of `body_text` (never `body_html`), computed once when the message is stored:
 	// quoted replies (an "On ... wrote:" line, an "Original Message" separator, a From/Sent header block,
 	//  `>` lines) and a `-- ` signature are cut off, whitespace is collapsed to single spaces, and the
@@ -127261,6 +128306,11 @@ func (s *SentEmailDetail) GetInteractionKind() NilString {
 	return s.InteractionKind
 }
 
+// GetImported returns the value of Imported.
+func (s *SentEmailDetail) GetImported() NilSentEmailDetailImported {
+	return s.Imported
+}
+
 // GetSnippet returns the value of Snippet.
 func (s *SentEmailDetail) GetSnippet() NilString {
 	return s.Snippet
@@ -127529,6 +128579,11 @@ func (s *SentEmailDetail) SetInteractionHint(val SentEmailDetailInteractionHint)
 // SetInteractionKind sets the value of InteractionKind.
 func (s *SentEmailDetail) SetInteractionKind(val NilString) {
 	s.InteractionKind = val
+}
+
+// SetImported sets the value of Imported.
+func (s *SentEmailDetail) SetImported(val NilSentEmailDetailImported) {
+	s.Imported = val
 }
 
 // SetSnippet sets the value of Snippet.
@@ -127810,6 +128865,185 @@ func (s *SentEmailDetailHold) SetReason(val string) {
 // SetSince sets the value of Since.
 func (s *SentEmailDetailHold) SetSince(val NilDateTime) {
 	s.Since = val
+}
+
+// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
+type SentEmailDetailImported struct {
+	// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+	// file.
+	From SentEmailDetailImportedFrom `json:"from"`
+	// How Primitive acquired the historical message.
+	Method       SentEmailDetailImportedMethod       `json:"method"`
+	Verification SentEmailDetailImportedVerification `json:"verification"`
+	// When Primitive acquired this historical message.
+	At time.Time `json:"at"`
+}
+
+// GetFrom returns the value of From.
+func (s *SentEmailDetailImported) GetFrom() SentEmailDetailImportedFrom {
+	return s.From
+}
+
+// GetMethod returns the value of Method.
+func (s *SentEmailDetailImported) GetMethod() SentEmailDetailImportedMethod {
+	return s.Method
+}
+
+// GetVerification returns the value of Verification.
+func (s *SentEmailDetailImported) GetVerification() SentEmailDetailImportedVerification {
+	return s.Verification
+}
+
+// GetAt returns the value of At.
+func (s *SentEmailDetailImported) GetAt() time.Time {
+	return s.At
+}
+
+// SetFrom sets the value of From.
+func (s *SentEmailDetailImported) SetFrom(val SentEmailDetailImportedFrom) {
+	s.From = val
+}
+
+// SetMethod sets the value of Method.
+func (s *SentEmailDetailImported) SetMethod(val SentEmailDetailImportedMethod) {
+	s.Method = val
+}
+
+// SetVerification sets the value of Verification.
+func (s *SentEmailDetailImported) SetVerification(val SentEmailDetailImportedVerification) {
+	s.Verification = val
+}
+
+// SetAt sets the value of At.
+func (s *SentEmailDetailImported) SetAt(val time.Time) {
+	s.At = val
+}
+
+// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+// file.
+type SentEmailDetailImportedFrom string
+
+const (
+	SentEmailDetailImportedFromGoogleWorkspace SentEmailDetailImportedFrom = "google_workspace"
+	SentEmailDetailImportedFromUnknown         SentEmailDetailImportedFrom = "unknown"
+)
+
+// AllValues returns all SentEmailDetailImportedFrom values.
+func (SentEmailDetailImportedFrom) AllValues() []SentEmailDetailImportedFrom {
+	return []SentEmailDetailImportedFrom{
+		SentEmailDetailImportedFromGoogleWorkspace,
+		SentEmailDetailImportedFromUnknown,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SentEmailDetailImportedFrom) MarshalText() ([]byte, error) {
+	switch s {
+	case SentEmailDetailImportedFromGoogleWorkspace:
+		return []byte(s), nil
+	case SentEmailDetailImportedFromUnknown:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SentEmailDetailImportedFrom) UnmarshalText(data []byte) error {
+	switch SentEmailDetailImportedFrom(data) {
+	case SentEmailDetailImportedFromGoogleWorkspace:
+		*s = SentEmailDetailImportedFromGoogleWorkspace
+		return nil
+	case SentEmailDetailImportedFromUnknown:
+		*s = SentEmailDetailImportedFromUnknown
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// How Primitive acquired the historical message.
+type SentEmailDetailImportedMethod string
+
+const (
+	SentEmailDetailImportedMethodPrimitiveDirect SentEmailDetailImportedMethod = "primitive_direct"
+	SentEmailDetailImportedMethodAPIUpload       SentEmailDetailImportedMethod = "api_upload"
+)
+
+// AllValues returns all SentEmailDetailImportedMethod values.
+func (SentEmailDetailImportedMethod) AllValues() []SentEmailDetailImportedMethod {
+	return []SentEmailDetailImportedMethod{
+		SentEmailDetailImportedMethodPrimitiveDirect,
+		SentEmailDetailImportedMethodAPIUpload,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SentEmailDetailImportedMethod) MarshalText() ([]byte, error) {
+	switch s {
+	case SentEmailDetailImportedMethodPrimitiveDirect:
+		return []byte(s), nil
+	case SentEmailDetailImportedMethodAPIUpload:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SentEmailDetailImportedMethod) UnmarshalText(data []byte) error {
+	switch SentEmailDetailImportedMethod(data) {
+	case SentEmailDetailImportedMethodPrimitiveDirect:
+		*s = SentEmailDetailImportedMethodPrimitiveDirect
+		return nil
+	case SentEmailDetailImportedMethodAPIUpload:
+		*s = SentEmailDetailImportedMethodAPIUpload
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type SentEmailDetailImportedVerification string
+
+const (
+	SentEmailDetailImportedVerificationProviderFetched SentEmailDetailImportedVerification = "provider_fetched"
+	SentEmailDetailImportedVerificationUnverified      SentEmailDetailImportedVerification = "unverified"
+)
+
+// AllValues returns all SentEmailDetailImportedVerification values.
+func (SentEmailDetailImportedVerification) AllValues() []SentEmailDetailImportedVerification {
+	return []SentEmailDetailImportedVerification{
+		SentEmailDetailImportedVerificationProviderFetched,
+		SentEmailDetailImportedVerificationUnverified,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SentEmailDetailImportedVerification) MarshalText() ([]byte, error) {
+	switch s {
+	case SentEmailDetailImportedVerificationProviderFetched:
+		return []byte(s), nil
+	case SentEmailDetailImportedVerificationUnverified:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SentEmailDetailImportedVerification) UnmarshalText(data []byte) error {
+	switch SentEmailDetailImportedVerification(data) {
+	case SentEmailDetailImportedVerificationProviderFetched:
+		*s = SentEmailDetailImportedVerificationProviderFetched
+		return nil
+	case SentEmailDetailImportedVerificationUnverified:
+		*s = SentEmailDetailImportedVerificationUnverified
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // How to place this send in a timeline without downloading it, decided when it was sent from the
@@ -128313,6 +129547,9 @@ type SentEmailSummary struct {
 	// The `<protocol>/<version>` the hint was decided from when `interaction_hint` is `status` or `card`;
 	//  null otherwise.
 	InteractionKind NilString `json:"interaction_kind"`
+	// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+	// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
+	Imported NilSentEmailSummaryImported `json:"imported"`
 	// A plain-text preview of `body_text` (never `body_html`), computed once when the message is stored:
 	// quoted replies (an "On ... wrote:" line, an "Original Message" separator, a From/Sent header block,
 	//  `>` lines) and a `-- ` signature are cut off, whitespace is collapsed to single spaces, and the
@@ -128550,6 +129787,11 @@ func (s *SentEmailSummary) GetInteractionKind() NilString {
 	return s.InteractionKind
 }
 
+// GetImported returns the value of Imported.
+func (s *SentEmailSummary) GetImported() NilSentEmailSummaryImported {
+	return s.Imported
+}
+
 // GetSnippet returns the value of Snippet.
 func (s *SentEmailSummary) GetSnippet() NilString {
 	return s.Snippet
@@ -128778,6 +130020,11 @@ func (s *SentEmailSummary) SetInteractionHint(val SentEmailSummaryInteractionHin
 // SetInteractionKind sets the value of InteractionKind.
 func (s *SentEmailSummary) SetInteractionKind(val NilString) {
 	s.InteractionKind = val
+}
+
+// SetImported sets the value of Imported.
+func (s *SentEmailSummary) SetImported(val NilSentEmailSummaryImported) {
+	s.Imported = val
 }
 
 // SetSnippet sets the value of Snippet.
@@ -129012,6 +130259,185 @@ func (s *SentEmailSummaryHold) SetReason(val string) {
 // SetSince sets the value of Since.
 func (s *SentEmailSummaryHold) SetSince(val NilDateTime) {
 	s.Since = val
+}
+
+// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
+type SentEmailSummaryImported struct {
+	// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+	// file.
+	From SentEmailSummaryImportedFrom `json:"from"`
+	// How Primitive acquired the historical message.
+	Method       SentEmailSummaryImportedMethod       `json:"method"`
+	Verification SentEmailSummaryImportedVerification `json:"verification"`
+	// When Primitive acquired this historical message.
+	At time.Time `json:"at"`
+}
+
+// GetFrom returns the value of From.
+func (s *SentEmailSummaryImported) GetFrom() SentEmailSummaryImportedFrom {
+	return s.From
+}
+
+// GetMethod returns the value of Method.
+func (s *SentEmailSummaryImported) GetMethod() SentEmailSummaryImportedMethod {
+	return s.Method
+}
+
+// GetVerification returns the value of Verification.
+func (s *SentEmailSummaryImported) GetVerification() SentEmailSummaryImportedVerification {
+	return s.Verification
+}
+
+// GetAt returns the value of At.
+func (s *SentEmailSummaryImported) GetAt() time.Time {
+	return s.At
+}
+
+// SetFrom sets the value of From.
+func (s *SentEmailSummaryImported) SetFrom(val SentEmailSummaryImportedFrom) {
+	s.From = val
+}
+
+// SetMethod sets the value of Method.
+func (s *SentEmailSummaryImported) SetMethod(val SentEmailSummaryImportedMethod) {
+	s.Method = val
+}
+
+// SetVerification sets the value of Verification.
+func (s *SentEmailSummaryImported) SetVerification(val SentEmailSummaryImportedVerification) {
+	s.Verification = val
+}
+
+// SetAt sets the value of At.
+func (s *SentEmailSummaryImported) SetAt(val time.Time) {
+	s.At = val
+}
+
+// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+// file.
+type SentEmailSummaryImportedFrom string
+
+const (
+	SentEmailSummaryImportedFromGoogleWorkspace SentEmailSummaryImportedFrom = "google_workspace"
+	SentEmailSummaryImportedFromUnknown         SentEmailSummaryImportedFrom = "unknown"
+)
+
+// AllValues returns all SentEmailSummaryImportedFrom values.
+func (SentEmailSummaryImportedFrom) AllValues() []SentEmailSummaryImportedFrom {
+	return []SentEmailSummaryImportedFrom{
+		SentEmailSummaryImportedFromGoogleWorkspace,
+		SentEmailSummaryImportedFromUnknown,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SentEmailSummaryImportedFrom) MarshalText() ([]byte, error) {
+	switch s {
+	case SentEmailSummaryImportedFromGoogleWorkspace:
+		return []byte(s), nil
+	case SentEmailSummaryImportedFromUnknown:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SentEmailSummaryImportedFrom) UnmarshalText(data []byte) error {
+	switch SentEmailSummaryImportedFrom(data) {
+	case SentEmailSummaryImportedFromGoogleWorkspace:
+		*s = SentEmailSummaryImportedFromGoogleWorkspace
+		return nil
+	case SentEmailSummaryImportedFromUnknown:
+		*s = SentEmailSummaryImportedFromUnknown
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// How Primitive acquired the historical message.
+type SentEmailSummaryImportedMethod string
+
+const (
+	SentEmailSummaryImportedMethodPrimitiveDirect SentEmailSummaryImportedMethod = "primitive_direct"
+	SentEmailSummaryImportedMethodAPIUpload       SentEmailSummaryImportedMethod = "api_upload"
+)
+
+// AllValues returns all SentEmailSummaryImportedMethod values.
+func (SentEmailSummaryImportedMethod) AllValues() []SentEmailSummaryImportedMethod {
+	return []SentEmailSummaryImportedMethod{
+		SentEmailSummaryImportedMethodPrimitiveDirect,
+		SentEmailSummaryImportedMethodAPIUpload,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SentEmailSummaryImportedMethod) MarshalText() ([]byte, error) {
+	switch s {
+	case SentEmailSummaryImportedMethodPrimitiveDirect:
+		return []byte(s), nil
+	case SentEmailSummaryImportedMethodAPIUpload:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SentEmailSummaryImportedMethod) UnmarshalText(data []byte) error {
+	switch SentEmailSummaryImportedMethod(data) {
+	case SentEmailSummaryImportedMethodPrimitiveDirect:
+		*s = SentEmailSummaryImportedMethodPrimitiveDirect
+		return nil
+	case SentEmailSummaryImportedMethodAPIUpload:
+		*s = SentEmailSummaryImportedMethodAPIUpload
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type SentEmailSummaryImportedVerification string
+
+const (
+	SentEmailSummaryImportedVerificationProviderFetched SentEmailSummaryImportedVerification = "provider_fetched"
+	SentEmailSummaryImportedVerificationUnverified      SentEmailSummaryImportedVerification = "unverified"
+)
+
+// AllValues returns all SentEmailSummaryImportedVerification values.
+func (SentEmailSummaryImportedVerification) AllValues() []SentEmailSummaryImportedVerification {
+	return []SentEmailSummaryImportedVerification{
+		SentEmailSummaryImportedVerificationProviderFetched,
+		SentEmailSummaryImportedVerificationUnverified,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SentEmailSummaryImportedVerification) MarshalText() ([]byte, error) {
+	switch s {
+	case SentEmailSummaryImportedVerificationProviderFetched:
+		return []byte(s), nil
+	case SentEmailSummaryImportedVerificationUnverified:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SentEmailSummaryImportedVerification) UnmarshalText(data []byte) error {
+	switch SentEmailSummaryImportedVerification(data) {
+	case SentEmailSummaryImportedVerificationProviderFetched:
+		*s = SentEmailSummaryImportedVerificationProviderFetched
+		return nil
+	case SentEmailSummaryImportedVerificationUnverified:
+		*s = SentEmailSummaryImportedVerificationUnverified
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // How to place this send in a timeline without downloading it, decided when it was sent from the
@@ -139735,6 +141161,9 @@ type ThreadMessage struct {
 	// `card` or `none`. Not declared as a closed enum so that a value added later does not fail decoding;
 	//  treat an unknown value as `none`. Absent on inbound messages. Older servers omit it.
 	InteractionHint OptString `json:"interaction_hint"`
+	// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+	// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
+	Imported NilThreadMessageImported `json:"imported"`
 	// Every inbound copy of this message you can read (a message to several of the org's mailboxes is
 	// stored once per mailbox), in arrival order. At most 50; past that, the ones listed are your own
 	// mailboxes' copies first, then the earliest. The entry's `id` is one of them unless the entry is
@@ -139807,6 +141236,11 @@ func (s *ThreadMessage) GetFyi() OptBool {
 // GetInteractionHint returns the value of InteractionHint.
 func (s *ThreadMessage) GetInteractionHint() OptString {
 	return s.InteractionHint
+}
+
+// GetImported returns the value of Imported.
+func (s *ThreadMessage) GetImported() NilThreadMessageImported {
+	return s.Imported
 }
 
 // GetCopies returns the value of Copies.
@@ -139882,6 +141316,11 @@ func (s *ThreadMessage) SetFyi(val OptBool) {
 // SetInteractionHint sets the value of InteractionHint.
 func (s *ThreadMessage) SetInteractionHint(val OptString) {
 	s.InteractionHint = val
+}
+
+// SetImported sets the value of Imported.
+func (s *ThreadMessage) SetImported(val NilThreadMessageImported) {
+	s.Imported = val
 }
 
 // SetCopies sets the value of Copies.
@@ -139976,6 +141415,185 @@ func (s *ThreadMessageDirection) UnmarshalText(data []byte) error {
 		return nil
 	case ThreadMessageDirectionOutbound:
 		*s = ThreadMessageDirectionOutbound
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
+// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
+type ThreadMessageImported struct {
+	// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+	// file.
+	From ThreadMessageImportedFrom `json:"from"`
+	// How Primitive acquired the historical message.
+	Method       ThreadMessageImportedMethod       `json:"method"`
+	Verification ThreadMessageImportedVerification `json:"verification"`
+	// When Primitive acquired this historical message.
+	At time.Time `json:"at"`
+}
+
+// GetFrom returns the value of From.
+func (s *ThreadMessageImported) GetFrom() ThreadMessageImportedFrom {
+	return s.From
+}
+
+// GetMethod returns the value of Method.
+func (s *ThreadMessageImported) GetMethod() ThreadMessageImportedMethod {
+	return s.Method
+}
+
+// GetVerification returns the value of Verification.
+func (s *ThreadMessageImported) GetVerification() ThreadMessageImportedVerification {
+	return s.Verification
+}
+
+// GetAt returns the value of At.
+func (s *ThreadMessageImported) GetAt() time.Time {
+	return s.At
+}
+
+// SetFrom sets the value of From.
+func (s *ThreadMessageImported) SetFrom(val ThreadMessageImportedFrom) {
+	s.From = val
+}
+
+// SetMethod sets the value of Method.
+func (s *ThreadMessageImported) SetMethod(val ThreadMessageImportedMethod) {
+	s.Method = val
+}
+
+// SetVerification sets the value of Verification.
+func (s *ThreadMessageImported) SetVerification(val ThreadMessageImportedVerification) {
+	s.Verification = val
+}
+
+// SetAt sets the value of At.
+func (s *ThreadMessageImported) SetAt(val time.Time) {
+	s.At = val
+}
+
+// Original mail provider. Unknown when Primitive has not established the provider of an uploaded
+// file.
+type ThreadMessageImportedFrom string
+
+const (
+	ThreadMessageImportedFromGoogleWorkspace ThreadMessageImportedFrom = "google_workspace"
+	ThreadMessageImportedFromUnknown         ThreadMessageImportedFrom = "unknown"
+)
+
+// AllValues returns all ThreadMessageImportedFrom values.
+func (ThreadMessageImportedFrom) AllValues() []ThreadMessageImportedFrom {
+	return []ThreadMessageImportedFrom{
+		ThreadMessageImportedFromGoogleWorkspace,
+		ThreadMessageImportedFromUnknown,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ThreadMessageImportedFrom) MarshalText() ([]byte, error) {
+	switch s {
+	case ThreadMessageImportedFromGoogleWorkspace:
+		return []byte(s), nil
+	case ThreadMessageImportedFromUnknown:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ThreadMessageImportedFrom) UnmarshalText(data []byte) error {
+	switch ThreadMessageImportedFrom(data) {
+	case ThreadMessageImportedFromGoogleWorkspace:
+		*s = ThreadMessageImportedFromGoogleWorkspace
+		return nil
+	case ThreadMessageImportedFromUnknown:
+		*s = ThreadMessageImportedFromUnknown
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// How Primitive acquired the historical message.
+type ThreadMessageImportedMethod string
+
+const (
+	ThreadMessageImportedMethodPrimitiveDirect ThreadMessageImportedMethod = "primitive_direct"
+	ThreadMessageImportedMethodAPIUpload       ThreadMessageImportedMethod = "api_upload"
+)
+
+// AllValues returns all ThreadMessageImportedMethod values.
+func (ThreadMessageImportedMethod) AllValues() []ThreadMessageImportedMethod {
+	return []ThreadMessageImportedMethod{
+		ThreadMessageImportedMethodPrimitiveDirect,
+		ThreadMessageImportedMethodAPIUpload,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ThreadMessageImportedMethod) MarshalText() ([]byte, error) {
+	switch s {
+	case ThreadMessageImportedMethodPrimitiveDirect:
+		return []byte(s), nil
+	case ThreadMessageImportedMethodAPIUpload:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ThreadMessageImportedMethod) UnmarshalText(data []byte) error {
+	switch ThreadMessageImportedMethod(data) {
+	case ThreadMessageImportedMethodPrimitiveDirect:
+		*s = ThreadMessageImportedMethodPrimitiveDirect
+		return nil
+	case ThreadMessageImportedMethodAPIUpload:
+		*s = ThreadMessageImportedMethodAPIUpload
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ThreadMessageImportedVerification string
+
+const (
+	ThreadMessageImportedVerificationProviderFetched ThreadMessageImportedVerification = "provider_fetched"
+	ThreadMessageImportedVerificationUnverified      ThreadMessageImportedVerification = "unverified"
+)
+
+// AllValues returns all ThreadMessageImportedVerification values.
+func (ThreadMessageImportedVerification) AllValues() []ThreadMessageImportedVerification {
+	return []ThreadMessageImportedVerification{
+		ThreadMessageImportedVerificationProviderFetched,
+		ThreadMessageImportedVerificationUnverified,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ThreadMessageImportedVerification) MarshalText() ([]byte, error) {
+	switch s {
+	case ThreadMessageImportedVerificationProviderFetched:
+		return []byte(s), nil
+	case ThreadMessageImportedVerificationUnverified:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ThreadMessageImportedVerification) UnmarshalText(data []byte) error {
+	switch ThreadMessageImportedVerification(data) {
+	case ThreadMessageImportedVerificationProviderFetched:
+		*s = ThreadMessageImportedVerificationProviderFetched
+		return nil
+	case ThreadMessageImportedVerificationUnverified:
+		*s = ThreadMessageImportedVerificationUnverified
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -141464,9 +143082,10 @@ func (s *UpdateDefaultNetworkMemberOKDataOwnershipKind) UnmarshalText(data []byt
 }
 
 type UpdateDefaultNetworkMemberOKDataPresence struct {
-	LastCheckedAt time.Time `json:"last_checked_at"`
-	ExpiresAt     time.Time `json:"expires_at"`
-	ValidForMs    int       `json:"valid_for_ms"`
+	LastCheckedAt time.Time                                        `json:"last_checked_at"`
+	ExpiresAt     time.Time                                        `json:"expires_at"`
+	ValidForMs    int                                              `json:"valid_for_ms"`
+	Basis         OptUpdateDefaultNetworkMemberOKDataPresenceBasis `json:"basis"`
 }
 
 // GetLastCheckedAt returns the value of LastCheckedAt.
@@ -141484,6 +143103,11 @@ func (s *UpdateDefaultNetworkMemberOKDataPresence) GetValidForMs() int {
 	return s.ValidForMs
 }
 
+// GetBasis returns the value of Basis.
+func (s *UpdateDefaultNetworkMemberOKDataPresence) GetBasis() OptUpdateDefaultNetworkMemberOKDataPresenceBasis {
+	return s.Basis
+}
+
 // SetLastCheckedAt sets the value of LastCheckedAt.
 func (s *UpdateDefaultNetworkMemberOKDataPresence) SetLastCheckedAt(val time.Time) {
 	s.LastCheckedAt = val
@@ -141497,6 +143121,52 @@ func (s *UpdateDefaultNetworkMemberOKDataPresence) SetExpiresAt(val time.Time) {
 // SetValidForMs sets the value of ValidForMs.
 func (s *UpdateDefaultNetworkMemberOKDataPresence) SetValidForMs(val int) {
 	s.ValidForMs = val
+}
+
+// SetBasis sets the value of Basis.
+func (s *UpdateDefaultNetworkMemberOKDataPresence) SetBasis(val OptUpdateDefaultNetworkMemberOKDataPresenceBasis) {
+	s.Basis = val
+}
+
+type UpdateDefaultNetworkMemberOKDataPresenceBasis string
+
+const (
+	UpdateDefaultNetworkMemberOKDataPresenceBasisProbe   UpdateDefaultNetworkMemberOKDataPresenceBasis = "probe"
+	UpdateDefaultNetworkMemberOKDataPresenceBasisOrganic UpdateDefaultNetworkMemberOKDataPresenceBasis = "organic"
+)
+
+// AllValues returns all UpdateDefaultNetworkMemberOKDataPresenceBasis values.
+func (UpdateDefaultNetworkMemberOKDataPresenceBasis) AllValues() []UpdateDefaultNetworkMemberOKDataPresenceBasis {
+	return []UpdateDefaultNetworkMemberOKDataPresenceBasis{
+		UpdateDefaultNetworkMemberOKDataPresenceBasisProbe,
+		UpdateDefaultNetworkMemberOKDataPresenceBasisOrganic,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s UpdateDefaultNetworkMemberOKDataPresenceBasis) MarshalText() ([]byte, error) {
+	switch s {
+	case UpdateDefaultNetworkMemberOKDataPresenceBasisProbe:
+		return []byte(s), nil
+	case UpdateDefaultNetworkMemberOKDataPresenceBasisOrganic:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *UpdateDefaultNetworkMemberOKDataPresenceBasis) UnmarshalText(data []byte) error {
+	switch UpdateDefaultNetworkMemberOKDataPresenceBasis(data) {
+	case UpdateDefaultNetworkMemberOKDataPresenceBasisProbe:
+		*s = UpdateDefaultNetworkMemberOKDataPresenceBasisProbe
+		return nil
+	case UpdateDefaultNetworkMemberOKDataPresenceBasisOrganic:
+		*s = UpdateDefaultNetworkMemberOKDataPresenceBasisOrganic
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // UpdateDefaultNetworkMemberOKHeaders wraps UpdateDefaultNetworkMemberOK with response headers.
