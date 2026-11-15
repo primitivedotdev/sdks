@@ -55,6 +55,14 @@ func (s *SemanticSearchInput) setDefaults() {
 }
 
 // setDefaults set default value of fields.
+func (s *SendMailUnsubscribe) setDefaults() {
+	{
+		val := bool(true)
+		s.OneClick.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
 func (s *TemplateInstall) setDefaults() {
 	{
 		val := string("")

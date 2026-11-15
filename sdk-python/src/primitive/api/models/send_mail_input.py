@@ -17,6 +17,7 @@ if TYPE_CHECKING:
   from ..models.send_mail_attachment import SendMailAttachment
   from ..models.send_mail_input_headers import SendMailInputHeaders
   from ..models.send_mail_payload_ref import SendMailPayloadRef
+  from ..models.send_mail_unsubscribe import SendMailUnsubscribe
 
 
 
@@ -106,6 +107,17 @@ class SendMailInput:
                 deduplication window, returns the original result without checking again, and a request that differs only in
                 if_latest_message_id is not a replay. On /send-mail it requires in_reply_to; it cannot be combined with
                 scheduled_at or repeat, because it is checked when the request is accepted.
+            unsubscribe (SendMailUnsubscribe | Unset): One-click unsubscribe for the message. Primitive writes a `List-
+                Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-
+                Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe
+                sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the
+                unsubscribe. Every recipient of a message would get the same `url`, so another recipient could unsubscribe
+                whoever it identifies: a send with `unsubscribe` must have exactly one recipient, one entry across `to`, `cc`
+                and `bcc` (an address given twice counts twice), and a send to more is refused with a `validation_error`. Send
+                one message per recipient, for example with `POST /v1/send-mail/batch`. The `headers` map refuses both header
+                names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers`
+                may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a
+                repeating send.
      """
 
     from_: str
@@ -125,6 +137,7 @@ class SendMailInput:
     scheduled_at: datetime.datetime | Unset = UNSET
     headers: SendMailInputHeaders | Unset = UNSET
     if_latest_message_id: UUID | Unset = UNSET
+    unsubscribe: SendMailUnsubscribe | Unset = UNSET
 
 
 
@@ -135,6 +148,7 @@ class SendMailInput:
         from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
         from ..models.send_mail_input_headers import SendMailInputHeaders # noqa: PLC0415
         from ..models.send_mail_payload_ref import SendMailPayloadRef # noqa: PLC0415
+        from ..models.send_mail_unsubscribe import SendMailUnsubscribe # noqa: PLC0415
         from_ = self.from_
 
         to = self.to
@@ -211,6 +225,10 @@ class SendMailInput:
         if not isinstance(self.if_latest_message_id, Unset):
             if_latest_message_id = str(self.if_latest_message_id)
 
+        unsubscribe: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.unsubscribe, Unset):
+            unsubscribe = self.unsubscribe.to_dict()
+
 
         field_dict: dict[str, Any] = {}
 
@@ -247,6 +265,8 @@ class SendMailInput:
             field_dict["headers"] = headers
         if if_latest_message_id is not UNSET:
             field_dict["if_latest_message_id"] = if_latest_message_id
+        if unsubscribe is not UNSET:
+            field_dict["unsubscribe"] = unsubscribe
 
         return field_dict
 
@@ -258,6 +278,7 @@ class SendMailInput:
         from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
         from ..models.send_mail_input_headers import SendMailInputHeaders # noqa: PLC0415
         from ..models.send_mail_payload_ref import SendMailPayloadRef # noqa: PLC0415
+        from ..models.send_mail_unsubscribe import SendMailUnsubscribe # noqa: PLC0415
         d = dict(src_dict)
         from_ = d.pop("from")
 
@@ -374,6 +395,16 @@ class SendMailInput:
 
 
 
+        _unsubscribe = d.pop("unsubscribe", UNSET)
+        unsubscribe: SendMailUnsubscribe | Unset
+        if isinstance(_unsubscribe,  Unset):
+            unsubscribe = UNSET
+        else:
+            unsubscribe = SendMailUnsubscribe.from_dict(_unsubscribe)
+
+
+
+
         send_mail_input = cls(
             from_=from_,
             to=to,
@@ -392,6 +423,7 @@ class SendMailInput:
             scheduled_at=scheduled_at,
             headers=headers,
             if_latest_message_id=if_latest_message_id,
+            unsubscribe=unsubscribe,
         )
 
         return send_mail_input

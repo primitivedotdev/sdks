@@ -23340,6 +23340,35 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "string",
           "format": "uuid",
           "description": "Send only if this message id is still the newest message in the thread this send joins, as this credential can see it. Newest means the message that joined the thread last, in the order messages were attached to it, not by timestamp: a message accepted earlier but attached later is newer. Messages stored before join order was recorded count as older than every message that has one, and among themselves sort by timestamp (received_at for mail received, created_at for mail sent), ties going to the larger id. Pass latest_message_id from GET /emails/{id}/conversation: it is read by the same rule, whereas the last message listed there is ordered by timestamp and can differ when mail joined the thread late. An organization credential sees every message in the thread; a mailbox-scoped agent connection key sees only mail received at its address and mail sent from it. Mail awaiting sender authentication never counts. Otherwise nothing is sent and the response is 409 latest_message_mismatch with error.details.latest_message_id, latest_message_at and thread_id. If in_reply_to resolves to no single thread this credential can check, the response is 422 latest_message_thread_unresolved; that does not change on retry. If the thread stays locked by another writer for longer than the send waits, the response is 503 thread_busy with Retry-After; nothing was sent and the same request can be retried. Checked inside the send transaction under a lock on the thread, so two sends conditioned on the same id cannot both go out. The value is part of the request a replay is matched on: a replay of an already accepted request with the same idempotency key, or the identical request within the automatic deduplication window, returns the original result without checking again, and a request that differs only in if_latest_message_id is not a replay. On /send-mail it requires in_reply_to; it cannot be combined with scheduled_at or repeat, because it is checked when the request is accepted."
+        },
+        "unsubscribe": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "url"
+          ],
+          "description": "One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the unsubscribe. Every recipient of a message would get the same `url`, so another recipient could unsubscribe whoever it identifies: a send with `unsubscribe` must have exactly one recipient, one entry across `to`, `cc` and `bcc` (an address given twice counts twice), and a send to more is refused with a `validation_error`. Send one message per recipient, for example with `POST /v1/send-mail/batch`. The `headers` map refuses both header names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send.",
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 700,
+              "pattern": "^[Hh][Tt][Tt][Pp][Ss]://(?:[A-Za-z0-9\\-._~:/?#\\[\\]@!$&'()*+;=]|%[0-9A-Fa-f]{2})+$",
+              "description": "Absolute https URL that unsubscribes the recipient, at most 700 characters of URL characters only: printable ASCII with no spaces, double quotes, angle brackets or commas (percent-encode a comma as %2C), `%` only as a percent-encoded byte, `[` and `]` only around an IPv6 address host, a port from 1 to 65535, no `=?` (which mail readers can decode as an encoded word), and no user name or password. The host must be public: not a single-label name, `localhost` or a name under `.localhost`, `.internal`, `.local`, `.home.arpa` or `.localdomain`, or a loopback, link-local, private, shared, reserved, multicast or unspecified IP address, including an IPv6 address that embeds one. The scheme is written in lower case."
+            },
+            "one_click": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether to also write `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, which tells the receiver it may unsubscribe with a single POST to `url`. Set false when `url` needs the recipient to open a page and confirm."
+            },
+            "mailto": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 254,
+              "pattern": "^[A-Za-z0-9!$'*+=_~-]+(?:\\.[A-Za-z0-9!$'*+=_~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$",
+              "description": "An address to also offer as a `mailto:` unsubscribe, written after `url`. The address alone, without the `mailto:` prefix: at most 64 letters, digits and `.!$'*+=_~-` before the `@`, and a dotted domain after it. An `=` is written as `%3D` in the header."
+            }
+          }
         }
       }
     },
@@ -24561,6 +24590,35 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "string",
           "format": "uuid",
           "description": "Send only if this message id is still the newest message in the thread this send joins, as this credential can see it. Newest means the message that joined the thread last, in the order messages were attached to it, not by timestamp: a message accepted earlier but attached later is newer. Messages stored before join order was recorded count as older than every message that has one, and among themselves sort by timestamp (received_at for mail received, created_at for mail sent), ties going to the larger id. Pass latest_message_id from GET /emails/{id}/conversation: it is read by the same rule, whereas the last message listed there is ordered by timestamp and can differ when mail joined the thread late. An organization credential sees every message in the thread; a mailbox-scoped agent connection key sees only mail received at its address and mail sent from it. Mail awaiting sender authentication never counts. Otherwise nothing is sent and the response is 409 latest_message_mismatch with error.details.latest_message_id, latest_message_at and thread_id. If in_reply_to resolves to no single thread this credential can check, the response is 422 latest_message_thread_unresolved; that does not change on retry. If the thread stays locked by another writer for longer than the send waits, the response is 503 thread_busy with Retry-After; nothing was sent and the same request can be retried. Checked inside the send transaction under a lock on the thread, so two sends conditioned on the same id cannot both go out. The value is part of the request a replay is matched on: a replay of an already accepted request with the same idempotency key, or the identical request within the automatic deduplication window, returns the original result without checking again, and a request that differs only in if_latest_message_id is not a replay. On /send-mail it requires in_reply_to; it cannot be combined with scheduled_at or repeat, because it is checked when the request is accepted."
+        },
+        "unsubscribe": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "url"
+          ],
+          "description": "One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the unsubscribe. Every recipient of a message would get the same `url`, so another recipient could unsubscribe whoever it identifies: a send with `unsubscribe` must have exactly one recipient, one entry across `to`, `cc` and `bcc` (an address given twice counts twice), and a send to more is refused with a `validation_error`. Send one message per recipient, for example with `POST /v1/send-mail/batch`. The `headers` map refuses both header names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send.",
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 700,
+              "pattern": "^[Hh][Tt][Tt][Pp][Ss]://(?:[A-Za-z0-9\\-._~:/?#\\[\\]@!$&'()*+;=]|%[0-9A-Fa-f]{2})+$",
+              "description": "Absolute https URL that unsubscribes the recipient, at most 700 characters of URL characters only: printable ASCII with no spaces, double quotes, angle brackets or commas (percent-encode a comma as %2C), `%` only as a percent-encoded byte, `[` and `]` only around an IPv6 address host, a port from 1 to 65535, no `=?` (which mail readers can decode as an encoded word), and no user name or password. The host must be public: not a single-label name, `localhost` or a name under `.localhost`, `.internal`, `.local`, `.home.arpa` or `.localdomain`, or a loopback, link-local, private, shared, reserved, multicast or unspecified IP address, including an IPv6 address that embeds one. The scheme is written in lower case."
+            },
+            "one_click": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether to also write `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, which tells the receiver it may unsubscribe with a single POST to `url`. Set false when `url` needs the recipient to open a page and confirm."
+            },
+            "mailto": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 254,
+              "pattern": "^[A-Za-z0-9!$'*+=_~-]+(?:\\.[A-Za-z0-9!$'*+=_~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$",
+              "description": "An address to also offer as a `mailto:` unsubscribe, written after `url`. The address alone, without the `mailto:` prefix: at most 64 letters, digits and `.!$'*+=_~-` before the `@`, and a dotted domain after it. An `=` is written as `%3D` in the header."
+            }
+          }
         }
       },
       "required": [

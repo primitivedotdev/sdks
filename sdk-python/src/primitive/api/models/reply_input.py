@@ -15,6 +15,7 @@ if TYPE_CHECKING:
   from ..models.repeat_input import RepeatInput
   from ..models.reply_input_headers import ReplyInputHeaders
   from ..models.send_mail_attachment import SendMailAttachment
+  from ..models.send_mail_unsubscribe import SendMailUnsubscribe
 
 
 
@@ -100,6 +101,17 @@ class ReplyInput:
                 deduplication window, returns the original result without checking again, and a request that differs only in
                 if_latest_message_id is not a replay. On /send-mail it requires in_reply_to; it cannot be combined with
                 scheduled_at or repeat, because it is checked when the request is accepted.
+            unsubscribe (SendMailUnsubscribe | Unset): One-click unsubscribe for the message. Primitive writes a `List-
+                Unsubscribe` header naming `url` (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-
+                Post: List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click unsubscribe
+                sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your endpoint records the
+                unsubscribe. Every recipient of a message would get the same `url`, so another recipient could unsubscribe
+                whoever it identifies: a send with `unsubscribe` must have exactly one recipient, one entry across `to`, `cc`
+                and `bcc` (an address given twice counts twice), and a send to more is refused with a `validation_error`. Send
+                one message per recipient, for example with `POST /v1/send-mail/batch`. The `headers` map refuses both header
+                names, so this field is the only way to set them, and the headers it adds count toward the 25 entries `headers`
+                may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a
+                repeating send.
      """
 
     body_text: str | Unset = UNSET
@@ -111,6 +123,7 @@ class ReplyInput:
     repeat: RepeatInput | Unset = UNSET
     headers: ReplyInputHeaders | Unset = UNSET
     if_latest_message_id: UUID | Unset = UNSET
+    unsubscribe: SendMailUnsubscribe | Unset = UNSET
 
 
 
@@ -120,6 +133,7 @@ class ReplyInput:
         from ..models.repeat_input import RepeatInput # noqa: PLC0415
         from ..models.reply_input_headers import ReplyInputHeaders # noqa: PLC0415
         from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
+        from ..models.send_mail_unsubscribe import SendMailUnsubscribe # noqa: PLC0415
         body_text = self.body_text
 
         body_html = self.body_html
@@ -151,6 +165,10 @@ class ReplyInput:
         if not isinstance(self.if_latest_message_id, Unset):
             if_latest_message_id = str(self.if_latest_message_id)
 
+        unsubscribe: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.unsubscribe, Unset):
+            unsubscribe = self.unsubscribe.to_dict()
+
 
         field_dict: dict[str, Any] = {}
 
@@ -174,6 +192,8 @@ class ReplyInput:
             field_dict["headers"] = headers
         if if_latest_message_id is not UNSET:
             field_dict["if_latest_message_id"] = if_latest_message_id
+        if unsubscribe is not UNSET:
+            field_dict["unsubscribe"] = unsubscribe
 
         return field_dict
 
@@ -184,6 +204,7 @@ class ReplyInput:
         from ..models.repeat_input import RepeatInput # noqa: PLC0415
         from ..models.reply_input_headers import ReplyInputHeaders # noqa: PLC0415
         from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
+        from ..models.send_mail_unsubscribe import SendMailUnsubscribe # noqa: PLC0415
         d = dict(src_dict)
         body_text = d.pop("body_text", UNSET)
 
@@ -237,6 +258,16 @@ class ReplyInput:
 
 
 
+        _unsubscribe = d.pop("unsubscribe", UNSET)
+        unsubscribe: SendMailUnsubscribe | Unset
+        if isinstance(_unsubscribe,  Unset):
+            unsubscribe = UNSET
+        else:
+            unsubscribe = SendMailUnsubscribe.from_dict(_unsubscribe)
+
+
+
+
         reply_input = cls(
             body_text=body_text,
             body_html=body_html,
@@ -247,6 +278,7 @@ class ReplyInput:
             repeat=repeat,
             headers=headers,
             if_latest_message_id=if_latest_message_id,
+            unsubscribe=unsubscribe,
         )
 
         return reply_input

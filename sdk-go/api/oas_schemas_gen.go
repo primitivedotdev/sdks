@@ -36056,6 +36056,52 @@ func (o OptSendMailInputHeaders) Or(d SendMailInputHeaders) SendMailInputHeaders
 	return d
 }
 
+// NewOptSendMailUnsubscribe returns new OptSendMailUnsubscribe with value set to v.
+func NewOptSendMailUnsubscribe(v SendMailUnsubscribe) OptSendMailUnsubscribe {
+	return OptSendMailUnsubscribe{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSendMailUnsubscribe is optional SendMailUnsubscribe.
+type OptSendMailUnsubscribe struct {
+	Value SendMailUnsubscribe
+	Set   bool
+}
+
+// IsSet returns true if OptSendMailUnsubscribe was set.
+func (o OptSendMailUnsubscribe) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSendMailUnsubscribe) Reset() {
+	var v SendMailUnsubscribe
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSendMailUnsubscribe) SetTo(v SendMailUnsubscribe) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSendMailUnsubscribe) Get() (v SendMailUnsubscribe, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSendMailUnsubscribe) Or(d SendMailUnsubscribe) SendMailUnsubscribe {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptSentEmailStatus returns new OptSentEmailStatus with value set to v.
 func NewOptSentEmailStatus(v SentEmailStatus) OptSentEmailStatus {
 	return OptSentEmailStatus{
@@ -41454,6 +41500,17 @@ type ReplyInput struct {
 	// not a replay. On /send-mail it requires in_reply_to; it cannot be combined with scheduled_at or
 	// repeat, because it is checked when the request is accepted.
 	IfLatestMessageID OptUUID `json:"if_latest_message_id"`
+	// One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url`
+	// (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post:
+	// List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click
+	// unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your
+	// endpoint records the unsubscribe. Every recipient of a message would get the same `url`, so
+	// another recipient could unsubscribe whoever it identifies: a reply with `unsubscribe` must go to
+	// the one address it answers, and one with `reply_all` that adds a cc is refused with a
+	// `validation_error`. The `headers` map refuses both header names, so this field is the only way to
+	// set them, and the headers it adds count toward the 25 entries `headers` may hold. A field whose
+	// rendered `List-Unsubscribe` would pass 980 characters is refused. Not accepted on a repeating send.
+	Unsubscribe OptSendMailUnsubscribe `json:"unsubscribe"`
 }
 
 // GetBodyText returns the value of BodyText.
@@ -41501,6 +41558,11 @@ func (s *ReplyInput) GetIfLatestMessageID() OptUUID {
 	return s.IfLatestMessageID
 }
 
+// GetUnsubscribe returns the value of Unsubscribe.
+func (s *ReplyInput) GetUnsubscribe() OptSendMailUnsubscribe {
+	return s.Unsubscribe
+}
+
 // SetBodyText sets the value of BodyText.
 func (s *ReplyInput) SetBodyText(val OptString) {
 	s.BodyText = val
@@ -41544,6 +41606,11 @@ func (s *ReplyInput) SetHeaders(val OptReplyInputHeaders) {
 // SetIfLatestMessageID sets the value of IfLatestMessageID.
 func (s *ReplyInput) SetIfLatestMessageID(val OptUUID) {
 	s.IfLatestMessageID = val
+}
+
+// SetUnsubscribe sets the value of Unsubscribe.
+func (s *ReplyInput) SetUnsubscribe(val OptSendMailUnsubscribe) {
+	s.Unsubscribe = val
 }
 
 // Extra headers, as `{ "Name": "value" }`, at most 25. A name is one of `Auto-Submitted`,
@@ -44500,7 +44567,8 @@ type SendMailInput struct {
 	// original result without checking again, and a request that differs only in if_latest_message_id is
 	// not a replay. On /send-mail it requires in_reply_to; it cannot be combined with scheduled_at or
 	// repeat, because it is checked when the request is accepted.
-	IfLatestMessageID OptUUID `json:"if_latest_message_id"`
+	IfLatestMessageID OptUUID                `json:"if_latest_message_id"`
+	Unsubscribe       OptSendMailUnsubscribe `json:"unsubscribe"`
 }
 
 // GetRepeat returns the value of Repeat.
@@ -44588,6 +44656,11 @@ func (s *SendMailInput) GetIfLatestMessageID() OptUUID {
 	return s.IfLatestMessageID
 }
 
+// GetUnsubscribe returns the value of Unsubscribe.
+func (s *SendMailInput) GetUnsubscribe() OptSendMailUnsubscribe {
+	return s.Unsubscribe
+}
+
 // SetRepeat sets the value of Repeat.
 func (s *SendMailInput) SetRepeat(val OptRepeatInput) {
 	s.Repeat = val
@@ -44671,6 +44744,11 @@ func (s *SendMailInput) SetHeaders(val OptSendMailInputHeaders) {
 // SetIfLatestMessageID sets the value of IfLatestMessageID.
 func (s *SendMailInput) SetIfLatestMessageID(val OptUUID) {
 	s.IfLatestMessageID = val
+}
+
+// SetUnsubscribe sets the value of Unsubscribe.
+func (s *SendMailInput) SetUnsubscribe(val OptSendMailUnsubscribe) {
+	s.Unsubscribe = val
 }
 
 // Blind-carbon-copy recipients. Either a single address or an array of addresses. Each entry must be
@@ -45123,6 +45201,71 @@ func (s *SendMailResult) SetIdempotency(val OptSendMailIdempotencyReplay) {
 // SetScheduledAt sets the value of ScheduledAt.
 func (s *SendMailResult) SetScheduledAt(val OptDateTime) {
 	s.ScheduledAt = val
+}
+
+// One-click unsubscribe for the message. Primitive writes a `List-Unsubscribe` header naming `url`
+// (and `mailto` when given) and, unless `one_click` is false, `List-Unsubscribe-Post:
+// List-Unsubscribe=One-Click` (RFC 8058), and DKIM-signs both. A receiver that offers one-click
+// unsubscribe sends an HTTPS POST to `url` with the form body `List-Unsubscribe=One-Click`; your
+// endpoint records the unsubscribe. Every recipient of a message would get the same `url`, so
+// another recipient could unsubscribe whoever it identifies: a send with `unsubscribe` must have
+// exactly one recipient, one entry across `to`, `cc` and `bcc` (an address given twice counts twice),
+//
+//	and a send to more is refused with a `validation_error`. Send one message per recipient, for
+//
+// example with `POST /v1/send-mail/batch`. The `headers` map refuses both header names, so this
+// field is the only way to set them, and the headers it adds count toward the 25 entries `headers`
+// may hold. A field whose rendered `List-Unsubscribe` would pass 980 characters is refused. Not
+// accepted on a repeating send.
+// Ref: #/components/schemas/SendMailUnsubscribe
+type SendMailUnsubscribe struct {
+	// Absolute https URL that unsubscribes the recipient, at most 700 characters of URL characters only:
+	// printable ASCII with no spaces, double quotes, angle brackets or commas (percent-encode a comma as
+	// %2C), `%` only as a percent-encoded byte, `[` and `]` only around an IPv6 address host, a port
+	// from 1 to 65535, no `=?` (which mail readers can decode as an encoded word), and no user name or
+	// password. The host must be public: not a single-label name, `localhost` or a name under `.
+	// localhost`, `.internal`, `.local`, `.home.arpa` or `.localdomain`, or a loopback, link-local,
+	// private, shared, reserved, multicast or unspecified IP address, including an IPv6 address that
+	// embeds one. The scheme is written in lower case.
+	URL string `json:"url"`
+	// Whether to also write `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, which tells the
+	// receiver it may unsubscribe with a single POST to `url`. Set false when `url` needs the recipient
+	// to open a page and confirm.
+	OneClick OptBool `json:"one_click"`
+	// An address to also offer as a `mailto:` unsubscribe, written after `url`. The address alone,
+	// without the `mailto:` prefix: at most 64 letters, digits and `.!$'*+=_~-` before the `@`, and a
+	// dotted domain after it. An `=` is written as `%3D` in the header.
+	Mailto OptString `json:"mailto"`
+}
+
+// GetURL returns the value of URL.
+func (s *SendMailUnsubscribe) GetURL() string {
+	return s.URL
+}
+
+// GetOneClick returns the value of OneClick.
+func (s *SendMailUnsubscribe) GetOneClick() OptBool {
+	return s.OneClick
+}
+
+// GetMailto returns the value of Mailto.
+func (s *SendMailUnsubscribe) GetMailto() OptString {
+	return s.Mailto
+}
+
+// SetURL sets the value of URL.
+func (s *SendMailUnsubscribe) SetURL(val string) {
+	s.URL = val
+}
+
+// SetOneClick sets the value of OneClick.
+func (s *SendMailUnsubscribe) SetOneClick(val OptBool) {
+	s.OneClick = val
+}
+
+// SetMailto sets the value of Mailto.
+func (s *SendMailUnsubscribe) SetMailto(val OptString) {
+	s.Mailto = val
 }
 
 // The caller can send to a specific address that has

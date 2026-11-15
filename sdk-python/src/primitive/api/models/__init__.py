@@ -536,6 +536,7 @@ from .send_mail_input import SendMailInput
 from .send_mail_input_headers import SendMailInputHeaders
 from .send_mail_payload_ref import SendMailPayloadRef
 from .send_mail_result import SendMailResult
+from .send_mail_unsubscribe import SendMailUnsubscribe
 from .send_permission_address import SendPermissionAddress
 from .send_permission_address_type import SendPermissionAddressType
 from .send_permission_any_recipient import SendPermissionAnyRecipient
@@ -1230,6 +1231,7 @@ __all__ = (
     "SendMailInputHeaders",
     "SendMailPayloadRef",
     "SendMailResult",
+    "SendMailUnsubscribe",
     "SendPermissionAddress",
     "SendPermissionAddressType",
     "SendPermissionAnyRecipient",
