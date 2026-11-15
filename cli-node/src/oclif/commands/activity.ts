@@ -284,66 +284,6 @@ export function formatAskedRows(
   return [line(header), ...rows.map(line)].join("\n");
 }
 
-/** Totals of who receives a rule's matches, as a receivers_changed notice carries them before and after. */
-type ReceiverTotals = {
-  keys: number;
-  reads_in_full: number;
-  webhooks: number;
-  shares: number;
-};
-
-const TOTAL_KEYS = ["keys", "reads_in_full", "webhooks", "shares"] as const;
-
-/** `value` as receiver totals: an object whose four counts are all non-negative integers. */
-function receiverTotals(value: unknown): ReceiverTotals | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const totals = value as Record<string, unknown>;
-  return TOTAL_KEYS.every((key) => {
-    const count = totals[key];
-    return typeof count === "number" && Number.isInteger(count) && count >= 0;
-  })
-    ? (totals as ReceiverTotals)
-    : null;
-}
-
-/**
- * What a receivers_changed notice says changed, from its totals before and
- * after: "keys 3 to 2 (1 to 0 also reading your mail beyond the rule),
- * webhooks 2 to 1",
- * or, when the totals are equal (an owner or a webhook site changed), that
- * they are. Null for any other notice, and for one whose totals are missing
- * or not counts (an older server).
- * The API no longer sends these notices; this only reads one written before,
- * should an answer still carry it, so the help and the table promise none.
- */
-export function receiversChangeText(item: ActivityItem): string | null {
-  if (item.state !== "receivers_changed") return null;
-  const change = (
-    item as { receivers_change?: { before?: unknown; after?: unknown } }
-  ).receivers_change;
-  const before = receiverTotals(change?.before);
-  const after = receiverTotals(change?.after);
-  if (!before || !after) return null;
-  const moved = (key: keyof ReceiverTotals) => before[key] !== after[key];
-  const span = (key: keyof ReceiverTotals) => `${before[key]} to ${after[key]}`;
-  // Keys also reading your mail beyond the rule are some of the keys, so they are told with them.
-  const full = moved("reads_in_full")
-    ? ` (${span("reads_in_full")} also reading your mail beyond the rule)`
-    : "";
-  const changed = [
-    ...(moved("keys")
-      ? [`keys ${span("keys")}${full}`]
-      : full
-        ? [`keys ${after.keys}${full}`]
-        : []),
-    ...(moved("webhooks") ? [`webhooks ${span("webhooks")}`] : []),
-    ...(moved("shares") ? [`shares ${span("shares")}`] : []),
-  ];
-  return changed.length > 0
-    ? changed.join(", ")
-    : "same totals, an owner or webhook site changed";
-}
-
 const STOP_REASONS: ReadonlyMap<string, string> = new Map([
   ["deleted", "rule deleted"],
   ["turned_off", "turned off"],
@@ -352,8 +292,8 @@ const STOP_REASONS: ReadonlyMap<string, string> = new Map([
 
 /**
  * Why a stopped notice says the rule stopped covering you, from its
- * stop_reason. Null for any other notice, and for one whose reason is
- * missing or unknown (an older server).
+ * stop_reason. Null for any other notice, and for a reason this CLI does
+ * not know.
  */
 export function stoppedText(item: ActivityItem): string | null {
   if (item.state !== "stopped") return null;
@@ -371,8 +311,7 @@ const COVERING_NOW = `\`primitive email-rule-oversight list-email-rules-covering
  * now whose notice is not written yet (pending, dated when the rule last
  * changed), then the rule's id (rule_id; a pending row's own id is the
  * rule's), never the notice's own id, which no command takes; and, when any
- * row is a stopped notice with its reason (or an older receivers_changed
- * notice with its totals), what changed (CHANGE).
+ * row is a stopped notice with its reason, what changed (CHANGE).
  * `complete` says the listing is the whole of it (from the first page to the
  * last, nothing withheld). Even then an empty one is no promise that nothing
  * covers you: notices can lag, so it
@@ -404,14 +343,12 @@ export function formatConcerningRows(
       // The rule's name then; marked once the rule has been deleted.
       `${item.name ?? "(unnamed)"}${item.rule_now === "deleted" ? " (deleted)" : ""}`,
       item.created_through.name ?? item.created_through.id ?? "",
-      // An older server sends no rule_id; a pending row's id is the rule's.
+      // A pending row's own id is the rule's.
       item.rule_id ?? (item.state === "pending" ? item.id : ""),
     ])
     .map(shownCells);
   // Last, so it widens no other column, and only when a row has one.
-  const changes = items.map(
-    (item) => receiversChangeText(item) ?? stoppedText(item),
-  );
+  const changes = items.map(stoppedText);
   const withChange = changes.some((change) => change !== null);
   if (withChange)
     for (const [i, row] of rows.entries()) row.push(changes[i] ?? "");

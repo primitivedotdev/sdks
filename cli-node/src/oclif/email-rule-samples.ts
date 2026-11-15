@@ -86,8 +86,7 @@ function cutLabel(text: string, max: number): string {
 
 /**
  * Whether a look-alike is one the rule should match: its `expected` as the
- * API gives it. An answer without one (an older server) is must-not-match,
- * as every look-alike was.
+ * API gives it.
  */
 function lookAlikeExpected(
   lookAlike: Record<string, unknown>,

@@ -519,50 +519,6 @@ describe("activity concerning command", () => {
     );
   });
 
-  it("still shows an older receivers_changed notice's totals in a last column, with no line under the table about it", () => {
-    const changed = (
-      before: unknown,
-      after: unknown,
-      name = "Vendor invoices",
-    ) =>
-      item({
-        kind: "email_rule_coverage",
-        rule_id: "3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f",
-        name,
-        state: "receivers_changed",
-        owned_now: "someone_else",
-        created_through: { kind: "member", id: "u-3", name: "Sam Rivera" },
-        receivers_change: { before, after },
-      } as Partial<ActivityItem>);
-    const totals = { keys: 3, reads_in_full: 1, webhooks: 2, shares: 0 };
-    const out = formatConcerningRows([
-      changed(totals, { ...totals, keys: 2, reads_in_full: 0, webhooks: 1 }),
-      changed(totals, totals, "Same"),
-      changed(totals, { ...totals, reads_in_full: 2 }, "Full"),
-      changed(totals, { ...totals, keys: 4, shares: 1 }, "Shared"),
-      item({ kind: "email_rule_coverage", state: "started", name: "Other" }),
-    ]);
-    expect(out).toMatch(
-      /^NOTICE\s+WHEN \(UTC\)\s+RULE\s+AUTHOR\s+RULE ID\s+CHANGE$/m,
-    );
-    expect(out).toMatch(
-      /^receivers_changed {2,}.*Vendor invoices\s+Sam Rivera\s+3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f {2}keys 3 to 2 \(1 to 0 also reading your mail beyond the rule\), webhooks 2 to 1$/m,
-    );
-    expect(out).toMatch(
-      /Same\s+.*same totals, an owner or webhook site changed$/m,
-    );
-    expect(out).toMatch(
-      /Full\s+.*keys 3 \(1 to 2 also reading your mail beyond the rule\)$/m,
-    );
-    expect(out).toMatch(/Shared\s+.*keys 3 to 4, shares 0 to 1$/m);
-    // Other notices keep their state alone, and nothing is added to the NOTICE column.
-    expect(out).toMatch(/^started {2,}.*Other/m);
-    expect(out).not.toContain("receivers_changed (");
-    // The API no longer sends these notices, so nothing under the table explains or promises them.
-    expect(out).not.toContain("receivers_changed:");
-    expect(out).not.toContain("get-email-rule-covering-me");
-  });
-
   it("shows a stopped notice's reason in the last column, and nothing for a reason it does not know", () => {
     const stop = (stop_reason: unknown, name: string) =>
       item({
@@ -614,35 +570,7 @@ describe("activity concerning command", () => {
     );
   });
 
-  it("shows no CHANGE for totals that are missing or not counts, and lists the pending and unfinished footnotes together", () => {
-    const odd = (receivers_change: unknown, state = "receivers_changed") =>
-      item({
-        kind: "email_rule_coverage",
-        state,
-        name: "Odd",
-        receivers_change,
-      } as Partial<ActivityItem>);
-    const totals = { keys: 3, reads_in_full: 1, webhooks: 2, shares: 0 };
-    for (const change of [
-      undefined,
-      { before: { keys: 3 }, after: totals },
-      { before: {}, after: {} },
-      { before: [], after: [] },
-      { before: { ...totals, keys: "3" }, after: totals },
-      { before: { ...totals, keys: -1 }, after: totals },
-      { before: { ...totals, keys: 1.5 }, after: totals },
-    ]) {
-      const out = formatConcerningRows([odd(change)]);
-      expect(out).not.toContain("CHANGE");
-      expect(out).not.toContain("undefined");
-      expect(out).toMatch(/^receivers_changed {2,}2026-/m);
-    }
-    // Totals on any other notice are not shown.
-    expect(
-      formatConcerningRows([
-        odd({ before: totals, after: { ...totals, keys: 1 } }, "new_version"),
-      ]),
-    ).not.toContain("CHANGE");
+  it("lists the pending and unfinished footnotes together", () => {
     const all = formatConcerningRows(
       [
         item({
@@ -650,7 +578,7 @@ describe("activity concerning command", () => {
           state: "pending",
           name: "Waiting",
         }),
-        odd({ before: totals, after: { ...totals, webhooks: 3 } }),
+        item({ kind: "email_rule_coverage", state: "started", name: "Other" }),
       ],
       false,
       null,
@@ -658,7 +586,7 @@ describe("activity concerning command", () => {
     );
     expect(all).toContain("pending: the rule covers you now");
     expect(all).toContain("did not finish");
-    expect(all).not.toContain("receivers_changed:");
+    expect(all).not.toContain("CHANGE");
   });
 
   it("lists coverage notices with the rule's author, and asks the API for exactly that", async () => {

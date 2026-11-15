@@ -405,16 +405,12 @@ const unitInterval = (value: unknown): value is number =>
 
 /**
  * How sure an answer is, from 0 to 1: the answer's `confidence`, the number
- * a webhook payload carries for it, when the answer has one; otherwise the
- * chance of the answer given, worked out from `probability`, the chance of
- * yes. Null for an unanswered question.
+ * a webhook payload carries for it. Null for an unanswered question, or a
+ * confidence that is not a number from 0 to 1.
  */
 export function answerConfidence(answer: QuestionAnswer): number | null {
   if (typeof answer.answer !== "boolean") return null;
-  if (unitInterval(answer.confidence)) return answer.confidence;
-  const p = answer.probability;
-  if (!unitInterval(p)) return null;
-  return answer.answer ? p : 1 - p;
+  return unitInterval(answer.confidence) ? answer.confidence : null;
 }
 
 type UndecidedReason = {
@@ -499,7 +495,7 @@ function conditionLines(summary: TestEmailRuleResult["summary"]): string[] {
     : [];
   if (conditions.length === 0) return [];
   // How many of those decided the conditions held for together, before any
-  // question: an older server sends none.
+  // question.
   const held = summary?.conditions_held;
   const together =
     typeof held === "number" ? `; together they held on ${held}` : "";

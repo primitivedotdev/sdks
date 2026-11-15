@@ -264,8 +264,8 @@ function testResult(
           {
             question: "Is it a sales pitch?",
             answer: false,
-            // An API that does not send confidence yet: worked out as 1 - 0.19.
             probability: 0.19,
+            confidence: 0.81,
           },
         ],
         question_answers_source: "stored",
@@ -2740,7 +2740,12 @@ describe("email-rules made-up emails in test and write reports", () => {
             judged(0, "failed", "matched", {
               label: "medical: three",
               question_answers: [
-                { question: "Is it a bill?", answer: true, probability: 0.9 },
+                {
+                  question: "Is it a bill?",
+                  answer: true,
+                  probability: 0.9,
+                  confidence: 0.9,
+                },
               ],
             }),
             judged(1, "undecided", "not_decided", { label: "medical: one" }),
@@ -4993,7 +4998,7 @@ describe("email-rules test-email-rule-on-sample --with-protection", () => {
 });
 
 describe("how sure a question's answer is", () => {
-  it("reads confidence, the number a webhook payload carries, before working it out from probability", () => {
+  it("reads confidence, the number a webhook payload carries, and nothing else", () => {
     expect(
       answerConfidence({
         question: "Q",
@@ -5002,22 +5007,10 @@ describe("how sure a question's answer is", () => {
         confidence: 0.75,
       }),
     ).toBe(0.75);
-    // From an API that does not send confidence: the chance of the answer given.
+    // Without a confidence, nothing is worked out from probability.
     expect(
       answerConfidence({ question: "Q", answer: false, probability: 0.2 }),
-    ).toBeCloseTo(0.8);
-    expect(
-      answerConfidence({ question: "Q", answer: true, probability: 0.57 }),
-    ).toBe(0.57);
-    expect(
-      answerConfidence({
-        question: "Q",
-        answer: null,
-        probability: null,
-        error_class: "deadline",
-      }),
     ).toBeNull();
-    // A confidence it cannot read is not printed; an unanswered question has none.
     expect(
       answerConfidence({
         question: "Q",
@@ -5025,7 +5018,7 @@ describe("how sure a question's answer is", () => {
         probability: 0.6,
         confidence: Number.NaN,
       }),
-    ).toBe(0.6);
+    ).toBeNull();
     expect(
       answerConfidence({
         question: "Q",

@@ -84,12 +84,7 @@ import {
 } from "./reply-state.js";
 import {
   emptyRuleListHint,
-  isObjectionBoxRefused,
-  OBJECTION_BOX_FALLBACK,
-  OBJECTION_BOX_FLAG,
-  objectionBoxErrorHint,
   ruleListDefaultsNote,
-  withDefaultObjectionBox,
 } from "./rule-list-defaults.js";
 import {
   createEndpointRuleRequestHint,
@@ -255,8 +250,6 @@ export const OPERATION_PATH_FLAGS: Record<
         "The id of the email (from `primitive emails list`), not a rule id: lists what every rule you can see decided about this email, and why a rule did not run. --id is accepted too.",
     },
   },
-  // The CLI's own default box, asked for by name (rule-list-defaults.ts).
-  listEmailRuleObjections: { box: OBJECTION_BOX_FLAG },
   replyToEmail: { id: { flag: "email-id", description: EMAIL_ID_NOT_SENT } },
   signalEmail: { id: { flag: "email-id", description: EMAIL_ID_NOT_SENT } },
   stopRepeatFromEmail: {
@@ -1668,8 +1661,6 @@ export const OPERATION_ERROR_HINTS: Record<
     updateEndpointRuleRequestHint(code, body, payload),
   updateEmailRule: (code, body, payload, path, flags) =>
     updateEmailRuleErrorHint(code, payload, path?.id, body, flags),
-  listEmailRuleObjections: (_code, _body, payload, _path, flags) =>
-    objectionBoxErrorHint(payload, flags),
   verifyDomain: (code, _body, payload) =>
     code === "dns_verification_failed"
       ? domainVerificationFailedHint(payload)
@@ -1976,16 +1967,9 @@ export function createOperationCommand(
         // And for `from_verified`, a trust filter: rows without the
         // requested value are refused, never printed.
         const fromVerified = fromVerifiedExpectation(operation.sdkName, query);
-        // What is sent: the query as given, with the objection list's default
-        // box asked for by name (rule-list-defaults.ts). `query` stays as
-        // given, for the notes that say which defaults applied.
-        let sentQuery = withDefaultObjectionBox(operation.sdkName, query);
-        // Set when the server refused that box, so objections you made were
-        // read instead.
-        let objectionBoxRefused = false;
         const callOperation = (
           stepUpToken?: string,
-          pageQuery: Record<string, unknown> = sentQuery,
+          pageQuery: Record<string, unknown> = query,
         ) => {
           const sent = stepUpToken
             ? { ...headers, [STEP_UP_HEADER]: stepUpToken }
@@ -2061,7 +2045,7 @@ export function createOperationCommand(
           const rows: unknown[] = [];
           let sentCursor = query.cursor;
           let last = await callOperation(undefined, {
-            ...sentQuery,
+            ...query,
             limit: Math.min(max, wanted),
           });
           // Only a null cursor ends a list: a page can come back short, even
@@ -2102,7 +2086,7 @@ export function createOperationCommand(
             }
             sentCursor = cursor;
             last = await callOperation(undefined, {
-              ...sentQuery,
+              ...query,
               cursor,
               limit: Math.min(max, wanted - rows.length),
             });
@@ -2140,19 +2124,7 @@ export function createOperationCommand(
                     },
                   })
                 : await callOperation();
-        let result = await send();
-        // A server that predates the objection list's default box refuses
-        // it: read the list once more with objections you made, which such a
-        // server lists by default, and say so in the line below.
-        if (
-          result.error &&
-          sentQuery !== query &&
-          isObjectionBoxRefused(extractErrorPayload(result.error))
-        ) {
-          sentQuery = { ...query, box: OBJECTION_BOX_FALLBACK };
-          objectionBoxRefused = true;
-          result = await send();
-        }
+        const result = await send();
 
         if (result.error) {
           const errorPayload = extractErrorPayload(result.error);
@@ -2336,9 +2308,7 @@ export function createOperationCommand(
           // the grant too, and nor does a page with more to read.
           const tail = query.since !== undefined;
           const more = envelope?.meta?.cursor ?? null;
-          const ruleListHint = emptyRuleListHint(operation.sdkName, query, {
-            objectionBoxRefused,
-          });
+          const ruleListHint = emptyRuleListHint(operation.sdkName, query);
           ruleListHintSaid = ruleListHint !== undefined;
           const hint =
             operation.sdkName === "listEmails"
@@ -2372,9 +2342,7 @@ export function createOperationCommand(
         if (Array.isArray(envelope?.data) && (!jsonOutput || withEnvelope)) {
           const note = ruleListHintSaid
             ? undefined
-            : ruleListDefaultsNote(operation.sdkName, query, {
-                objectionBoxRefused,
-              });
+            : ruleListDefaultsNote(operation.sdkName, query);
           if (note && jsonOutput) summary.push(note);
           else if (note) process.stderr.write(`${note}\n`);
         }
