@@ -3691,11 +3691,11 @@ func decodeCreateEmailRuleObjectionParams(args [0]string, argsEscaped bool, r *h
 // CreateEmailRuleRequestParams is parameters of createEmailRuleRequest operation.
 type CreateEmailRuleRequestParams struct {
 	// Optional. With a key, a create identical to a pending request of yours to the same member (name,
-	// english, tree, explanation and message, naming the member the same way) returns that request with
-	// existing: true (200) instead of making a second one. The key itself is not stored, so any key does
-	// this, and a create without one is never matched to an existing request. A key that is empty,
-	// longer than 255 characters or not printable ASCII is refused with 400 `validation_error`; a valid
-	// one is echoed in the Idempotency-Key response header.
+	// english, tree and message, naming the member the same way) returns that request with existing:
+	// true (200) instead of making a second one. The key itself is not stored, so any key does this, and
+	// a create without one is never matched to an existing request. A key that is empty, longer than 255
+	// characters or not printable ASCII is refused with 400 `validation_error`; a valid one is echoed in
+	// the Idempotency-Key response header.
 	IdempotencyKey OptString `json:",omitempty,omitzero"`
 }
 
@@ -29471,6 +29471,12 @@ type ListSentEmailsParams struct {
 	// seconds; 0 (the default) returns immediately. Keeping one request in flight and reissuing it with
 	// the position you hold is the low-latency way to follow outbound delivery status.
 	Wait OptInt `json:",omitempty,omitzero"`
+	// True: only sends from your own addresses. For a person (a session, a Primitive CLI or app login,
+	// or an agent signed in with a code): their own member addresses, not mailboxes delegated or shared
+	// with them. For a connected agent: its own address. For an API key or another app it is not applied.
+	//  meta.mine says whether it was applied ({ applied, addresses }). Combines with from and every
+	// other filter.
+	Mine OptListSentEmailsMine `json:",omitempty,omitzero"`
 	// Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`.
 	// Reads a page of messages in one request instead of one detail read per row. Parts are withheld
 	// where the detail read withholds them. Each body field is cut to 64 KiB per row and a response
@@ -29584,6 +29590,15 @@ func unpackListSentEmailsParams(packed middleware.Parameters) (params ListSentEm
 		}
 		if v, ok := packed[key]; ok {
 			params.Wait = v.(OptInt)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "mine",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Mine = v.(OptListSentEmailsMine)
 		}
 	}
 	{
@@ -30185,6 +30200,62 @@ func decodeListSentEmailsParams(args [0]string, argsEscaped bool, r *http.Reques
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "wait",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: mine.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "mine",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotMineVal ListSentEmailsMine
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotMineVal = ListSentEmailsMine(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Mine.SetTo(paramsDotMineVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Mine.Get(); ok {
+					if err := func() error {
+						if err := validateParameter(value); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "mine",
 			In:   "query",
 			Err:  err,
 		}

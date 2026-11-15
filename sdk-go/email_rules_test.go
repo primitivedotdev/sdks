@@ -52,7 +52,7 @@ func TestGetEmailRuleDecodesUnfamiliarState(t *testing.T) {
 	if !set {
 		t.Fatal("expected a current version")
 	}
-	if current.Version != 2 || current.CompiledBy != "rule-compiler-v1" || len(current.Tree.Questions) != 1 {
+	if current.Version != 2 || len(current.Tree.Questions) != 1 {
 		t.Fatalf("unexpected current version %+v", current)
 	}
 }

@@ -28,25 +28,21 @@ class EmailRuleVersion:
     """ 
         Attributes:
             version (int):
+            explanation (None | str): What the version matches: Primitive's reading of the tree, worked out on every read,
+                never the words of whoever wrote the rule. Null when the tree no longer reads as one.
             english (str):
             tree (EmailRuleTree):
-            explanation (str):
-            assumptions (list[str]):
-            warnings (list[str]):
-            compiled_by (str): Who produced the tree, as stated when saved (not verified), such as rule-compiler-v1 or
-                member.
+            warnings (list[str]): Primitive's notes on the tree and its english, worked out on every read.
             vocabulary (str):
             created_at (datetime.datetime):
             sql (EmailRuleVersionSql | Unset): Present only when include_sql was true.
      """
 
     version: int
+    explanation: None | str
     english: str
     tree: EmailRuleTree
-    explanation: str
-    assumptions: list[str]
     warnings: list[str]
-    compiled_by: str
     vocabulary: str
     created_at: datetime.datetime
     sql: EmailRuleVersionSql | Unset = UNSET
@@ -61,21 +57,16 @@ class EmailRuleVersion:
         from ..models.email_rule_version_sql import EmailRuleVersionSql # noqa: PLC0415
         version = self.version
 
+        explanation: None | str
+        explanation = self.explanation
+
         english = self.english
 
         tree = self.tree.to_dict()
 
-        explanation = self.explanation
-
-        assumptions = self.assumptions
-
-
-
         warnings = self.warnings
 
 
-
-        compiled_by = self.compiled_by
 
         vocabulary = self.vocabulary
 
@@ -90,12 +81,10 @@ class EmailRuleVersion:
         field_dict.update(self.additional_properties)
         field_dict.update({
             "version": version,
+            "explanation": explanation,
             "english": english,
             "tree": tree,
-            "explanation": explanation,
-            "assumptions": assumptions,
             "warnings": warnings,
-            "compiled_by": compiled_by,
             "vocabulary": vocabulary,
             "created_at": created_at,
         })
@@ -113,6 +102,14 @@ class EmailRuleVersion:
         d = dict(src_dict)
         version = d.pop("version")
 
+        def _parse_explanation(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        explanation = _parse_explanation(d.pop("explanation"))
+
+
         english = d.pop("english")
 
         tree = EmailRuleTree.from_dict(d.pop("tree"))
@@ -120,15 +117,8 @@ class EmailRuleVersion:
 
 
 
-        explanation = d.pop("explanation")
-
-        assumptions = cast(list[str], d.pop("assumptions"))
-
-
         warnings = cast(list[str], d.pop("warnings"))
 
-
-        compiled_by = d.pop("compiled_by")
 
         vocabulary = d.pop("vocabulary")
 
@@ -149,12 +139,10 @@ class EmailRuleVersion:
 
         email_rule_version = cls(
             version=version,
+            explanation=explanation,
             english=english,
             tree=tree,
-            explanation=explanation,
-            assumptions=assumptions,
             warnings=warnings,
-            compiled_by=compiled_by,
             vocabulary=vocabulary,
             created_at=created_at,
             sql=sql,

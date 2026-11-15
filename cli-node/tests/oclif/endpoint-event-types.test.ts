@@ -9,19 +9,9 @@ import {
   currentEndpointRules,
   EventTypesFlagError,
   parseEventTypesFlag,
-  unknownEventTypes,
+  withDefaultEventTypes,
   withEventTypes,
 } from "../../src/oclif/endpoint-event-types.js";
-import {
-  createEndpointRuleRequestHint,
-  RULE_REQUEST_WEBHOOK_CHANGE_HINT,
-  RULE_REQUEST_WEBHOOK_CREATE_HINT,
-  RULE_REQUEST_WEBHOOK_DEFAULT_HINT,
-  RULE_REQUEST_WEBHOOK_HTTP_HINT,
-  RULE_REQUEST_WEBHOOK_KEY_HINT,
-  RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT,
-  updateEndpointRuleRequestHint,
-} from "../../src/oclif/rule-request-webhooks.js";
 
 const auth = vi.hoisted(() => ({ create: vi.fn() }));
 vi.mock("../../src/oclif/api-client.js", () => ({
@@ -103,54 +93,49 @@ afterEach(() => {
 });
 
 describe("parseEventTypesFlag", () => {
-  it("splits, trims, dedupes and expands sent_email.*", () => {
+  it("splits, trims and dedupes, and leaves family names for the API to expand", () => {
     expect(
       parseEventTypesFlag([
         "email.received, sent_email.*",
-        "sent_email.failed",
+        "sent_email.*",
+        "email_rule_objection.*,email.bouncd",
         "",
       ]),
-    ).toEqual(["email.received", ...SENT_EMAIL_EVENTS]);
-  });
-
-  it("expands email_rule_request.* to the four rule request events, and nothing else named like it", () => {
-    expect(
-      parseEventTypesFlag(["email_rule_request.*,email.received"]),
     ).toEqual([
-      "email_rule_request.created",
-      "email_rule_request.accepted",
-      "email_rule_request.declined",
-      "email_rule_request.withdrawn",
       "email.received",
+      "sent_email.*",
+      "email_rule_objection.*",
+      "email.bouncd",
     ]);
-    expect(parseEventTypesFlag(["constructor"])).toEqual(["constructor"]);
   });
 
-  it("expands email_rule_objection.* to the four objection events, which this CLI knows", () => {
-    const expanded = parseEventTypesFlag(["email_rule_objection.*"]);
-    expect(expanded).toEqual([
-      "email_rule_objection.created",
-      "email_rule_objection.accepted",
-      "email_rule_objection.declined",
-      "email_rule_objection.withdrawn",
-    ]);
-    expect(unknownEventTypes(expanded)).toEqual([]);
-  });
-
-  it("rejects an empty list and more than 50 names", () => {
+  it("rejects an empty list", () => {
     expect(() => parseEventTypesFlag([" , "])).toThrow(EventTypesFlagError);
-    const many = Array.from({ length: 51 }, (_, i) => `custom.${i}`);
-    expect(() => parseEventTypesFlag([many.join(",")])).toThrow(/at most 50/);
   });
+});
 
-  it("names the event types it does not know", () => {
+describe("withDefaultEventTypes", () => {
+  it("adds email.received to a create that names no event types, and leaves any other body alone", () => {
+    expect(withDefaultEventTypes(undefined)).toBeUndefined();
+    expect(withDefaultEventTypes({ kind: "http", url: "u" })).toEqual({
+      kind: "http",
+      url: "u",
+      rules: { event_types: ["email.received"] },
+    });
+    for (const other of [
+      { kind: "function", function_id: "f" },
+      { kind: "pull", name: "p" },
+    ])
+      expect(withDefaultEventTypes(other)).toBe(other);
     expect(
-      unknownEventTypes([
-        "sent_email.failed",
-        "email.bouncd",
-        "email.received",
-      ]),
-    ).toEqual(["email.bouncd"]);
+      withDefaultEventTypes({ url: "u", rules: { max_size_bytes: 1 } }),
+    ).toEqual({
+      url: "u",
+      rules: { max_size_bytes: 1, event_types: ["email.received"] },
+    });
+    const named = { rules: { event_types: ["sent_email.*"] } };
+    expect(withDefaultEventTypes(named)).toBe(named);
+    expect(withDefaultEventTypes([])).toEqual([]);
   });
 });
 
@@ -209,7 +194,7 @@ describe("endpoints create/update --event-types", () => {
     expect(command("listEndpoints").flags["event-types"]).toBeUndefined();
   });
 
-  it("creates an endpoint subscribed to the sent_email events", async () => {
+  it("sends a family name as given on create", async () => {
     const calls = fixture({
       body: {
         success: true,
@@ -230,8 +215,35 @@ describe("endpoints create/update --event-types", () => {
     expect(calls[0]?.method).toBe("POST");
     expect(calls[0]?.body).toEqual({
       url: "https://hooks.example.test/primitive",
-      rules: { event_types: SENT_EMAIL_EVENTS },
+      rules: { event_types: ["sent_email.*"] },
     });
+  });
+
+  it("sends email.received on a create that names no event types", async () => {
+    const calls = fixture({ body: { success: true, data: endpointRow({}) } });
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    await command("createEndpoint").run(
+      ["--url", "https://hooks.example.test/primitive"],
+      { root },
+    );
+    expect(calls[0]?.body).toEqual({
+      url: "https://hooks.example.test/primitive",
+      rules: { event_types: ["email.received"] },
+    });
+  });
+
+  it("never fills in the URL when an update adds rule events", async () => {
+    const calls = fixture(
+      { body: { success: true, data: [endpointRow({})] } },
+      { body: { success: true, data: endpointRow({}) } },
+    );
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    await command("updateEndpoint").run(
+      ["--id", ENDPOINT_ID, "--event-types", "email_rule_request.*"],
+      { root },
+    );
+    const patch = calls.find((call) => call.method === "PATCH");
+    expect(patch?.body).not.toHaveProperty("url");
   });
 
   it("keeps the endpoint's other rules on update", async () => {
@@ -274,7 +286,7 @@ describe("endpoints create/update --event-types", () => {
     expect(calls[1]?.body).toEqual({
       rules: {
         sender_whitelist: ["alerts@example.test"],
-        event_types: ["email.received", ...SENT_EMAIL_EVENTS],
+        event_types: ["email.received", "sent_email.*"],
       },
     });
   });
@@ -299,248 +311,5 @@ describe("endpoints create/update --event-types", () => {
     expect(calls[0]?.body).toEqual({
       rules: { max_size_bytes: 100, event_types: ["sent_email.completed"] },
     });
-  });
-
-  it("warns about an unknown event type on stderr", async () => {
-    fixture({ body: { success: true, data: endpointRow({}) } });
-    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-    const stderr = vi
-      .spyOn(process.stderr, "write")
-      .mockImplementation(() => true);
-    await command("createEndpoint").run(
-      [
-        "--url",
-        "https://hooks.example.test/primitive",
-        "--event-types",
-        "sent_email.faild",
-      ],
-      { root },
-    );
-    expect(stderr.mock.calls.map((call) => String(call[0])).join("")).toContain(
-      "sent_email.faild is not an event type this CLI knows",
-    );
-  });
-});
-
-describe("a refused webhook for rule request events", () => {
-  const RULE_REQUEST_EVENTS = [
-    "email_rule_request.created",
-    "email_rule_request.accepted",
-    "email_rule_request.declined",
-    "email_rule_request.withdrawn",
-  ];
-  const refused = (status: number, code: string, reason?: string): Reply => ({
-    status,
-    body: {
-      success: false,
-      error: {
-        code,
-        message: "Refused.",
-        ...(reason ? { details: { reason } } : {}),
-      },
-    },
-  });
-  const stderrOf = async (sdkName: string, argv: string[]) => {
-    const written: string[] = [];
-    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-    vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
-      written.push(String(chunk));
-      return true;
-    });
-    await command(sdkName)
-      .run(argv, { root })
-      .catch(() => undefined);
-    return written.join("");
-  };
-
-  it("says to make it signed in as yourself when a key or another app made it", async () => {
-    const calls = fixture(
-      refused(403, "forbidden", "rule_request_events_need_own_webhook"),
-    );
-    const stderr = await stderrOf("createEndpoint", [
-      "--url",
-      "https://hooks.example.test/requests",
-      "--event-types",
-      "email_rule_request.*",
-    ]);
-    expect(calls[0]?.body).toEqual({
-      url: "https://hooks.example.test/requests",
-      rules: { event_types: RULE_REQUEST_EVENTS },
-    });
-    expect(stderr).toContain(RULE_REQUEST_WEBHOOK_CREATE_HINT);
-  });
-
-  it("says to leave out the default flags when it is asked to be a default", async () => {
-    fixture(refused(400, "validation_error"));
-    const stderr = await stderrOf("createEndpoint", [
-      "--url",
-      "https://hooks.example.test/requests",
-      "--event-types",
-      "email_rule_request.*",
-      "--no-is-route-target",
-    ]);
-    expect(stderr).toContain(RULE_REQUEST_WEBHOOK_DEFAULT_HINT);
-  });
-
-  it("says to create a new webhook when an existing one is given the events", async () => {
-    const calls = fixture(
-      {
-        body: {
-          success: true,
-          data: [endpointRow({ event_types: ["email.received"] })],
-        },
-      },
-      refused(403, "forbidden", "rule_request_events_need_own_webhook"),
-    );
-    const stderr = await stderrOf("updateEndpoint", [
-      "--id",
-      ENDPOINT_ID,
-      "--event-types",
-      "email_rule_request.*",
-    ]);
-    expect(calls.map((call) => call.method)).toEqual(["GET", "PATCH"]);
-    expect(stderr).toContain(RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT);
-  });
-
-  it("tells a change by someone else, or a hand-over to a key, apart from adding the events", () => {
-    const reason = {
-      code: "forbidden",
-      details: { reason: "rule_request_events_need_own_webhook" },
-    };
-    expect(
-      updateEndpointRuleRequestHint("forbidden", { enabled: false }, reason),
-    ).toBe(RULE_REQUEST_WEBHOOK_CHANGE_HINT);
-    expect(
-      updateEndpointRuleRequestHint(
-        "forbidden",
-        { owner_key_id: "00000000-0000-4000-8000-000000000001" },
-        reason,
-      ),
-    ).toBe(RULE_REQUEST_WEBHOOK_KEY_HINT);
-    expect(
-      updateEndpointRuleRequestHint(
-        "forbidden",
-        { rules: { event_types: ["email_rule_request.created"] } },
-        reason,
-      ),
-    ).toBe(RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT);
-    // Handing it back to the organization (owner_key_id null) is a hand-over too.
-    expect(
-      updateEndpointRuleRequestHint(
-        "forbidden",
-        { owner_key_id: null },
-        reason,
-      ),
-    ).toBe(RULE_REQUEST_WEBHOOK_KEY_HINT);
-    // A raw body's literal wildcard counts, as the API counts it.
-    expect(
-      updateEndpointRuleRequestHint(
-        "forbidden",
-        { rules: { event_types: ["email_rule_request.*"] } },
-        reason,
-      ),
-    ).toBe(RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT);
-    // Objection events are kept to such a webhook too.
-    expect(
-      updateEndpointRuleRequestHint(
-        "forbidden",
-        { rules: { event_types: ["email_rule_objection.created"] } },
-        reason,
-      ),
-    ).toBe(RULE_REQUEST_WEBHOOK_SUBSCRIBE_HINT);
-  });
-
-  it("tells the create refusals apart by what was sent", () => {
-    const reason = {
-      code: "forbidden",
-      details: { reason: "rule_request_events_need_own_webhook" },
-    };
-    const rules = { event_types: ["email_rule_request.created"] };
-    expect(
-      createEndpointRuleRequestHint(
-        "forbidden",
-        { url: "https://x.test", rules },
-        reason,
-      ),
-    ).toBe(RULE_REQUEST_WEBHOOK_CREATE_HINT);
-    expect(
-      createEndpointRuleRequestHint(
-        "forbidden",
-        { url: "https://x.test", rules, owner_key_id: null },
-        reason,
-      ),
-    ).toBe(RULE_REQUEST_WEBHOOK_KEY_HINT);
-    expect(
-      createEndpointRuleRequestHint(
-        "forbidden",
-        { kind: "function", rules },
-        reason,
-      ),
-    ).toBe(RULE_REQUEST_WEBHOOK_HTTP_HINT);
-    expect(
-      createEndpointRuleRequestHint(
-        "forbidden",
-        { kind: "http", url: "https://x.test", rules },
-        reason,
-      ),
-    ).toBe(RULE_REQUEST_WEBHOOK_CREATE_HINT);
-  });
-
-  it("names every flag that asks for a default", () => {
-    for (const asked of [
-      { is_route_target: false },
-      { takeover: true },
-      { takeover: false },
-    ]) {
-      expect(
-        createEndpointRuleRequestHint("validation_error", {
-          url: "https://hooks.example.test/x",
-          rules: { event_types: RULE_REQUEST_EVENTS },
-          ...asked,
-        }),
-      ).toBe(RULE_REQUEST_WEBHOOK_DEFAULT_HINT);
-    }
-    expect(RULE_REQUEST_WEBHOOK_DEFAULT_HINT).toContain("--no-takeover");
-  });
-
-  it("adds nothing to other refusals", () => {
-    expect(
-      createEndpointRuleRequestHint("validation_error", {
-        url: "https://hooks.example.test/x",
-        is_route_target: false,
-        rules: { event_types: ["email.received"] },
-      }),
-    ).toBeUndefined();
-    expect(
-      createEndpointRuleRequestHint("validation_error", {
-        url: "https://hooks.example.test/x",
-        rules: { event_types: RULE_REQUEST_EVENTS },
-      }),
-    ).toBeUndefined();
-    expect(
-      createEndpointRuleRequestHint(
-        "forbidden",
-        {},
-        {
-          code: "forbidden",
-          details: { reason: "endpoint_owner_changed" },
-        },
-      ),
-    ).toBeUndefined();
-    expect(
-      updateEndpointRuleRequestHint("forbidden", {}, undefined),
-    ).toBeUndefined();
-    // The reason is read from the error, or from an envelope around it.
-    expect(
-      createEndpointRuleRequestHint(
-        "forbidden",
-        {},
-        {
-          error: {
-            details: { reason: "rule_request_events_need_own_webhook" },
-          },
-        },
-      ),
-    ).toBe(RULE_REQUEST_WEBHOOK_CREATE_HINT);
   });
 });

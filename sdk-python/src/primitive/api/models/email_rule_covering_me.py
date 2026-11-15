@@ -50,7 +50,8 @@ class EmailRuleCoveringMe:
             english (None | str): What its author asked for, in their words, at its current version. Null when it has no
                 version, was deleted after the page was read, or the words could not be read in time; GET /v1/email-
                 rules/covering-me/{id} shows them with its tree.
-            explanation (None | str): What its current version matches, as compiled. Null as english is.
+            explanation (None | str): What its current version matches, Primitive's reading of its tree. Null as english is,
+                or when the tree no longer reads as one.
             do_not_share_note (str | Unset): On a grant rule: that the active do-not-share rules over an email run first,
                 keeping from it what they match and holding back what they cannot decide, which is decided again for up to a day
                 and shared only if none of them then matches it.

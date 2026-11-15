@@ -148,7 +148,6 @@ from .compile_email_rule_request_evaluation_scope import CompileEmailRuleRequest
 from .compile_email_rule_request_kind import CompileEmailRuleRequestKind
 from .compile_email_rule_response_200 import CompileEmailRuleResponse200
 from .compile_email_rule_result import CompileEmailRuleResult
-from .compile_email_rule_result_kind import CompileEmailRuleResultKind
 from .compile_email_rule_result_sql import CompileEmailRuleResultSql
 from .complete_webhook_exec_input import CompleteWebhookExecInput
 from .complete_webhook_exec_input_mode import CompleteWebhookExecInputMode
@@ -207,7 +206,6 @@ from .create_email_rule_request_request_kind import CreateEmailRuleRequestReques
 from .create_email_rule_request_response_200 import CreateEmailRuleRequestResponse200
 from .create_email_rule_request_response_201 import CreateEmailRuleRequestResponse201
 from .create_email_rule_request_result import CreateEmailRuleRequestResult
-from .create_email_rule_request_result_proposed_via import CreateEmailRuleRequestResultProposedVia
 from .create_email_rule_request_result_status import CreateEmailRuleRequestResultStatus
 from .create_email_rule_request_state import CreateEmailRuleRequestState
 from .create_email_rule_response_201 import CreateEmailRuleResponse201
@@ -215,7 +213,6 @@ from .create_email_rule_result import CreateEmailRuleResult
 from .create_email_rule_result_affects import CreateEmailRuleResultAffects
 from .create_email_rule_result_evaluation_scope import CreateEmailRuleResultEvaluationScope
 from .create_email_rule_result_expectations import CreateEmailRuleResultExpectations
-from .create_email_rule_result_expectations_check import CreateEmailRuleResultExpectationsCheck
 from .create_email_rule_result_kind import CreateEmailRuleResultKind
 from .create_email_rule_result_restored_from import CreateEmailRuleResultRestoredFrom
 from .create_email_rule_result_state import CreateEmailRuleResultState
@@ -403,7 +400,6 @@ from .decline_email_rule_objection_result_status import DeclineEmailRuleObjectio
 from .decline_email_rule_request_request import DeclineEmailRuleRequestRequest
 from .decline_email_rule_request_response_200 import DeclineEmailRuleRequestResponse200
 from .decline_email_rule_request_result import DeclineEmailRuleRequestResult
-from .decline_email_rule_request_result_proposed_via import DeclineEmailRuleRequestResultProposedVia
 from .decline_email_rule_request_result_status import DeclineEmailRuleRequestResultStatus
 from .delete_address_note_response_200 import DeleteAddressNoteResponse200
 from .delete_address_note_response_200_data import DeleteAddressNoteResponse200Data
@@ -540,7 +536,9 @@ from .email_readable_parse_status_type_2_type_1 import EmailReadableParseStatusT
 from .email_readable_parse_status_type_3_type_1 import EmailReadableParseStatusType3Type1
 from .email_rule import EmailRule
 from .email_rule_author import EmailRuleAuthor
-from .email_rule_breadth import EmailRuleBreadth
+from .email_rule_body import EmailRuleBody
+from .email_rule_body_evaluation_scope import EmailRuleBodyEvaluationScope
+from .email_rule_body_kind import EmailRuleBodyKind
 from .email_rule_coverage import EmailRuleCoverage
 from .email_rule_coverage_via import EmailRuleCoverageVia
 from .email_rule_covering_author import EmailRuleCoveringAuthor
@@ -557,6 +555,7 @@ from .email_rule_expectation_sample import EmailRuleExpectationSample
 from .email_rule_expectation_sample_expected import EmailRuleExpectationSampleExpected
 from .email_rule_expectation_sample_input import EmailRuleExpectationSampleInput
 from .email_rule_expectation_sample_input_expected import EmailRuleExpectationSampleInputExpected
+from .email_rule_expectations_check import EmailRuleExpectationsCheck
 from .email_rule_kind import EmailRuleKind
 from .email_rule_look_alike import EmailRuleLookAlike
 from .email_rule_look_alike_email import EmailRuleLookAlikeEmail
@@ -586,7 +585,6 @@ from .email_rule_receivers_webhooks_item import EmailRuleReceiversWebhooksItem
 from .email_rule_receivers_webhooks_item_owner import EmailRuleReceiversWebhooksItemOwner
 from .email_rule_receivers_webhooks_item_owner_kind import EmailRuleReceiversWebhooksItemOwnerKind
 from .email_rule_request import EmailRuleRequest
-from .email_rule_request_proposed_via import EmailRuleRequestProposedVia
 from .email_rule_request_proposer import EmailRuleRequestProposer
 from .email_rule_request_status import EmailRuleRequestStatus
 from .email_rule_request_target import EmailRuleRequestTarget
@@ -595,6 +593,7 @@ from .email_rule_sample_judgment import EmailRuleSampleJudgment
 from .email_rule_sample_judgment_expected import EmailRuleSampleJudgmentExpected
 from .email_rule_sample_judgment_outcome import EmailRuleSampleJudgmentOutcome
 from .email_rule_sample_judgment_question_answers_item import EmailRuleSampleJudgmentQuestionAnswersItem
+from .email_rule_sample_judgment_reason import EmailRuleSampleJudgmentReason
 from .email_rule_sample_judgment_status import EmailRuleSampleJudgmentStatus
 from .email_rule_saved_sample_email import EmailRuleSavedSampleEmail
 from .email_rule_saved_sample_email_from import EmailRuleSavedSampleEmailFrom
@@ -636,7 +635,6 @@ from .email_rule_written import EmailRuleWritten
 from .email_rule_written_affects import EmailRuleWrittenAffects
 from .email_rule_written_evaluation_scope import EmailRuleWrittenEvaluationScope
 from .email_rule_written_expectations import EmailRuleWrittenExpectations
-from .email_rule_written_expectations_check import EmailRuleWrittenExpectationsCheck
 from .email_rule_written_kind import EmailRuleWrittenKind
 from .email_rule_written_restored_from import EmailRuleWrittenRestoredFrom
 from .email_rule_written_state import EmailRuleWrittenState
@@ -801,7 +799,6 @@ from .get_email_rule_objection_result_rule import GetEmailRuleObjectionResultRul
 from .get_email_rule_objection_result_status import GetEmailRuleObjectionResultStatus
 from .get_email_rule_request_response_200 import GetEmailRuleRequestResponse200
 from .get_email_rule_request_result import GetEmailRuleRequestResult
-from .get_email_rule_request_result_proposed_via import GetEmailRuleRequestResultProposedVia
 from .get_email_rule_request_result_status import GetEmailRuleRequestResultStatus
 from .get_email_rule_response_200 import GetEmailRuleResponse200
 from .get_email_rule_result import GetEmailRuleResult
@@ -1171,6 +1168,7 @@ from .list_roles_result_unassigned import ListRolesResultUnassigned
 from .list_roles_result_unassigned_key import ListRolesResultUnassignedKey
 from .list_routes_response_200 import ListRoutesResponse200
 from .list_sent_attachment_archive_members_response_200 import ListSentAttachmentArchiveMembersResponse200
+from .list_sent_emails_mine import ListSentEmailsMine
 from .list_sent_emails_response_200 import ListSentEmailsResponse200
 from .list_suspensions_include_decided import ListSuspensionsIncludeDecided
 from .list_suspensions_response_200 import ListSuspensionsResponse200
@@ -1781,6 +1779,7 @@ from .test_email_rule_result_expectations_counts import TestEmailRuleResultExpec
 from .test_email_rule_result_expectations_results_item import TestEmailRuleResultExpectationsResultsItem
 from .test_email_rule_result_expectations_results_item_expected import TestEmailRuleResultExpectationsResultsItemExpected
 from .test_email_rule_result_expectations_results_item_outcome import TestEmailRuleResultExpectationsResultsItemOutcome
+from .test_email_rule_result_expectations_results_item_reason import TestEmailRuleResultExpectationsResultsItemReason
 from .test_email_rule_result_expectations_results_item_status import TestEmailRuleResultExpectationsResultsItemStatus
 from .test_email_rule_result_questions import TestEmailRuleResultQuestions
 from .test_email_rule_result_results_item import TestEmailRuleResultResultsItem
@@ -1865,7 +1864,6 @@ from .update_email_rule_result import UpdateEmailRuleResult
 from .update_email_rule_result_affects import UpdateEmailRuleResultAffects
 from .update_email_rule_result_evaluation_scope import UpdateEmailRuleResultEvaluationScope
 from .update_email_rule_result_expectations import UpdateEmailRuleResultExpectations
-from .update_email_rule_result_expectations_check import UpdateEmailRuleResultExpectationsCheck
 from .update_email_rule_result_kind import UpdateEmailRuleResultKind
 from .update_email_rule_result_restored_from import UpdateEmailRuleResultRestoredFrom
 from .update_email_rule_result_state import UpdateEmailRuleResultState
@@ -1946,7 +1944,6 @@ from .withdraw_email_rule_objection_result_rule import WithdrawEmailRuleObjectio
 from .withdraw_email_rule_objection_result_status import WithdrawEmailRuleObjectionResultStatus
 from .withdraw_email_rule_request_response_200 import WithdrawEmailRuleRequestResponse200
 from .withdraw_email_rule_request_result import WithdrawEmailRuleRequestResult
-from .withdraw_email_rule_request_result_proposed_via import WithdrawEmailRuleRequestResultProposedVia
 from .withdraw_email_rule_request_result_status import WithdrawEmailRuleRequestResultStatus
 
 __all__ = (
@@ -2098,7 +2095,6 @@ __all__ = (
     "CompileEmailRuleRequestKind",
     "CompileEmailRuleResponse200",
     "CompileEmailRuleResult",
-    "CompileEmailRuleResultKind",
     "CompileEmailRuleResultSql",
     "CompleteWebhookExecInput",
     "CompleteWebhookExecInputMode",
@@ -2158,7 +2154,6 @@ __all__ = (
     "CreateEmailRuleRequestResponse200",
     "CreateEmailRuleRequestResponse201",
     "CreateEmailRuleRequestResult",
-    "CreateEmailRuleRequestResultProposedVia",
     "CreateEmailRuleRequestResultStatus",
     "CreateEmailRuleRequestState",
     "CreateEmailRuleResponse201",
@@ -2166,7 +2161,6 @@ __all__ = (
     "CreateEmailRuleResultAffects",
     "CreateEmailRuleResultEvaluationScope",
     "CreateEmailRuleResultExpectations",
-    "CreateEmailRuleResultExpectationsCheck",
     "CreateEmailRuleResultKind",
     "CreateEmailRuleResultRestoredFrom",
     "CreateEmailRuleResultState",
@@ -2353,7 +2347,6 @@ __all__ = (
     "DeclineEmailRuleRequestRequest",
     "DeclineEmailRuleRequestResponse200",
     "DeclineEmailRuleRequestResult",
-    "DeclineEmailRuleRequestResultProposedVia",
     "DeclineEmailRuleRequestResultStatus",
     "DeleteAddressNoteResponse200",
     "DeleteAddressNoteResponse200Data",
@@ -2490,7 +2483,9 @@ __all__ = (
     "EmailReadableParseStatusType3Type1",
     "EmailRule",
     "EmailRuleAuthor",
-    "EmailRuleBreadth",
+    "EmailRuleBody",
+    "EmailRuleBodyEvaluationScope",
+    "EmailRuleBodyKind",
     "EmailRuleCoverage",
     "EmailRuleCoverageVia",
     "EmailRuleCoveringAuthor",
@@ -2507,6 +2502,7 @@ __all__ = (
     "EmailRuleExpectationSampleExpected",
     "EmailRuleExpectationSampleInput",
     "EmailRuleExpectationSampleInputExpected",
+    "EmailRuleExpectationsCheck",
     "EmailRuleKind",
     "EmailRuleLookAlike",
     "EmailRuleLookAlikeEmail",
@@ -2536,7 +2532,6 @@ __all__ = (
     "EmailRuleReceiversWebhooksItemOwner",
     "EmailRuleReceiversWebhooksItemOwnerKind",
     "EmailRuleRequest",
-    "EmailRuleRequestProposedVia",
     "EmailRuleRequestProposer",
     "EmailRuleRequestStatus",
     "EmailRuleRequestTarget",
@@ -2545,6 +2540,7 @@ __all__ = (
     "EmailRuleSampleJudgmentExpected",
     "EmailRuleSampleJudgmentOutcome",
     "EmailRuleSampleJudgmentQuestionAnswersItem",
+    "EmailRuleSampleJudgmentReason",
     "EmailRuleSampleJudgmentStatus",
     "EmailRuleSavedSampleEmail",
     "EmailRuleSavedSampleEmailFrom",
@@ -2586,7 +2582,6 @@ __all__ = (
     "EmailRuleWrittenAffects",
     "EmailRuleWrittenEvaluationScope",
     "EmailRuleWrittenExpectations",
-    "EmailRuleWrittenExpectationsCheck",
     "EmailRuleWrittenKind",
     "EmailRuleWrittenRestoredFrom",
     "EmailRuleWrittenState",
@@ -2751,7 +2746,6 @@ __all__ = (
     "GetEmailRuleObjectionResultStatus",
     "GetEmailRuleRequestResponse200",
     "GetEmailRuleRequestResult",
-    "GetEmailRuleRequestResultProposedVia",
     "GetEmailRuleRequestResultStatus",
     "GetEmailRuleResponse200",
     "GetEmailRuleResult",
@@ -3121,6 +3115,7 @@ __all__ = (
     "ListRolesResultUnassignedKey",
     "ListRoutesResponse200",
     "ListSentAttachmentArchiveMembersResponse200",
+    "ListSentEmailsMine",
     "ListSentEmailsResponse200",
     "ListSuspensionsIncludeDecided",
     "ListSuspensionsResponse200",
@@ -3731,6 +3726,7 @@ __all__ = (
     "TestEmailRuleResultExpectationsResultsItem",
     "TestEmailRuleResultExpectationsResultsItemExpected",
     "TestEmailRuleResultExpectationsResultsItemOutcome",
+    "TestEmailRuleResultExpectationsResultsItemReason",
     "TestEmailRuleResultExpectationsResultsItemStatus",
     "TestEmailRuleResultQuestions",
     "TestEmailRuleResultResultsItem",
@@ -3818,7 +3814,6 @@ __all__ = (
     "UpdateEmailRuleResultAffects",
     "UpdateEmailRuleResultEvaluationScope",
     "UpdateEmailRuleResultExpectations",
-    "UpdateEmailRuleResultExpectationsCheck",
     "UpdateEmailRuleResultKind",
     "UpdateEmailRuleResultRestoredFrom",
     "UpdateEmailRuleResultState",
@@ -3896,6 +3891,5 @@ __all__ = (
     "WithdrawEmailRuleObjectionResultStatus",
     "WithdrawEmailRuleRequestResponse200",
     "WithdrawEmailRuleRequestResult",
-    "WithdrawEmailRuleRequestResultProposedVia",
     "WithdrawEmailRuleRequestResultStatus",
 )

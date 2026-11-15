@@ -22,8 +22,8 @@ T = TypeVar("T", bound="CreateEmailRuleRequestExpectations")
 
 @_attrs_define
 class CreateEmailRuleRequestExpectations:
-    """ Emails it must match and must not (at most 100): a test by rule_id judges them unless expect is given, and each
-    version it saves is checked against them.
+    """ Emails it must match and must not (at most 100): a test by rule_id judges them unless expect is given, and a write
+    that leaves the rule active on a new version, or turns it active, is judged against them first.
 
         Attributes:
             match (list[UUID] | Unset):

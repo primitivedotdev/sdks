@@ -10,6 +10,7 @@ from ..types import UNSET, Unset
 
 from ..models.test_email_rule_result_expectations_results_item_expected import TestEmailRuleResultExpectationsResultsItemExpected
 from ..models.test_email_rule_result_expectations_results_item_outcome import TestEmailRuleResultExpectationsResultsItemOutcome
+from ..models.test_email_rule_result_expectations_results_item_reason import TestEmailRuleResultExpectationsResultsItemReason
 from ..models.test_email_rule_result_expectations_results_item_status import TestEmailRuleResultExpectationsResultsItemStatus
 from uuid import UUID
 
@@ -30,12 +31,16 @@ class TestEmailRuleResultExpectationsResultsItem:
             expected (TestEmailRuleResultExpectationsResultsItemExpected):
             outcome (TestEmailRuleResultExpectationsResultsItemOutcome):
             status (TestEmailRuleResultExpectationsResultsItemStatus):
+            reason (TestEmailRuleResultExpectationsResultsItemReason | Unset): On an undecided one only: why.
+            retryable (bool | Unset): On an undecided one only: whether testing again can decide it.
      """
 
     email_id: UUID
     expected: TestEmailRuleResultExpectationsResultsItemExpected
     outcome: TestEmailRuleResultExpectationsResultsItemOutcome
     status: TestEmailRuleResultExpectationsResultsItemStatus
+    reason: TestEmailRuleResultExpectationsResultsItemReason | Unset = UNSET
+    retryable: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -51,6 +56,13 @@ class TestEmailRuleResultExpectationsResultsItem:
 
         status = self.status.value
 
+        reason: str | Unset = UNSET
+        if not isinstance(self.reason, Unset):
+            reason = self.reason.value
+
+
+        retryable = self.retryable
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -60,6 +72,10 @@ class TestEmailRuleResultExpectationsResultsItem:
             "outcome": outcome,
             "status": status,
         })
+        if reason is not UNSET:
+            field_dict["reason"] = reason
+        if retryable is not UNSET:
+            field_dict["retryable"] = retryable
 
         return field_dict
 
@@ -88,11 +104,25 @@ class TestEmailRuleResultExpectationsResultsItem:
 
 
 
+        _reason = d.pop("reason", UNSET)
+        reason: TestEmailRuleResultExpectationsResultsItemReason | Unset
+        if isinstance(_reason,  Unset):
+            reason = UNSET
+        else:
+            reason = TestEmailRuleResultExpectationsResultsItemReason(_reason)
+
+
+
+
+        retryable = d.pop("retryable", UNSET)
+
         test_email_rule_result_expectations_results_item = cls(
             email_id=email_id,
             expected=expected,
             outcome=outcome,
             status=status,
+            reason=reason,
+            retryable=retryable,
         )
 
 

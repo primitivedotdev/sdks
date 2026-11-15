@@ -8,7 +8,6 @@ import {
   withFlagSuggestion,
 } from "../../src/oclif/flag-suggestions.js";
 import { COMMANDS } from "../../src/oclif/index.js";
-import { sentListOtherSendersNote } from "../../src/oclif/sent-list-labels.js";
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
 const self = "agent@example.test";
@@ -203,35 +202,65 @@ describe("unknown flags", () => {
   });
 });
 
-describe("sent list under a connected profile", () => {
+describe("sent list", () => {
   const rows = [
-    { id: "s1", from_address: self, status: "delivered" },
-    { id: "s2", from_address: peer, status: "delivered" },
+    {
+      id: "s1",
+      from_address: self,
+      to_address: "pat@example.test",
+      status: "delivered",
+      created_at: "2026-11-10T12:34:56.000Z",
+      subject: "Hello\u001b[2J there",
+    },
   ];
+  const answer = (applied: boolean) =>
+    jsonResponse(200, {
+      success: true,
+      data: rows,
+      meta: {
+        cursor: null,
+        mine: { applied, addresses: applied ? [self] : [] },
+      },
+    });
 
-  it("labels rows another address sent to this one", async () => {
-    responder = () => jsonResponse(200, { success: true, data: rows });
+  it("asks for your own sends unless --all-senders, and keeps a mine given", async () => {
+    responder = () => answer(true);
+    await run("sent:list", []);
+    await run("sent:list", ["--all-senders"]);
+    await run("sending:list-sent-emails", ["--mine", "false"]);
+    expect(fetchCalls.map((url) => url.searchParams.get("mine"))).toEqual([
+      "true",
+      null,
+      "false",
+    ]);
+  });
+
+  it("prints whose sends these are and a table, sender first, after the JSON", async () => {
+    responder = () => answer(true);
     const result = await run("sent:list", []);
-    expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual(rows);
-    expect(result.stderr).toContain(
-      `1 of 2 rows were sent by another address in this organization (${peer}) to ${self}; they are mail ${self} received, not its own sends. Rows with from_address ${self} are this address's sends; pass --from ${self} to list only those.`,
+    const lines = result.stderr.trimEnd().split("\n");
+    expect(lines[0]).toBe(
+      `Sends from your own addresses (${self}). --all-senders lists every send you can read.`,
     );
+    expect(lines[1]).toMatch(
+      /^FROM\s+TO\s+STATUS\s+WHEN \(UTC\)\s+SUBJECT\s+ID$/,
+    );
+    expect(lines[2]).toMatch(
+      /^agent@example\.test\s+pat@example\.test\s+delivered\s+2026-11-10 12:34\s+Hello there\s+s1$/,
+    );
+    responder = () => answer(false);
+    const all = await run("sent:list", []);
+    expect(all.stderr).not.toContain("Sends from your own addresses");
   });
 
-  it("carries the label in the envelope summary under --json", async () => {
-    responder = () => jsonResponse(200, { success: true, data: rows });
+  it("adds nothing under --json, where meta.mine and from_address say it", async () => {
+    responder = () => answer(true);
     const result = await run("sent:list", ["--json"]);
-    expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
-    expect(JSON.parse(result.stdout).summary).toContain(
-      `pass --from ${self} to list only those.`,
-    );
-  });
-
-  it("says nothing when every row is this address's own send", () => {
-    expect(sentListOtherSendersNote([rows[0]], self)).toBeNull();
-    expect(sentListOtherSendersNote(rows, undefined)).toBeNull();
-    expect(sentListOtherSendersNote([], self)).toBeNull();
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      data: rows,
+      meta: { mine: { applied: true } },
+    });
   });
 });

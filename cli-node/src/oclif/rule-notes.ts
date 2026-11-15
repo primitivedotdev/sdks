@@ -50,26 +50,27 @@ function list(value: unknown): unknown[] {
 
 /**
  * The notes an answer carries, in order: each scope warning, each warning
- * (the answer's own or its summary's), then the answer's notes, its rule's,
- * a restore's and its expectations check's, each once.
+ * (the answer's own, its summary's or its rule's), then the answer's notes, its rule's
+ * and a restore's, each once.
  */
 export function ruleNotesLines(answer: unknown): string[] {
   if (!isRecord(answer)) return [];
   const summary = isRecord(answer.summary) ? answer.summary : {};
   const rule = isRecord(answer.rule) ? answer.rule : {};
-  const check = isRecord(answer.expectations_check)
-    ? answer.expectations_check
-    : {};
   const restored = isRecord(answer.restored_from) ? answer.restored_from : {};
   const notes = (from: Record<string, unknown>) =>
     NOTE_KEYS.map((key) => from[key]);
   const lines = [
     ...list(answer.scope_warnings).filter(isRecord).map(scopeWarningLine),
-    ...[...list(answer.warnings), ...list(summary.warnings)]
+    ...[
+      ...list(answer.warnings),
+      ...list(summary.warnings),
+      ...list(rule.warnings),
+    ]
       .map(shown)
       .filter(Boolean)
       .map((text) => `Warning: ${text}`),
-    ...[...notes(answer), ...notes(rule), restored.note, check.note]
+    ...[...notes(answer), ...notes(rule), restored.note]
       .map(shown)
       .filter(Boolean),
   ];

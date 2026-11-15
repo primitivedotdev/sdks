@@ -113,7 +113,7 @@ def sync_detailed(
      Accepts a pending objection to a rule you wrote: turns the rule off (state draft), as updating it
     would, and records the objection accepted, together. You can turn the rule on again later. Needs
     mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -152,7 +152,7 @@ def sync(
      Accepts a pending objection to a rule you wrote: turns the rule off (state draft), as updating it
     would, and records the objection accepted, together. You can turn the rule on again later. Needs
     mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -186,7 +186,7 @@ async def asyncio_detailed(
      Accepts a pending objection to a rule you wrote: turns the rule off (state draft), as updating it
     would, and records the objection accepted, together. You can turn the rule on again later. Needs
     mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -225,7 +225,7 @@ async def asyncio(
      Accepts a pending objection to a rule you wrote: turns the rule off (state draft), as updating it
     would, and records the objection accepted, together. You can turn the rule on again later. Needs
     mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+    or narrowed token).
 
     Args:
         id (UUID):

@@ -117,7 +117,7 @@ def sync_detailed(
 
      Lists the rules you share with other members, so you can find one and stop it. This needs no mail
     access and does not depend on the feature being on for the organization, as stopping a share does
-    not. It takes the dashboard or the Primitive CLI.
+    not. It takes your own credential at your full access, an agent you signed in with a code included.
 
     Args:
         live (ListGivenEmailRuleSharesLive | Unset): Whether to list live shares, ended ones, or
@@ -159,7 +159,7 @@ def sync(
 
      Lists the rules you share with other members, so you can find one and stop it. This needs no mail
     access and does not depend on the feature being on for the organization, as stopping a share does
-    not. It takes the dashboard or the Primitive CLI.
+    not. It takes your own credential at your full access, an agent you signed in with a code included.
 
     Args:
         live (ListGivenEmailRuleSharesLive | Unset): Whether to list live shares, ended ones, or
@@ -196,7 +196,7 @@ async def asyncio_detailed(
 
      Lists the rules you share with other members, so you can find one and stop it. This needs no mail
     access and does not depend on the feature being on for the organization, as stopping a share does
-    not. It takes the dashboard or the Primitive CLI.
+    not. It takes your own credential at your full access, an agent you signed in with a code included.
 
     Args:
         live (ListGivenEmailRuleSharesLive | Unset): Whether to list live shares, ended ones, or
@@ -238,7 +238,7 @@ async def asyncio(
 
      Lists the rules you share with other members, so you can find one and stop it. This needs no mail
     access and does not depend on the feature being on for the organization, as stopping a share does
-    not. It takes the dashboard or the Primitive CLI.
+    not. It takes your own credential at your full access, an agent you signed in with a code included.
 
     Args:
         live (ListGivenEmailRuleSharesLive | Unset): Whether to list live shares, ended ones, or

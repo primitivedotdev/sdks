@@ -8,15 +8,11 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.compile_email_rule_result_kind import CompileEmailRuleResultKind
 from typing import cast
 
 if TYPE_CHECKING:
   from ..models.compile_email_rule_result_sql import CompileEmailRuleResultSql
-  from ..models.email_rule_breadth import EmailRuleBreadth
-  from ..models.email_rule_scope_used import EmailRuleScopeUsed
-  from ..models.email_rule_scope_warning import EmailRuleScopeWarning
-  from ..models.email_rule_tree import EmailRuleTree
+  from ..models.email_rule_body import EmailRuleBody
 
 
 
@@ -30,47 +26,21 @@ T = TypeVar("T", bound="CompileEmailRuleResult")
 class CompileEmailRuleResult:
     """ 
         Attributes:
-            tree (EmailRuleTree):
-            explanation (str): What the rule matches, in plain English: only which emails, not what it grants or shares,
-                which follows from its state, its scope and the keys, webhooks and people it reaches. The compiler leaves out a
-                sentence that plainly says what the rule hands over.
+            rule (EmailRuleBody):
+            explanation (str): What the rule matches: Primitive's reading of its tree, as every read of the rule gives it.
             assumptions (list[str]): Readings the compiler chose where the description was open to more than one. Whenever
                 the rule holds a condition, question or confidence bar that no words of the description call for, this list also
                 has a line starting "Added without the description asking for it:" naming it (several share a line when there
                 are many).
             warnings (list[str]): Parts of the description the column contract cannot express, how the rule handles them,
-                and the compiler's own notes on the rule (the Email Rules docs list them). When the rule has no questions and
-                its conditions hold for nearly all of your recent mail (see breadth), or it is a grant rule whose conditions
-                alone hold for over 20% of at least 20 emails (see conditions_breadth), the first warning says so.
-            compiled_by (str): An opaque name for the version of the rule compiler that produced the rule, such as rule-
-                compiler-v1. Send it back as compiled_by when you save the rule.
-            kind (CompileEmailRuleResultKind | Unset): The kind it was compiled for. Send it with the tree to a test.
-            breadth (EmailRuleBreadth | None | Unset): How many recent emails its conditions hold for, warning or not,
-                counted over evaluation_scope as sent (by default your own mailboxes, whatever scope you save it with). Null
-                when not counted in full: a rule with questions, headers-only access, no test of it possible as you, a count
-                that failed or ran out of time, or, with no scope sent, a rule that holds only for mail to To or Cc addresses
-                outside your own mailboxes (a warning says so). Writes ignore it, so a compile answer (without include_sql) can
-                be sent back unchanged.
-            conditions_breadth (EmailRuleBreadth | None | Unset): For a grant rule with questions, breadth counted on its
-                conditions alone: the emails its questions are asked about. Null for any other rule, or when not counted in full
-                (as breadth).
-            breadth_scope (EmailRuleScopeUsed | Unset):
-            scope_warnings (list[EmailRuleScopeWarning] | Unset): Names in the scope_selection sent that match nothing this
-                organization receives mail at (a typo, or an inbox not yet in use), as a test or write would warn of them.
-                Present only when there are some; writes ignore it.
+                and the compiler's own notes on the rule (the Email Rules docs list them).
             sql (CompileEmailRuleResultSql | Unset): Present only when include_sql was true.
      """
 
-    tree: EmailRuleTree
+    rule: EmailRuleBody
     explanation: str
     assumptions: list[str]
     warnings: list[str]
-    compiled_by: str
-    kind: CompileEmailRuleResultKind | Unset = UNSET
-    breadth: EmailRuleBreadth | None | Unset = UNSET
-    conditions_breadth: EmailRuleBreadth | None | Unset = UNSET
-    breadth_scope: EmailRuleScopeUsed | Unset = UNSET
-    scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
     sql: CompileEmailRuleResultSql | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -80,11 +50,8 @@ class CompileEmailRuleResult:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.compile_email_rule_result_sql import CompileEmailRuleResultSql # noqa: PLC0415
-        from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
-        from ..models.email_rule_scope_used import EmailRuleScopeUsed # noqa: PLC0415
-        from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
-        from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
-        tree = self.tree.to_dict()
+        from ..models.email_rule_body import EmailRuleBody # noqa: PLC0415
+        rule = self.rule.to_dict()
 
         explanation = self.explanation
 
@@ -96,42 +63,6 @@ class CompileEmailRuleResult:
 
 
 
-        compiled_by = self.compiled_by
-
-        kind: str | Unset = UNSET
-        if not isinstance(self.kind, Unset):
-            kind = self.kind.value
-
-
-        breadth: dict[str, Any] | None | Unset
-        if isinstance(self.breadth, Unset):
-            breadth = UNSET
-        elif isinstance(self.breadth, EmailRuleBreadth):
-            breadth = self.breadth.to_dict()
-        else:
-            breadth = self.breadth
-
-        conditions_breadth: dict[str, Any] | None | Unset
-        if isinstance(self.conditions_breadth, Unset):
-            conditions_breadth = UNSET
-        elif isinstance(self.conditions_breadth, EmailRuleBreadth):
-            conditions_breadth = self.conditions_breadth.to_dict()
-        else:
-            conditions_breadth = self.conditions_breadth
-
-        breadth_scope: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.breadth_scope, Unset):
-            breadth_scope = self.breadth_scope.to_dict()
-
-        scope_warnings: list[dict[str, Any]] | Unset = UNSET
-        if not isinstance(self.scope_warnings, Unset):
-            scope_warnings = []
-            for scope_warnings_item_data in self.scope_warnings:
-                scope_warnings_item = scope_warnings_item_data.to_dict()
-                scope_warnings.append(scope_warnings_item)
-
-
-
         sql: dict[str, Any] | Unset = UNSET
         if not isinstance(self.sql, Unset):
             sql = self.sql.to_dict()
@@ -140,22 +71,11 @@ class CompileEmailRuleResult:
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
-            "tree": tree,
+            "rule": rule,
             "explanation": explanation,
             "assumptions": assumptions,
             "warnings": warnings,
-            "compiled_by": compiled_by,
         })
-        if kind is not UNSET:
-            field_dict["kind"] = kind
-        if breadth is not UNSET:
-            field_dict["breadth"] = breadth
-        if conditions_breadth is not UNSET:
-            field_dict["conditions_breadth"] = conditions_breadth
-        if breadth_scope is not UNSET:
-            field_dict["breadth_scope"] = breadth_scope
-        if scope_warnings is not UNSET:
-            field_dict["scope_warnings"] = scope_warnings
         if sql is not UNSET:
             field_dict["sql"] = sql
 
@@ -166,12 +86,9 @@ class CompileEmailRuleResult:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.compile_email_rule_result_sql import CompileEmailRuleResultSql # noqa: PLC0415
-        from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
-        from ..models.email_rule_scope_used import EmailRuleScopeUsed # noqa: PLC0415
-        from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
-        from ..models.email_rule_tree import EmailRuleTree # noqa: PLC0415
+        from ..models.email_rule_body import EmailRuleBody # noqa: PLC0415
         d = dict(src_dict)
-        tree = EmailRuleTree.from_dict(d.pop("tree"))
+        rule = EmailRuleBody.from_dict(d.pop("rule"))
 
 
 
@@ -182,80 +99,6 @@ class CompileEmailRuleResult:
 
 
         warnings = cast(list[str], d.pop("warnings"))
-
-
-        compiled_by = d.pop("compiled_by")
-
-        _kind = d.pop("kind", UNSET)
-        kind: CompileEmailRuleResultKind | Unset
-        if isinstance(_kind,  Unset):
-            kind = UNSET
-        else:
-            kind = CompileEmailRuleResultKind(_kind)
-
-
-
-
-        def _parse_breadth(data: object) -> EmailRuleBreadth | None | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                breadth_type_1 = EmailRuleBreadth.from_dict(data)
-
-
-
-                return breadth_type_1
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(EmailRuleBreadth | None | Unset, data)
-
-        breadth = _parse_breadth(d.pop("breadth", UNSET))
-
-
-        def _parse_conditions_breadth(data: object) -> EmailRuleBreadth | None | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                conditions_breadth_type_1 = EmailRuleBreadth.from_dict(data)
-
-
-
-                return conditions_breadth_type_1
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(EmailRuleBreadth | None | Unset, data)
-
-        conditions_breadth = _parse_conditions_breadth(d.pop("conditions_breadth", UNSET))
-
-
-        _breadth_scope = d.pop("breadth_scope", UNSET)
-        breadth_scope: EmailRuleScopeUsed | Unset
-        if isinstance(_breadth_scope,  Unset):
-            breadth_scope = UNSET
-        else:
-            breadth_scope = EmailRuleScopeUsed.from_dict(_breadth_scope)
-
-
-
-
-        _scope_warnings = d.pop("scope_warnings", UNSET)
-        scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
-        if _scope_warnings is not UNSET:
-            scope_warnings = []
-            for scope_warnings_item_data in _scope_warnings:
-                scope_warnings_item = EmailRuleScopeWarning.from_dict(scope_warnings_item_data)
-
-
-
-                scope_warnings.append(scope_warnings_item)
 
 
         _sql = d.pop("sql", UNSET)
@@ -269,16 +112,10 @@ class CompileEmailRuleResult:
 
 
         compile_email_rule_result = cls(
-            tree=tree,
+            rule=rule,
             explanation=explanation,
             assumptions=assumptions,
             warnings=warnings,
-            compiled_by=compiled_by,
-            kind=kind,
-            breadth=breadth,
-            conditions_breadth=conditions_breadth,
-            breadth_scope=breadth_scope,
-            scope_warnings=scope_warnings,
             sql=sql,
         )
 

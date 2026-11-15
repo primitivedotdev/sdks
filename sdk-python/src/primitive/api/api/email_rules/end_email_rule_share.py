@@ -111,8 +111,8 @@ def sync_detailed(
      Stops sharing; the rule itself is left unchanged, as the answer's note says. Either person on the
     share can do this, or an owner or admin who manages members. The share is kept, marked as ended.
     This needs no mail access and does not depend on the email rules feature. An owner or admin not on
-    the share must use a dashboard session. Otherwise use your own session, or an OAuth or CLI token
-    that acts with your full access: API keys and agent keys are refused.
+    the share must use a dashboard session. Otherwise use your own credential at your full access (an
+    agent you signed in with a code included): other apps, API keys and agent keys are refused.
 
     Args:
         id (UUID):
@@ -148,8 +148,8 @@ def sync(
      Stops sharing; the rule itself is left unchanged, as the answer's note says. Either person on the
     share can do this, or an owner or admin who manages members. The share is kept, marked as ended.
     This needs no mail access and does not depend on the email rules feature. An owner or admin not on
-    the share must use a dashboard session. Otherwise use your own session, or an OAuth or CLI token
-    that acts with your full access: API keys and agent keys are refused.
+    the share must use a dashboard session. Otherwise use your own credential at your full access (an
+    agent you signed in with a code included): other apps, API keys and agent keys are refused.
 
     Args:
         id (UUID):
@@ -180,8 +180,8 @@ async def asyncio_detailed(
      Stops sharing; the rule itself is left unchanged, as the answer's note says. Either person on the
     share can do this, or an owner or admin who manages members. The share is kept, marked as ended.
     This needs no mail access and does not depend on the email rules feature. An owner or admin not on
-    the share must use a dashboard session. Otherwise use your own session, or an OAuth or CLI token
-    that acts with your full access: API keys and agent keys are refused.
+    the share must use a dashboard session. Otherwise use your own credential at your full access (an
+    agent you signed in with a code included): other apps, API keys and agent keys are refused.
 
     Args:
         id (UUID):
@@ -217,8 +217,8 @@ async def asyncio(
      Stops sharing; the rule itself is left unchanged, as the answer's note says. Either person on the
     share can do this, or an owner or admin who manages members. The share is kept, marked as ended.
     This needs no mail access and does not depend on the email rules feature. An owner or admin not on
-    the share must use a dashboard session. Otherwise use your own session, or an OAuth or CLI token
-    that acts with your full access: API keys and agent keys are refused.
+    the share must use a dashboard session. Otherwise use your own credential at your full access (an
+    agent you signed in with a code included): other apps, API keys and agent keys are refused.
 
     Args:
         id (UUID):

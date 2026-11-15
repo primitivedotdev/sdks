@@ -75,13 +75,6 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_403
 
-    if response.status_code == 409:
-        response_409 = ErrorResponse.from_dict(response.json())
-
-
-
-        return response_409
-
     if response.status_code == 422:
         response_422 = ErrorResponse.from_dict(response.json())
 
@@ -127,16 +120,15 @@ def sync_detailed(
 ) -> Response[CompileEmailRuleResponse200 | ErrorResponse]:
     """ Compile a rule description
 
-     Turns a plain-English description of which received emails to match into a rule tree over the column
-    contract, with an explanation of what it matches, the assumptions made, and warnings for what the
-    columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
-    after the conditions match; they read the subject, the new text and attachment file names, never
-    attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
-    much of the recent classified mail in evaluation_scope (by default your own mailboxes) its
-    conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone.
-    include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read,
-    the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token).
+     Turns a plain-English description of which received emails to match into a rule over the column
+    contract: rule, exactly the body create (with a name), update and the tests take, with an
+    explanation of what it matches, the assumptions made, and warnings for what the columns cannot
+    express. Where the columns fall short it adds up to five yes/no questions, asked only after the
+    conditions match; they read the subject, the new text and attachment file names, never attachment
+    contents. Nothing is read or saved: a scope given is carried into rule, and a test says how much
+    mail the rule matches. include_sql returns the SQL it renders to. kind do_not_share compiles for
+    recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
+    key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -172,16 +164,15 @@ def sync(
 ) -> CompileEmailRuleResponse200 | ErrorResponse | None:
     """ Compile a rule description
 
-     Turns a plain-English description of which received emails to match into a rule tree over the column
-    contract, with an explanation of what it matches, the assumptions made, and warnings for what the
-    columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
-    after the conditions match; they read the subject, the new text and attachment file names, never
-    attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
-    much of the recent classified mail in evaluation_scope (by default your own mailboxes) its
-    conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone.
-    include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read,
-    the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token).
+     Turns a plain-English description of which received emails to match into a rule over the column
+    contract: rule, exactly the body create (with a name), update and the tests take, with an
+    explanation of what it matches, the assumptions made, and warnings for what the columns cannot
+    express. Where the columns fall short it adds up to five yes/no questions, asked only after the
+    conditions match; they read the subject, the new text and attachment file names, never attachment
+    contents. Nothing is read or saved: a scope given is carried into rule, and a test says how much
+    mail the rule matches. include_sql returns the SQL it renders to. kind do_not_share compiles for
+    recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
+    key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -212,16 +203,15 @@ async def asyncio_detailed(
 ) -> Response[CompileEmailRuleResponse200 | ErrorResponse]:
     """ Compile a rule description
 
-     Turns a plain-English description of which received emails to match into a rule tree over the column
-    contract, with an explanation of what it matches, the assumptions made, and warnings for what the
-    columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
-    after the conditions match; they read the subject, the new text and attachment file names, never
-    attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
-    much of the recent classified mail in evaluation_scope (by default your own mailboxes) its
-    conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone.
-    include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read,
-    the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token).
+     Turns a plain-English description of which received emails to match into a rule over the column
+    contract: rule, exactly the body create (with a name), update and the tests take, with an
+    explanation of what it matches, the assumptions made, and warnings for what the columns cannot
+    express. Where the columns fall short it adds up to five yes/no questions, asked only after the
+    conditions match; they read the subject, the new text and attachment file names, never attachment
+    contents. Nothing is read or saved: a scope given is carried into rule, and a test says how much
+    mail the rule matches. include_sql returns the SQL it renders to. kind do_not_share compiles for
+    recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
+    key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -257,16 +247,15 @@ async def asyncio(
 ) -> CompileEmailRuleResponse200 | ErrorResponse | None:
     """ Compile a rule description
 
-     Turns a plain-English description of which received emails to match into a rule tree over the column
-    contract, with an explanation of what it matches, the assumptions made, and warnings for what the
-    columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only
-    after the conditions match; they read the subject, the new text and attachment file names, never
-    attachment contents. Nothing is saved. For a rule with no questions, breadth counts, read only, how
-    much of the recent classified mail in evaluation_scope (by default your own mailboxes) its
-    conditions match; for a grant rule with questions, conditions_breadth counts its conditions alone.
-    include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read,
-    the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token).
+     Turns a plain-English description of which received emails to match into a rule over the column
+    contract: rule, exactly the body create (with a name), update and the tests take, with an
+    explanation of what it matches, the assumptions made, and warnings for what the columns cannot
+    express. Where the columns fall short it adds up to five yes/no questions, asked only after the
+    conditions match; they read the subject, the new text and attachment file names, never attachment
+    contents. Nothing is read or saved: a scope given is carried into rule, and a test says how much
+    mail the rule matches. include_sql returns the SQL it renders to. kind do_not_share compiles for
+    recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
+    key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):

@@ -1,14 +1,14 @@
 from enum import StrEnum
 
-class CreateEmailRuleRequestResultProposedVia(StrEnum):
-    OAUTH = "oauth"
-    SESSION = "session"
+class ListSentEmailsMine(StrEnum):
+    FALSE = "false"
+    TRUE = "true"
 
     def __str__(self) -> str:
         return str(self.value)
 
     @classmethod
-    def _missing_(cls, value: object) -> "CreateEmailRuleRequestResultProposedVia | None":
+    def _missing_(cls, value: object) -> "ListSentEmailsMine | None":
         # A value the API added after this SDK was generated: keep it rather
         # than failing to decode the whole response.
         if not isinstance(value, str):

@@ -32,10 +32,7 @@ import {
 } from "./automated-filter.js";
 import { withBooleanFlagValues } from "./boolean-flag-values.js";
 import { requireDefaultLoginProfile } from "./connected-agent-profile.js";
-import {
-  EMAIL_RULE_OPERATION_EXTENSIONS,
-  updateEmailRuleErrorHint,
-} from "./email-rule-authoring.js";
+import { EMAIL_RULE_OPERATION_EXTENSIONS } from "./email-rule-authoring.js";
 import {
   emptyEmailListHint,
   listFilters,
@@ -48,8 +45,7 @@ import {
   EVENT_TYPES_FLAG_OPERATIONS,
   EventTypesFlagError,
   parseEventTypesFlag,
-  unknownEventTypes,
-  unknownEventTypesWarning,
+  withDefaultEventTypes,
   withEventTypes,
 } from "./endpoint-event-types.js";
 import {
@@ -84,10 +80,11 @@ import {
 } from "./reply-state.js";
 import { RULE_NOTES_TAGS, ruleNotesReport } from "./rule-notes.js";
 import {
-  createEndpointRuleRequestHint,
-  updateEndpointRuleRequestHint,
-} from "./rule-request-webhooks.js";
-import { sentListOtherSendersNote } from "./sent-list-labels.js";
+  ALL_SENDERS_FLAG,
+  ALL_SENDERS_FLAG_DESCRIPTION,
+  sentListLines,
+  withMineDefault,
+} from "./sent-list.js";
 import {
   approveThenRerunHint,
   BROWSER_FLAG_DESCRIPTION,
@@ -96,7 +93,6 @@ import {
   terminalApprovalIo,
   withApproval,
 } from "./step-up-approval.js";
-import { terminalLine } from "./terminal-text.js";
 import { parseRetryAfter } from "./transient-retry.js";
 
 type OperationName = keyof typeof operations;
@@ -1302,6 +1298,12 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     headerFlagToName.set(name, parameter.name);
   }
 
+  if (operation.sdkName === "listSentEmails") {
+    flags[ALL_SENDERS_FLAG] = Flags.boolean({
+      description: ALL_SENDERS_FLAG_DESCRIPTION,
+    });
+  }
+
   if (EVENT_TYPES_FLAG_OPERATIONS.has(operation.sdkName)) {
     flags["event-types"] = Flags.string({
       description: EVENT_TYPES_FLAG_DESCRIPTION,
@@ -1370,14 +1372,9 @@ async function applyEventTypesFlag(params: {
   values: string[];
   endpointId: string | undefined;
   listEndpoints: ListEndpointsFn;
-  quiet: boolean;
 }): Promise<Record<string, unknown>> {
   try {
     const eventTypes = parseEventTypesFlag(params.values);
-    const unknown = unknownEventTypes(eventTypes);
-    if (unknown.length > 0 && !params.quiet) {
-      process.stderr.write(unknownEventTypesWarning(unknown));
-    }
     const baseRules =
       params.endpointId !== undefined && !bodyHasRules(params.body)
         ? await currentEndpointRules(params.endpointId, params.listEndpoints)
@@ -1560,13 +1557,13 @@ export function overLongBodyField(
 }
 
 /** What a write that takes a compile answer reads from --body-file, said beside the generic help. */
-const COMPILE_ANSWER =
-  "the data of the answer `compile-email-rule --json` printed (without --include-sql), saved to a file: `compile-email-rule ... --json | jq .data > rule.json`";
+const COMPILE_RULE =
+  "the `rule` of a saved compile answer: `compile-email-rule ... --json | jq .data.rule > rule.json`";
 export const BODY_FILE_HELP: Record<string, string> = {
-  createEmailRule: `For this command, ${COMPILE_ANSWER}, and add --english with the description you compiled, and --name.`,
-  updateEmailRule: `For a new version, ${COMPILE_ANSWER}, and add --english with the description you compiled (required with a new tree); --name only to rename it.`,
-  createEmailRuleRequest: `For this command, ${COMPILE_ANSWER}, and add --english with the description you compiled, --name and --target-email.`,
-  acceptEmailRuleRequest: `To change the rule as you accept it, ${COMPILE_ANSWER}, and add --english with the description you compiled.`,
+  createEmailRule: `For this command, ${COMPILE_RULE}, with --name.`,
+  updateEmailRule: `For a new version, ${COMPILE_RULE}; --name only to rename it.`,
+  createEmailRuleRequest: `For this command, ${COMPILE_RULE}, compiled without --evaluation-scope, with --name and --target-email.`,
+  acceptEmailRuleRequest: `To change the rule as you accept it, ${COMPILE_RULE}, compiled without --evaluation-scope.`,
 };
 
 // Per-operation flag aliases keyed by operation.sdkName and body
@@ -1634,14 +1631,7 @@ export const OPERATION_ERROR_HINTS: Record<
 > = {
   inviteOrganizationMember: (code, body, payload) =>
     inviteRefusalHint(code, body, payload),
-  createEndpoint: (code, body, payload) =>
-    createEndpointRuleRequestHint(code, body, payload),
-  updateEndpoint: (code, body, payload) =>
-    updateEndpointRuleRequestHint(code, body, payload),
-  updateEmailRule: (code, body, payload, path) => {
-    const hint = updateEmailRuleErrorHint(code, payload, path?.id, body);
-    return hint === undefined ? undefined : terminalLine(hint);
-  },
+
   verifyDomain: (code, _body, payload) =>
     code === "dns_verification_failed"
       ? domainVerificationFailedHint(payload)
@@ -1895,8 +1885,11 @@ export function createOperationCommand(
                 client: apiClient.client,
                 responseStyle: "fields",
               }) as ReturnType<ListEndpointsFn>,
-            quiet: parsedFlags.json === true,
           });
+        } else if (operation.sdkName === "createEndpoint") {
+          // A create always states what it receives: email.received unless
+          // the flag or the body names event types.
+          body = withDefaultEventTypes(body);
         }
 
         if (operation.bodyRequired && body === undefined) {
@@ -1911,11 +1904,16 @@ export function createOperationCommand(
         const operationFn = operations[
           operation.sdkName as OperationName
         ] as unknown as OperationExecutor;
-        const query = collectValues(
+        const given = collectValues(
           operation.queryParams,
           parsedFlags,
           operation.sdkName,
         );
+        // sent list lists your own sends unless --all-senders.
+        const query =
+          operation.sdkName === "listSentEmails"
+            ? withMineDefault(given, parsedFlags)
+            : given;
         // Set when this list or search call asked for reply state, so an
         // older server that lacks it fails loudly instead of returning
         // unfiltered mail that looks filtered.
@@ -2297,18 +2295,6 @@ export function createOperationCommand(
           }
         }
 
-        // A connected address's sent list also carries delivered sends
-        // other addresses made to it. Say so, so they are not read as this
-        // address's own sends.
-        if (operation.sdkName === "listSentEmails") {
-          const note = sentListOtherSendersNote(
-            envelope?.data,
-            auth.connectedAgent?.agentAddress,
-          );
-          if (note && jsonOutput) summary.push(note);
-          else if (note) process.stderr.write(`${note}\n`);
-        }
-
         // Idempotent-replay banner. Send-mail (and any future
         // operation that might surface this flag) carries
         // `idempotent_replay: true` when the server short-circuited
@@ -2418,6 +2404,10 @@ export function createOperationCommand(
         }
         if (report && !jsonOutput) {
           for (const line of report.lines) process.stderr.write(`${line}\n`);
+        }
+        if (operation.sdkName === "listSentEmails" && !jsonOutput) {
+          for (const line of sentListLines(envelope))
+            process.stderr.write(`${line}\n`);
         }
         if (reportError !== undefined && report?.exitCode && !jsonOutput) {
           process.stderr.write(

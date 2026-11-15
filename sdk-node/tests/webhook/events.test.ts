@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  CREDENTIAL_EVENT_TYPES,
   EMAIL_EVENT_TYPES,
+  EMAIL_RULE_COVERAGE_EVENT_TYPES,
   EMAIL_RULE_OBJECTION_EVENT_TYPES,
   EMAIL_RULE_REQUEST_EVENT_TYPES,
   getEventHeader,
   handleWebhookEvent,
   INTERACTION_EVENT_TYPES,
   isEmailReceivedEvent,
+  isEmailRuleCoverageEvent,
   isEmailRuleObjectionEvent,
   isEmailRuleRequestEvent,
   isKnownWebhookEventType,
@@ -116,6 +119,7 @@ describe("header-keyed event parsing", () => {
       "email_rule_objection.created",
       "email_rule_objection.accepted",
       "email_rule_objection.declined",
+      "email_rule_objection.amended",
       "email_rule_objection.withdrawn",
     ]);
     for (const type of EMAIL_RULE_OBJECTION_EVENT_TYPES) {
@@ -152,6 +156,101 @@ describe("header-keyed event parsing", () => {
         ),
       ),
     ).toBe(false);
+  });
+
+  it("reads an amended objection's version and note", () => {
+    const event = parseWebhookEvent(
+      {
+        id: "evt_3",
+        type: "email_rule_objection.amended",
+        occurred_at: "2026-11-14T10:00:00.000Z",
+        email_rule_objection: {
+          id: "obj_1",
+          rule: { id: "rule_1", name: "Archive newsletters" },
+          status: "amended",
+          created_at: "2026-11-12T03:16:16.848Z",
+          decided_at: "2026-11-14T10:00:00.000Z",
+          decline_reason: null,
+          amended_version: 4,
+          amend_note: "Personal mail is left out now.",
+        },
+      },
+      "email_rule_objection.amended",
+    );
+    expect(isEmailRuleObjectionEvent(event)).toBe(true);
+    if (isEmailRuleObjectionEvent(event)) {
+      expect(event.email_rule_objection.status).toBe("amended");
+      expect(event.email_rule_objection.amended_version).toBe(4);
+      expect(event.email_rule_objection.amend_note).toBe(
+        "Personal mail is left out now.",
+      );
+    }
+  });
+
+  it("lists the opt-in rule coverage events and parses one by its header", () => {
+    expect([...EMAIL_RULE_COVERAGE_EVENT_TYPES]).toEqual([
+      "email_rule_coverage.started",
+      "email_rule_coverage.new_version",
+      "email_rule_coverage.stopped",
+    ]);
+    for (const type of EMAIL_RULE_COVERAGE_EVENT_TYPES) {
+      expect(WEBHOOK_EVENT_TYPES).toContain(type);
+      expect(isKnownWebhookEventType(type)).toBe(true);
+    }
+    const event = parseWebhookEvent(
+      {
+        id: "evt_4",
+        type: "email_rule_coverage.stopped",
+        occurred_at: "2026-11-14T10:00:00.000Z",
+        email_rule_coverage: {
+          id: "notice_1",
+          rule: {
+            id: "rule_2",
+            name: "Vendor invoices",
+            kind: "grant",
+            state: "active",
+            version: 3,
+          },
+          author: { user_id: "user_3", name: "Sam Rivera" },
+          via: "selected",
+          addresses: ["ana@acme.example"],
+          stop_reason: "turned_off",
+        },
+      },
+      "email_rule_coverage.stopped",
+    );
+    expect(isEmailRuleCoverageEvent(event)).toBe(true);
+    expect(isEmailRuleObjectionEvent(event)).toBe(false);
+    if (isEmailRuleCoverageEvent(event)) {
+      expect(event.email_rule_coverage.rule.name).toBe("Vendor invoices");
+      expect(event.email_rule_coverage.stop_reason).toBe("turned_off");
+      expect(event.email_rule_coverage.addresses).toEqual(["ana@acme.example"]);
+    }
+    expect(
+      isEmailRuleCoverageEvent(
+        parseWebhookEvent(
+          { type: "email_rule_objection.created" },
+          "email_rule_objection.created",
+        ),
+      ),
+    ).toBe(false);
+  });
+
+  it("lists the opt-in credential events", () => {
+    expect([...CREDENTIAL_EVENT_TYPES]).toEqual([
+      "credential.created",
+      "credential.updated",
+      "credential.rotated",
+      "credential.revoked",
+      "credential.expired",
+      "credential.suspended",
+      "credential.leak_detected",
+      "credential.oauth_granted",
+      "credential.oauth_revoked",
+      "credential.policy_changed",
+    ]);
+    for (const type of CREDENTIAL_EVENT_TYPES)
+      expect(isKnownWebhookEventType(type)).toBe(true);
   });
 
   it("no longer lists the payment events", () => {

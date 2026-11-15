@@ -361,7 +361,7 @@ primitive emails list
 primitive emails get --id <inbound-email-id>
 primitive emails get --id <inbound-email-id> --context
 primitive emails get --id <inbound-email-id> --compact
-primitive sent list
+primitive sent list                # your own sends; --all-senders for every send you can read
 primitive sent delete --id <sent-email-id>
 primitive domains list
 primitive billing

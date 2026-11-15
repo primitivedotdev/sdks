@@ -30,7 +30,6 @@ class EmailRuleShareRuleType0:
             state (EmailRuleShareRuleType0State):
             current_version (int | None):
             english (None | str):
-            explanation (None | str):
             updated_at (datetime.datetime):
      """
 
@@ -38,7 +37,6 @@ class EmailRuleShareRuleType0:
     state: EmailRuleShareRuleType0State
     current_version: int | None
     english: None | str
-    explanation: None | str
     updated_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -57,9 +55,6 @@ class EmailRuleShareRuleType0:
         english: None | str
         english = self.english
 
-        explanation: None | str
-        explanation = self.explanation
-
         updated_at = self.updated_at.isoformat()
 
 
@@ -70,7 +65,6 @@ class EmailRuleShareRuleType0:
             "state": state,
             "current_version": current_version,
             "english": english,
-            "explanation": explanation,
             "updated_at": updated_at,
         })
 
@@ -104,14 +98,6 @@ class EmailRuleShareRuleType0:
         english = _parse_english(d.pop("english"))
 
 
-        def _parse_explanation(data: object) -> None | str:
-            if data is None:
-                return data
-            return cast(None | str, data)
-
-        explanation = _parse_explanation(d.pop("explanation"))
-
-
         updated_at = datetime.datetime.fromisoformat(d.pop("updated_at"))
 
 
@@ -122,7 +108,6 @@ class EmailRuleShareRuleType0:
             state=state,
             current_version=current_version,
             english=english,
-            explanation=explanation,
             updated_at=updated_at,
         )
 

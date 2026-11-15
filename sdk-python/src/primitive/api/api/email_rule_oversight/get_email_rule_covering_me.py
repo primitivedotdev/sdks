@@ -110,8 +110,7 @@ def sync_detailed(
     --json) counts each rule's webhook deliveries; on another member's mail, GET
     /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id <email-
     id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
-    or the Primitive CLI.
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -160,8 +159,7 @@ def sync(
     --json) counts each rule's webhook deliveries; on another member's mail, GET
     /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id <email-
     id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
-    or the Primitive CLI.
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -205,8 +203,7 @@ async def asyncio_detailed(
     --json) counts each rule's webhook deliveries; on another member's mail, GET
     /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id <email-
     id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
-    or the Primitive CLI.
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -255,8 +252,7 @@ async def asyncio(
     --json) counts each rule's webhook deliveries; on another member's mail, GET
     /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id <email-
     id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
-    or the Primitive CLI.
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):

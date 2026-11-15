@@ -19,7 +19,6 @@ describe("ruleNotesLines", () => {
           },
         ],
         rule: { note: "Rule note." },
-        expectations_check: { note: "Check note." },
       }),
     ).toEqual([
       "Scope warning: typo.example (unknown_domain)",
@@ -28,7 +27,6 @@ describe("ruleNotesLines", () => {
       "Warning: From the summary.",
       "Top note.",
       "Rule note.",
-      "Check note.",
     ]);
   });
 
@@ -53,6 +51,12 @@ describe("ruleNotesLines", () => {
       "It protects nothing yet.",
       "Version 2 was restored.",
     ]);
+  });
+
+  it("prints a tested rule's warnings", () => {
+    expect(
+      ruleNotesLines({ rule: { warnings: ["The tree reads no question."] } }),
+    ).toEqual(["Warning: The tree reads no question."]);
   });
 
   it("keeps a note whole on one line, without terminal controls, naming the CLI command for a route", () => {

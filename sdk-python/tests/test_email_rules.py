@@ -52,7 +52,6 @@ def test_get_email_rule_decodes_unfamiliar_state() -> None:
     assert rule.name == "Internship applicants"
     assert rule.current is not None
     assert rule.current.version == 2
-    assert rule.current.compiled_by == "rule-compiler-v1"
     assert rule.current.tree.questions == [
         "Is the sender a college student looking for an internship?"
     ]

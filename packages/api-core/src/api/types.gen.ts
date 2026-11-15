@@ -106,7 +106,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'ownership_proof_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'access_mode_unavailable' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_work_agreement_replay_conflict' | 'agent_work_deadline_not_future' | 'agent_work_inactive' | 'agent_work_not_found' | 'agent_work_replay_conflict' | 'agent_work_version_conflict' | 'already_claimed' | 'already_member' | 'always_sent' | 'archive_busy' | 'archive_invalid' | 'archive_limit_exceeded' | 'archive_unsafe_path' | 'archive_unsupported' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'authorization_unavailable' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'builtin_role' | 'chunk_size_mismatch' | 'chunk_too_large' | 'chunks_missing' | 'claim_failed' | 'claim_not_pending' | 'cleanup_incomplete' | 'cli_access_refused' | 'code_expired' | 'confirmation_required' | 'connection_already_claimed' | 'connection_cleanup_pending' | 'connection_create_request_conflict' | 'connection_owner_address_required' | 'connection_removed' | 'connection_revoked' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'delivery_held' | 'delivery_unavailable' | 'deploy_failed' | 'deploy_outcome_unknown' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_admission_unavailable' | 'email_in_use' | 'email_rule_author_only' | 'email_rule_author_unresolvable' | 'email_rule_compiler_unavailable' | 'email_rule_conflict' | 'email_rule_look_alikes_not_written' | 'email_rule_not_compiled' | 'email_rule_request_limit' | 'email_rule_request_not_pending' | 'email_rule_request_not_withdrawn' | 'email_rule_request_party_left' | 'email_rule_request_proposer_only' | 'email_rule_request_target_only' | 'email_rule_scope_locked' | 'email_rule_scope_not_readable' | 'email_rule_share_ended' | 'email_rule_share_limit' | 'embedding_provider_unavailable' | 'entitlement' | 'expectations_failed' | 'expectations_undecided' | 'expectations_unreadable' | 'expired' | 'feature_not_enabled' | 'fresh_send_not_authorized' | 'function_cannot_receive_mail' | 'function_delivery_refused' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_key_missing' | 'function_key_runtime_only' | 'function_not_deployed' | 'function_scope_forbidden' | 'function_signing_secret_missing' | 'function_suspended' | 'github_binding_owner_changed' | 'github_binding_paused' | 'grant_forbidden' | 'grant_not_available' | 'hash_mismatch' | 'hipaa_mode' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'host_key_limit' | 'idempotency_conflict' | 'idempotency_key_invalid' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_manifest' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_signature' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_accepting' | 'invitation_address_not_allowed' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'ip_not_allowed' | 'keep_refused' | 'key_change_superseded' | 'key_recently_created' | 'key_revoked' | 'last_owner' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'load_test_recipient_not_allowed' | 'mail_import_cap_exceeded' | 'mail_import_content_mismatch' | 'mail_import_deadline' | 'mail_import_disabled' | 'mail_import_fenced' | 'mail_import_forbidden' | 'mail_import_invalid_input' | 'mail_import_invalid_provider_response' | 'mail_import_out_of_window' | 'mail_import_policy_mismatch' | 'mail_import_provider_auth' | 'mail_import_provider_unavailable' | 'mail_import_storage_failed' | 'mail_import_storage_limit' | 'mail_import_storage_not_ready' | 'mail_import_too_large' | 'mail_import_unavailable' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_claimable' | 'mailbox_not_found' | 'mailbox_shared_with_others' | 'managed_build_failed' | 'managed_domain' | 'member_address_domain_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_reserved' | 'member_address_unavailable' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'no_expectations' | 'no_mail_read' | 'not_a_template_install' | 'not_available' | 'not_claimable' | 'not_held' | 'not_pending' | 'object_suspended' | 'onboarding_key_in_use' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'outbound_relay_unavailable' | 'outside_key_scope' | 'path_invalid' | 'payload_too_large' | 'pending_owner_confirmation' | 'plan_required' | 'policy_forbidden' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'pull_subscription_requires_agent_connection' | 'query_invalid' | 'recipient_changed' | 'recipient_suppressed' | 'redeploy_failed' | 'removal_failed' | 'removal_timeout' | 'request_expired' | 'required_by_organization' | 'resend_limit_exceeded' | 'resend_too_soon' | 'role_assigned' | 'role_assignment_unavailable' | 'role_key_taken' | 'rotate_instead' | 'rotation_in_progress' | 'rotation_incomplete' | 'rotation_refused' | 'rotation_unconfirmed' | 'runtime_grant_unavailable' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_at_required' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sending_ip_warmup_cap' | 'sent_email_tail_unavailable' | 'sent_mail_search_unavailable' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'signing_secret_unavailable' | 'signup_failed' | 'standing_owner_revoked' | 'step_up_invalid' | 'step_up_not_accepted' | 'step_up_refused' | 'step_up_required' | 'stop_changed' | 'storage_error' | 'storage_limit_exceeded' | 'suspension_undecided' | 'template_role' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'thread_busy' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_unavailable' | 'usage_limit_exceeded';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'ownership_proof_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict' | 'access_mode_unavailable' | 'agent_account_managed_domain_only' | 'agent_changed' | 'agent_limit' | 'agent_misconfigured' | 'agent_work_agreement_replay_conflict' | 'agent_work_deadline_not_future' | 'agent_work_inactive' | 'agent_work_not_found' | 'agent_work_replay_conflict' | 'agent_work_version_conflict' | 'already_claimed' | 'already_member' | 'always_sent' | 'archive_busy' | 'archive_invalid' | 'archive_limit_exceeded' | 'archive_unsafe_path' | 'archive_unsupported' | 'attachment_name_ambiguous' | 'attachment_not_archive' | 'authorization_unavailable' | 'bad_request' | 'body_not_supported' | 'build_failed' | 'builder_unavailable' | 'builtin_role' | 'chunk_size_mismatch' | 'chunk_too_large' | 'chunks_missing' | 'claim_failed' | 'claim_not_pending' | 'cleanup_incomplete' | 'cli_access_refused' | 'code_expired' | 'confirmation_required' | 'connection_already_claimed' | 'connection_cleanup_pending' | 'connection_create_request_conflict' | 'connection_owner_address_required' | 'connection_removed' | 'connection_revoked' | 'contact_request_invalid' | 'contact_request_not_ready' | 'contact_request_unauthenticated' | 'contact_request_unavailable' | 'cursor_expired' | 'delete_failed' | 'delivery_held' | 'delivery_unavailable' | 'deploy_failed' | 'deploy_outcome_unknown' | 'direct_delivery_failed' | 'direct_delivery_unavailable' | 'directory_limit' | 'dns_publication_failed' | 'dns_publication_pending' | 'dns_verification_failed' | 'download_token_expired' | 'download_token_invalid' | 'email_admission_unavailable' | 'email_in_use' | 'email_rule_author_only' | 'email_rule_author_unresolvable' | 'email_rule_compiler_unavailable' | 'email_rule_conflict' | 'email_rule_look_alikes_not_written' | 'email_rule_not_compiled' | 'email_rule_request_limit' | 'email_rule_request_not_pending' | 'email_rule_request_not_withdrawn' | 'email_rule_request_party_left' | 'email_rule_request_proposer_only' | 'email_rule_request_target_only' | 'email_rule_scope_locked' | 'email_rule_scope_not_readable' | 'email_rule_share_ended' | 'email_rule_share_limit' | 'embedding_provider_unavailable' | 'entitlement' | 'expectations_failed' | 'expectations_undecided' | 'expired' | 'feature_not_enabled' | 'fresh_send_not_authorized' | 'function_cannot_receive_mail' | 'function_delivery_refused' | 'function_effect_email_mismatch' | 'function_effect_mismatch' | 'function_forked' | 'function_github_linked' | 'function_key_missing' | 'function_key_runtime_only' | 'function_not_deployed' | 'function_scope_forbidden' | 'function_signing_secret_missing' | 'function_suspended' | 'github_binding_owner_changed' | 'github_binding_paused' | 'grant_forbidden' | 'grant_not_available' | 'hash_mismatch' | 'hipaa_mode' | 'hipaa_mode_check_unavailable' | 'hipaa_mode_external_send_blocked' | 'host_key_limit' | 'idempotency_conflict' | 'idempotency_key_invalid' | 'invalid_code' | 'invalid_cursor' | 'invalid_email' | 'invalid_manifest' | 'invalid_payload_reference' | 'invalid_request' | 'invalid_signature' | 'invalid_step' | 'invalid_token' | 'invalid_topic_sources' | 'invitation_accepted' | 'invitation_accepting' | 'invitation_address_not_allowed' | 'invitation_changed' | 'invitation_pending' | 'invitation_sending' | 'invitation_unconfirmed' | 'invitations_pending' | 'ip_not_allowed' | 'keep_refused' | 'key_change_superseded' | 'key_recently_created' | 'key_revoked' | 'last_owner' | 'latest_message_mismatch' | 'latest_message_thread_unresolved' | 'load_test_recipient_not_allowed' | 'mail_import_cap_exceeded' | 'mail_import_content_mismatch' | 'mail_import_deadline' | 'mail_import_disabled' | 'mail_import_fenced' | 'mail_import_forbidden' | 'mail_import_invalid_input' | 'mail_import_invalid_provider_response' | 'mail_import_out_of_window' | 'mail_import_policy_mismatch' | 'mail_import_provider_auth' | 'mail_import_provider_unavailable' | 'mail_import_storage_failed' | 'mail_import_storage_limit' | 'mail_import_storage_not_ready' | 'mail_import_too_large' | 'mail_import_unavailable' | 'mail_relay_unavailable' | 'mail_routing_conflict' | 'mail_topic_edit_conflict' | 'mail_topic_generation_conflict' | 'mailbox_not_claimable' | 'mailbox_not_found' | 'mailbox_shared_with_others' | 'managed_build_failed' | 'managed_domain' | 'member_address_domain_unavailable' | 'member_address_history_confirmation_required' | 'member_address_immutable' | 'member_address_reserved' | 'member_address_unavailable' | 'member_changed' | 'message_not_found' | 'name_taken' | 'network_member_excluded' | 'network_member_not_found' | 'network_peer_not_found' | 'network_view_denied' | 'no_code' | 'no_endpoint' | 'no_mail_read' | 'not_a_template_install' | 'not_available' | 'not_claimable' | 'not_held' | 'not_pending' | 'object_suspended' | 'onboarding_key_in_use' | 'outbound_edge_rejected' | 'outbound_email_limit_exceeded' | 'outbound_relay_timeout' | 'outbound_relay_unavailable' | 'outside_key_scope' | 'path_invalid' | 'payload_too_large' | 'pending_owner_confirmation' | 'plan_required' | 'policy_forbidden' | 'presence_admission_busy' | 'presence_idempotency_conflict' | 'presence_probe_stale' | 'pro_plan_required' | 'project_changed' | 'pull_subscription_requires_agent_connection' | 'query_invalid' | 'recipient_changed' | 'recipient_suppressed' | 'redeploy_failed' | 'removal_failed' | 'removal_timeout' | 'request_expired' | 'required_by_organization' | 'resend_limit_exceeded' | 'resend_too_soon' | 'role_assigned' | 'role_assignment_unavailable' | 'role_key_taken' | 'rotate_instead' | 'rotation_in_progress' | 'rotation_incomplete' | 'rotation_refused' | 'rotation_unconfirmed' | 'runtime_grant_unavailable' | 'schedule_allowlist_not_provided' | 'schedule_sender_collision' | 'schedule_wake_disabled' | 'scheduled_at_required' | 'scheduled_payload_invalid' | 'search_unavailable' | 'semantic_search_not_enabled' | 'send_failed' | 'sender_not_authorized' | 'sending_ip_warmup_cap' | 'sent_email_tail_unavailable' | 'sent_mail_search_unavailable' | 'shopping_binding_conflict' | 'shopping_decision_conflict' | 'shopping_identity_conflict' | 'shopping_not_found' | 'shopping_owner_mail_required' | 'shopping_package_not_found' | 'shopping_proposal_expired' | 'shopping_replay_conflict' | 'shopping_source_unavailable' | 'shopping_too_many_shipments' | 'shopping_tracking_invalid' | 'shopping_version_conflict' | 'shopping_wake_unavailable' | 'shredded' | 'sign_in_email_change_required' | 'signal_not_allowed' | 'signal_parent_not_ready' | 'signal_sender_unauthenticated' | 'signing_secret_unavailable' | 'signup_failed' | 'standing_owner_revoked' | 'step_up_invalid' | 'step_up_not_accepted' | 'step_up_refused' | 'step_up_required' | 'stop_changed' | 'storage_error' | 'storage_limit_exceeded' | 'suspension_undecided' | 'template_role' | 'template_unavailable' | 'template_update_failed' | 'terms_not_accepted' | 'thread_busy' | 'too_many_attempts' | 'too_many_concurrent_builds' | 'too_many_resends' | 'topic_edit_too_large' | 'topic_generation_too_large' | 'unavailable' | 'unknown_chunk' | 'update_needs_input' | 'upstream_unavailable' | 'usage_limit_exceeded';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -4224,7 +4224,7 @@ export type Endpoint = {
      */
     rules: {
         /**
-         * Event types this endpoint receives. Omitted: every event type except the opt-in sent_email.* events, which an endpoint receives only when it lists them.
+         * Event types this endpoint receives: exact names, or family.* (for example sent_email.*), stored as every current name in that family. Required to create a webhook; a Function endpoint without it stores every email.* and interaction.* name. On update, omitted keeps the stored list.
          */
         event_types?: Array<string>;
         /**
@@ -4378,7 +4378,7 @@ export type CreateEndpointInput = {
      */
     rules?: {
         /**
-         * Event types this endpoint receives. Omitted: every event type except the opt-in sent_email.* events, which an endpoint receives only when it lists them.
+         * Event types this endpoint receives: exact names, or family.* (for example sent_email.*), stored as every current name in that family. Required to create a webhook; a Function endpoint without it stores every email.* and interaction.* name. On update, omitted keeps the stored list.
          */
         event_types?: Array<string>;
         /**
@@ -4433,7 +4433,7 @@ export type UpdateEndpointInput = {
     domain_id?: string | null;
     rules?: {
         /**
-         * Event types this endpoint receives. Omitted: every event type except the opt-in sent_email.* events, which an endpoint receives only when it lists them.
+         * Event types this endpoint receives: exact names, or family.* (for example sent_email.*), stored as every current name in that family. Required to create a webhook; a Function endpoint without it stores every email.* and interaction.* name. On update, omitted keeps the stored list.
          */
         event_types?: Array<string>;
         /**
@@ -6483,17 +6483,6 @@ export type EmailRuleTree = {
     questions: Array<string>;
 };
 
-export type EmailRuleBreadth = {
-    /**
-     * Classified emails the conditions were decided for: of the newest 200 from the last 30 days in the scope counted (evaluation_scope as sent; by default your own mailboxes, for a grant rule those you may share), the ones you can still read.
-     */
-    checked: number;
-    /**
-     * Of those, how many they hold for (for a do-not-share rule, one they cannot decide counts).
-     */
-    matched: number;
-};
-
 export type EmailRuleScopeUsed = {
     /**
      * author, own_mailboxes or selected, as a rule's evaluation_scope.
@@ -6540,16 +6529,16 @@ export type CompileEmailRuleRequest = {
      */
     include_sql?: boolean;
     /**
-     * The scope breadth is counted over, as a test of the tree runs it: send the one you will save the rule with. Nothing is saved. own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
+     * Carried into rule as given, for the write that saves it. Nothing is read or saved.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
 };
 
 export type CompileEmailRuleResult = {
-    tree: EmailRuleTree;
+    rule: EmailRuleBody;
     /**
-     * What the rule matches, in plain English: only which emails, not what it grants or shares, which follows from its state, its scope and the keys, webhooks and people it reaches. The compiler leaves out a sentence that plainly says what the rule hands over.
+     * What the rule matches: Primitive's reading of its tree, as every read of the rule gives it.
      */
     explanation: string;
     /**
@@ -6557,30 +6546,9 @@ export type CompileEmailRuleResult = {
      */
     assumptions: Array<string>;
     /**
-     * Parts of the description the column contract cannot express, how the rule handles them, and the compiler's own notes on the rule (the Email Rules docs list them). When the rule has no questions and its conditions hold for nearly all of your recent mail (see breadth), or it is a grant rule whose conditions alone hold for over 20% of at least 20 emails (see conditions_breadth), the first warning says so.
+     * Parts of the description the column contract cannot express, how the rule handles them, and the compiler's own notes on the rule (the Email Rules docs list them).
      */
     warnings: Array<string>;
-    /**
-     * An opaque name for the version of the rule compiler that produced the rule, such as rule-compiler-v1. Send it back as compiled_by when you save the rule.
-     */
-    compiled_by: string;
-    /**
-     * The kind it was compiled for. Send it with the tree to a test.
-     */
-    kind?: 'grant' | 'do_not_share';
-    /**
-     * How many recent emails its conditions hold for, warning or not, counted over evaluation_scope as sent (by default your own mailboxes, whatever scope you save it with). Null when not counted in full: a rule with questions, headers-only access, no test of it possible as you, a count that failed or ran out of time, or, with no scope sent, a rule that holds only for mail to To or Cc addresses outside your own mailboxes (a warning says so). Writes ignore it, so a compile answer (without include_sql) can be sent back unchanged.
-     */
-    breadth?: EmailRuleBreadth | null;
-    /**
-     * For a grant rule with questions, breadth counted on its conditions alone: the emails its questions are asked about. Null for any other rule, or when not counted in full (as breadth).
-     */
-    conditions_breadth?: EmailRuleBreadth | null;
-    breadth_scope?: EmailRuleScopeUsed;
-    /**
-     * Names in the scope_selection sent that match nothing this organization receives mail at (a typo, or an inbox not yet in use), as a test or write would warn of them. Present only when there are some; writes ignore it.
-     */
-    scope_warnings?: Array<EmailRuleScopeWarning>;
     /**
      * Present only when include_sql was true.
      */
@@ -6603,11 +6571,11 @@ export type EmailRuleTested = {
     /**
      * The kind it was tested as.
      */
-    kind?: 'grant' | 'do_not_share';
+    kind: 'grant' | 'do_not_share';
     /**
-     * Present when a tree was sent without kind, so it was tested as grant.
+     * Primitive's notes on the tree tested, as a rule's warnings read: with a tree, over the english sent with it.
      */
-    note?: string;
+    warnings: Array<string>;
 };
 
 export type EmailRuleSampleJudgment = {
@@ -6617,6 +6585,14 @@ export type EmailRuleSampleJudgment = {
     expected: 'match' | 'no_match';
     outcome: 'matched' | 'near_miss' | 'no_match' | 'not_decided';
     status: 'passed' | 'failed' | 'undecided';
+    /**
+     * On an undecided one only: why.
+     */
+    reason?: 'not_decided' | 'unset_column' | 'unclassified' | 'missing_fact' | 'unanswered';
+    /**
+     * On an undecided one only: whether judging it again can decide it.
+     */
+    retryable?: boolean;
     question_answers: Array<{
         question: string;
         answer: boolean | null;
@@ -6685,20 +6661,24 @@ export type EmailRuleSavedSampleEmail = {
 export type TestEmailRuleRequest = {
     tree?: EmailRuleTreeInput;
     /**
+     * With tree: its description, which the answer's rule.warnings read.
+     */
+    english?: string;
+    /**
      * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
     /**
-     * A saved rule you can see. Its current version is tested, with its author's access; one you see only because it covers your mailboxes, with yours, over only those (dashboard or Primitive CLI only).
+     * A saved rule you can see. Its current version is tested, with its author's access; one you see only because it covers your mailboxes, with yours, over only those (dashboard or Primitive CLI only). With tree, its author only: the tree is tested as the rule's next version, as its author, over its scope (or evaluation_scope as sent), against its saved expectations.
      */
     rule_id?: string;
     /**
-     * A pending rule request you can see: its rule as asked, tested as you over your own mailboxes (what accepting would share, for the member asked). Give one of tree, rule_id and request_id.
+     * A pending rule request you can see: its rule as asked, tested as you over your own mailboxes (what accepting would share, for the member asked).
      */
     request_id?: string;
     /**
-     * For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. A saved rule or a request uses its own.
+     * Required with tree alone: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. With rule_id and tree, must be the rule's own.
      */
     kind?: 'grant' | 'do_not_share';
     /**
@@ -6858,7 +6838,7 @@ export type TestEmailRuleResult = {
          */
         decided: number;
         /**
-         * Of decided, how many its conditions alone held for. Compile's breadth and conditions_breadth count this over recent mail in the scope sent to it, by default your own; here it is counted over the emails this test decided.
+         * Of decided, how many its conditions alone held for.
          */
         conditions_held?: number;
         /**
@@ -6910,6 +6890,14 @@ export type TestEmailRuleResult = {
             expected: 'match' | 'no_match';
             outcome: 'matched' | 'near_miss' | 'no_match' | 'unclassified' | 'skipped' | 'not_found';
             status: 'passed' | 'failed' | 'undecided';
+            /**
+             * On an undecided one only: why.
+             */
+            reason?: 'unclassified' | 'unanswered' | 'skipped' | 'not_found';
+            /**
+             * On an undecided one only: whether testing again can decide it.
+             */
+            retryable?: boolean;
         }>;
         /**
          * Made-up emails judged (expect.samples, or a saved rule's), in order; counts include them.
@@ -6987,7 +6975,7 @@ export type GenerateLookAlikesRequest = {
      */
     request_id?: string;
     /**
-     * For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. A saved rule or a request uses its own.
+     * Required with tree: the kind the tree is.
      */
     kind?: 'grant' | 'do_not_share';
     /**
@@ -7034,13 +7022,17 @@ export type TestEmailRuleOnSampleRequest = {
      */
     rule_id?: string;
     /**
-     * A pending rule request you can see: its rule as asked, tested as you over your own mailboxes (what accepting would share, for the member asked). Give one of tree, rule_id and request_id.
+     * A pending rule request you can see: its rule as asked, tested as you over your own mailboxes (what accepting would share, for the member asked).
      */
     request_id?: string;
     /**
-     * For an unsaved tree: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. A saved rule or a request uses its own.
+     * Required with tree: do_not_share tests it as a rule that blocks sharing.
      */
     kind?: 'grant' | 'do_not_share';
+    /**
+     * With tree: its description, which the answer's rule.warnings read.
+     */
+    english?: string;
     /**
      * A made-up received email. Nothing about it is stored.
      */
@@ -7227,7 +7219,7 @@ export type EmailRuleWritten = {
     created_at: string;
     updated_at: string;
     /**
-     * Its current version: its text (english, tree, explanation, assumptions, warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.
+     * Its current version: english and tree, with Primitive's reading and notes. current_version is its number. GET /email-rules lists rules without it.
      */
     current: EmailRuleVersion | null;
     /**
@@ -7249,42 +7241,7 @@ export type EmailRuleWritten = {
      * Its saved made-up emails, when this write set or added some.
      */
     expectation_samples?: Array<EmailRuleExpectationSample>;
-    /**
-     * After a write that saved a version or changed its expectations or made-up emails, if it has some: the emails by id judged on that version from stored classifications without asking its questions, and any made-up emails listed as undecided. Undecided: one that needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access shows headers only, it could not finish in time, or the check failed), and after a write that changed only made-up emails on a rule with emails by id. Test by rule_id for the rest. With if_expectations_pass, the judgment made before the save, which passed.
-     */
-    expectations_check?: {
-        version: number | null;
-        /**
-         * False when any failed, true when every one passed, null when none failed but some are undecided (not a failure).
-         */
-        passed: boolean | null;
-        /**
-         * Whether every expectation was judged (undecided and undecided_samples are empty). Absent from a server that predates it.
-         */
-        decided?: boolean;
-        failed: Array<string>;
-        undecided: Array<string>;
-        /**
-         * Made-up emails that failed, by index in the set judged (saved oldest first, then added; or as sent).
-         */
-        failed_samples?: Array<number>;
-        /**
-         * Made-up emails not decided, by index. Only a write that saves a version or activates the rule, sent with if_expectations_pass or judged by default, judges them.
-         */
-        undecided_samples?: Array<number>;
-        /**
-         * failed_samples with each one's label, from a write that judged them before saving (if_expectations_pass, or by default).
-         */
-        failed_sample_details?: Array<EmailRuleSampleDetail>;
-        /**
-         * undecided_samples with each one's label, as failed_sample_details.
-         */
-        undecided_sample_details?: Array<EmailRuleSampleDetail>;
-        /**
-         * On an update that saved a version that did not pass, or a do_not_share rule created active: that it was saved anyway, is current, and whether it is live.
-         */
-        note?: string;
-    };
+    expectations_check?: EmailRuleExpectationsCheck;
     /**
      * When this write saved an earlier version again (restore_version): which, and that the scope is not part of a version.
      */
@@ -7300,10 +7257,6 @@ export type EmailRuleWritten = {
         endpoints: number;
         shares_ended: number;
     };
-    /**
-     * After a write that saved a version of an active rule keys, webhooks or a share read without checking it first: what it changes, and how to have the next one checked.
-     */
-    notice?: string;
     /**
      * After a write that saved a version of a rule with a live share: that the share goes on under it, given even when affects is not, with whom it is and the version they accepted when those can be read.
      */
@@ -7329,15 +7282,16 @@ export type EmailRuleAuthor = {
 
 export type EmailRuleVersion = {
     version: number;
+    /**
+     * What the version matches: Primitive's reading of the tree, worked out on every read, never the words of whoever wrote the rule. Null when the tree no longer reads as one.
+     */
+    explanation: string | null;
     english: string;
     tree: EmailRuleTree;
-    explanation: string;
-    assumptions: Array<string>;
-    warnings: Array<string>;
     /**
-     * Who produced the tree, as stated when saved (not verified), such as rule-compiler-v1 or member.
+     * Primitive's notes on the tree and its english, worked out on every read.
      */
-    compiled_by: string;
+    warnings: Array<string>;
     vocabulary: string;
     created_at: string;
     /**
@@ -7374,9 +7328,9 @@ export type CreateEmailRuleRequest = {
      */
     name: string;
     /**
-     * grant (the default): what the rule matches can be shared. do_not_share: the rule runs before every other rule, and while it is active no rule shares an email it matches; an email it cannot decide counts as matched. Set when the rule is created; it never changes.
+     * grant: what the rule matches can be shared. do_not_share: the rule runs before every other rule, and while it is active no rule shares an email it matches; an email it cannot decide counts as matched. Set when the rule is created; it never changes.
      */
-    kind?: 'grant' | 'do_not_share';
+    kind: 'grant' | 'do_not_share';
     /**
      * observe (the default) records what the rule would match and grants or blocks nothing; draft is not evaluated; active only for a do_not_share rule.
      */
@@ -7387,7 +7341,7 @@ export type CreateEmailRuleRequest = {
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
     /**
-     * Emails it must match and must not (at most 100): a test by rule_id judges them unless expect is given, and each version it saves is checked against them.
+     * Emails it must match and must not (at most 100): a test by rule_id judges them unless expect is given, and a write that leaves the rule active on a new version, or turns it active, is judged against them first.
      */
     expectations?: {
         match?: Array<string>;
@@ -7402,35 +7356,6 @@ export type CreateEmailRuleRequest = {
      */
     english: string;
     tree: EmailRuleTreeInput;
-    /**
-     * What the rule matches, in plain English. Left out, the server writes one from the tree.
-     */
-    explanation?: string;
-    /**
-     * The compile response's assumptions. Stored as sent.
-     */
-    assumptions?: Array<string>;
-    /**
-     * The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).
-     */
-    warnings?: Array<string>;
-    /**
-     * Who produced the tree (not verified): the compile response's compiled_by, or member (the default) for a tree you wrote or edited.
-     */
-    compiled_by?: string;
-    /**
-     * Ignored (the compile answer's breadth).
-     */
-    breadth?: EmailRuleBreadth | null;
-    /**
-     * Ignored.
-     */
-    conditions_breadth?: EmailRuleBreadth | null;
-    breadth_scope?: EmailRuleScopeUsed;
-    /**
-     * Ignored (the compile answer's scope_warnings).
-     */
-    scope_warnings?: Array<EmailRuleScopeWarning>;
 };
 
 export type CreateEmailRuleResult = EmailRuleWritten;
@@ -7536,7 +7461,7 @@ export type EmailRuleRead = {
     created_at: string;
     updated_at: string;
     /**
-     * Its current version: its text (english, tree, explanation, assumptions, warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.
+     * Its current version: english and tree, with Primitive's reading and notes. current_version is its number. GET /email-rules lists rules without it.
      */
     current: EmailRuleVersion | null;
     /**
@@ -7568,35 +7493,6 @@ export type UpdateEmailRuleRequest = {
      */
     english?: string;
     tree?: EmailRuleTreeInput;
-    /**
-     * What the rule matches, in plain English. Left out, the server writes one from the tree.
-     */
-    explanation?: string;
-    /**
-     * The compile response's assumptions. Stored as sent.
-     */
-    assumptions?: Array<string>;
-    /**
-     * The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).
-     */
-    warnings?: Array<string>;
-    /**
-     * Who produced the tree (not verified): the compile response's compiled_by, or member (the default) for a tree you wrote or edited.
-     */
-    compiled_by?: string;
-    /**
-     * Ignored (the compile answer's breadth).
-     */
-    breadth?: EmailRuleBreadth | null;
-    /**
-     * Ignored.
-     */
-    conditions_breadth?: EmailRuleBreadth | null;
-    breadth_scope?: EmailRuleScopeUsed;
-    /**
-     * Ignored (the compile answer's scope_warnings).
-     */
-    scope_warnings?: Array<EmailRuleScopeWarning>;
     /**
      * Must be the rule's own (400 kind_mismatch).
      */
@@ -7630,11 +7526,7 @@ export type UpdateEmailRuleRequest = {
      */
     if_revision?: number;
     /**
-     * true: judge the rule as this write leaves it (new tree, restored version, new scope, or the version it activates) against the expectations it leaves, as POST /email-rules/test would, before saving; it can take as long as a test. Failed: 409 expectations_failed; on emails the rule cannot read: 409 expectations_unreadable; undecided: 409 expectations_undecided (each with details.expectations_check); none to judge: 400 no_expectations. Refused writes save nothing; a pass saves unless the rule moved meanwhile (409 email_rule_conflict). Only writes that save a version or activate the rule are judged. Omitted: judged as with true when the write saves a version or changes the scope of an active rule that API keys, webhooks or a share read and that has expectations. false: never judged first.
-     */
-    if_expectations_pass?: boolean;
-    /**
-     * Save version n again as the next version (author only): its english, tree, explanation, assumptions, warnings and compiled_by. A version carries no scope: the rule keeps its own unless evaluation_scope is sent. 404 version_not_found; 400 already_current or version_not_renderable. Not with a version's own fields.
+     * Save version n again as the next version (author only): its english and tree. A version carries no scope: the rule keeps its own unless evaluation_scope is sent. 404 version_not_found; 400 already_current or version_not_renderable. Not with a version's own fields.
      */
     restore_version?: number;
 };
@@ -8069,35 +7961,6 @@ export type CreateEmailRuleRequestRequest = {
     english: string;
     tree: EmailRuleTreeInput;
     /**
-     * What the rule matches, in plain English. Left out, the server writes one from the tree.
-     */
-    explanation?: string;
-    /**
-     * The compile response's assumptions. Stored as sent.
-     */
-    assumptions?: Array<string>;
-    /**
-     * The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).
-     */
-    warnings?: Array<string>;
-    /**
-     * Who produced the tree (not verified): the compile response's compiled_by, or member (the default) for a tree you wrote or edited.
-     */
-    compiled_by?: string;
-    /**
-     * Ignored (the compile answer's breadth).
-     */
-    breadth?: EmailRuleBreadth | null;
-    /**
-     * Ignored.
-     */
-    conditions_breadth?: EmailRuleBreadth | null;
-    breadth_scope?: EmailRuleScopeUsed;
-    /**
-     * Ignored (the compile answer's scope_warnings).
-     */
-    scope_warnings?: Array<EmailRuleScopeWarning>;
-    /**
      * Only grant.
      */
     kind?: 'grant';
@@ -8109,26 +7972,15 @@ export type CreateEmailRuleRequestResult = {
     name: string;
     english: string;
     tree: EmailRuleTree;
-    explanation: string;
-    assumptions: Array<string>;
     /**
-     * As the member who asked sent them, normally from their compile, then every compiler note on the rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them.
+     * What the rule as asked actually does, as a grant rule: Primitive's reading of its tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.
+     */
+    explanation: string | null;
+    /**
+     * Primitive's notes on the rule as asked, from its tree and english, worked out on every read.
      */
     warnings: Array<string>;
-    /**
-     * What the rule as asked actually does: Primitive's own reading of the request's tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.
-     */
-    server_explanation?: string | null;
-    /**
-     * Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes and that counts the asker quotes came from their own mail. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.
-     */
-    server_notes?: Array<string>;
-    compiled_by: string;
     vocabulary: string;
-    /**
-     * session: the proposer's own session; oauth: an OAuth or CLI token acting for them.
-     */
-    proposed_via: 'session' | 'oauth';
     created_at: string;
     decided_at: string | null;
     decided_by_user_id: string | null;
@@ -8157,7 +8009,7 @@ export type CreateEmailRuleRequestResult = {
      */
     edited_on_accept?: boolean | null;
     /**
-     * For the member asked, while pending: who asked (as proposer names them), what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results and rule_deliveries). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
+     * For the member asked, while pending: who asked (as proposer names them), what the rule actually does (explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results and rule_deliveries). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
      */
     notice?: string | null;
     /**
@@ -8169,7 +8021,7 @@ export type CreateEmailRuleRequestResult = {
      */
     target_warning?: string | null;
     /**
-     * Present, as true, when the create carried an Idempotency-Key and you already had a pending request to this member asking exactly this (name, english, tree, explanation and message, naming the member the same way): that request is returned (200), and no second one is made or sent.
+     * Present, as true, when the create carried an Idempotency-Key and you already had a pending request to this member asking exactly this (name, english, tree and message, naming the member the same way): that request is returned (200), and no second one is made or sent.
      */
     existing?: boolean;
 };
@@ -8211,26 +8063,15 @@ export type EmailRuleRequest = {
     name: string;
     english: string;
     tree: EmailRuleTree;
-    explanation: string;
-    assumptions: Array<string>;
     /**
-     * As the member who asked sent them, normally from their compile, then every compiler note on the rule's tree and words they lack. The compiler's note that the rule matches nearly everything, in its own wording, counted that member's recent mail: anyone else reads it naming them.
+     * What the rule as asked actually does, as a grant rule: Primitive's reading of its tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.
+     */
+    explanation: string | null;
+    /**
+     * Primitive's notes on the rule as asked, from its tree and english, worked out on every read.
      */
     warnings: Array<string>;
-    /**
-     * What the rule as asked actually does: Primitive's own reading of the request's tree, never the words of the member who asked or of a model. Null when the tree no longer reads as one.
-     */
-    server_explanation?: string | null;
-    /**
-     * Primitive's own notes on the rule as asked, worked out from its tree and description each time the request is read, and to the member asked while pending, how to test it on look-alikes and that counts the asker quotes came from their own mail. Unlike warnings, never written by the member who asked, though a note can quote their words or tree values.
-     */
-    server_notes?: Array<string>;
-    compiled_by: string;
     vocabulary: string;
-    /**
-     * session: the proposer's own session; oauth: an OAuth or CLI token acting for them.
-     */
-    proposed_via: 'session' | 'oauth';
     created_at: string;
     decided_at: string | null;
     decided_by_user_id: string | null;
@@ -8259,7 +8100,7 @@ export type EmailRuleRequest = {
      */
     edited_on_accept?: boolean | null;
     /**
-     * For the member asked, while pending: who asked (as proposer names them), what the rule actually does (server_explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results and rule_deliveries). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
+     * For the member asked, while pending: who asked (as proposer names them), what the rule actually does (explanation), Primitive's warnings, what accepting would share, then where to see what becomes of one email (rule-results and rule_deliveries). For the member who asked, once accepted with changes: that the request is not what is shared. Else null.
      */
     notice?: string | null;
 };
@@ -8325,7 +8166,7 @@ export type EmailRuleWithVersion = {
     created_at: string;
     updated_at: string;
     /**
-     * Its current version: its text (english, tree, explanation, assumptions, warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.
+     * Its current version: english and tree, with Primitive's reading and notes. current_version is its number. GET /email-rules lists rules without it.
      */
     current: EmailRuleVersion | null;
 };
@@ -8344,7 +8185,7 @@ export type EmailRuleShare = {
      */
     accepted_rule_version: number;
     /**
-     * Whether the member who accepted changed the rule's English, tree or explanation before accepting (a new name does not count).
+     * Whether the member who accepted changed the rule's English or tree before accepting (a new name does not count).
      */
     edited_on_accept: boolean;
     /**
@@ -8377,7 +8218,6 @@ export type EmailRuleShare = {
         state: 'draft' | 'observe' | 'active';
         current_version: number | null;
         english: string | null;
-        explanation: string | null;
         updated_at: string;
     } | null;
     /**
@@ -8446,35 +8286,6 @@ export type AcceptEmailRuleRequestRequest = {
     english?: string;
     tree?: EmailRuleTreeInput;
     /**
-     * What the rule matches, in plain English. Left out, the server writes one from the tree.
-     */
-    explanation?: string;
-    /**
-     * The compile response's assumptions. Stored as sent.
-     */
-    assumptions?: Array<string>;
-    /**
-     * The compile response's warnings. Stored as sent, then any server note they lack on an address or domain the description names that the rule does not test, or on a grant rule that tests only who an email was sent to (on a rule request, every compiler note on the rule).
-     */
-    warnings?: Array<string>;
-    /**
-     * Who produced the tree (not verified): the compile response's compiled_by, or member (the default) for a tree you wrote or edited.
-     */
-    compiled_by?: string;
-    /**
-     * Ignored (the compile answer's breadth).
-     */
-    breadth?: EmailRuleBreadth | null;
-    /**
-     * Ignored.
-     */
-    conditions_breadth?: EmailRuleBreadth | null;
-    breadth_scope?: EmailRuleScopeUsed;
-    /**
-     * Ignored (the compile answer's scope_warnings).
-     */
-    scope_warnings?: Array<EmailRuleScopeWarning>;
-    /**
      * Only grant.
      */
     kind?: 'grant';
@@ -8486,7 +8297,7 @@ export type AcceptEmailRuleRequestRequest = {
 
 export type AcceptEmailRuleRequestResult = {
     /**
-     * What is now shared, in words. When you changed the rule and it can now match mail the request left out by who it was sent to (such as mail where an address is only copied), that comes first; when you changed its english, tree or explanation (edited_on_accept; a new name alone is no change), that rule.current is what you agreed to and request what was asked.
+     * What is now shared, in words. When you changed the rule and it can now match mail the request left out by who it was sent to (such as mail where an address is only copied), that comes first; when you changed its english or tree (edited_on_accept; a new name alone is no change), that rule.current is what you agreed to and request what was asked.
      */
     notice?: string;
     rule: EmailRuleWithVersion;
@@ -8639,7 +8450,7 @@ export type EmailRuleCoveringMe = {
      */
     english: string | null;
     /**
-     * What its current version matches, as compiled. Null as english is.
+     * What its current version matches, Primitive's reading of its tree. Null as english is, or when the tree no longer reads as one.
      */
     explanation: string | null;
 };
@@ -8719,11 +8530,13 @@ export type EmailRuleCoveringMeVersion = {
     english: string;
     tree: EmailRuleTree;
     /**
-     * What the rule matches, as compiled.
+     * What the rule matches: Primitive's reading of the tree, worked out on every read, never the words of whoever wrote the rule. Null when the tree no longer reads as one.
      */
-    explanation: string;
-    assumptions: Array<string>;
-    compiled_by: string;
+    explanation: string | null;
+    /**
+     * Primitive's notes on the tree and its english, worked out on every read.
+     */
+    warnings: Array<string>;
     vocabulary: string;
     created_at: string;
 };
@@ -11764,6 +11577,50 @@ export type CliOrgList = {
  * The key of a built-in role. Every other role, including the `operator` template, is a template or custom role with a key of its own. A member's `role` (and the `stored_role` a role assignment returns) can also be `restricted`, which is not a built-in role and cannot be assigned: it stands for a template or custom role that does not fully include `member`, or for no role at all.
  */
 export type BuiltinRoleKey = 'owner' | 'admin' | 'member';
+
+export type EmailRuleExpectationsCheck = {
+    /**
+     * The version judged, once saved; null in a refusal.
+     */
+    version: number | null;
+    /**
+     * Whether every expectation passed.
+     */
+    passed: boolean;
+    /**
+     * Emails by id that failed.
+     */
+    failed: Array<string>;
+    /**
+     * Emails by id not decided.
+     */
+    undecided: Array<string>;
+    /**
+     * Made-up emails that failed, by index in the set judged and label.
+     */
+    failed_samples: Array<EmailRuleSampleDetail>;
+    /**
+     * Made-up emails not decided.
+     */
+    undecided_samples: Array<EmailRuleSampleDetail>;
+};
+
+export type EmailRuleBody = {
+    /**
+     * The description it was compiled from.
+     */
+    english: string;
+    /**
+     * grant or do_not_share.
+     */
+    kind: 'grant' | 'do_not_share';
+    tree: EmailRuleTree;
+    /**
+     * Present only when given at compile.
+     */
+    evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
+    scope_selection?: EmailRuleScopeSelection;
+};
 
 export type StartCliLoginData = {
     body?: StartCliLoginInput;
@@ -15890,6 +15747,10 @@ export type ListSentEmailsData = {
          * Long-poll. Hold the request up to this many seconds waiting for a send to appear or change state past `since`, returning as soon as one does, or an empty page when the window elapses. Only meaningful together with `since`: a non-zero `wait` without `since` is rejected, while `wait=0` is exactly equivalent to omitting it and so is accepted anywhere and holds nothing. Maximum 30 seconds; 0 (the default) returns immediately. Keeping one request in flight and reissuing it with the position you hold is the low-latency way to follow outbound delivery status.
          */
         wait?: number;
+        /**
+         * true: only sends from your own addresses. For a person (a session, a Primitive CLI or app login, or an agent signed in with a code): their own member addresses, not mailboxes delegated or shared with them. For a connected agent: its own address. For an API key or another app it is not applied. meta.mine says whether it was applied ({ applied, addresses }). Combines with from and every other filter.
+         */
+        mine?: 'true' | 'false';
         /**
          * Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`. Reads a page of messages in one request instead of one detail read per row. Parts are withheld where the detail read withholds them. Each body field is cut to 64 KiB per row and a response carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in `truncated_fields`. Unknown values are a `validation_error`.
          */
@@ -21634,13 +21495,9 @@ export type CompileEmailRuleErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden.
      */
     403: ErrorResponse;
-    /**
-     * email_rule_author_unresolvable: with evaluation_scope selected, you cannot act as a rule's author right now (details.reason left, revoked, suspended, membership_ended or no_mail_read).
-     */
-    409: ErrorResponse;
     /**
      * email_rule_not_compiled: the description could not be turned into a valid rule (details.reason is refused, invalid or truncated).
      */
@@ -21683,7 +21540,7 @@ export type TestEmailRuleData = {
 
 export type TestEmailRuleErrors = {
     /**
-     * validation_error: give exactly one of tree, rule_id and request_id, at most 200 email_ids (with the expected emails), 1 to 100 expected emails none in both lists (or only expect.samples, up to 20), and a tree that is valid for the column contract. evaluation_scope, scope_selection and kind go only with tree. A saved rule's current version or a request's rule that no longer renders answers details.reason version_not_renderable; email_ids that with its saved expectations name over 200 emails, too_many_emails.
+     * validation_error: give one of tree (with kind), rule_id and request_id, or rule_id with tree; at most 200 email_ids (with the expected emails), 1 to 100 expected emails none in both lists (or only expect.samples, up to 20), and a tree that is valid for the column contract. english, evaluation_scope, scope_selection and kind go only with tree; with rule_id, a kind other than the rule's answers details.reason kind_mismatch. A saved rule's current version or a request's rule that no longer renders answers details.reason version_not_renderable; email_ids that with its saved expectations name over 200 emails, too_many_emails.
      */
     400: ErrorResponse;
     /**
@@ -21691,7 +21548,7 @@ export type TestEmailRuleErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and a rule decides on what emails say. email_rule_scope_not_readable: scope_selection names something you cannot read. forbidden with details.reason covering_view_only: you read this rule only in the covering view, since it decided on your mail before and covers none of your mailboxes now (details.covering_view).
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and a rule decides on what emails say. email_rule_scope_not_readable: scope_selection names something you cannot read. email_rule_author_only: rule_id with tree from anyone but the rule's author. forbidden with details.reason covering_view_only: you read this rule only in the covering view, since it decided on your mail before and covers none of your mailboxes now (details.covering_view).
      */
     403: ErrorResponse;
     /**
@@ -22012,7 +21869,7 @@ export type GetEmailRuleErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox or decided on your mail; details.covering_view is where (getEmailRuleCoveringMe).
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason covering_view_only: you may read this rule only because it covers your mailbox or decided on your mail; details.covering_view is where (getEmailRuleCoveringMe).
      */
     403: ErrorResponse;
     /**
@@ -22052,7 +21909,7 @@ export type UpdateEmailRuleData = {
 
 export type UpdateEmailRuleErrors = {
     /**
-     * validation_error: invalid body or tree (details.errors), too large (too_large), a version that no longer renders (version_not_renderable), restore_version names the current version (already_current), over 20 made-up emails (too_many_expectation_samples), or a kind other than the rule's own (kind_mismatch). no_expectations: if_expectations_pass with no expectations to judge, or a write that removes them from an active rule keys, webhooks or a share read; nothing was saved.
+     * validation_error: invalid body or tree (details.errors), too large (too_large), a version that no longer renders (version_not_renderable), restore_version names the current version (already_current), over 20 made-up emails (too_many_expectation_samples), or a kind other than the rule's own (kind_mismatch).
      */
     400: ErrorResponse;
     /**
@@ -22060,7 +21917,7 @@ export type UpdateEmailRuleErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_author_only: only the rule's author may make this change. forbidden (rule_shared): the rule is shared, so only its author or a member manager can turn it off. forbidden (first_party_required): a new version of a shared rule is saved only by its author on the dashboard or the Primitive CLI, never by an app or agent acting for them. email_rule_scope_not_readable: scope_selection names something you cannot read. grant_forbidden (mail_depth): judging a write (if_expectations_pass, or by default) needs content access to mail when it judges emails by id.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_author_only: only the rule's author may make this change. forbidden (rule_shared): the rule is shared, so only its author or a member manager can turn it off. forbidden (first_party_required): a new version of a shared rule, or turning one active, is done only by its author on the dashboard, the Primitive CLI or the Primitive app, never by an agent acting for them. email_rule_scope_not_readable: scope_selection names something you cannot read. grant_forbidden (mail_depth): judging a write needs content access to mail when it judges emails by id.
      */
     403: ErrorResponse;
     /**
@@ -22068,7 +21925,7 @@ export type UpdateEmailRuleErrors = {
      */
     404: ErrorResponse;
     /**
-     * email_rule_conflict: the rule changed (details.reason version_moved with current_version, revision_moved with current_revision, expectations_moved, rule_changed or readers_changed); read it again and retry. email_rule_scope_locked: the rule is shared. email_rule_author_unresolvable: the rule could not run as you over the chosen scope. expectations_failed, expectations_unreadable (details.unreadable) or expectations_undecided, with if_expectations_pass or by default on an active rule keys, webhooks or a share read (details.read_by): nothing was saved; details carries current_version, state and expectations_check.
+     * email_rule_conflict: the rule changed (details.reason version_moved with current_version, revision_moved with current_revision, expectations_moved or rule_changed); read it again and retry. email_rule_scope_locked: the rule is shared. email_rule_author_unresolvable: the rule could not run as you over the chosen scope. expectations_failed, or expectations_undecided (details.reason, details.unreadable): nothing was saved; details carries current_version, state and expectations_check.
      */
     409: ErrorResponse;
     /**
@@ -22076,7 +21933,7 @@ export type UpdateEmailRuleErrors = {
      */
     429: ErrorResponse;
     /**
-     * service_unavailable (rule_keys_unread or rule_readers_unread): the keys or readers of an active rule could not be read in time; nothing was saved.
+     * service_unavailable: rule_keys_unread, the keys listing an active rule could not be read in time; judged_too_late, the judgment finished too late to save in time (Retry-After). Nothing was saved.
      */
     503: ErrorResponse;
 };
@@ -22129,7 +21986,7 @@ export type ListEmailRuleDecisionsErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox or decided on your mail; details.covering_view is where (listEmailRuleDecisionsOnMyMail).
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say. forbidden with details.reason covering_view_only: you may read this rule only because it covers your mailbox or decided on your mail; details.covering_view is where (listEmailRuleDecisionsOnMyMail).
      */
     403: ErrorResponse;
     /**
@@ -22235,7 +22092,7 @@ export type ListEmailRuleVersionsErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason covering_view_only (your dashboard session or the Primitive CLI only): you may read this rule only because it covers your mailbox or decided on your mail; details.covering_view is where (listEmailRuleVersionsCoveringMe while it covers you).
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason covering_view_only: you may read this rule only because it covers your mailbox or decided on your mail; details.covering_view is where (listEmailRuleVersionsCoveringMe while it covers you).
      */
     403: ErrorResponse;
     /**
@@ -22415,7 +22272,7 @@ export type CreateEmailRuleRequestData = {
     body: CreateEmailRuleRequestRequest;
     headers?: {
         /**
-         * Optional. With a key, a create identical to a pending request of yours to the same member (name, english, tree, explanation and message, naming the member the same way) returns that request with existing: true (200) instead of making a second one. The key itself is not stored, so any key does this, and a create without one is never matched to an existing request. A key that is empty, longer than 255 characters or not printable ASCII is refused with 400 `validation_error`; a valid one is echoed in the Idempotency-Key response header.
+         * Optional. With a key, a create identical to a pending request of yours to the same member (name, english, tree and message, naming the member the same way) returns that request with existing: true (200) instead of making a second one. The key itself is not stored, so any key does this, and a create without one is never matched to an existing request. A key that is empty, longer than 255 characters or not printable ASCII is refused with 400 `validation_error`; a valid one is echoed in the Idempotency-Key response header.
          */
         'Idempotency-Key'?: string;
     };
@@ -22759,7 +22616,7 @@ export type AcceptEmailRuleRequestErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_request_target_only: only the member the request was made to may accept it. forbidden with details.reason first_party_required: accepted from another OAuth app or with an agent token. grant_forbidden with details.permission mail:share_own: the caller's role does not let them share their own mail through email rules.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_request_target_only: only the member the request was made to may accept it. forbidden with details.reason first_party_required: accepted by an agent signed in with a code; only you accept. grant_forbidden with details.permission mail:share_own: the caller's role does not let them share their own mail through email rules.
      */
     403: ErrorResponse;
     /**
@@ -23030,7 +22887,7 @@ export type ListEmailRuleShareEmailsErrors = {
      */
     401: ErrorResponse;
     /**
-     * grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and which emails a share's rule gave is read from what they say; forbidden: you are no longer a member; or details.reason not_on_share: you can see this share as an owner or admin but are not one of its two people; or details.reason first_party_required: use the dashboard or the Primitive CLI, signed in as yourself.
+     * grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and which emails a share's rule gave is read from what they say; forbidden: you are no longer a member; or details.reason not_on_share: you can see this share as an owner or admin but are not one of its two people; or details.reason first_party_required: another app or a key cannot list them.
      */
     403: ErrorResponse;
     /**
@@ -23087,7 +22944,7 @@ export type ListEmailRulesCoveringMeErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden.
      */
     403: ErrorResponse;
     /**
@@ -23128,7 +22985,7 @@ export type GetEmailRuleCoveringMeErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden.
      */
     403: ErrorResponse;
     /**
@@ -23189,7 +23046,7 @@ export type ListEmailRuleDecisionsOnMyMailErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: your access to mail shows headers only, and what a rule decided is read from what emails say.
      */
     403: ErrorResponse;
     /**
@@ -23251,7 +23108,7 @@ export type ListEmailRuleVersionsCoveringMeErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason no_longer_covers: it decided on your mail before but covers none of your mailboxes now; details.covering_view (getEmailRuleCoveringMe) shows the version that last decided on your mail.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason no_longer_covers: it decided on your mail before but covers none of your mailboxes now; details.covering_view (getEmailRuleCoveringMe) shows the version that last decided on your mail.
      */
     403: ErrorResponse;
     /**
@@ -23312,7 +23169,7 @@ export type ListEmailRuleObjectionsErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden.
      */
     403: ErrorResponse;
     /**
@@ -23358,7 +23215,7 @@ export type CreateEmailRuleObjectionErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden.
      */
     403: ErrorResponse;
     /**
@@ -23410,7 +23267,7 @@ export type GetEmailRuleObjectionErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden.
      */
     403: ErrorResponse;
     /**
@@ -23460,7 +23317,7 @@ export type WithdrawEmailRuleObjectionErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason objector_only: only the member who made it can withdraw it.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason objector_only: only the member who made it can withdraw it.
      */
     403: ErrorResponse;
     /**
@@ -23518,7 +23375,7 @@ export type DeclineEmailRuleObjectionErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason author_only: only the rule's author can decline it.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason author_only: only the rule's author can decline it.
      */
     403: ErrorResponse;
     /**
@@ -23572,7 +23429,7 @@ export type AcceptEmailRuleObjectionErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason author_only: only the rule's author can accept it.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason author_only: only the rule's author can accept it.
      */
     403: ErrorResponse;
     /**
@@ -23630,7 +23487,7 @@ export type AmendEmailRuleObjectionErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden; details.reason first_party_required means this credential is not your dashboard session or the Primitive CLI. forbidden with details.reason author_only: only the rule's author can answer it.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. forbidden with details.reason author_only: only the rule's author can answer it.
      */
     403: ErrorResponse;
     /**

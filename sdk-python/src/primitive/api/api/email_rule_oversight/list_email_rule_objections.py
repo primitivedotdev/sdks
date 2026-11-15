@@ -131,8 +131,7 @@ def sync_detailed(
     amended once they have saved a newer version of the rule, or the member who made it withdraws it,
     which clears its message (not from an email to the author already sent or being sent). It never
     changes after that. Needs mail:read, the email rules feature, and a member's own full-access
-    credential (no API key, agent key or narrowed token). Only on your own dashboard session or the
-    Primitive CLI.
+    credential (no API key, agent key or narrowed token).
 
     Args:
         box (ListEmailRuleObjectionsBox | Unset): mine: objections you made and objections to
@@ -186,8 +185,7 @@ def sync(
     amended once they have saved a newer version of the rule, or the member who made it withdraws it,
     which clears its message (not from an email to the author already sent or being sent). It never
     changes after that. Needs mail:read, the email rules feature, and a member's own full-access
-    credential (no API key, agent key or narrowed token). Only on your own dashboard session or the
-    Primitive CLI.
+    credential (no API key, agent key or narrowed token).
 
     Args:
         box (ListEmailRuleObjectionsBox | Unset): mine: objections you made and objections to
@@ -236,8 +234,7 @@ async def asyncio_detailed(
     amended once they have saved a newer version of the rule, or the member who made it withdraws it,
     which clears its message (not from an email to the author already sent or being sent). It never
     changes after that. Needs mail:read, the email rules feature, and a member's own full-access
-    credential (no API key, agent key or narrowed token). Only on your own dashboard session or the
-    Primitive CLI.
+    credential (no API key, agent key or narrowed token).
 
     Args:
         box (ListEmailRuleObjectionsBox | Unset): mine: objections you made and objections to
@@ -291,8 +288,7 @@ async def asyncio(
     amended once they have saved a newer version of the rule, or the member who made it withdraws it,
     which clears its message (not from an email to the author already sent or being sent). It never
     changes after that. Needs mail:read, the email rules feature, and a member's own full-access
-    credential (no API key, agent key or narrowed token). Only on your own dashboard session or the
-    Primitive CLI.
+    credential (no API key, agent key or narrowed token).
 
     Args:
         box (ListEmailRuleObjectionsBox | Unset): mine: objections you made and objections to

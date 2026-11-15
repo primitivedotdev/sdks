@@ -36,9 +36,7 @@ class TestEmailRuleResultSummary:
                 the recent window, a grant rule whose conditions held for more than 20% of at least 20 emails checked (at least
                 90% if it has no questions), or for every one of fewer, gets a warning saying so, before those about what it
                 decided.
-            conditions_held (int | Unset): Of decided, how many its conditions alone held for. Compile's breadth and
-                conditions_breadth count this over recent mail in the scope sent to it, by default your own; here it is counted
-                over the emails this test decided.
+            conditions_held (int | Unset): Of decided, how many its conditions alone held for.
      """
 
     decided: int

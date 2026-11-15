@@ -158,7 +158,12 @@ describe("the endpoint commands print a webhook URL as stored", () => {
         });
         const result = await run(sdkName, [...argv, ...mode]);
         expect(result.error, sdkName).toBeNull();
-        expect(calls[0]?.body, sdkName).toEqual({ url: sent });
+        // A create also states what it receives; email.received by default.
+        expect(calls[0]?.body, sdkName).toEqual(
+          sdkName === "createEndpoint"
+            ? { url: sent, rules: { event_types: ["email.received"] } }
+            : { url: sent },
+        );
         expect(
           (printed(result.stdout, mode.length > 0) as { url: string }).url,
           sdkName,

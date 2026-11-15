@@ -112,8 +112,7 @@ def sync_detailed(
 
      Withdraws a pending objection you made, and clears its message; an email to the rule's author
     already sent or being sent keeps it. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
-    or the Primitive CLI.
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -151,8 +150,7 @@ def sync(
 
      Withdraws a pending objection you made, and clears its message; an email to the rule's author
     already sent or being sent keeps it. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
-    or the Primitive CLI.
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -185,8 +183,7 @@ async def asyncio_detailed(
 
      Withdraws a pending objection you made, and clears its message; an email to the rule's author
     already sent or being sent keeps it. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
-    or the Primitive CLI.
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -224,8 +221,7 @@ async def asyncio(
 
      Withdraws a pending objection you made, and clears its message; an email to the rule's author
     already sent or being sent keeps it. Needs mail:read, the email rules feature, and a member's own
-    full-access credential (no API key, agent key or narrowed token). Only on your own dashboard session
-    or the Primitive CLI.
+    full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):

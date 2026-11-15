@@ -40,7 +40,9 @@ from .event_receiver import (
     PendingEvent,
 )
 from .events import (
+    CREDENTIAL_EVENT_TYPES,
     EMAIL_EVENT_TYPES,
+    EMAIL_RULE_COVERAGE_EVENT_TYPES,
     EMAIL_RULE_OBJECTION_EVENT_TYPES,
     EMAIL_RULE_REQUEST_EVENT_TYPES,
     INTERACTION_EVENT_TYPES,
@@ -276,6 +278,8 @@ __all__ = [
     "SENT_EMAIL_EVENT_TYPES",
     "EMAIL_RULE_REQUEST_EVENT_TYPES",
     "EMAIL_RULE_OBJECTION_EVENT_TYPES",
+    "EMAIL_RULE_COVERAGE_EVENT_TYPES",
+    "CREDENTIAL_EVENT_TYPES",
     "SentEmailAcceptedEvent",
     "SentEmailCompletedEvent",
     "SentEmailCompletedSummary",

@@ -1559,7 +1559,8 @@ describe("generated commands with --json", () => {
     const result = await runMerged("sent:list", []);
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual([{ id: "sent-1" }]);
-    expect(result.stderr).toBe("next cursor: cursor-2\n");
+    expect(result.stderr.startsWith("next cursor: cursor-2\n")).toBe(true);
+    expect(result.stderr).toMatch(/^FROM\s+TO\s+STATUS/m);
   });
 });
 

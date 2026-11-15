@@ -131,10 +131,10 @@ def sync_detailed(
     shared only if they manage members from the dashboard. A scope change saves a new version; a shared
     rule keeps its scope, and a kind never changes. A saved version takes effect at once, on the rule's
     share too, which goes on under it. if_version refuses a write once a version was saved since you
-    read it; if_revision, once anything changed. Without if_expectations_pass a version is saved even
-    when its expectations fail, except on an active rule keys, webhooks or a share read: that write is
-    checked first unless if_expectations_pass is false. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+    read it; if_revision, once anything changed. A write that leaves the rule active and saves a version
+    or turns it active is first judged against the expectations it leaves (up to about 95 seconds): a
+    failure refuses it, and so does an undecided one on a grant rule. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -177,10 +177,10 @@ def sync(
     shared only if they manage members from the dashboard. A scope change saves a new version; a shared
     rule keeps its scope, and a kind never changes. A saved version takes effect at once, on the rule's
     share too, which goes on under it. if_version refuses a write once a version was saved since you
-    read it; if_revision, once anything changed. Without if_expectations_pass a version is saved even
-    when its expectations fail, except on an active rule keys, webhooks or a share read: that write is
-    checked first unless if_expectations_pass is false. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+    read it; if_revision, once anything changed. A write that leaves the rule active and saves a version
+    or turns it active is first judged against the expectations it leaves (up to about 95 seconds): a
+    failure refuses it, and so does an undecided one on a grant rule. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -218,10 +218,10 @@ async def asyncio_detailed(
     shared only if they manage members from the dashboard. A scope change saves a new version; a shared
     rule keeps its scope, and a kind never changes. A saved version takes effect at once, on the rule's
     share too, which goes on under it. if_version refuses a write once a version was saved since you
-    read it; if_revision, once anything changed. Without if_expectations_pass a version is saved even
-    when its expectations fail, except on an active rule keys, webhooks or a share read: that write is
-    checked first unless if_expectations_pass is false. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+    read it; if_revision, once anything changed. A write that leaves the rule active and saves a version
+    or turns it active is first judged against the expectations it leaves (up to about 95 seconds): a
+    failure refuses it, and so does an undecided one on a grant rule. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -264,10 +264,10 @@ async def asyncio(
     shared only if they manage members from the dashboard. A scope change saves a new version; a shared
     rule keeps its scope, and a kind never changes. A saved version takes effect at once, on the rule's
     share too, which goes on under it. if_version refuses a write once a version was saved since you
-    read it; if_revision, once anything changed. Without if_expectations_pass a version is saved even
-    when its expectations fail, except on an active rule keys, webhooks or a share read: that write is
-    checked first unless if_expectations_pass is false. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+    read it; if_revision, once anything changed. A write that leaves the rule active and saves a version
+    or turns it active is first judged against the expectations it leaves (up to about 95 seconds): a
+    failure refuses it, and so does an undecided one on a grant rule. Needs mail:read, the email rules
+    feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):

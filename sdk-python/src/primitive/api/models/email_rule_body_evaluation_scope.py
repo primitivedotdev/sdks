@@ -1,14 +1,15 @@
 from enum import StrEnum
 
-class CompileEmailRuleResultKind(StrEnum):
-    DO_NOT_SHARE = "do_not_share"
-    GRANT = "grant"
+class EmailRuleBodyEvaluationScope(StrEnum):
+    AUTHOR = "author"
+    OWN_MAILBOXES = "own_mailboxes"
+    SELECTED = "selected"
 
     def __str__(self) -> str:
         return str(self.value)
 
     @classmethod
-    def _missing_(cls, value: object) -> "CompileEmailRuleResultKind | None":
+    def _missing_(cls, value: object) -> "EmailRuleBodyEvaluationScope | None":
         # A value the API added after this SDK was generated: keep it rather
         # than failing to decode the whole response.
         if not isinstance(value, str):

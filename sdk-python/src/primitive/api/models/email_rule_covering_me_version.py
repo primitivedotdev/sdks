@@ -29,9 +29,9 @@ class EmailRuleCoveringMeVersion:
             version (int):
             english (str): What its author asked for, in their words.
             tree (EmailRuleTree):
-            explanation (str): What the rule matches, as compiled.
-            assumptions (list[str]):
-            compiled_by (str):
+            explanation (None | str): What the rule matches: Primitive's reading of the tree, worked out on every read,
+                never the words of whoever wrote the rule. Null when the tree no longer reads as one.
+            warnings (list[str]): Primitive's notes on the tree and its english, worked out on every read.
             vocabulary (str):
             created_at (datetime.datetime):
      """
@@ -39,9 +39,8 @@ class EmailRuleCoveringMeVersion:
     version: int
     english: str
     tree: EmailRuleTree
-    explanation: str
-    assumptions: list[str]
-    compiled_by: str
+    explanation: None | str
+    warnings: list[str]
     vocabulary: str
     created_at: datetime.datetime
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -58,13 +57,12 @@ class EmailRuleCoveringMeVersion:
 
         tree = self.tree.to_dict()
 
+        explanation: None | str
         explanation = self.explanation
 
-        assumptions = self.assumptions
+        warnings = self.warnings
 
 
-
-        compiled_by = self.compiled_by
 
         vocabulary = self.vocabulary
 
@@ -78,8 +76,7 @@ class EmailRuleCoveringMeVersion:
             "english": english,
             "tree": tree,
             "explanation": explanation,
-            "assumptions": assumptions,
-            "compiled_by": compiled_by,
+            "warnings": warnings,
             "vocabulary": vocabulary,
             "created_at": created_at,
         })
@@ -101,12 +98,16 @@ class EmailRuleCoveringMeVersion:
 
 
 
-        explanation = d.pop("explanation")
+        def _parse_explanation(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
 
-        assumptions = cast(list[str], d.pop("assumptions"))
+        explanation = _parse_explanation(d.pop("explanation"))
 
 
-        compiled_by = d.pop("compiled_by")
+        warnings = cast(list[str], d.pop("warnings"))
+
 
         vocabulary = d.pop("vocabulary")
 
@@ -120,8 +121,7 @@ class EmailRuleCoveringMeVersion:
             english=english,
             tree=tree,
             explanation=explanation,
-            assumptions=assumptions,
-            compiled_by=compiled_by,
+            warnings=warnings,
             vocabulary=vocabulary,
             created_at=created_at,
         )

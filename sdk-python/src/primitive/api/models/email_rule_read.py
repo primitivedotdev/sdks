@@ -42,8 +42,8 @@ class EmailRuleRead:
             is_author (bool): Whether you are its author, in your current membership. Only its author edits it.
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
-            current (EmailRuleVersion | None): Its current version: its text (english, tree, explanation, assumptions,
-                warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.
+            current (EmailRuleVersion | None): Its current version: english and tree, with Primitive's reading and notes.
+                current_version is its number. GET /email-rules lists rules without it.
             kind (EmailRuleReadKind | Unset): grant: what it matches can be shared. do_not_share: it blocks sharing what it
                 matches.
             protection_note (str | Unset): On a do_not_share rule only: it protects nothing yet (not active), a classifier
