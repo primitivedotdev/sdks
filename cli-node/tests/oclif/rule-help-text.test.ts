@@ -34,12 +34,11 @@ describe("where the help points a reader of email rules", () => {
     ).not.toContain("compile-email-rule");
   });
 
-  it("says a create leaves expectations on questions undecided until a test asks them", () => {
-    expect(
-      command("email-rules:create-email-rule").flags?.["fail-on-expectations"]
-        ?.description,
-    ).toContain(
-      "on a new rule with questions an email whose conditions hold stays undecided (exit 3) until `test-email-rule --rule-id` asks them",
-    );
+  it("has no --fail-on-expectations on create or update", () => {
+    for (const id of [
+      "email-rules:create-email-rule",
+      "email-rules:update-email-rule",
+    ])
+      expect(command(id).flags?.["fail-on-expectations"]).toBeUndefined();
   });
 });

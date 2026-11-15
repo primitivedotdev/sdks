@@ -5,17 +5,13 @@
 //   primitive email-rules test-email-rule --rule-id <id> \
 //     --expect-match <email-id>,<email-id> --expect-no-match <email-id>
 //
-// The exit code follows the expectations the answer judged (expect, or a
-// saved rule's saved expectations): 1 when one failed or is undecided for
-// good (its email cannot be found, read or classified), and 3 when the only
-// undecided ones a later test can decide, so a script can rerun it. The JSON
-// on stdout keeps the API's shape; under --json the report is left out and
-// the document gains `error` and `exit_code` when the exit code is not 0.
-//
-// create-email-rule and update-email-rule exit 0 whatever their answer's
-// expectations_check says, unless --fail-on-expectations asks otherwise: then
-// 1 when one failed, and 3 when none failed but one is undecided or the
-// expectations this write sent were not checked, so test the rule to decide.
+// test-email-rule's exit code follows the expectations the answer judged
+// (expect, or a saved rule's own): 1 when one failed, or is undecided and
+// testing again cannot decide it; 3 when the only ones not passed are
+// undecided and a later test can decide them; else 0. Under --json the
+// report is left out and the document gains `error` and `exit_code` when
+// the exit code is not 0. A write the API refuses exits 1 with the API's
+// error.
 //
 // This module does not import api-command.ts, which imports it.
 
@@ -325,67 +321,54 @@ export function answerConfidence(answer: QuestionAnswer): number | null {
   return unitInterval(answer.confidence) ? answer.confidence : null;
 }
 
-type UndecidedReason = {
-  why: string;
-  resolvable: boolean;
-  /** Unresolvable as far as the answer shows, though a later test might still decide it. */
-  may?: boolean;
-};
+/** Why an expectation is undecided, and whether testing again later can decide it. */
+type Undecided = { reason: string; retryable: boolean };
 
-// An unclassified email by unclassified_reason: whether a later test can
-// classify it. An unknown reason is taken as one it cannot.
-const UNCLASSIFIED_REASONS: Record<string, UndecidedReason> = {
-  pending: { why: "not classified yet", resolvable: true },
-  classifier_unavailable: {
-    why: "the classifier was unavailable",
-    resolvable: true,
-  },
-  classification_failed: {
-    why: "its classification failed",
-    resolvable: false,
-    may: true,
-  },
-  not_classifiable: { why: "it cannot be classified", resolvable: false },
-};
-
-function sameId(a: string, b: string): boolean {
-  return a.toLowerCase() === b.toLowerCase();
-}
+/** Unclassified reasons a later test can get past. */
+const RETRYABLE_UNCLASSIFIED = new Set(["pending", "classifier_unavailable"]);
+/** Outcomes decided on an email's conditions: undecided then means a question went unanswered. */
+const DECIDED_OUTCOMES = new Set(["matched", "near_miss", "no_match"]);
 
 /**
- * Why an expectation is undecided, from its email's result, and whether a
- * later test can decide it: not for an email the rule cannot find or read, or
- * one that cannot be classified; yes for one not classified yet, or whose
- * question went unanswered.
+ * The server's `retryable` and `reason` on an undecided entry when it gives
+ * them. Otherwise read from the outcome: an email not classified yet, or
+ * decided on its conditions with a question unanswered, and a sample not
+ * reached or with a question unanswered, can be decided later; nothing else
+ * can.
  */
-export function undecidedReason(
-  expectation: Pick<ExpectationResult, "email_id" | "outcome">,
-  results: readonly TestResult[],
-): UndecidedReason {
-  const result = results.find((entry) =>
-    sameId(entry.email_id, expectation.email_id),
-  );
-  const outcome = result?.outcome ?? expectation.outcome;
-  if (outcome === "not_found")
-    return { why: "no such email the rule can read", resolvable: false };
-  // An email that cannot be tested (unparsed, rejected, content discarded)
-  // stays that way: testing again never decides it.
-  if (outcome === "skipped")
-    return { why: skippedText(result), resolvable: false };
-  if (outcome === "unclassified") {
-    const reason = result?.unclassified_reason;
-    return (
-      (reason ? UNCLASSIFIED_REASONS[reason] : undefined) ?? {
-        why: reason ? `unclassified (${reason})` : "unclassified",
-        resolvable: false,
-      }
-    );
-  }
-  return { why: "a question went unanswered", resolvable: true };
+export function undecidedOf(
+  entry: unknown,
+  result?: Pick<TestResult, "outcome" | "unclassified_reason">,
+  questionAnswers: readonly QuestionAnswer[] = [],
+): Undecided {
+  const given = isRecord(entry) ? entry : {};
+  const outcome = String(result?.outcome ?? given.outcome ?? "");
+  const unclassified = result?.unclassified_reason ?? "";
+  const unanswered =
+    (result !== undefined && DECIDED_OUTCOMES.has(outcome)) ||
+    questionAnswers.some((answer) => answer.answer === null);
+  const fallback: Undecided =
+    outcome === "unclassified"
+      ? {
+          reason: unclassified || "unclassified",
+          retryable: RETRYABLE_UNCLASSIFIED.has(unclassified),
+        }
+      : outcome === "not_decided"
+        ? { reason: "not_decided", retryable: true }
+        : unanswered
+          ? { reason: "question_unanswered", retryable: true }
+          : { reason: outcome || "undecided", retryable: false };
+  return {
+    reason: typeof given.reason === "string" ? given.reason : fallback.reason,
+    retryable:
+      typeof given.retryable === "boolean"
+        ? given.retryable
+        : fallback.retryable,
+  };
 }
 
-function undecidedNote(reason: UndecidedReason): string {
-  return `${reason.why}; ${reason.resolvable ? "test again later" : reason.may ? "a later test may not decide it" : "testing again will not decide it"}`;
+function undecidedNote(undecided: Undecided): string {
+  return `${undecided.reason}; ${undecided.retryable ? "test again later" : "testing again will not decide it"}`;
 }
 
 function answerText(answer: QuestionAnswer): string {
@@ -437,13 +420,25 @@ function questionLines(
   ];
 }
 
+/** An undecided email expectation, read with its email's test result. */
+function emailUndecided(
+  expectation: Pick<ExpectationResult, "email_id" | "outcome">,
+  results: readonly TestResult[],
+): Undecided {
+  const result = results.find(
+    (entry) =>
+      entry.email_id.toLowerCase() === expectation.email_id.toLowerCase(),
+  );
+  return undecidedOf(expectation, result, result?.question_answers ?? []);
+}
+
 function expectationLine(
   result: ExpectationResult,
   results: readonly TestResult[],
 ): string {
   const note =
     result.status === "undecided"
-      ? undecidedNote(undecidedReason(result, results))
+      ? undecidedNote(emailUndecided(result, results))
       : undefined;
   return `  ${result.status}: ${result.email_id} expected ${result.expected}, got ${result.outcome}${note ? ` (${note})` : ""}`;
 }
@@ -456,6 +451,8 @@ type SampleJudgment = {
   outcome: string;
   status: string;
   question_answers: QuestionAnswer[];
+  /** The entry as the API gave it, for its retryable and reason. */
+  entry: Record<string, unknown>;
 };
 
 /** The made-up emails a test's expectations judged, in order. */
@@ -473,6 +470,7 @@ function sampleJudgments(expectations: unknown): SampleJudgment[] {
     question_answers: Array.isArray(item.question_answers)
       ? (item.question_answers.filter(isRecord) as QuestionAnswer[])
       : [],
+    entry: item,
   }));
 }
 
@@ -503,37 +501,10 @@ function sampleNamer(request?: {
   };
 }
 
-/**
- * Why a made-up email is undecided, and whether a later test can decide it:
- * yes when it was not reached or a question went unanswered; maybe not
- * otherwise, since a spam score it does not carry, a fact its
- * classification left out or a failed classification look the same. A
- * spam score left unset makes one undecided even with a question
- * unanswered, which then reads as decidable later: the answer cannot tell.
- */
-function sampleUndecidedReason(sample: SampleJudgment): UndecidedReason {
-  if (sample.outcome === "not_decided")
-    return {
-      why: "it was not reached in time, or deciding it failed",
-      resolvable: true,
-    };
-  const answers = sample.question_answers;
-  if (
-    answers.some((answer) => answer.answer === null) &&
-    !answers.some((answer) => answer.answer === false)
-  )
-    return { why: "a question went unanswered", resolvable: true };
-  return {
-    why: "it reads a spam score the sample does not carry, a fact its classification left out, or its classification failed",
-    resolvable: false,
-    may: true,
-  };
-}
-
 function sampleLines(sample: SampleJudgment, name: SampleNamer): string[] {
   const note =
     sample.status === "undecided"
-      ? ` (${undecidedNote(sampleUndecidedReason(sample))})`
+      ? ` (${undecidedNote(undecidedOf(sample.entry, undefined, sample.question_answers))})`
       : "";
   const lines = [
     `  ${sample.status}: ${name(sample)} expected ${sample.expected}, got ${sample.outcome}${note}`,
@@ -583,28 +554,16 @@ const NOT_MATCHED_ORDER: Record<string, number> = {
   not_found: 5,
 };
 
-const SKIPPED_REASONS: Record<string, string> = {
-  unparsed: "its content failed to parse",
-  rejected: "it was rejected and never delivered",
-  content_discarded: "its content was discarded",
-};
-
-/** Why a skipped email cannot be tested, from its skipped_reason. */
-function skippedText(
-  result: Pick<TestResult, "skipped_reason"> | undefined,
-): string {
-  const reason = result?.skipped_reason;
-  return `skipped: ${(reason && SKIPPED_REASONS[reason]) ?? (reason ? reason : "it cannot be tested")}`;
-}
-
 function notMatchedLine(result: TestResult): string[] {
   if (result.outcome === "skipped")
-    return [`  ${result.email_id} ${skippedText(result)}`];
+    return [
+      `  ${result.email_id} skipped${result.skipped_reason ? ` (${result.skipped_reason})` : ""}`,
+    ];
   if (result.outcome === "unclassified") {
     const reason = result.unclassified_reason;
     const note = !reason
       ? ""
-      : UNCLASSIFIED_REASONS[reason]?.resolvable
+      : RETRYABLE_UNCLASSIFIED.has(reason)
         ? `${reason}: test again later`
         : reason;
     return [`  ${result.email_id} unclassified${note ? ` (${note})` : ""}`];
@@ -717,12 +676,10 @@ function notMatchedLines(
 /**
  * The exit code a test's expectations call for, and the error a --json
  * document carries with it:
- * - 1 and `expectations_failed` when one failed;
- * - else 1 and `expectations_unresolvable` when one is undecided and a later
- *   test cannot decide it (its email cannot be found or read, or cannot be
- *   classified);
- * - else 3 and `expectations_undecided` when one is undecided and a later
- *   test can decide it;
+ * - 1 and `expectations_failed` when one failed (emails or samples);
+ * - else 1 and `expectations_undecided` when one is undecided and testing
+ *   again cannot decide it;
+ * - else 3 and `expectations_undecided` when one is undecided;
  * - else nothing: the exit code stays 0.
  */
 export function expectationsOutcome(
@@ -749,23 +706,22 @@ export function expectationsOutcome(
       .filter((result) => result.status === "undecided")
       .map((result) => ({
         id: result.email_id,
-        reason: undecidedReason(result, testResults),
+        ...emailUndecided(result, testResults),
       })),
     ...samples
       .filter((sample) => sample.status === "undecided")
       .map((sample) => ({
         id: name({ index: sample.index, label: null }),
-        reason: sampleUndecidedReason(sample),
+        ...undecidedOf(sample.entry, undefined, sample.question_answers),
       })),
   ];
-  const unresolvable = undecided.filter(({ reason }) => !reason.resolvable);
   const failedCount = Math.max(expectations.counts?.failed ?? 0, failed.length);
   const undecidedCount = Math.max(
     expectations.counts?.undecided ?? 0,
     undecided.length,
   );
   const why = (list: typeof undecided) =>
-    list.map(({ id, reason }) => `${id} (${reason.why})`).join(", ");
+    list.map(({ id, reason }) => `${id} (${reason})`).join(", ");
   if (failedCount > 0)
     return {
       exitCode: EXIT_EXPECTATION_FAILED,
@@ -774,23 +730,23 @@ export function expectationsOutcome(
         message: `${plural(failedCount, "expectation", "expectations")} failed${failed.length > 0 ? `: ${failed.join(", ")}` : ""}.`,
       },
     };
-  if (unresolvable.length > 0)
+  if (undecidedCount === 0) return {};
+  const final = undecided.filter(({ retryable }) => !retryable);
+  if (final.length > 0)
     return {
       exitCode: EXIT_EXPECTATION_FAILED,
       error: {
-        code: "expectations_unresolvable",
-        message: `${plural(unresolvable.length, "expectation is", "expectations are")} undecided, and testing again ${unresolvable.every(({ reason }) => reason.may) ? "may not decide" : "will not decide"} ${unresolvable.length === 1 ? "it" : "them"}: ${why(unresolvable)}.`,
-      },
-    };
-  if (undecidedCount > 0)
-    return {
-      exitCode: EXIT_EXPECTATION_UNDECIDED,
-      error: {
         code: "expectations_undecided",
-        message: `${plural(undecidedCount, "expectation is", "expectations are")} undecided${undecided.length > 0 ? `: ${why(undecided)}` : ""}. Test again later.`,
+        message: `${plural(undecidedCount, "expectation is", "expectations are")} undecided, and testing again will not decide ${final.length === 1 ? "this one" : "these"}: ${why(final)}.`,
       },
     };
-  return {};
+  return {
+    exitCode: EXIT_EXPECTATION_UNDECIDED,
+    error: {
+      code: "expectations_undecided",
+      message: `${plural(undecidedCount, "expectation is", "expectations are")} undecided${undecided.length > 0 ? `: ${why(undecided)}` : ""}. Test again later.`,
+    },
+  };
 }
 
 /** A time an answer gives, to the minute, in UTC. */
@@ -1003,81 +959,6 @@ function expectationsCheckLine(
   return `Expectations on ${on}: ${parts.length > 0 ? parts.join(", ") : "not passed"}.${rest}${note}`;
 }
 
-/** The flag that makes a rule write's exit code follow its expectations_check. */
-export const FAIL_ON_EXPECTATIONS_FLAG = "fail-on-expectations";
-
-/**
- * The exit code and --json `error` of a rule write under
- * --fail-on-expectations: 1 when an expectation failed; 3 when none failed but
- * one is undecided, or when expectations this write sent were not checked.
- * Read from the failed and undecided lists first, since a write may answer
- * `passed` as false or as null when nothing failed and something is
- * undecided; any other check that did not pass exits 1.
- */
-function writtenExpectationsOutcome(
-  check: unknown,
-  sentExpectations: boolean,
-  ruleId: string,
-  /** Said first on update, where the same codes also mean a refused write. */
-  saved = "",
-  name: (index: number) => string = (index) => `saved sample ${index + 1}`,
-): Pick<OperationReport, "exitCode" | "error"> {
-  const test = `\`primitive email-rules test-email-rule --rule-id ${ruleId}\``;
-  if (!isRecord(check)) {
-    if (!sentExpectations) return {};
-    return {
-      exitCode: EXIT_EXPECTATION_UNDECIDED,
-      error: {
-        code: "expectations_unchecked",
-        message: `${saved}The expectations this write sent were not checked on it. Test them with ${test}.`,
-      },
-    };
-  }
-  const failed = [
-    ...(Array.isArray(check.failed) ? check.failed : []),
-    ...indexList(check.failed_samples).map(name),
-  ];
-  const undecidedSamples = indexList(check.undecided_samples);
-  const undecided = [
-    ...(Array.isArray(check.undecided) ? check.undecided : []),
-    ...undecidedSamples.map(name),
-  ];
-  if (failed.length > 0)
-    return {
-      exitCode: EXIT_EXPECTATION_FAILED,
-      error: {
-        code: "expectations_failed",
-        message: `${saved}${plural(failed.length, "expectation", "expectations")} failed on this write: ${failed.join(", ")}.`,
-      },
-    };
-  if (undecided.length > 0)
-    return {
-      exitCode: EXIT_EXPECTATION_UNDECIDED,
-      error: {
-        code: "expectations_undecided",
-        message: `${saved}${plural(undecided.length, "expectation is", "expectations are")} undecided on this write, which judges them without classifying mail or asking the rule's questions${undecidedSamples.length > 0 ? ", and leaves made-up emails unjudged" : ""}: ${undecided.join(", ")}. Test them with ${test}.`,
-      },
-    };
-  // Fail closed: a check that names nothing failed or undecided yet did not pass.
-  if (check.passed !== true)
-    return {
-      exitCode: EXIT_EXPECTATION_FAILED,
-      error: {
-        code: "expectations_failed",
-        message: `${saved}The write's expectations check did not pass.`,
-      },
-    };
-  return {};
-}
-
-/**
- * update-email-rule's post-save outcome says the write was saved: the server
- * judges a write before saving only when it saves a version or turns the
- * rule active, and refuses with these same codes, saving nothing.
- */
-const SAVED_UNJUDGED =
-  "The write was saved: the server judges a write before saving only when it saves a version or turns the rule active, so not this one. ";
-
 /** What a written do_not_share rule's report says first. */
 const BLOCKS_SHARING =
   "This rule blocks sharing (kind do_not_share): while it is active, no rule shares an email it matches.";
@@ -1247,17 +1128,7 @@ export function writtenEmailRuleReport(
   // To its author: objections to the rule waiting for an answer.
   const objections = noteLine(rule.objection_notice);
   if (objections) lines.push(objections);
-  if (request.flags?.[FAIL_ON_EXPECTATIONS_FLAG] !== true) return { lines };
-  return {
-    lines,
-    ...writtenExpectationsOutcome(
-      rule.expectations_check,
-      sentExpectations,
-      ruleId,
-      isUpdate(request) ? SAVED_UNJUDGED : "",
-      name,
-    ),
-  };
+  return { lines };
 }
 
 /** Whether a rule write sent expectations: emails by id, or made-up emails to save or add. */
@@ -1266,32 +1137,9 @@ function sentExpectationsIn(body: unknown): boolean {
   const some = (value: unknown) => Array.isArray(value) && value.length > 0;
   return (
     isRecord(body.expectations) ||
-    some(body.expectation_samples) ||
-    some(body.add_expectation_samples)
+    some(body.add_expectation_samples) ||
+    some(body.expectation_samples)
   );
-}
-
-/** Whether a rule write is an update: it names the rule in its path. */
-function isUpdate(request: { path?: Record<string, unknown> }): boolean {
-  return typeof request.path?.id === "string";
-}
-
-/**
- * A rule write's exit code when its report cannot be built, under
- * --fail-on-expectations: 1 for a check that is there and did not pass, and 3
- * when there is none but the write sent expectations.
- */
-function writtenFallbackExitCode(
-  data: unknown,
-  request: { body: unknown; flags: Record<string, unknown> },
-): number | undefined {
-  if (request.flags[FAIL_ON_EXPECTATIONS_FLAG] !== true) return undefined;
-  // The same reading as the report's, so the two never disagree.
-  return writtenExpectationsOutcome(
-    isRecord(data) ? data.expectations_check : undefined,
-    sentExpectationsIn(request.body),
-    "<rule-id>",
-  ).exitCode;
 }
 
 // get-email-rule-scope
@@ -1442,10 +1290,8 @@ function readByText(details: Record<string, unknown>): string | undefined {
 }
 
 /** How to save a write the default check refused, without the check. */
-function saveUncheckedText(flags?: Record<string, unknown>): string {
-  return flags?.[FAIL_ON_EXPECTATIONS_FLAG] === true
-    ? `send it again without --${FAIL_ON_EXPECTATIONS_FLAG} and with --no-if-expectations-pass`
-    : "send it again with --no-if-expectations-pass";
+function saveUncheckedText(_flags?: Record<string, unknown>): string {
+  return "send it again with --no-if-expectations-pass";
 }
 
 /**
@@ -1535,8 +1381,6 @@ export function updateEmailRuleErrorHint(
     const reason = String(details.reason);
     // A reason the answer gives says what to do; with none, a made-up email
     // may stay undecided.
-    // The same reading as updateEmailRuleErrorExitCode's, so the hint and
-    // the exit code never disagree.
     const samplesMayStay = undecidedSamplesMayStay(
       undecidedSamples.length,
       reason,
@@ -1551,7 +1395,7 @@ export function updateEmailRuleErrorHint(
         : samplesMayStay
           ? `${undecided.length > 0 ? ` ${byReason}` : ""} ${UNDECIDED_SAMPLES_NEXT_STEP} ${refusedSampleTest(body, id)}`
           : ` ${byReason}`;
-    return `Hint: the rule, as this write would leave it, ${judged}.${which}${next}${unchecked} The command exits ${updateEmailRuleErrorExitCode(payload) ?? EXIT_EXPECTATION_FAILED}.`;
+    return `Hint: the rule, as this write would leave it, ${judged}.${which}${next}${unchecked}`;
   }
   if (code === "expectations_unreadable") {
     // Emails the rule cannot read (deleted, or outside its scope or its
@@ -1566,12 +1410,12 @@ export function updateEmailRuleErrorHint(
     const one = unreadable.length === 1;
     const named = unreadable.length > 0 ? `: ${unreadable.join(", ")}` : "";
     const them = one ? "it" : "them";
-    return `Hint: the rule, as this write would leave it, ${judged}. ${one ? "An expectation names an email" : "Expectations name emails"} this rule cannot read (deleted, or outside its scope or its author's mail)${named}. Sending the write again will not decide ${them}: send --expectations-file without ${them}, or an evaluation_scope that reads ${them}.${unchecked} The command exits ${EXIT_EXPECTATION_FAILED}.`;
+    return `Hint: the rule, as this write would leave it, ${judged}. ${one ? "An expectation names an email" : "Expectations name emails"} this rule cannot read (deleted, or outside its scope or its author's mail)${named}. Sending the write again will not decide ${them}: send --expectations-file without ${them}, or an evaluation_scope that reads ${them}.${unchecked}`;
   }
   if (code === "no_expectations")
     return readBy
       ? `Hint: nothing was saved: this write removes the rule's expectations, and the rule is active and ${readBy}, so a write that changes what it grants is checked against them first. Keep some with --expectations-file, --expectation-samples-file or --add-expectation-samples-file, or, to save the write without the check, ${saveUncheckedText(flags)}.`
-      : "Hint: nothing was saved. Give the rule expectations with --expectations-file or made-up emails with --expectation-samples-file or --add-expectation-samples-file (in this write or before it), or send the write without if_expectations_pass (--fail-on-expectations or --if-expectations-pass).";
+      : "Hint: nothing was saved. Give the rule expectations with --expectations-file or made-up emails with --expectation-samples-file or --add-expectation-samples-file (in this write or before it), or send the write without if_expectations_pass.";
   return undefined;
 }
 
@@ -1617,33 +1461,6 @@ const UNDECIDED_NEXT_STEP: Readonly<Record<string, string>> = {
   author_unresolvable:
     "The rule cannot run as its author over the mail it would cover (details.author_reason), so sending the write again will not decide them.",
 };
-
-/**
- * update-email-rule's exit code for the expectations guard's refusals: 1 when
- * one failed, or when they may not be decided by trying again (an expectation
- * names an email the rule cannot read, the rule cannot run as its author, or
- * a made-up email is undecided for no reason the answer gives); 3 when trying
- * again later can decide them.
- */
-export function updateEmailRuleErrorExitCode(
-  payload: unknown,
-): number | undefined {
-  const code = isRecord(payload) ? payload.code : undefined;
-  if (code === "expectations_failed" || code === "expectations_unreadable")
-    return EXIT_EXPECTATION_FAILED;
-  if (code !== "expectations_undecided") return undefined;
-  const details = errorDetails(payload);
-  if (details.reason === "author_unresolvable") return EXIT_EXPECTATION_FAILED;
-  const check = isRecord(details.expectations_check)
-    ? details.expectations_check
-    : {};
-  return undecidedSamplesMayStay(
-    indexList(check.undecided_samples).length,
-    String(details.reason),
-  )
-    ? EXIT_EXPECTATION_FAILED
-    : EXIT_EXPECTATION_UNDECIDED;
-}
 
 /**
  * Whether a guard's undecided made-up emails may stay undecided: some are,
@@ -1808,44 +1625,12 @@ export function listEmailRulesReport(data: unknown): OperationReport {
 
 // The flags and reports, by generated operation
 
-/** create-email-rule's --fail-on-expectations: the exit code follows the check made after saving. */
-const FAIL_ON_EXPECTATIONS_HELP =
-  "Exit 1 when an expectation in the answer's expectations_check failed, and 3 when none failed but one is undecided or the expectations this write sent were not checked (test the rule to decide). A create does not judge made-up emails, so with some it exits 3. It judges emails by id on their stored classification without asking the rule's questions, so on a new rule with questions an email whose conditions hold stays undecided (exit 3) until `test-email-rule --rule-id` asks them. Without it the command exits 0 whatever the check says.";
-
-/** update-email-rule's --fail-on-expectations: the server refuses the write. */
-const UPDATE_FAIL_ON_EXPECTATIONS_HELP =
-  "Refuse the write unless the rule, as this write would leave it, passes its expectations. It sends if_expectations_pass (over any in --body-file or --raw-body), so the server judges a new version, a restored one, a new scope or turning the rule active before saving, on its emails by id and its made-up emails, and saves nothing when one failed (exit 1), one names an email the rule cannot read (exit 1, since sending again never decides it), one is undecided (exit 3, or 1 when the rule cannot run as its author or a made-up email is undecided for no reason the answer gives) or the rule has none (exit 1). It can take as long as a test of the rule; the command waits for it. Judging needs a credential that reads the mail's content. A write the server does not judge (one changing only expectations, say) is saved, and the exit code then follows the answer's expectations_check, as on create. Without it, the server still judges, and refuses the same way, a write that saves a version or changes the scope of an active rule that API keys, webhooks or a share read and that has expectations (the refusal's details.read_by counts them), unless --no-if-expectations-pass is sent. With --json, a refused write's document holds the API's error alone; a saved write's holds the rule.";
-
-/** When update-email-rule judges the made-up emails a samples flag sets. */
-const UPDATE_JUDGES_SAMPLES = `The write judges them before saving with --${FAIL_ON_EXPECTATIONS_FLAG}, when it saves a version or turns the rule active, and without it when it saves a version or changes the scope of an active rule that API keys, webhooks or a share read, unless --no-if-expectations-pass is sent.`;
-
 /** What a samples file flag reads. */
 const SAMPLES_FILE_SHAPE =
   'A JSON file of made-up emails the rule must match or not: an array such as [{"expected": "no_match", "label": "a personal bill", "email": {...}}], with email as test-email-rule-on-sample takes it (text up to 4,000 characters, at most 10 each of to, cc, attachment_types and attachment_names), like the one generate-look-alikes --samples-file writes, or a generate-look-alikes answer saved as it printed it.';
 
 const EXPECTATION_FLAG_NOTE =
   "Replaces any expect in --body-file or --raw-body. The answer reports them in expectations (passed, counts, results) and the exit code follows it; see --help-full.";
-
-/**
- * update-email-rule's --fail-on-expectations sends if_expectations_pass, over
- * any in the body. Asking for it while turning it off is refused.
- */
-function expectationsGuardBodyFields(
-  flags: Record<string, unknown>,
-): ExtensionBodyField[] {
-  if (flags[FAIL_ON_EXPECTATIONS_FLAG] !== true) return [];
-  if (flags["if-expectations-pass"] === false)
-    throw usageError(
-      "--fail-on-expectations asks the server to judge the write before saving it; it cannot be combined with --no-if-expectations-pass.",
-    );
-  return [
-    {
-      flag: `--${FAIL_ON_EXPECTATIONS_FLAG}`,
-      property: "if_expectations_pass",
-      value: true,
-    },
-  ];
-}
 
 /**
  * The stderr report of end-email-rule-share: the answer's note, which says
@@ -1982,7 +1767,8 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
       return [...expect, ...same, ...scopeSelectionBodyFields(flags, base)];
     },
     bodyProperties: ["expect", "scope_selection"],
-    // Fail closed: expectations that are there and not passed exit 1.
+    // Fail closed: expectations that are there and not passed exit 1, if the
+    // report cannot be built.
     fallbackExitCode: (data) => {
       const expectations = (
         data as { expectations?: { passed?: unknown } } | null
@@ -2005,9 +1791,6 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
       [PICK_FLAG]: Flags.string({
         description: pickFlagHelp([SAMPLES_FILE_FLAG]),
       }),
-      [FAIL_ON_EXPECTATIONS_FLAG]: Flags.boolean({
-        description: FAIL_ON_EXPECTATIONS_HELP,
-      }),
       ...scopeSelectionFlags(),
     },
     bodyFields: (flags, base) => [
@@ -2016,7 +1799,6 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
       ...scopeSelectionBodyFields(flags, base),
     ],
     bodyProperties: ["expectations", "expectation_samples", "scope_selection"],
-    fallbackExitCode: writtenFallbackExitCode,
     report: writtenEmailRuleReport,
   },
   updateEmailRule: {
@@ -2026,25 +1808,21 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
           'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}, replacing its saved expectations; a file holding null removes them. Sets expectations, over any in --body-file or --raw-body; the answer judges them in expectations_check (passed, decided, failed, undecided); the report test-email-rule answers with is named expectations instead.',
       }),
       [SAMPLES_FILE_FLAG]: Flags.string({
-        description: `${SAMPLES_FILE_SHAPE} They replace the rule's saved ones, and a file holding [] removes them. Sets expectation_samples, over any in --body-file or --raw-body. Not with --${ADD_SAMPLES_FILE_FLAG}. ${UPDATE_JUDGES_SAMPLES}`,
+        description: `${SAMPLES_FILE_SHAPE} They replace the rule's saved ones, and a file holding [] removes them. Sets expectation_samples, over any in --body-file or --raw-body. Not with --${ADD_SAMPLES_FILE_FLAG}.`,
         exclusive: [ADD_SAMPLES_FILE_FLAG],
       }),
       [ADD_SAMPLES_FILE_FLAG]: Flags.string({
-        description: `${SAMPLES_FILE_SHAPE} They are added to the rule's saved ones. Sets add_expectation_samples, over any in --body-file or --raw-body. Not with --${SAMPLES_FILE_FLAG}. ${UPDATE_JUDGES_SAMPLES}`,
+        description: `${SAMPLES_FILE_SHAPE} They are added to the rule's saved ones. Sets add_expectation_samples, over any in --body-file or --raw-body. Not with --${SAMPLES_FILE_FLAG}.`,
         exclusive: [SAMPLES_FILE_FLAG],
       }),
       [PICK_FLAG]: Flags.string({
         description: pickFlagHelp([SAMPLES_FILE_FLAG, ADD_SAMPLES_FILE_FLAG]),
-      }),
-      [FAIL_ON_EXPECTATIONS_FLAG]: Flags.boolean({
-        description: UPDATE_FAIL_ON_EXPECTATIONS_HELP,
       }),
       ...scopeSelectionFlags(),
     },
     bodyFields: (flags, base) => [
       ...expectationsBodyFields(flags),
       ...samplesBodyFields(true)(flags),
-      ...expectationsGuardBodyFields(flags),
       ...scopeSelectionBodyFields(flags, base),
     ],
     bodyProperties: [
@@ -2053,8 +1831,6 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
       "add_expectation_samples",
       "scope_selection",
     ],
-    errorExitCode: updateEmailRuleErrorExitCode,
-    fallbackExitCode: writtenFallbackExitCode,
     report: writtenEmailRuleReport,
   },
   generateLookAlikes: {

@@ -15,6 +15,7 @@ import {
   affectsLine,
   answerConfidence,
   endEmailRuleShareReport,
+  expectationsOutcome,
   formatFact,
   NOT_MATCHED_LIST_LIMIT,
   shareActivityLines,
@@ -391,15 +392,10 @@ describe("email-rules test-email-rule: expectations from flags", () => {
     expect(rawBodyOnly).toMatch(/^ {3}tree\b/m);
     expect(rawBodyOnly).not.toMatch(/^ {3}expect\b/m);
     for (const text of [
-      "a saved rule's saved expectations are judged instead",
-      // Both reports named, the test's and the write's.
-      "Either way, the answer reports the expectations it judged in expectations: passed, counts and per-email results.",
-      "create-email-rule and update-email-rule instead judge the rule's saved expectations on the version they save, in expectations_check",
-      "The exit code follows that report:",
-      "1 when one is undecided and testing again will not decide it",
-      "3 when the only undecided ones can be decided later",
-      "Exit 1 also means the request failed",
-      "expectations_failed, expectations_unresolvable, expectations_undecided (exit 3)",
+      "without it, a saved rule's own expectations are judged",
+      "1 when one failed or is undecided for good (or the request failed)",
+      "3 when the only ones not passed can be decided by testing again later",
+      "error.code is expectations_failed or expectations_undecided",
     ])
       expect(description).toContain(text);
     for (const id of [
@@ -610,7 +606,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
       '  0. "Is it a sales pitch?": yes 1, no 1, unanswered 0',
       "Expectations: 1 failed, 1 undecided, 1 passed.",
       `  failed: ${B} expected match, got no_match`,
-      `  undecided: ${D} expected no_match, got unclassified (not classified yet; test again later)`,
+      `  undecided: ${D} expected no_match, got unclassified (pending; test again later)`,
       "Matched (1):",
       `  ${A}`,
       "Not matched (3):",
@@ -647,7 +643,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     expect(result.stderr).toContain("Expectations: 1 undecided, 1 passed.");
   });
 
-  it("exits 1 with expectations_unresolvable for an email the rule cannot find", async () => {
+  it("exits 1 with expectations_undecided for an email the rule cannot find", async () => {
     const data = withResults([{ email_id: E, outcome: "not_found" }], {
       passed: false,
       counts: { passed: 1, failed: 0, undecided: 1 },
@@ -671,21 +667,21 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     const result = await run("email-rules:test-email-rule", argv);
     expect(result.exitCode).toBe(1);
     expect(stderrLines(result)).toContain(
-      `  undecided: ${E} expected match, got not_found (no such email the rule can read; testing again will not decide it)`,
+      `  undecided: ${E} expected match, got not_found (not_found; testing again will not decide it)`,
     );
     const json = await run("email-rules:test-email-rule", [...argv, "--json"]);
     expect(json.exitCode).toBe(1);
     expect(json.stderr).toBe("");
     expect(JSON.parse(json.merged)).toMatchObject({
       error: {
-        code: "expectations_unresolvable",
-        message: `1 expectation is undecided, and testing again will not decide it: ${E} (no such email the rule can read).`,
+        code: "expectations_undecided",
+        message: `1 expectation is undecided, and testing again will not decide this one: ${E} (not_found).`,
       },
       exit_code: 1,
     });
   });
 
-  it("exits 1 with expectations_unresolvable for an email that cannot be classified", async () => {
+  it("exits 1 with expectations_undecided for an email that cannot be classified", async () => {
     const data = {
       ...testResult(UNDECIDED_EXPECTATIONS),
       results: testResult().results.map((result) =>
@@ -704,7 +700,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     expect(result.exitCode).toBe(1);
     expect(stderrLines(result)).toEqual(
       expect.arrayContaining([
-        `  undecided: ${D} expected no_match, got unclassified (it cannot be classified; testing again will not decide it)`,
+        `  undecided: ${D} expected no_match, got unclassified (not_classifiable; testing again will not decide it)`,
         `  ${D} unclassified (not_classifiable)`,
       ]),
     );
@@ -715,12 +711,12 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     ]);
     expect(json.exitCode).toBe(1);
     expect(JSON.parse(json.merged).error).toEqual({
-      code: "expectations_unresolvable",
-      message: `1 expectation is undecided, and testing again will not decide it: ${D} (it cannot be classified).`,
+      code: "expectations_undecided",
+      message: `1 expectation is undecided, and testing again will not decide this one: ${D} (not_classifiable).`,
     });
   });
 
-  it("exits 1 with expectations_unresolvable for an email that cannot be tested", async () => {
+  it("exits 1 with expectations_undecided for an email that cannot be tested", async () => {
     const data = withResults(
       [{ email_id: E, outcome: "skipped", skipped_reason: "unparsed" }],
       {
@@ -742,15 +738,15 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     expect(result.exitCode).toBe(1);
     expect(stderrLines(result)).toEqual(
       expect.arrayContaining([
-        `  undecided: ${E} expected match, got skipped (skipped: its content failed to parse; testing again will not decide it)`,
-        `  ${E} skipped: its content failed to parse`,
+        `  undecided: ${E} expected match, got skipped (skipped; testing again will not decide it)`,
+        `  ${E} skipped (unparsed)`,
       ]),
     );
     const json = await run("email-rules:test-email-rule", [...argv, "--json"]);
     expect(json.exitCode).toBe(1);
     expect(JSON.parse(json.merged).error).toEqual({
-      code: "expectations_unresolvable",
-      message: `1 expectation is undecided, and testing again will not decide it: ${E} (skipped: its content failed to parse).`,
+      code: "expectations_undecided",
+      message: `1 expectation is undecided, and testing again will not decide this one: ${E} (skipped).`,
     });
   });
 
@@ -791,8 +787,8 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     expect(result.exitCode).toBe(3);
     expect(stderrLines(result)).toEqual(
       expect.arrayContaining([
-        `  undecided: ${C} expected match, got near_miss (a question went unanswered; test again later)`,
-        `  undecided: ${D} expected no_match, got unclassified (the classifier was unavailable; test again later)`,
+        `  undecided: ${C} expected match, got near_miss (question_unanswered; test again later)`,
+        `  undecided: ${D} expected no_match, got unclassified (classifier_unavailable; test again later)`,
         `  ${D} unclassified (classifier_unavailable: test again later)`,
       ]),
     );
@@ -804,7 +800,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     expect(json.exitCode).toBe(3);
     expect(JSON.parse(json.merged).error).toEqual({
       code: "expectations_undecided",
-      message: `2 expectations are undecided: ${C} (a question went unanswered), ${D} (the classifier was unavailable). Test again later.`,
+      message: `2 expectations are undecided: ${C} (question_unanswered), ${D} (classifier_unavailable). Test again later.`,
     });
   });
 
@@ -907,7 +903,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
       expect(JSON.parse(json.merged)).toEqual({
         ...data,
         error: {
-          code: "expectations_not_passed",
+          code: "expectations_failed",
           message:
             "The answer's expectations were not all shown to pass; read their result in the answer.",
         },
@@ -1180,7 +1176,7 @@ describe("email-rules test-email-rule --json", () => {
       data: { expectations: UNDECIDED_EXPECTATIONS },
       error: {
         code: "expectations_undecided",
-        message: `1 expectation is undecided: ${D} (not classified yet). Test again later.`,
+        message: `1 expectation is undecided: ${D} (pending). Test again later.`,
       },
       exit_code: 3,
     });
@@ -1411,289 +1407,6 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
     expect(JSON.parse(result.merged)).toEqual(data);
-  });
-
-  describe("--fail-on-expectations", () => {
-    const sent = () =>
-      tempFile("e.json", JSON.stringify({ match: [B], no_match: [D] }));
-    const check = (fields: Record<string, unknown>) => ({
-      ...written,
-      expectations_check: { version: 4, ...fields },
-    });
-    const TEST = `\`primitive email-rules test-email-rule --rule-id ${RULE}\``;
-
-    it("exits 1 when an expectation failed, with the same report", async () => {
-      answer(
-        check({ passed: false, decided: false, failed: [B], undecided: [D] }),
-      );
-      const result = await run("email-rules:update-email-rule", [
-        RULE,
-        "--expectations-file",
-        sent(),
-        "--fail-on-expectations",
-      ]);
-      expect(result.exitCode).toBe(1);
-      expect(stderrLines(result)).toEqual([
-        `Expectations on version 4: 1 failed (${B}), 1 undecided (${D}). To decide the rest, run ${TEST}.`,
-      ]);
-    });
-
-    it("exits 3 when none failed and one is undecided, with passed null", async () => {
-      const data = check({
-        passed: null,
-        decided: false,
-        failed: [],
-        undecided: [D],
-      });
-      answer(data);
-      const result = await run("email-rules:create-email-rule", [
-        "--raw-body",
-        JSON.stringify({ tree, name: "n", english: "e" }),
-        "--expectations-file",
-        sent(),
-        "--fail-on-expectations",
-        "--json",
-      ]);
-      expect(result.exitCode).toBe(3);
-      expect(result.stderr).toBe("");
-      expect(JSON.parse(result.merged)).toEqual({
-        ...data,
-        error: {
-          code: "expectations_undecided",
-          message: `1 expectation is undecided on this write, which judges them without classifying mail or asking the rule's questions: ${D}. Test them with ${TEST}.`,
-        },
-        exit_code: 3,
-      });
-    });
-
-    it("says a write the server did not judge was saved, under --json, when one failed", async () => {
-      // Changing only expectations saves no version, so the server saves
-      // it unjudged and the check after saving sets the exit code.
-      const data = check({
-        passed: false,
-        decided: true,
-        failed: [B, D],
-        undecided: [],
-      });
-      answer(data);
-      const result = await run("email-rules:update-email-rule", [
-        RULE,
-        "--expectations-file",
-        sent(),
-        "--fail-on-expectations",
-        "--json",
-      ]);
-      expect(result.exitCode, result.stderr).toBe(1);
-      expect(calls[0]?.body).toMatchObject({ if_expectations_pass: true });
-      expect(JSON.parse(result.merged)).toEqual({
-        ...data,
-        error: {
-          code: "expectations_failed",
-          message: `The write was saved: the server judges a write before saving only when it saves a version or turns the rule active, so not this one. 2 expectations failed on this write: ${B}, ${D}.`,
-        },
-        exit_code: 1,
-      });
-    });
-
-    it("never sends if_expectations_pass on create", async () => {
-      answer(check({ passed: true, decided: true, failed: [], undecided: [] }));
-      await run("email-rules:create-email-rule", [
-        "--raw-body",
-        JSON.stringify({ tree, name: "n", english: "e" }),
-        "--fail-on-expectations",
-      ]);
-      expect(calls[0]?.body).not.toHaveProperty("if_expectations_pass");
-    });
-
-    it("exits 0 when every one passed, and when the write has none to check", async () => {
-      answer(check({ passed: true, decided: true, failed: [], undecided: [] }));
-      const passed = await run("email-rules:update-email-rule", [
-        RULE,
-        "--expectations-file",
-        sent(),
-        "--fail-on-expectations",
-      ]);
-      expect(passed.exitCode, passed.stderr).toBe(0);
-      answer(written);
-      const none = await run("email-rules:update-email-rule", [
-        RULE,
-        "--name",
-        "Renamed",
-        "--fail-on-expectations",
-      ]);
-      expect(none.exitCode, none.stderr).toBe(0);
-      expect(none.stderr).toBe("");
-    });
-
-    it("exits 3 when the expectations it sent were not checked", async () => {
-      answer(written);
-      const result = await run("email-rules:update-email-rule", [
-        RULE,
-        "--expectations-file",
-        sent(),
-        "--fail-on-expectations",
-        "--json",
-      ]);
-      expect(result.exitCode).toBe(3);
-      expect(JSON.parse(result.merged)).toMatchObject({
-        error: {
-          code: "expectations_unchecked",
-          message: `The write was saved: the server judges a write before saving only when it saves a version or turns the rule active, so not this one. The expectations this write sent were not checked on it. Test them with ${TEST}.`,
-        },
-        exit_code: 3,
-      });
-    });
-
-    it("keeps exit 0 without the flag, whatever the check says", async () => {
-      answer(
-        check({ passed: false, decided: true, failed: [B], undecided: [] }),
-      );
-      const result = await run("email-rules:update-email-rule", [
-        RULE,
-        "--expectations-file",
-        sent(),
-      ]);
-      expect(result.exitCode).toBe(0);
-    });
-
-    it("exits 3 when none failed and one is undecided, with passed false", async () => {
-      answer(check({ passed: false, failed: [], undecided: [D] }));
-      const result = await run("email-rules:update-email-rule", [
-        RULE,
-        "--expectations-file",
-        sent(),
-        "--fail-on-expectations",
-      ]);
-      expect(result.exitCode, result.stderr).toBe(3);
-    });
-
-    it("exits 1 for any other check that did not pass", async () => {
-      for (const fields of [
-        { passed: null, failed: [], undecided: [] },
-        { passed: false, failed: [], undecided: [] },
-        { failed: [], undecided: [] },
-        { passed: null, failed: "x", undecided: "y" },
-      ]) {
-        answer(check(fields));
-        const result = await run("email-rules:update-email-rule", [
-          RULE,
-          "--expectations-file",
-          sent(),
-          "--fail-on-expectations",
-          "--json",
-        ]);
-        expect(result.exitCode, JSON.stringify(fields)).toBe(1);
-        expect(JSON.parse(result.merged).error?.code).toBe(
-          "expectations_failed",
-        );
-      }
-    });
-
-    it("exits 0 on create with no expectations, and on update with a null file", async () => {
-      answer(written);
-      const created = await run("email-rules:create-email-rule", [
-        "--raw-body",
-        JSON.stringify({ tree, name: "n", english: "e" }),
-        "--fail-on-expectations",
-      ]);
-      expect(created.exitCode, created.stderr).toBe(0);
-      answer(written);
-      const cleared = await run("email-rules:update-email-rule", [
-        RULE,
-        "--expectations-file",
-        tempFile("null.json", "null"),
-        "--fail-on-expectations",
-      ]);
-      expect(cleared.exitCode, cleared.stderr).toBe(0);
-    });
-
-    it("prints the data alone under --json when every one passed", async () => {
-      const data = check({
-        passed: true,
-        decided: true,
-        failed: [],
-        undecided: [],
-      });
-      answer(data);
-      const result = await run("email-rules:update-email-rule", [
-        RULE,
-        "--expectations-file",
-        sent(),
-        "--fail-on-expectations",
-        "--json",
-      ]);
-      expect(result.exitCode).toBe(0);
-      expect(JSON.parse(result.merged)).toEqual(data);
-    });
-
-    it("fails closed when the report cannot be built, and only with the flag", async () => {
-      const extension = OPERATION_EXTENSIONS.updateEmailRule;
-      if (!extension) throw new Error("updateEmailRule has no extension");
-      const report = extension.report;
-      extension.report = () => {
-        throw new Error("bad answer");
-      };
-      try {
-        const exitFor = async (data: unknown, flag: boolean) => {
-          answer(data);
-          const result = await run("email-rules:update-email-rule", [
-            RULE,
-            "--expectations-file",
-            sent(),
-            ...(flag ? ["--fail-on-expectations"] : []),
-          ]);
-          return result.exitCode;
-        };
-        const failed = check({ passed: false, failed: [B], undecided: [] });
-        expect(await exitFor(failed, true)).toBe(1);
-        expect(await exitFor(failed, false)).toBe(0);
-        // No check, though the write sent expectations: not checked, so test the rule.
-        expect(await exitFor(written, true)).toBe(3);
-        // Read as the report reads it, lists first, whatever passed says.
-        expect(
-          await exitFor(
-            check({ passed: true, failed: [B], undecided: [] }),
-            true,
-          ),
-        ).toBe(1);
-        expect(
-          await exitFor(
-            check({ passed: true, failed: [], undecided: [D] }),
-            true,
-          ),
-        ).toBe(3);
-        expect(
-          await exitFor(
-            check({ passed: true, failed: [], undecided: [] }),
-            true,
-          ),
-        ).toBe(0);
-      } finally {
-        extension.report = report;
-      }
-    });
-
-    it("is a flag on create and update", () => {
-      for (const id of [
-        "email-rules:create-email-rule",
-        "email-rules:update-email-rule",
-      ]) {
-        const flag = (COMMANDS[id] as unknown as Runnable).flags[
-          "fail-on-expectations"
-        ];
-        expect(flag?.type, id).toBe("boolean");
-      }
-      // Create judges after saving; update asks the server to refuse first.
-      expect(
-        (COMMANDS["email-rules:create-email-rule"] as unknown as Runnable)
-          .flags["fail-on-expectations"]?.description,
-      ).toContain("Exit 1 when an expectation");
-      const update = (
-        COMMANDS["email-rules:update-email-rule"] as unknown as Runnable
-      ).flags["fail-on-expectations"]?.description;
-      expect(update).toContain("sends if_expectations_pass");
-      expect(update).toContain("saves nothing");
-    });
   });
 
   it("generates --if-version on update and an optional --explanation on rule writes", () => {
@@ -2244,7 +1957,7 @@ describe("email-rules made-up emails in test and write reports", () => {
       "Expectations: 1 failed, 1 undecided, 0 passed.",
       '  failed: sample 3 ("medical: three") expected no_match, got matched',
       '    questions: "Is it a bill?" yes at 0.90',
-      '  undecided: sample 1 ("medical: one") expected no_match, got not_decided (it was not reached in time, or deciding it failed; test again later)',
+      '  undecided: sample 1 ("medical: one") expected no_match, got not_decided (not_decided; test again later)',
     ]);
   });
 
@@ -2265,7 +1978,7 @@ describe("email-rules made-up emails in test and write reports", () => {
     expect(JSON.parse(later.merged).error).toEqual({
       code: "expectations_undecided",
       message:
-        "1 expectation is undecided: saved sample 1 (index 0) (it was not reached in time, or deciding it failed). Test again later.",
+        "1 expectation is undecided: saved sample 1 (index 0) (not_decided). Test again later.",
     });
     // A question left unanswered, with none answered no, can be decided by a
     // later test: exit 3 too.
@@ -2289,7 +2002,7 @@ describe("email-rules made-up emails in test and write reports", () => {
     ]);
     expect(unanswered.exitCode).toBe(3);
     expect(lines(unanswered)).toContain(
-      '  undecided: saved sample 3 (index 2, "medical: three") expected no_match, got near_miss (a question went unanswered; test again later)',
+      '  undecided: saved sample 3 (index 2, "medical: three") expected no_match, got near_miss (question_unanswered; test again later)',
     );
     const unansweredJson = await run("email-rules:test-email-rule", [
       "--rule-id",
@@ -2299,7 +2012,7 @@ describe("email-rules made-up emails in test and write reports", () => {
     expect(JSON.parse(unansweredJson.merged).error).toEqual({
       code: "expectations_undecided",
       message:
-        "1 expectation is undecided: saved sample 3 (index 2) (a question went unanswered). Test again later.",
+        "1 expectation is undecided: saved sample 3 (index 2) (question_unanswered). Test again later.",
     });
     answer(
       testResult(
@@ -2319,13 +2032,13 @@ describe("email-rules made-up emails in test and write reports", () => {
           ])
         ).merged,
       ).error.message,
-    ).toContain("testing again may not decide it");
+    ).toContain("testing again will not decide this one");
     expect(lines(may)).toContain(
-      '  undecided: saved sample 2 (index 1, "medical: two") expected no_match, got no_match (it reads a spam score the sample does not carry, a fact its classification left out, or its classification failed; a later test may not decide it)',
+      '  undecided: saved sample 2 (index 1, "medical: two") expected no_match, got no_match (no_match; testing again will not decide it)',
     );
   });
 
-  it("says a write does not judge the made-up emails it saved, and --fail-on-expectations exits 3", async () => {
+  it("says a write does not judge the made-up emails it saved", async () => {
     const data = {
       ...written,
       expectation_samples: [
@@ -2366,15 +2079,6 @@ describe("email-rules made-up emails in test and write reports", () => {
       // Sent as --pick 2,3: named by their numbers in the file.
       `Expectations on version 1: none failed, 2 made-up emails not judged by this write (sample 2 ("medical: two"), sample 3 ("medical: three")). To decide the rest, run \`primitive email-rules test-email-rule --rule-id ${RULE}\`.`,
     );
-    const failing = await run("email-rules:create-email-rule", [
-      ...argv,
-      "--fail-on-expectations",
-      "--json",
-    ]);
-    expect(failing.exitCode).toBe(3);
-    expect(JSON.parse(failing.merged).error.message).toBe(
-      `2 expectations are undecided on this write, which judges them without classifying mail or asking the rule's questions, and leaves made-up emails unjudged: sample 2 ("medical: two"), sample 3 ("medical: three"). Test them with \`primitive email-rules test-email-rule --rule-id ${RULE}\`.`,
-    );
   });
 
   it("names the made-up emails a guarded update failed on, and exits 1", async () => {
@@ -2401,11 +2105,10 @@ describe("email-rules made-up emails in test and write reports", () => {
       RULE,
       "--state",
       "active",
-      "--fail-on-expectations",
     ]);
     expect(result.exitCode).toBe(1);
     expect(stderrLines(result).at(-1)).toBe(
-      "Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations failed: saved sample 2 (index 1). The command exits 1.",
+      "Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations failed: saved sample 2 (index 1).",
     );
     // A server that names each one's label beside its index: said with it.
     responder = () =>
@@ -2435,7 +2138,6 @@ describe("email-rules made-up emails in test and write reports", () => {
       RULE,
       "--state",
       "active",
-      "--fail-on-expectations",
     ]);
     expect(stderrLines(labelled).at(-1)).toContain(
       'Expectations failed: saved sample 2 (index 1, "Personal medical bill").',
@@ -2475,7 +2177,6 @@ describe("email-rules made-up emails in test and write reports", () => {
       file,
       "--pick",
       "3",
-      "--fail-on-expectations",
     ]);
     expect(stderrLines(replaced).at(-1)).toContain(
       'Expectations failed: sample 3 ("medical: three").',
@@ -2485,33 +2186,30 @@ describe("email-rules made-up emails in test and write reports", () => {
       RULE,
       "--add-expectation-samples-file",
       file,
-      "--fail-on-expectations",
     ]);
     expect(stderrLines(added).at(-1)).toContain(
       "Expectations failed: made-up email 5 (index 4). Made-up emails are numbered from 1: the rule's saved ones first, then those this write adds.",
     );
   });
 
-  it("exits 1 when a refused write's made-up email is undecided for no reason given, and 3 when the judgment ran out of time", async () => {
+  it("exits 1 for every refused write, with a hint by its reason", async () => {
     refusedWith({ undecided_samples: [0] });
     const stays = await run("email-rules:update-email-rule", [
       RULE,
       "--state",
       "active",
-      "--fail-on-expectations",
     ]);
     expect(stays.exitCode).toBe(1);
     expect(stderrLines(stays).at(-1)).toBe(
-      `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations undecided: saved sample 1 (index 0). A made-up email undecided for no reason given may stay so (a spam score it does not carry, a fact its classification left out, or a failed classification), so sending the write again may not decide it. To see why, test rule ${RULE} on each with \`primitive email-rules test-email-rule-on-sample\` (\`primitive email-rules get-email-rule ${RULE}\` lists its saved ones). The command exits 1.`,
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations undecided: saved sample 1 (index 0). A made-up email undecided for no reason given may stay so (a spam score it does not carry, a fact its classification left out, or a failed classification), so sending the write again may not decide it. To see why, test rule ${RULE} on each with \`primitive email-rules test-email-rule-on-sample\` (\`primitive email-rules get-email-rule ${RULE}\` lists its saved ones).`,
     );
     refusedWith({ undecided_samples: [0] }, "deadline");
     const later = await run("email-rules:update-email-rule", [
       RULE,
       "--state",
       "active",
-      "--fail-on-expectations",
     ]);
-    expect(later.exitCode).toBe(3);
+    expect(later.exitCode).toBe(1);
     expect(stderrLines(later).at(-1)).toContain(
       "The judgment ran out of time; send the write again.",
     );
@@ -2525,7 +2223,6 @@ describe("email-rules made-up emails in test and write reports", () => {
       RULE,
       "--state",
       "active",
-      "--fail-on-expectations",
     ]);
     expect(author.exitCode).toBe(1);
     const hint = stderrLines(author).at(-1) ?? "";
@@ -2541,7 +2238,6 @@ describe("email-rules made-up emails in test and write reports", () => {
       const result = await run("email-rules:update-email-rule", [
         RULE,
         ...argv,
-        "--fail-on-expectations",
       ]);
       expect(result.exitCode).toBe(1);
       return stderrLines(result).at(-1) ?? "";
@@ -2706,34 +2402,6 @@ describe("email-rules update-email-rule: the server's write guards", () => {
   });
   const sentBody = () => calls.find((call) => call.method === "PATCH")?.body;
 
-  it("--fail-on-expectations sends if_expectations_pass, over the body", async () => {
-    answer(written);
-    await run("email-rules:update-email-rule", [
-      RULE,
-      "--raw-body",
-      JSON.stringify({ state: "active", if_expectations_pass: false }),
-      "--fail-on-expectations",
-    ]);
-    expect(sentBody()).toEqual({ state: "active", if_expectations_pass: true });
-    calls = [];
-    await run("email-rules:update-email-rule", [RULE, "--state", "active"]);
-    expect(sentBody()).toEqual({ state: "active" });
-  });
-
-  it("refuses --fail-on-expectations with --no-if-expectations-pass, sending nothing", async () => {
-    answer(written);
-    const result = await run("email-rules:update-email-rule", [
-      RULE,
-      "--state",
-      "active",
-      "--fail-on-expectations",
-      "--no-if-expectations-pass",
-    ]);
-    expect(result.exitCode).toBe(2);
-    expect(result.stderr).toContain("--no-if-expectations-pass");
-    expect(calls).toEqual([]);
-  });
-
   it("exits 1 when an expectation failed and nothing was saved, naming them", async () => {
     responder = () =>
       jsonResponse(
@@ -2754,15 +2422,14 @@ describe("email-rules update-email-rule: the server's write guards", () => {
       RULE,
       "--state",
       "active",
-      "--fail-on-expectations",
     ]);
     expect(result.exitCode).toBe(1);
     expect(stderrLines(result).at(-1)).toBe(
-      `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations failed: ${A}. The command exits 1.`,
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations failed: ${A}.`,
     );
   });
 
-  it("exits 3 when one is undecided, under --json too", async () => {
+  it("exits 1 when one is undecided, under --json too", async () => {
     const body = refusal("expectations_undecided", {
       reason: "deadline",
       current_version: 5,
@@ -2780,16 +2447,15 @@ describe("email-rules update-email-rule: the server's write guards", () => {
       RULE,
       "--state",
       "active",
-      "--fail-on-expectations",
       "--json",
     ]);
-    expect(result.exitCode).toBe(3);
+    expect(result.exitCode).toBe(1);
     expect(result.stderr).toBe("");
     expect(JSON.parse(result.merged)).toEqual({
       error: body.error,
-      exit_code: 3,
+      exit_code: 1,
       warnings: [
-        `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations undecided: ${B}. The judgment ran out of time; send the write again. The command exits 3.`,
+        `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations undecided: ${B}. The judgment ran out of time; send the write again.`,
       ],
     });
   });
@@ -2816,11 +2482,10 @@ describe("email-rules update-email-rule: the server's write guards", () => {
       RULE,
       "--state",
       "active",
-      "--fail-on-expectations",
     ]);
     expect(result.exitCode).toBe(1);
     expect(stderrLines(result).at(-1)).toBe(
-      `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations undecided: ${B}. The rule cannot run as its author over the mail it would cover (details.author_reason), so sending the write again will not decide them. The command exits 1.`,
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. Expectations undecided: ${B}. The rule cannot run as its author over the mail it would cover (details.author_reason), so sending the write again will not decide them.`,
     );
   });
 
@@ -2842,11 +2507,10 @@ describe("email-rules update-email-rule: the server's write guards", () => {
       RULE,
       "--state",
       "active",
-      "--fail-on-expectations",
     ]);
     expect(result.exitCode).toBe(1);
     expect(stderrLines(result).at(-1)).toBe(
-      `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. An expectation names an email this rule cannot read (deleted, or outside its scope or its author's mail): ${C}. Sending the write again will not decide it: send --expectations-file without it, or an evaluation_scope that reads it. The command exits 1.`,
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving (if_expectations_pass), and nothing was saved. An expectation names an email this rule cannot read (deleted, or outside its scope or its author's mail): ${C}. Sending the write again will not decide it: send --expectations-file without it, or an evaluation_scope that reads it.`,
     );
     // Several, an id that is not a string, and an empty list are each said plainly.
     const hintFor = OPERATION_ERROR_HINTS.updateEmailRule;
@@ -2871,7 +2535,6 @@ describe("email-rules update-email-rule: the server's write guards", () => {
       RULE,
       "--state",
       "active",
-      "--fail-on-expectations",
       "--json",
     ]);
     expect(json.exitCode).toBe(1);
@@ -2894,11 +2557,10 @@ describe("email-rules update-email-rule: the server's write guards", () => {
       RULE,
       "--state",
       "active",
-      "--fail-on-expectations",
     ]);
     expect(result.exitCode).toBe(1);
     expect(stderrLines(result).at(-1)).toBe(
-      "Hint: nothing was saved. Give the rule expectations with --expectations-file or made-up emails with --expectation-samples-file or --add-expectation-samples-file (in this write or before it), or send the write without if_expectations_pass (--fail-on-expectations or --if-expectations-pass).",
+      "Hint: nothing was saved. Give the rule expectations with --expectations-file or made-up emails with --expectation-samples-file or --add-expectation-samples-file (in this write or before it), or send the write without if_expectations_pass.",
     );
   });
 
@@ -2928,7 +2590,7 @@ describe("email-rules update-email-rule: the server's write guards", () => {
     expect(result.exitCode).toBe(1);
     expect(sentBody()).toEqual({ restore_version: 3 });
     expect(stderrLines(result).at(-1)).toBe(
-      `Hint: the rule, as this write would leave it, was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys, webhooks or a share read it, and nothing was saved. Expectations failed: ${A}. The rule is active and 2 API keys and 1 webhook read what it grants; to save the write without the check, send it again with --no-if-expectations-pass. The command exits 1.`,
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys, webhooks or a share read it, and nothing was saved. Expectations failed: ${A}. The rule is active and 2 API keys and 1 webhook read what it grants; to save the write without the check, send it again with --no-if-expectations-pass.`,
     );
     const hintFor = OPERATION_ERROR_HINTS.updateEmailRule;
     // A share counts as a reader: alone, and beside keys and webhooks.
@@ -2963,9 +2625,9 @@ describe("email-rules update-email-rule: the server's write guards", () => {
         { id: RULE },
       ),
     ).toBe(
-      `Hint: the rule, as this write would leave it, was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys, webhooks or a share read it, and nothing was saved. An expectation names an email this rule cannot read (deleted, or outside its scope or its author's mail): ${C}. Sending the write again will not decide it: send --expectations-file without it, or an evaluation_scope that reads it. The rule is active and API keys, webhooks or a share may read what it grants (they could not be counted in time); to save the write without the check, send it again with --no-if-expectations-pass. The command exits 1.`,
+      `Hint: the rule, as this write would leave it, was judged against its expectations before saving, as a write that changes what an active rule grants is by default while API keys, webhooks or a share read it, and nothing was saved. An expectation names an email this rule cannot read (deleted, or outside its scope or its author's mail): ${C}. Sending the write again will not decide it: send --expectations-file without it, or an evaluation_scope that reads it. The rule is active and API keys, webhooks or a share may read what it grants (they could not be counted in time); to save the write without the check, send it again with --no-if-expectations-pass.`,
     );
-    // Removing the expectations of a rule they read, under --fail-on-expectations.
+    // Removing the expectations of a rule they read.
     expect(
       hintFor?.(
         "no_expectations",
@@ -2975,10 +2637,9 @@ describe("email-rules update-email-rule: the server's write guards", () => {
           details: { read_by: { keys: 1, webhooks: 0 } },
         },
         { id: RULE },
-        { "fail-on-expectations": true },
       ),
     ).toBe(
-      "Hint: nothing was saved: this write removes the rule's expectations, and the rule is active and 1 API key and 0 webhooks read what it grants, so a write that changes what it grants is checked against them first. Keep some with --expectations-file, --expectation-samples-file or --add-expectation-samples-file, or, to save the write without the check, send it again without --fail-on-expectations and with --no-if-expectations-pass.",
+      "Hint: nothing was saved: this write removes the rule's expectations, and the rule is active and 1 API key and 0 webhooks read what it grants, so a write that changes what it grants is checked against them first. Keep some with --expectations-file, --expectation-samples-file or --add-expectation-samples-file, or, to save the write without the check, send it again with --no-if-expectations-pass.",
     );
   });
 
@@ -4489,5 +4150,121 @@ describe("how sure a question's answer is", () => {
         confidence: 0.9,
       }),
     ).toBeNull();
+  });
+});
+
+describe("expectationsOutcome: one exit rule for a test", () => {
+  type Expectations = Parameters<typeof expectationsOutcome>[0];
+  const E1 = "00000000-0000-4000-8000-0000000000e1";
+  const entry = (status: string, extra: Record<string, unknown> = {}) => ({
+    email_id: E1,
+    expected: "match" as const,
+    outcome: "near_miss" as const,
+    status: status as "passed",
+    ...extra,
+  });
+  const sample = (status: string, extra: Record<string, unknown> = {}) => ({
+    index: 0,
+    label: null,
+    expected: "no_match",
+    outcome: "no_match",
+    status,
+    question_answers: [],
+    ...extra,
+  });
+  type Case = [
+    string,
+    { results?: unknown[]; samples?: unknown[] },
+    number | undefined,
+    string | undefined,
+  ];
+  const cases: Case[] = [
+    ["nothing to judge", {}, undefined, undefined],
+    ["all passed", { results: [entry("passed")] }, undefined, undefined],
+    [
+      "an email failed",
+      { results: [entry("failed")] },
+      1,
+      "expectations_failed",
+    ],
+    [
+      "a sample failed",
+      { samples: [sample("failed")] },
+      1,
+      "expectations_failed",
+    ],
+    [
+      "failed beats undecided",
+      { results: [entry("undecided")], samples: [sample("failed")] },
+      1,
+      "expectations_failed",
+    ],
+    [
+      "undecided, retryable by the server",
+      { results: [entry("undecided", { retryable: true, reason: "x" })] },
+      3,
+      "expectations_undecided",
+    ],
+    [
+      "undecided, not retryable by the server",
+      { results: [entry("undecided", { retryable: false, reason: "x" })] },
+      1,
+      "expectations_undecided",
+    ],
+    [
+      "one retryable and one not",
+      {
+        results: [entry("undecided", { retryable: true })],
+        samples: [sample("undecided", { retryable: false })],
+      },
+      1,
+      "expectations_undecided",
+    ],
+    [
+      "a sample not reached, without the server's word",
+      { samples: [sample("undecided", { outcome: "not_decided" })] },
+      3,
+      "expectations_undecided",
+    ],
+    [
+      "a sample decided but undecided, without the server's word",
+      { samples: [sample("undecided")] },
+      1,
+      "expectations_undecided",
+    ],
+  ];
+  it.each(cases)("%s", (_name, given, exitCode, code) => {
+    const results = given.results ?? [];
+    const samples = given.samples ?? [];
+    const all = [...results, ...samples] as Array<{ status: string }>;
+    const count = (status: string) =>
+      all.filter((item) => item.status === status).length;
+    const outcome = expectationsOutcome(
+      results.length + samples.length === 0
+        ? undefined
+        : ({
+            passed: count("passed") === all.length,
+            counts: {
+              passed: count("passed"),
+              failed: count("failed"),
+              undecided: count("undecided"),
+            },
+            results,
+            samples,
+          } as Expectations),
+    );
+    expect(outcome.exitCode).toBe(exitCode);
+    expect(outcome.error?.code).toBe(code);
+  });
+
+  it("names the server's reason for each undecided one", () => {
+    const outcome = expectationsOutcome({
+      passed: false,
+      counts: { passed: 0, failed: 0, undecided: 1 },
+      results: [entry("undecided", { retryable: true, reason: "pending" })],
+    } as Expectations);
+    expect(outcome.error?.message).toBe(
+      `1 expectation is undecided: ${E1} (pending). Test again later.`,
+    );
   });
 });

@@ -1535,7 +1535,7 @@ export const OPERATION_HINTS: Record<string, string> = {
   startAgentSignup:
     "Tip: pass --terms-accepted. Capture the signup_token from the response and feed it to `primitive agent verify-agent-signup --signup-token <token> --verification-code <6-digit-code>` (the verify flag accepts --code as an alias). The high-level `primitive signup <email>` command walks an interactive user through both steps with friendlier prompts.",
   testEmailRule:
-    "Tip: --expect-match and --expect-no-match (or --expect-file) set expect, the emails the rule must match and must not. When no expect is sent, by these flags or in the body, a saved rule's saved expectations are judged instead. Either way, the answer reports the expectations it judged in expectations: passed, counts and per-email results. (create-email-rule and update-email-rule instead judge the rule's saved expectations on the version they save, in expectations_check: passed, decided, failed and undecided.) The exit code follows that report: 1 when one failed; 1 when one is undecided and testing again will not decide it (its email cannot be found or read, cannot be classified, or cannot be tested: skipped); 3 when the only undecided ones can be decided later (not classified yet, or a question unanswered), so test again later. Exit 1 also means the request failed. With --json, error.code tells these apart: expectations_failed, expectations_unresolvable, expectations_undecided (exit 3), or the API's own code. Without --json a readable report follows the JSON on stderr: warnings, how each condition held, the expectations, and the values each email that did not match was compared on.",
+    "Tip: --expect-match and --expect-no-match (or --expect-file) set expect; without it, a saved rule's own expectations are judged. Exit 0 when every expectation passed, 1 when one failed or is undecided for good (or the request failed), and 3 when the only ones not passed can be decided by testing again later; with --json, error.code is expectations_failed or expectations_undecided.",
   verifyAgentSignup:
     "Tip: pass --verification-code <code> (or --code; both work). The response carries OAuth tokens but not your assigned inbox domain; run `primitive domains list` (or `primitive whoami`) after success to see the managed *.primitive.email address that routes to this account.",
 };
@@ -2169,8 +2169,7 @@ export function createOperationCommand(
               this.config.configDir,
               parsedFlags.id,
             );
-          // A hook never turns a failed request into exit 0.
-          process.exitCode = extension?.errorExitCode?.(errorPayload) || 1;
+          process.exitCode = 1;
           return;
         }
 
@@ -2394,7 +2393,7 @@ export function createOperationCommand(
               lines: [],
               exitCode: fallback,
               error: {
-                code: "expectations_not_passed",
+                code: "expectations_failed",
                 message:
                   "The answer's expectations were not all shown to pass; read their result in the answer.",
               },
