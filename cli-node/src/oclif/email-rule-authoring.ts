@@ -16,10 +16,7 @@
 // This module does not import api-command.ts, which imports it.
 
 import { Errors, Flags } from "@oclif/core";
-import type {
-  ListEmailRuleResultsResult,
-  TestEmailRuleResult,
-} from "@primitivedotdev/api-core";
+import type { TestEmailRuleResult } from "@primitivedotdev/api-core";
 import {
   ADD_SAMPLES_FILE_FLAG,
   EXPECT_SAMPLES_FILE_FLAG,
@@ -1211,40 +1208,3 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
     report: ruleNotesReport,
   },
 };
-
-// emails facts
-
-export type Classification = NonNullable<
-  ListEmailRuleResultsResult["classification"]
->;
-
-/** The classification in a listEmailRuleResults answer, or null. */
-export function classificationOf(data: unknown): Classification | null {
-  if (!isRecord(data) || !isRecord(data.classification)) return null;
-  return data.classification as Classification;
-}
-
-/** One line per fact: name, value(s) and confidence. */
-export function classificationFactLines(
-  classification: Classification,
-): string[] {
-  return Object.entries(
-    isRecord(classification.facts) ? classification.facts : {},
-  ).map(([name, fact]) => formatFact(name, isRecord(fact) ? fact : {}));
-}
-
-/** Why there are no facts to print for an email. */
-export function noFactsMessage(data: unknown): string {
-  if (classificationOf(data))
-    return "This email's classification has no facts.";
-  const rules = isRecord(data) && Array.isArray(data.rules) ? data.rules : [];
-  const withheld = rules.some(
-    (rule) =>
-      isRecord(rule) &&
-      isRecord(rule.decision) &&
-      rule.decision.detail_withheld === true,
-  );
-  return withheld
-    ? "No classification to show: this email's content cannot be read (withheld, failed to parse or discarded)."
-    : "No classification for this email yet. It has not been classified (recent mail can take a while, so try again later), it will not be, or its content cannot be read.";
-}
