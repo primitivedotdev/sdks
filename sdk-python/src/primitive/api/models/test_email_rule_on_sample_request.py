@@ -40,9 +40,10 @@ class TestEmailRuleOnSampleRequest:
             rule_id (UUID | Unset): A saved rule you can see, or one that covers your mailboxes (as you; dashboard or
                 Primitive CLI only). Its current version is tested.
             request_id (UUID | Unset): A pending rule request you can see: its rule as asked, tested as you over your own
-                mailboxes (what accepting would share, for the member asked). Give one of tree, rule_id and request_id.
-            kind (TestEmailRuleOnSampleRequestKind | Unset): For an unsaved tree: do_not_share tests it as a rule that
-                blocks sharing, so an email it cannot decide counts as matched. A saved rule or a request uses its own.
+                mailboxes (what accepting would share, for the member asked).
+            kind (TestEmailRuleOnSampleRequestKind | Unset): Required with tree: do_not_share tests it as a rule that blocks
+                sharing.
+            english (str | Unset): With tree: its description, which the answer's rule.warnings read.
             with_protection (bool | Unset): With true, a grant rule that matches is also judged against the active do-not-
                 share rules over the first recipient's mailbox, which you must read in full and the rule must run over; see
                 protection. Limited to 20 an hour per member.
@@ -55,6 +56,7 @@ class TestEmailRuleOnSampleRequest:
     rule_id: UUID | Unset = UNSET
     request_id: UUID | Unset = UNSET
     kind: TestEmailRuleOnSampleRequestKind | Unset = UNSET
+    english: str | Unset = UNSET
     with_protection: bool | Unset = UNSET
 
 
@@ -93,6 +95,8 @@ class TestEmailRuleOnSampleRequest:
             kind = self.kind.value
 
 
+        english = self.english
+
         with_protection = self.with_protection
 
 
@@ -113,6 +117,8 @@ class TestEmailRuleOnSampleRequest:
             field_dict["request_id"] = request_id
         if kind is not UNSET:
             field_dict["kind"] = kind
+        if english is not UNSET:
+            field_dict["english"] = english
         if with_protection is not UNSET:
             field_dict["with_protection"] = with_protection
 
@@ -191,6 +197,8 @@ class TestEmailRuleOnSampleRequest:
 
 
 
+        english = d.pop("english", UNSET)
+
         with_protection = d.pop("with_protection", UNSET)
 
         test_email_rule_on_sample_request = cls(
@@ -201,6 +209,7 @@ class TestEmailRuleOnSampleRequest:
             rule_id=rule_id,
             request_id=request_id,
             kind=kind,
+            english=english,
             with_protection=with_protection,
         )
 

@@ -123,11 +123,10 @@ def sync_detailed(
      The versions of a rule that covers one of your own mailboxes now that applied to your mail: its
     current version and each earlier one that decided on mail at your own mailboxes, so a decision can
     be read in the words of the version that made it. Each has what the covering view shows of a
-    version: its wording, tree, explanation and assumptions. A version that did neither is not listed.
-    Without versions, newest first, a page at a time (meta.cursor); with versions, only those named that
-    are listed, oldest first. Needs mail:read, the email rules feature, and a member's own full-access
-    credential (no API key, agent key or narrowed token). Only on your own dashboard session or the
-    Primitive CLI.
+    version: its wording, tree, and Primitive's reading and notes worked out from the tree. A version
+    that did neither is not listed. Without versions, newest first, a page at a time (meta.cursor); with
+    versions, only those named that are listed, oldest first. Needs mail:read, the email rules feature,
+    and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -173,11 +172,10 @@ def sync(
      The versions of a rule that covers one of your own mailboxes now that applied to your mail: its
     current version and each earlier one that decided on mail at your own mailboxes, so a decision can
     be read in the words of the version that made it. Each has what the covering view shows of a
-    version: its wording, tree, explanation and assumptions. A version that did neither is not listed.
-    Without versions, newest first, a page at a time (meta.cursor); with versions, only those named that
-    are listed, oldest first. Needs mail:read, the email rules feature, and a member's own full-access
-    credential (no API key, agent key or narrowed token). Only on your own dashboard session or the
-    Primitive CLI.
+    version: its wording, tree, and Primitive's reading and notes worked out from the tree. A version
+    that did neither is not listed. Without versions, newest first, a page at a time (meta.cursor); with
+    versions, only those named that are listed, oldest first. Needs mail:read, the email rules feature,
+    and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -218,11 +216,10 @@ async def asyncio_detailed(
      The versions of a rule that covers one of your own mailboxes now that applied to your mail: its
     current version and each earlier one that decided on mail at your own mailboxes, so a decision can
     be read in the words of the version that made it. Each has what the covering view shows of a
-    version: its wording, tree, explanation and assumptions. A version that did neither is not listed.
-    Without versions, newest first, a page at a time (meta.cursor); with versions, only those named that
-    are listed, oldest first. Needs mail:read, the email rules feature, and a member's own full-access
-    credential (no API key, agent key or narrowed token). Only on your own dashboard session or the
-    Primitive CLI.
+    version: its wording, tree, and Primitive's reading and notes worked out from the tree. A version
+    that did neither is not listed. Without versions, newest first, a page at a time (meta.cursor); with
+    versions, only those named that are listed, oldest first. Needs mail:read, the email rules feature,
+    and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -268,11 +265,10 @@ async def asyncio(
      The versions of a rule that covers one of your own mailboxes now that applied to your mail: its
     current version and each earlier one that decided on mail at your own mailboxes, so a decision can
     be read in the words of the version that made it. Each has what the covering view shows of a
-    version: its wording, tree, explanation and assumptions. A version that did neither is not listed.
-    Without versions, newest first, a page at a time (meta.cursor); with versions, only those named that
-    are listed, oldest first. Needs mail:read, the email rules feature, and a member's own full-access
-    credential (no API key, agent key or narrowed token). Only on your own dashboard session or the
-    Primitive CLI.
+    version: its wording, tree, and Primitive's reading and notes worked out from the tree. A version
+    that did neither is not listed. Without versions, newest first, a page at a time (meta.cursor); with
+    versions, only those named that are listed, oldest first. Needs mail:read, the email rules feature,
+    and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):

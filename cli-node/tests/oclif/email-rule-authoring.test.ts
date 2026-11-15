@@ -213,7 +213,7 @@ function testResult(
   expectations?: TestEmailRuleResult["expectations"],
 ): TestEmailRuleResult {
   return {
-    rule: { id: RULE, version: 3, vocabulary: "v1" },
+    rule: { id: RULE, version: 3, vocabulary: "v1", kind: "grant", warnings: [] },
     window: { mode: "recent", since: "2026-10-11T00:00:00Z", limit: 198 },
     counts: {
       emails: 4,

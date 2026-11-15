@@ -128,7 +128,7 @@ def sync_detailed(
     who objected sees; the rule stays as it is. When its message asks you to explain who receives what
     the rule matches, the reason is your answer. If you changed the rule instead, answer amended. Needs
     mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -171,7 +171,7 @@ def sync(
     who objected sees; the rule stays as it is. When its message asks you to explain who receives what
     the rule matches, the reason is your answer. If you changed the rule instead, answer amended. Needs
     mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -209,7 +209,7 @@ async def asyncio_detailed(
     who objected sees; the rule stays as it is. When its message asks you to explain who receives what
     the rule matches, the reason is your answer. If you changed the rule instead, answer amended. Needs
     mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -252,7 +252,7 @@ async def asyncio(
     who objected sees; the rule stays as it is. When its message asks you to explain who receives what
     the rule matches, the reason is your answer. If you changed the rule instead, answer amended. Needs
     mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
-    or narrowed token). Only on your own dashboard session or the Primitive CLI.
+    or narrowed token).
 
     Args:
         id (UUID):

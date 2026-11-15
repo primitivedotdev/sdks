@@ -1,14 +1,16 @@
 from enum import StrEnum
 
-class DeclineEmailRuleRequestResultProposedVia(StrEnum):
-    OAUTH = "oauth"
-    SESSION = "session"
+class TestEmailRuleResultExpectationsResultsItemReason(StrEnum):
+    NOT_FOUND = "not_found"
+    SKIPPED = "skipped"
+    UNANSWERED = "unanswered"
+    UNCLASSIFIED = "unclassified"
 
     def __str__(self) -> str:
         return str(self.value)
 
     @classmethod
-    def _missing_(cls, value: object) -> "DeclineEmailRuleRequestResultProposedVia | None":
+    def _missing_(cls, value: object) -> "TestEmailRuleResultExpectationsResultsItemReason | None":
         # A value the API added after this SDK was generated: keep it rather
         # than failing to decode the whole response.
         if not isinstance(value, str):

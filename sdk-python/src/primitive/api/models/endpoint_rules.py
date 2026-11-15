@@ -24,8 +24,9 @@ class EndpointRules:
     """ Endpoint-specific filtering rules
 
         Attributes:
-            event_types (list[str] | Unset): Event types this endpoint receives. Omitted: every event type except the opt-in
-                sent_email.* events, which an endpoint receives only when it lists them.
+            event_types (list[str] | Unset): Event types this endpoint receives: exact names, or family.* (for example
+                sent_email.*), stored as every current name in that family. Required to create a webhook; a Function endpoint
+                without it stores every email.* and interaction.* name. On update, omitted keeps the stored list.
             max_size_bytes (int | Unset): Skip messages larger than this many bytes.
             exclude_attachments (bool | Unset): When true, skip messages that have attachments.
             attachment_limit_mb (float | Unset): Skip messages whose attachments total more than this many megabytes.

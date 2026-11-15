@@ -31,6 +31,7 @@ class TestEmailRuleRequest:
     """ 
         Attributes:
             tree (EmailRuleTreeInput | Unset):
+            english (str | Unset): With tree: its description, which the answer's rule.warnings read.
             evaluation_scope (TestEmailRuleRequestEvaluationScope | Unset): own_mailboxes (the default): mail to your own
                 addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read,
                 inboxes added later included. selected: what scope_selection names.
@@ -38,10 +39,12 @@ class TestEmailRuleRequest:
                 them the author reads); each one you can read.
             rule_id (UUID | Unset): A saved rule you can see. Its current version is tested, with its author's access; one
                 you see only because it covers your mailboxes, with yours, over only those (dashboard or Primitive CLI only).
+                With tree, its author only: the tree is tested as the rule's next version, as its author, over its scope (or
+                evaluation_scope as sent), against its saved expectations.
             request_id (UUID | Unset): A pending rule request you can see: its rule as asked, tested as you over your own
-                mailboxes (what accepting would share, for the member asked). Give one of tree, rule_id and request_id.
-            kind (TestEmailRuleRequestKind | Unset): For an unsaved tree: do_not_share tests it as a rule that blocks
-                sharing, so an email it cannot decide counts as matched. A saved rule or a request uses its own.
+                mailboxes (what accepting would share, for the member asked).
+            kind (TestEmailRuleRequestKind | Unset): Required with tree alone: do_not_share tests it as a rule that blocks
+                sharing, so an email it cannot decide counts as matched. With rule_id and tree, must be the rule's own.
             email_ids (list[UUID] | Unset): Test exactly these emails, and any expected ones. Without it, the newest emails
                 the rule can read are tested, at most 200 and none older than 30 days.
             classify_missing (bool | Unset): Classify emails in the set that have not been classified yet and arrived more
@@ -52,6 +55,7 @@ class TestEmailRuleRequest:
      """
 
     tree: EmailRuleTreeInput | Unset = UNSET
+    english: str | Unset = UNSET
     evaluation_scope: TestEmailRuleRequestEvaluationScope | Unset = UNSET
     scope_selection: EmailRuleScopeSelection | Unset = UNSET
     rule_id: UUID | Unset = UNSET
@@ -72,6 +76,8 @@ class TestEmailRuleRequest:
         tree: dict[str, Any] | Unset = UNSET
         if not isinstance(self.tree, Unset):
             tree = self.tree.to_dict()
+
+        english = self.english
 
         evaluation_scope: str | Unset = UNSET
         if not isinstance(self.evaluation_scope, Unset):
@@ -117,6 +123,8 @@ class TestEmailRuleRequest:
         })
         if tree is not UNSET:
             field_dict["tree"] = tree
+        if english is not UNSET:
+            field_dict["english"] = english
         if evaluation_scope is not UNSET:
             field_dict["evaluation_scope"] = evaluation_scope
         if scope_selection is not UNSET:
@@ -153,6 +161,8 @@ class TestEmailRuleRequest:
 
 
 
+
+        english = d.pop("english", UNSET)
 
         _evaluation_scope = d.pop("evaluation_scope", UNSET)
         evaluation_scope: TestEmailRuleRequestEvaluationScope | Unset
@@ -230,6 +240,7 @@ class TestEmailRuleRequest:
 
         test_email_rule_request = cls(
             tree=tree,
+            english=english,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
             rule_id=rule_id,

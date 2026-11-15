@@ -18,7 +18,7 @@ var _ Handler = UnimplementedHandler{}
 // Accepts a pending objection to a rule you wrote: turns the rule off (state draft), as updating it
 // would, and records the objection accepted, together. You can turn the rule on again later. Needs
 // mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
-// key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+// key or narrowed token).
 //
 // POST /email-rule-objections/{id}/accept
 func (UnimplementedHandler) AcceptEmailRuleObjection(ctx context.Context, params AcceptEmailRuleObjectionParams) (r AcceptEmailRuleObjectionRes, _ error) {
@@ -30,14 +30,16 @@ func (UnimplementedHandler) AcceptEmailRuleObjection(ctx context.Context, params
 // Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches
 // from now on with the member who asked: each email in full with its attachments, but never raw. It
 // does not go back through mail already received. Send no body to accept it as asked, or change it
-// first with english and tree together (and an explanation, or the server writes one). Because this
-// gives your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth
-// apps and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree
-// to POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree
-// to POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST
-// /v1/email-rules/look-alikes with request_id); neither stores anything. expectation_samples are
-// kept on the rule it writes. Accepting also needs mail:share_own. Needs mail:read, the email rules
-// feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+// first with english and tree together. Because this gives your mail to someone else, only you do it,
+//
+//	on the dashboard, the Primitive CLI or the Primitive app: agents are refused. Before accepting,
+//
+// test it on your mail: pass the request's tree to POST /v1/email-rules/test. To try it on an email
+// that has not arrived, pass the request's tree to POST /v1/email-rules/test-sample with one you
+// make up, or have look-alikes written (POST /v1/email-rules/look-alikes with request_id); neither
+// stores anything. expectation_samples are kept on the rule it writes. Accepting also needs
+// mail:share_own. Needs mail:read, the email rules feature, and a member's own full-access
+// credential (no API key, agent key or narrowed token).
 //
 // POST /email-rule-requests/{id}/accept
 func (UnimplementedHandler) AcceptEmailRuleRequest(ctx context.Context, req OptAcceptEmailRuleRequestRequest, params AcceptEmailRuleRequestParams) (r AcceptEmailRuleRequestRes, _ error) {
@@ -179,7 +181,7 @@ func (UnimplementedHandler) AgentWorkWithdrawDeadline(ctx context.Context, req *
 // objected sees. Records the version the rule has now (rule.amended_version). Refused unless the
 // rule's current version is newer than when the objection was made (rule.objected_version). Needs
 // mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
-// key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+// key or narrowed token).
 //
 // POST /email-rule-objections/{id}/amend
 func (UnimplementedHandler) AmendEmailRuleObjection(ctx context.Context, req OptAmendEmailRuleObjectionRequest, params AmendEmailRuleObjectionParams) (r AmendEmailRuleObjectionRes, _ error) {
@@ -380,18 +382,15 @@ func (UnimplementedHandler) CliLogout(ctx context.Context, req OptCliLogoutInput
 
 // CompileEmailRule implements compileEmailRule operation.
 //
-// Turns a plain-English description of which received emails to match into a rule tree over the
-// column contract, with an explanation of what it matches, the assumptions made, and warnings for
-// what the columns cannot express. Where the columns fall short it adds up to five yes/no questions,
-// asked only after the conditions match; they read the subject, the new text and attachment file
-// names, never attachment contents. Nothing is saved. For a rule with no questions, breadth counts,
-// read only, how much of the recent classified mail in evaluation_scope (by default your own
-// mailboxes) its conditions match; for a grant rule with questions, conditions_breadth counts its
-// conditions alone. include_sql returns the SQL it renders to. kind do_not_share compiles for recall.
-//
-//	Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
-//
-// agent key or narrowed token).
+// Turns a plain-English description of which received emails to match into a rule over the column
+// contract: rule, exactly the body create (with a name), update and the tests take, with an
+// explanation of what it matches, the assumptions made, and warnings for what the columns cannot
+// express. Where the columns fall short it adds up to five yes/no questions, asked only after the
+// conditions match; they read the subject, the new text and attachment file names, never attachment
+// contents. Nothing is read or saved: a scope given is carried into rule, and a test says how much
+// mail the rule matches. include_sql returns the SQL it renders to. kind do_not_share compiles for
+// recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no
+// API key, agent key or narrowed token).
 //
 // POST /email-rules/compile
 func (UnimplementedHandler) CompileEmailRule(ctx context.Context, req *CompileEmailRuleRequest, params CompileEmailRuleParams) (r CompileEmailRuleRes, _ error) {
@@ -467,14 +466,14 @@ func (UnimplementedHandler) CreateAgentConnection(ctx context.Context, req *Crea
 
 // CreateEmailRule implements createEmailRule operation.
 //
-// Saves a rule as version 1 from a compile response or a tree you wrote, checked against the column
-// contract. It starts in observe (recorded, nothing granted or blocked) unless state is draft, or
-// active for a do_not_share rule. You are its author, and it never reaches mail you cannot read.
-// evaluation_scope is own_mailboxes unless you name author or selected (scope_selection names only
-// what you can read). expectations are judged in expectations_check. kind do_not_share blocks
-// sharing what it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs
-// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
-// key or narrowed token).
+// Saves a rule as version 1 from a compile answer's rule (with a name) or a tree you wrote with its
+// kind, checked against the column contract. It starts in observe (recorded, nothing granted or
+// blocked) unless state is draft, or active for a do_not_share rule. You are its author, and it
+// never reaches mail you cannot read. evaluation_scope is own_mailboxes unless you name author or
+// selected (scope_selection names only what you can read). a do_not_share rule created active is
+// first judged against its expectations (expectations_check). kind do_not_share blocks sharing what
+// it matches; a key cannot list it (details.reason rule_blocks_sharing). Needs mail:read, the email
+// rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // POST /email-rules
 func (UnimplementedHandler) CreateEmailRule(ctx context.Context, req *CreateEmailRuleRequest, params CreateEmailRuleParams) (r CreateEmailRuleRes, _ error) {
@@ -495,7 +494,7 @@ func (UnimplementedHandler) CreateEmailRule(ctx context.Context, req *CreateEmai
 // sent). It never changes after that. You may have one pending objection per rule and 50 in all, and
 // object to the same rule again only 10 minutes after you last did, whatever became of it. Needs
 // mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
-// key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+// key or narrowed token).
 //
 // POST /email-rule-objections
 func (UnimplementedHandler) CreateEmailRuleObjection(ctx context.Context, req *CreateEmailRuleObjectionRequest, params CreateEmailRuleObjectionParams) (r CreateEmailRuleObjectionRes, _ error) {
@@ -509,10 +508,10 @@ func (UnimplementedHandler) CreateEmailRuleObjection(ctx context.Context, req *C
 // work email if you can list members (at most 30 lookups by address an hour). Nothing is evaluated
 // or shared until they accept, and they may change the rule first. A message (up to 500 characters,
 // fixed once sent) tells them why you ask. With an Idempotency-Key, asking again for exactly what a
-// pending request of yours to the same member asks (name, english, tree, explanation and message,
-// naming them the same way) returns that request with existing: true (200), so a retry never asks
-// them twice. At most 5 pending requests to one member and 50 in all. With members:read the answer
-// says whether they can accept it under their role (target_can_accept, target_warning); POST
+// pending request of yours to the same member asks (name, english, tree and message, naming them the
+// same way) returns that request with existing: true (200), so a retry never asks them twice. At
+// most 5 pending requests to one member and 50 in all. With members:read the answer says whether
+// they can accept it under their role (target_can_accept, target_warning); POST
 // /v1/email-rule-requests/target-check checks first. Needs mail:read, the email rules feature, and a
 // member's own full-access credential (no API key, agent key or narrowed token).
 //
@@ -829,7 +828,7 @@ func (UnimplementedHandler) DecideSuspension(ctx context.Context, req *DecideSus
 // who objected sees; the rule stays as it is. When its message asks you to explain who receives what
 // the rule matches, the reason is your answer. If you changed the rule instead, answer amended.
 // Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
-// agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+// agent key or narrowed token).
 //
 // POST /email-rule-objections/{id}/decline
 func (UnimplementedHandler) DeclineEmailRuleObjection(ctx context.Context, req OptDeclineEmailRuleObjectionRequest, params DeclineEmailRuleObjectionParams) (r DeclineEmailRuleObjectionRes, _ error) {
@@ -1301,8 +1300,8 @@ func (UnimplementedHandler) EndBreakGlass(ctx context.Context, params EndBreakGl
 // Stops sharing; the rule itself is left unchanged, as the answer's note says. Either person on the
 // share can do this, or an owner or admin who manages members. The share is kept, marked as ended.
 // This needs no mail access and does not depend on the email rules feature. An owner or admin not on
-// the share must use a dashboard session. Otherwise use your own session, or an OAuth or CLI token
-// that acts with your full access: API keys and agent keys are refused.
+// the share must use a dashboard session. Otherwise use your own credential at your full access (an
+// agent you signed in with a code included): other apps, API keys and agent keys are refused.
 //
 // DELETE /email-rule-shares/{id}
 func (UnimplementedHandler) EndEmailRuleShare(ctx context.Context, params EndEmailRuleShareParams) (r EndEmailRuleShareRes, _ error) {
@@ -1677,11 +1676,12 @@ func (UnimplementedHandler) GetEmailReadable(ctx context.Context, params GetEmai
 // GetEmailRule implements getEmailRule operation.
 //
 // A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version
-// and its saved expectations. The current version's text (english, tree, explanation, assumptions,
-// warnings) is under current, and current_version is its number. What the scope comes to for its
-// author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when
-// include_sql is true. Needs mail:read, the email rules feature, and a member's own full-access
-// credential (no API key, agent key or narrowed token).
+// and its saved expectations. The current version is under current: english and tree, with
+// Primitive's reading (explanation) and notes (warnings) worked out from the tree on every read; and
+// current_version is its number. What the scope comes to for its author now is GET
+// /email-rules/{id}/scope. The SQL the version renders to is included only when include_sql is true.
+// Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+// agent key or narrowed token).
 //
 // GET /email-rules/{id}
 func (UnimplementedHandler) GetEmailRule(ctx context.Context, params GetEmailRuleParams) (r GetEmailRuleRes, _ error) {
@@ -1706,8 +1706,7 @@ func (UnimplementedHandler) GetEmailRule(ctx context.Context, params GetEmailRul
 // emails get <email-id> --json) counts each rule's webhook deliveries; on another member's mail, GET
 // /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id
 // <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a
-// member's own full-access credential (no API key, agent key or narrowed token). Only on your own
-// dashboard session or the Primitive CLI.
+// member's own full-access credential (no API key, agent key or narrowed token).
 //
 // GET /email-rules/covering-me/{id}
 func (UnimplementedHandler) GetEmailRuleCoveringMe(ctx context.Context, params GetEmailRuleCoveringMeParams) (r GetEmailRuleCoveringMeRes, _ error) {
@@ -1722,7 +1721,7 @@ func (UnimplementedHandler) GetEmailRuleCoveringMe(ctx context.Context, params G
 // they have saved a newer version of the rule, or the member who made it withdraws it, which clears
 // its message (not from an email to the author already sent or being sent). It never changes after
 // that. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
-// key, agent key or narrowed token). Only on your own dashboard session or the Primitive CLI.
+// key, agent key or narrowed token).
 //
 // GET /email-rule-objections/{id}
 func (UnimplementedHandler) GetEmailRuleObjection(ctx context.Context, params GetEmailRuleObjectionParams) (r GetEmailRuleObjectionRes, _ error) {
@@ -2750,8 +2749,6 @@ func (UnimplementedHandler) ListEmailRuleDecisions(ctx context.Context, params L
 // email (question_answers) and the columns its conditions read (parts). Needs mail:read, the email
 // rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 //
-//	Only on your own dashboard session or the Primitive CLI.
-//
 // GET /email-rules/covering-me/{id}/decisions
 func (UnimplementedHandler) ListEmailRuleDecisionsOnMyMail(ctx context.Context, params ListEmailRuleDecisionsOnMyMailParams) (r ListEmailRuleDecisionsOnMyMailRes, _ error) {
 	return r, ht.ErrNotImplemented
@@ -2766,8 +2763,7 @@ func (UnimplementedHandler) ListEmailRuleDecisionsOnMyMail(ctx context.Context, 
 // amended once they have saved a newer version of the rule, or the member who made it withdraws it,
 // which clears its message (not from an email to the author already sent or being sent). It never
 // changes after that. Needs mail:read, the email rules feature, and a member's own full-access
-// credential (no API key, agent key or narrowed token). Only on your own dashboard session or the
-// Primitive CLI.
+// credential (no API key, agent key or narrowed token).
 //
 // GET /email-rule-objections
 func (UnimplementedHandler) ListEmailRuleObjections(ctx context.Context, params ListEmailRuleObjectionsParams) (r ListEmailRuleObjectionsRes, _ error) {
@@ -2833,8 +2829,9 @@ func (UnimplementedHandler) ListEmailRuleScopeOptions(ctx context.Context, param
 // nothing, and shared_at is when the share's rule first matched the email. For the person sharing
 // their mail: everything it has handed over while it ran, including after it ended and whatever the
 // rule's state now, so they can see what left their mailbox, and shared_at is when it was handed
-// over. Only those two people can list them, from the dashboard or the Primitive CLI. A page can be
-// short or empty and still carry a cursor: keep reading until meta.cursor is null.
+// over. Only those two people can list them, each with their own credential (an agent they signed in
+// with a code included). A page can be short or empty and still carry a cursor: keep reading until
+// meta.cursor is null.
 //
 // GET /email-rule-shares/{id}/emails
 func (UnimplementedHandler) ListEmailRuleShareEmails(ctx context.Context, params ListEmailRuleShareEmailsParams) (r ListEmailRuleShareEmailsRes, _ error) {
@@ -2870,11 +2867,10 @@ func (UnimplementedHandler) ListEmailRuleVersions(ctx context.Context, params Li
 // The versions of a rule that covers one of your own mailboxes now that applied to your mail: its
 // current version and each earlier one that decided on mail at your own mailboxes, so a decision can
 // be read in the words of the version that made it. Each has what the covering view shows of a
-// version: its wording, tree, explanation and assumptions. A version that did neither is not listed.
-// Without versions, newest first, a page at a time (meta.cursor); with versions, only those named
-// that are listed, oldest first. Needs mail:read, the email rules feature, and a member's own
-// full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
-// session or the Primitive CLI.
+// version: its wording, tree, and Primitive's reading and notes worked out from the tree. A version
+// that did neither is not listed. Without versions, newest first, a page at a time (meta.cursor);
+// with versions, only those named that are listed, oldest first. Needs mail:read, the email rules
+// feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // GET /email-rules/covering-me/{id}/versions
 func (UnimplementedHandler) ListEmailRuleVersionsCoveringMe(ctx context.Context, params ListEmailRuleVersionsCoveringMeParams) (r ListEmailRuleVersionsCoveringMeRes, _ error) {
@@ -2912,18 +2908,17 @@ func (UnimplementedHandler) ListEmailRules(ctx context.Context, params ListEmail
 //	webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes
 //
 // and domains its scope names, or its saved expectations. Each listed rule carries its current
-// version's english and explanation; its tree is on GET /v1/email-rules/covering-me/{id}. A page can
-// hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number
-// of rules): keep reading until meta.cursor is null. For what happened to one email of yours, every
-// rule's decision on it and, for another member's rule covering you, who receives what it shares:
-// GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id
-// <email-id>). Whether a rule delivered the email by webhook is not in the rule results: on your own
-// mail, rule_deliveries on GET /v1/emails/{id} (primitive emails get <email-id> --json) counts each
-// rule's webhook deliveries; on another member's mail, GET
-// /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list --email-id
-// <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules feature, and a
-// member's own full-access credential (no API key, agent key or narrowed token). Only on your own
-// dashboard session or the Primitive CLI.
+// version's english and Primitive's reading of it (explanation); its tree is on GET
+// /v1/email-rules/covering-me/{id}. A page can hold fewer rules than limit, or none, and still carry
+// a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null.
+// For what happened to one email of yours, every rule's decision on it and, for another member's
+// rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive
+// email-rules list-email-rule-results --email-id <email-id>). Whether a rule delivered the email by
+// webhook is not in the rule results: on your own mail, rule_deliveries on GET /v1/emails/{id}
+// (primitive emails get <email-id> --json) counts each rule's webhook deliveries; on another
+// member's mail, GET /v1/webhooks/deliveries?email_id=<email-id> (primitive webhook-deliveries list
+// --email-id <email-id>, with webhooks:read) lists them. Needs mail:read, the email rules feature,
+// and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // GET /email-rules/covering-me
 func (UnimplementedHandler) ListEmailRulesCoveringMe(ctx context.Context, params ListEmailRulesCoveringMeParams) (r ListEmailRulesCoveringMeRes, _ error) {
@@ -3059,7 +3054,7 @@ func (UnimplementedHandler) ListFunctions(ctx context.Context) (r ListFunctionsR
 //
 // Lists the rules you share with other members, so you can find one and stop it. This needs no mail
 // access and does not depend on the feature being on for the organization, as stopping a share does
-// not. It takes the dashboard or the Primitive CLI.
+// not. It takes your own credential at your full access, an agent you signed in with a code included.
 //
 // GET /email-rule-shares/given
 func (UnimplementedHandler) ListGivenEmailRuleShares(ctx context.Context, params ListGivenEmailRuleSharesParams) (r ListGivenEmailRuleSharesRes, _ error) {
@@ -4543,15 +4538,18 @@ func (UnimplementedHandler) SuspendFunctionRuntimeKey(ctx context.Context, req *
 //
 //	no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and
 //
-// question decided. Test an unsaved tree, a saved rule by rule_id (its current version, as its
-// author), or a pending rule request by request_id (its rule as asked, as you, over your own
-// mailboxes). It reads only mail its author can read and its scope covers. A rule you see only
-// because it covers your own mailboxes runs as you, over only those, from the dashboard or the
-// Primitive CLI. Without email_ids it tests the newest emails, at most 200 and none older than 30
-// days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless
-// classify_missing is false. It records no decision and grants nothing, and stops at about 90
-// seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no
-// API key, agent key or narrowed token).
+// question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version,
+//
+//	as its author), rule_id with tree (that tree as the rule's next version, as its author, against
+//
+// its saved expectations; its author only), or a pending rule request by request_id (its rule as
+// asked, as you, over your own mailboxes). It reads only mail its author can read and its scope
+// covers. A rule you see only because it covers your own mailboxes runs as you, over only those.
+// Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any
+// expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing
+// is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs
+// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
+// key or narrowed token).
 //
 // POST /email-rules/test
 func (UnimplementedHandler) TestEmailRule(ctx context.Context, req *TestEmailRuleRequest, params TestEmailRuleParams) (r TestEmailRuleRes, _ error) {
@@ -4796,10 +4794,11 @@ func (UnimplementedHandler) UpdateEmailNotificationSettings(ctx context.Context,
 // shared only if they manage members from the dashboard. A scope change saves a new version; a
 // shared rule keeps its scope, and a kind never changes. A saved version takes effect at once, on
 // the rule's share too, which goes on under it. if_version refuses a write once a version was saved
-// since you read it; if_revision, once anything changed. Without if_expectations_pass a version is
-// saved even when its expectations fail, except on an active rule keys, webhooks or a share read:
-// that write is checked first unless if_expectations_pass is false. Needs mail:read, the email rules
-// feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+// since you read it; if_revision, once anything changed. A write that leaves the rule active and
+// saves a version or turns it active is first judged against the expectations it leaves (up to about
+// 95 seconds): a failure refuses it, and so does an undecided one on a grant rule. Needs mail:read,
+// the email rules feature, and a member's own full-access credential (no API key, agent key or
+// narrowed token).
 //
 // PATCH /email-rules/{id}
 func (UnimplementedHandler) UpdateEmailRule(ctx context.Context, req *UpdateEmailRuleRequest, params UpdateEmailRuleParams) (r UpdateEmailRuleRes, _ error) {
@@ -5173,8 +5172,7 @@ func (UnimplementedHandler) Whoami(ctx context.Context, params WhoamiParams) (r 
 //
 // Withdraws a pending objection you made, and clears its message; an email to the rule's author
 // already sent or being sent keeps it. Needs mail:read, the email rules feature, and a member's own
-// full-access credential (no API key, agent key or narrowed token). Only on your own dashboard
-// session or the Primitive CLI.
+// full-access credential (no API key, agent key or narrowed token).
 //
 // POST /email-rule-objections/{id}/withdraw
 func (UnimplementedHandler) WithdrawEmailRuleObjection(ctx context.Context, params WithdrawEmailRuleObjectionParams) (r WithdrawEmailRuleObjectionRes, _ error) {

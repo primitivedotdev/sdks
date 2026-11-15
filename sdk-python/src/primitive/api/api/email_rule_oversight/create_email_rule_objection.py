@@ -139,7 +139,7 @@ def sync_detailed(
     It never changes after that. You may have one pending objection per rule and 50 in all, and object
     to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read,
     the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token). Only on your own dashboard session or the Primitive CLI.
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -187,7 +187,7 @@ def sync(
     It never changes after that. You may have one pending objection per rule and 50 in all, and object
     to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read,
     the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token). Only on your own dashboard session or the Primitive CLI.
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -230,7 +230,7 @@ async def asyncio_detailed(
     It never changes after that. You may have one pending objection per rule and 50 in all, and object
     to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read,
     the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token). Only on your own dashboard session or the Primitive CLI.
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -278,7 +278,7 @@ async def asyncio(
     It never changes after that. You may have one pending objection per rule and 50 in all, and object
     to the same rule again only 10 minutes after you last did, whatever became of it. Needs mail:read,
     the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token). Only on your own dashboard session or the Primitive CLI.
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):

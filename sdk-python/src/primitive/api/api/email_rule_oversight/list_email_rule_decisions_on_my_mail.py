@@ -130,7 +130,6 @@ def sync_detailed(
     version that made it, which can be earlier than the current one: the questions it asked about that
     email (question_answers) and the columns its conditions read (parts). Needs mail:read, the email
     rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
-    Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -178,7 +177,6 @@ def sync(
     version that made it, which can be earlier than the current one: the questions it asked about that
     email (question_answers) and the columns its conditions read (parts). Needs mail:read, the email
     rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
-    Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -221,7 +219,6 @@ async def asyncio_detailed(
     version that made it, which can be earlier than the current one: the questions it asked about that
     email (question_answers) and the columns its conditions read (parts). Needs mail:read, the email
     rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
-    Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):
@@ -269,7 +266,6 @@ async def asyncio(
     version that made it, which can be earlier than the current one: the questions it asked about that
     email (question_answers) and the columns its conditions read (parts). Needs mail:read, the email
     rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
-    Only on your own dashboard session or the Primitive CLI.
 
     Args:
         id (UUID):

@@ -128,8 +128,9 @@ def sync_detailed(
     nothing, and shared_at is when the share's rule first matched the email. For the person sharing
     their mail: everything it has handed over while it ran, including after it ended and whatever the
     rule's state now, so they can see what left their mailbox, and shared_at is when it was handed over.
-    Only those two people can list them, from the dashboard or the Primitive CLI. A page can be short or
-    empty and still carry a cursor: keep reading until meta.cursor is null.
+    Only those two people can list them, each with their own credential (an agent they signed in with a
+    code included). A page can be short or empty and still carry a cursor: keep reading until
+    meta.cursor is null.
 
     Args:
         id (UUID):
@@ -173,8 +174,9 @@ def sync(
     nothing, and shared_at is when the share's rule first matched the email. For the person sharing
     their mail: everything it has handed over while it ran, including after it ended and whatever the
     rule's state now, so they can see what left their mailbox, and shared_at is when it was handed over.
-    Only those two people can list them, from the dashboard or the Primitive CLI. A page can be short or
-    empty and still carry a cursor: keep reading until meta.cursor is null.
+    Only those two people can list them, each with their own credential (an agent they signed in with a
+    code included). A page can be short or empty and still carry a cursor: keep reading until
+    meta.cursor is null.
 
     Args:
         id (UUID):
@@ -213,8 +215,9 @@ async def asyncio_detailed(
     nothing, and shared_at is when the share's rule first matched the email. For the person sharing
     their mail: everything it has handed over while it ran, including after it ended and whatever the
     rule's state now, so they can see what left their mailbox, and shared_at is when it was handed over.
-    Only those two people can list them, from the dashboard or the Primitive CLI. A page can be short or
-    empty and still carry a cursor: keep reading until meta.cursor is null.
+    Only those two people can list them, each with their own credential (an agent they signed in with a
+    code included). A page can be short or empty and still carry a cursor: keep reading until
+    meta.cursor is null.
 
     Args:
         id (UUID):
@@ -258,8 +261,9 @@ async def asyncio(
     nothing, and shared_at is when the share's rule first matched the email. For the person sharing
     their mail: everything it has handed over while it ran, including after it ended and whatever the
     rule's state now, so they can see what left their mailbox, and shared_at is when it was handed over.
-    Only those two people can list them, from the dashboard or the Primitive CLI. A page can be short or
-    empty and still carry a cursor: keep reading until meta.cursor is null.
+    Only those two people can list them, each with their own credential (an agent they signed in with a
+    code included). A page can be short or empty and still carry a cursor: keep reading until
+    meta.cursor is null.
 
     Args:
         id (UUID):

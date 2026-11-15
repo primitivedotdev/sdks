@@ -10,6 +10,7 @@ from ..types import UNSET, Unset
 
 from ..models.email_rule_sample_judgment_expected import EmailRuleSampleJudgmentExpected
 from ..models.email_rule_sample_judgment_outcome import EmailRuleSampleJudgmentOutcome
+from ..models.email_rule_sample_judgment_reason import EmailRuleSampleJudgmentReason
 from ..models.email_rule_sample_judgment_status import EmailRuleSampleJudgmentStatus
 from typing import cast
 from uuid import UUID
@@ -36,6 +37,8 @@ class EmailRuleSampleJudgment:
             outcome (EmailRuleSampleJudgmentOutcome):
             status (EmailRuleSampleJudgmentStatus):
             question_answers (list[EmailRuleSampleJudgmentQuestionAnswersItem]):
+            reason (EmailRuleSampleJudgmentReason | Unset): On an undecided one only: why.
+            retryable (bool | Unset): On an undecided one only: whether judging it again can decide it.
      """
 
     index: int
@@ -45,6 +48,8 @@ class EmailRuleSampleJudgment:
     outcome: EmailRuleSampleJudgmentOutcome
     status: EmailRuleSampleJudgmentStatus
     question_answers: list[EmailRuleSampleJudgmentQuestionAnswersItem]
+    reason: EmailRuleSampleJudgmentReason | Unset = UNSET
+    retryable: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -77,6 +82,13 @@ class EmailRuleSampleJudgment:
 
 
 
+        reason: str | Unset = UNSET
+        if not isinstance(self.reason, Unset):
+            reason = self.reason.value
+
+
+        retryable = self.retryable
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -89,6 +101,10 @@ class EmailRuleSampleJudgment:
             "status": status,
             "question_answers": question_answers,
         })
+        if reason is not UNSET:
+            field_dict["reason"] = reason
+        if retryable is not UNSET:
+            field_dict["retryable"] = retryable
 
         return field_dict
 
@@ -151,6 +167,18 @@ class EmailRuleSampleJudgment:
             question_answers.append(question_answers_item)
 
 
+        _reason = d.pop("reason", UNSET)
+        reason: EmailRuleSampleJudgmentReason | Unset
+        if isinstance(_reason,  Unset):
+            reason = UNSET
+        else:
+            reason = EmailRuleSampleJudgmentReason(_reason)
+
+
+
+
+        retryable = d.pop("retryable", UNSET)
+
         email_rule_sample_judgment = cls(
             index=index,
             sample_id=sample_id,
@@ -159,6 +187,8 @@ class EmailRuleSampleJudgment:
             outcome=outcome,
             status=status,
             question_answers=question_answers,
+            reason=reason,
+            retryable=retryable,
         )
 
 

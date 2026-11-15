@@ -9,6 +9,7 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.error_response import ErrorResponse
+from ...models.list_sent_emails_mine import ListSentEmailsMine
 from ...models.list_sent_emails_response_200 import ListSentEmailsResponse200
 from ...models.sent_email_status import SentEmailStatus
 from ...types import UNSET, Unset
@@ -31,6 +32,7 @@ def _get_kwargs(
     from_: str | Unset = UNSET,
     since: str | Unset = UNSET,
     wait: int | Unset = 0,
+    mine: ListSentEmailsMine | Unset = UNSET,
     include: str | Unset = UNSET,
     header: str | Unset = UNSET,
 
@@ -75,6 +77,12 @@ def _get_kwargs(
     params["since"] = since
 
     params["wait"] = wait
+
+    json_mine: str | Unset = UNSET
+    if not isinstance(mine, Unset):
+        json_mine = mine.value
+
+    params["mine"] = json_mine
 
     params["include"] = include
 
@@ -160,6 +168,7 @@ def sync_detailed(
     from_: str | Unset = UNSET,
     since: str | Unset = UNSET,
     wait: int | Unset = 0,
+    mine: ListSentEmailsMine | Unset = UNSET,
     include: str | Unset = UNSET,
     header: str | Unset = UNSET,
 
@@ -227,6 +236,7 @@ def sync_detailed(
         from_ (str | Unset):
         since (str | Unset):
         wait (int | Unset):  Default: 0.
+        mine (ListSentEmailsMine | Unset):
         include (str | Unset):  Example: body_text,headers.
         header (str | Unset):
 
@@ -251,6 +261,7 @@ q=q,
 from_=from_,
 since=since,
 wait=wait,
+mine=mine,
 include=include,
 header=header,
 
@@ -276,6 +287,7 @@ def sync(
     from_: str | Unset = UNSET,
     since: str | Unset = UNSET,
     wait: int | Unset = 0,
+    mine: ListSentEmailsMine | Unset = UNSET,
     include: str | Unset = UNSET,
     header: str | Unset = UNSET,
 
@@ -343,6 +355,7 @@ def sync(
         from_ (str | Unset):
         since (str | Unset):
         wait (int | Unset):  Default: 0.
+        mine (ListSentEmailsMine | Unset):
         include (str | Unset):  Example: body_text,headers.
         header (str | Unset):
 
@@ -368,6 +381,7 @@ q=q,
 from_=from_,
 since=since,
 wait=wait,
+mine=mine,
 include=include,
 header=header,
 
@@ -387,6 +401,7 @@ async def asyncio_detailed(
     from_: str | Unset = UNSET,
     since: str | Unset = UNSET,
     wait: int | Unset = 0,
+    mine: ListSentEmailsMine | Unset = UNSET,
     include: str | Unset = UNSET,
     header: str | Unset = UNSET,
 
@@ -454,6 +469,7 @@ async def asyncio_detailed(
         from_ (str | Unset):
         since (str | Unset):
         wait (int | Unset):  Default: 0.
+        mine (ListSentEmailsMine | Unset):
         include (str | Unset):  Example: body_text,headers.
         header (str | Unset):
 
@@ -478,6 +494,7 @@ q=q,
 from_=from_,
 since=since,
 wait=wait,
+mine=mine,
 include=include,
 header=header,
 
@@ -503,6 +520,7 @@ async def asyncio(
     from_: str | Unset = UNSET,
     since: str | Unset = UNSET,
     wait: int | Unset = 0,
+    mine: ListSentEmailsMine | Unset = UNSET,
     include: str | Unset = UNSET,
     header: str | Unset = UNSET,
 
@@ -570,6 +588,7 @@ async def asyncio(
         from_ (str | Unset):
         since (str | Unset):
         wait (int | Unset):  Default: 0.
+        mine (ListSentEmailsMine | Unset):
         include (str | Unset):  Example: body_text,headers.
         header (str | Unset):
 
@@ -595,6 +614,7 @@ q=q,
 from_=from_,
 since=since,
 wait=wait,
+mine=mine,
 include=include,
 header=header,
 

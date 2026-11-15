@@ -32,10 +32,8 @@ class CompileEmailRuleRequest:
                 not-share rule is compiled for recall: conditions only as narrow as the description says, and the judgement of
                 what it describes put into questions, since an email it misses can be shared.
             include_sql (bool | Unset): Also return the SQL the rule renders to. Off by default.
-            evaluation_scope (CompileEmailRuleRequestEvaluationScope | Unset): The scope breadth is counted over, as a test
-                of the tree runs it: send the one you will save the rule with. Nothing is saved. own_mailboxes (the default):
-                mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all
-                you can read, inboxes added later included. selected: what scope_selection names.
+            evaluation_scope (CompileEmailRuleRequestEvaluationScope | Unset): Carried into rule as given, for the write
+                that saves it. Nothing is read or saved.
             scope_selection (EmailRuleScopeSelection | Unset): For a selected rule: inboxes, and domains (each address at
                 them the author reads); each one you can read.
      """

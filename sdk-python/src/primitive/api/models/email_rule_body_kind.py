@@ -1,14 +1,14 @@
 from enum import StrEnum
 
-class WithdrawEmailRuleRequestResultProposedVia(StrEnum):
-    OAUTH = "oauth"
-    SESSION = "session"
+class EmailRuleBodyKind(StrEnum):
+    DO_NOT_SHARE = "do_not_share"
+    GRANT = "grant"
 
     def __str__(self) -> str:
         return str(self.value)
 
     @classmethod
-    def _missing_(cls, value: object) -> "WithdrawEmailRuleRequestResultProposedVia | None":
+    def _missing_(cls, value: object) -> "EmailRuleBodyKind | None":
         # A value the API added after this SDK was generated: keep it rather
         # than failing to decode the whole response.
         if not isinstance(value, str):

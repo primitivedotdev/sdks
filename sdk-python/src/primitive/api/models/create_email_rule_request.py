@@ -15,11 +15,8 @@ from typing import cast
 
 if TYPE_CHECKING:
   from ..models.create_email_rule_request_expectations import CreateEmailRuleRequestExpectations
-  from ..models.email_rule_breadth import EmailRuleBreadth
   from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput
   from ..models.email_rule_scope_selection import EmailRuleScopeSelection
-  from ..models.email_rule_scope_used import EmailRuleScopeUsed
-  from ..models.email_rule_scope_warning import EmailRuleScopeWarning
   from ..models.email_rule_tree_input import EmailRuleTreeInput
 
 
@@ -35,11 +32,11 @@ class CreateEmailRuleRequest:
     """ 
         Attributes:
             name (str): A short name for the rule.
+            kind (CreateEmailRuleRequestKind): grant: what the rule matches can be shared. do_not_share: the rule runs
+                before every other rule, and while it is active no rule shares an email it matches; an email it cannot decide
+                counts as matched. Set when the rule is created; it never changes.
             english (str): The plain-English description the rule was compiled from.
             tree (EmailRuleTreeInput):
-            kind (CreateEmailRuleRequestKind | Unset): grant (the default): what the rule matches can be shared.
-                do_not_share: the rule runs before every other rule, and while it is active no rule shares an email it matches;
-                an email it cannot decide counts as matched. Set when the rule is created; it never changes.
             state (CreateEmailRuleRequestState | Unset): observe (the default) records what the rule would match and grants
                 or blocks nothing; draft is not evaluated; active only for a do_not_share rule.
             evaluation_scope (CreateEmailRuleRequestEvaluationScope | Unset): own_mailboxes (the default): mail to your own
@@ -48,40 +45,21 @@ class CreateEmailRuleRequest:
             scope_selection (EmailRuleScopeSelection | Unset): For a selected rule: inboxes, and domains (each address at
                 them the author reads); each one you can read.
             expectations (CreateEmailRuleRequestExpectations | Unset): Emails it must match and must not (at most 100): a
-                test by rule_id judges them unless expect is given, and each version it saves is checked against them.
+                test by rule_id judges them unless expect is given, and a write that leaves the rule active on a new version, or
+                turns it active, is judged against them first.
             expectation_samples (list[EmailRuleExpectationSampleInput] | Unset): Made-up emails it must match or not (at
                 most 20).
-            explanation (str | Unset): What the rule matches, in plain English. Left out, the server writes one from the
-                tree.
-            assumptions (list[str] | Unset): The compile response's assumptions. Stored as sent.
-            warnings (list[str] | Unset): The compile response's warnings. Stored as sent, then any server note they lack on
-                an address or domain the description names that the rule does not test, or on a grant rule that tests only who
-                an email was sent to (on a rule request, every compiler note on the rule).
-            compiled_by (str | Unset): Who produced the tree (not verified): the compile response's compiled_by, or member
-                (the default) for a tree you wrote or edited.
-            breadth (EmailRuleBreadth | None | Unset): Ignored (the compile answer's breadth).
-            conditions_breadth (EmailRuleBreadth | None | Unset): Ignored.
-            breadth_scope (EmailRuleScopeUsed | Unset):
-            scope_warnings (list[EmailRuleScopeWarning] | Unset): Ignored (the compile answer's scope_warnings).
      """
 
     name: str
+    kind: CreateEmailRuleRequestKind
     english: str
     tree: EmailRuleTreeInput
-    kind: CreateEmailRuleRequestKind | Unset = UNSET
     state: CreateEmailRuleRequestState | Unset = UNSET
     evaluation_scope: CreateEmailRuleRequestEvaluationScope | Unset = UNSET
     scope_selection: EmailRuleScopeSelection | Unset = UNSET
     expectations: CreateEmailRuleRequestExpectations | Unset = UNSET
     expectation_samples: list[EmailRuleExpectationSampleInput] | Unset = UNSET
-    explanation: str | Unset = UNSET
-    assumptions: list[str] | Unset = UNSET
-    warnings: list[str] | Unset = UNSET
-    compiled_by: str | Unset = UNSET
-    breadth: EmailRuleBreadth | None | Unset = UNSET
-    conditions_breadth: EmailRuleBreadth | None | Unset = UNSET
-    breadth_scope: EmailRuleScopeUsed | Unset = UNSET
-    scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
 
 
 
@@ -89,22 +67,16 @@ class CreateEmailRuleRequest:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.create_email_rule_request_expectations import CreateEmailRuleRequestExpectations # noqa: PLC0415
-        from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
         from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
-        from ..models.email_rule_scope_used import EmailRuleScopeUsed # noqa: PLC0415
-        from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         name = self.name
+
+        kind = self.kind.value
 
         english = self.english
 
         tree = self.tree.to_dict()
-
-        kind: str | Unset = UNSET
-        if not isinstance(self.kind, Unset):
-            kind = self.kind.value
-
 
         state: str | Unset = UNSET
         if not isinstance(self.state, Unset):
@@ -133,61 +105,15 @@ class CreateEmailRuleRequest:
 
 
 
-        explanation = self.explanation
-
-        assumptions: list[str] | Unset = UNSET
-        if not isinstance(self.assumptions, Unset):
-            assumptions = self.assumptions
-
-
-
-        warnings: list[str] | Unset = UNSET
-        if not isinstance(self.warnings, Unset):
-            warnings = self.warnings
-
-
-
-        compiled_by = self.compiled_by
-
-        breadth: dict[str, Any] | None | Unset
-        if isinstance(self.breadth, Unset):
-            breadth = UNSET
-        elif isinstance(self.breadth, EmailRuleBreadth):
-            breadth = self.breadth.to_dict()
-        else:
-            breadth = self.breadth
-
-        conditions_breadth: dict[str, Any] | None | Unset
-        if isinstance(self.conditions_breadth, Unset):
-            conditions_breadth = UNSET
-        elif isinstance(self.conditions_breadth, EmailRuleBreadth):
-            conditions_breadth = self.conditions_breadth.to_dict()
-        else:
-            conditions_breadth = self.conditions_breadth
-
-        breadth_scope: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.breadth_scope, Unset):
-            breadth_scope = self.breadth_scope.to_dict()
-
-        scope_warnings: list[dict[str, Any]] | Unset = UNSET
-        if not isinstance(self.scope_warnings, Unset):
-            scope_warnings = []
-            for scope_warnings_item_data in self.scope_warnings:
-                scope_warnings_item = scope_warnings_item_data.to_dict()
-                scope_warnings.append(scope_warnings_item)
-
-
-
 
         field_dict: dict[str, Any] = {}
 
         field_dict.update({
             "name": name,
+            "kind": kind,
             "english": english,
             "tree": tree,
         })
-        if kind is not UNSET:
-            field_dict["kind"] = kind
         if state is not UNSET:
             field_dict["state"] = state
         if evaluation_scope is not UNSET:
@@ -198,22 +124,6 @@ class CreateEmailRuleRequest:
             field_dict["expectations"] = expectations
         if expectation_samples is not UNSET:
             field_dict["expectation_samples"] = expectation_samples
-        if explanation is not UNSET:
-            field_dict["explanation"] = explanation
-        if assumptions is not UNSET:
-            field_dict["assumptions"] = assumptions
-        if warnings is not UNSET:
-            field_dict["warnings"] = warnings
-        if compiled_by is not UNSET:
-            field_dict["compiled_by"] = compiled_by
-        if breadth is not UNSET:
-            field_dict["breadth"] = breadth
-        if conditions_breadth is not UNSET:
-            field_dict["conditions_breadth"] = conditions_breadth
-        if breadth_scope is not UNSET:
-            field_dict["breadth_scope"] = breadth_scope
-        if scope_warnings is not UNSET:
-            field_dict["scope_warnings"] = scope_warnings
 
         return field_dict
 
@@ -222,28 +132,20 @@ class CreateEmailRuleRequest:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.create_email_rule_request_expectations import CreateEmailRuleRequestExpectations # noqa: PLC0415
-        from ..models.email_rule_breadth import EmailRuleBreadth # noqa: PLC0415
         from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
         from ..models.email_rule_scope_selection import EmailRuleScopeSelection # noqa: PLC0415
-        from ..models.email_rule_scope_used import EmailRuleScopeUsed # noqa: PLC0415
-        from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_tree_input import EmailRuleTreeInput # noqa: PLC0415
         d = dict(src_dict)
         name = d.pop("name")
 
+        kind = CreateEmailRuleRequestKind(d.pop("kind"))
+
+
+
+
         english = d.pop("english")
 
         tree = EmailRuleTreeInput.from_dict(d.pop("tree"))
-
-
-
-
-        _kind = d.pop("kind", UNSET)
-        kind: CreateEmailRuleRequestKind | Unset
-        if isinstance(_kind,  Unset):
-            kind = UNSET
-        else:
-            kind = CreateEmailRuleRequestKind(_kind)
 
 
 
@@ -300,96 +202,16 @@ class CreateEmailRuleRequest:
                 expectation_samples.append(expectation_samples_item)
 
 
-        explanation = d.pop("explanation", UNSET)
-
-        assumptions = cast(list[str], d.pop("assumptions", UNSET))
-
-
-        warnings = cast(list[str], d.pop("warnings", UNSET))
-
-
-        compiled_by = d.pop("compiled_by", UNSET)
-
-        def _parse_breadth(data: object) -> EmailRuleBreadth | None | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                breadth_type_1 = EmailRuleBreadth.from_dict(data)
-
-
-
-                return breadth_type_1
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(EmailRuleBreadth | None | Unset, data)
-
-        breadth = _parse_breadth(d.pop("breadth", UNSET))
-
-
-        def _parse_conditions_breadth(data: object) -> EmailRuleBreadth | None | Unset:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                conditions_breadth_type_1 = EmailRuleBreadth.from_dict(data)
-
-
-
-                return conditions_breadth_type_1
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(EmailRuleBreadth | None | Unset, data)
-
-        conditions_breadth = _parse_conditions_breadth(d.pop("conditions_breadth", UNSET))
-
-
-        _breadth_scope = d.pop("breadth_scope", UNSET)
-        breadth_scope: EmailRuleScopeUsed | Unset
-        if isinstance(_breadth_scope,  Unset):
-            breadth_scope = UNSET
-        else:
-            breadth_scope = EmailRuleScopeUsed.from_dict(_breadth_scope)
-
-
-
-
-        _scope_warnings = d.pop("scope_warnings", UNSET)
-        scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
-        if _scope_warnings is not UNSET:
-            scope_warnings = []
-            for scope_warnings_item_data in _scope_warnings:
-                scope_warnings_item = EmailRuleScopeWarning.from_dict(scope_warnings_item_data)
-
-
-
-                scope_warnings.append(scope_warnings_item)
-
-
         create_email_rule_request = cls(
             name=name,
+            kind=kind,
             english=english,
             tree=tree,
-            kind=kind,
             state=state,
             evaluation_scope=evaluation_scope,
             scope_selection=scope_selection,
             expectations=expectations,
             expectation_samples=expectation_samples,
-            explanation=explanation,
-            assumptions=assumptions,
-            warnings=warnings,
-            compiled_by=compiled_by,
-            breadth=breadth,
-            conditions_breadth=conditions_breadth,
-            breadth_scope=breadth_scope,
-            scope_warnings=scope_warnings,
         )
 
         return create_email_rule_request

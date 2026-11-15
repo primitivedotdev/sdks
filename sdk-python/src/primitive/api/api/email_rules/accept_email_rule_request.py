@@ -134,14 +134,14 @@ def sync_detailed(
      Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from
     now on with the member who asked: each email in full with its attachments, but never raw. It does
     not go back through mail already received. Send no body to accept it as asked, or change it first
-    with english and tree together (and an explanation, or the server writes one). Because this gives
-    your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps
-    and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to
-    POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to
-    POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-
-    rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the
-    rule it writes. Accepting also needs mail:share_own. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+    with english and tree together. Because this gives your mail to someone else, only you do it, on the
+    dashboard, the Primitive CLI or the Primitive app: agents are refused. Before accepting, test it on
+    your mail: pass the request's tree to POST /v1/email-rules/test. To try it on an email that has not
+    arrived, pass the request's tree to POST /v1/email-rules/test-sample with one you make up, or have
+    look-alikes written (POST /v1/email-rules/look-alikes with request_id); neither stores anything.
+    expectation_samples are kept on the rule it writes. Accepting also needs mail:share_own. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -183,14 +183,14 @@ def sync(
      Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from
     now on with the member who asked: each email in full with its attachments, but never raw. It does
     not go back through mail already received. Send no body to accept it as asked, or change it first
-    with english and tree together (and an explanation, or the server writes one). Because this gives
-    your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps
-    and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to
-    POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to
-    POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-
-    rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the
-    rule it writes. Accepting also needs mail:share_own. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+    with english and tree together. Because this gives your mail to someone else, only you do it, on the
+    dashboard, the Primitive CLI or the Primitive app: agents are refused. Before accepting, test it on
+    your mail: pass the request's tree to POST /v1/email-rules/test. To try it on an email that has not
+    arrived, pass the request's tree to POST /v1/email-rules/test-sample with one you make up, or have
+    look-alikes written (POST /v1/email-rules/look-alikes with request_id); neither stores anything.
+    expectation_samples are kept on the rule it writes. Accepting also needs mail:share_own. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -227,14 +227,14 @@ async def asyncio_detailed(
      Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from
     now on with the member who asked: each email in full with its attachments, but never raw. It does
     not go back through mail already received. Send no body to accept it as asked, or change it first
-    with english and tree together (and an explanation, or the server writes one). Because this gives
-    your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps
-    and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to
-    POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to
-    POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-
-    rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the
-    rule it writes. Accepting also needs mail:share_own. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+    with english and tree together. Because this gives your mail to someone else, only you do it, on the
+    dashboard, the Primitive CLI or the Primitive app: agents are refused. Before accepting, test it on
+    your mail: pass the request's tree to POST /v1/email-rules/test. To try it on an email that has not
+    arrived, pass the request's tree to POST /v1/email-rules/test-sample with one you make up, or have
+    look-alikes written (POST /v1/email-rules/look-alikes with request_id); neither stores anything.
+    expectation_samples are kept on the rule it writes. Accepting also needs mail:share_own. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -276,14 +276,14 @@ async def asyncio(
      Writes the rule as yours, over your own mailboxes only, turns it on, and shares what it matches from
     now on with the member who asked: each email in full with its attachments, but never raw. It does
     not go back through mail already received. Send no body to accept it as asked, or change it first
-    with english and tree together (and an explanation, or the server writes one). Because this gives
-    your mail to someone else, it is limited to the dashboard and the Primitive CLI: other OAuth apps
-    and agent tokens are refused. Before accepting, test it on your mail: pass the request's tree to
-    POST /v1/email-rules/test. To try it on an email that has not arrived, pass the request's tree to
-    POST /v1/email-rules/test-sample with one you make up, or have look-alikes written (POST /v1/email-
-    rules/look-alikes with request_id); neither stores anything. expectation_samples are kept on the
-    rule it writes. Accepting also needs mail:share_own. Needs mail:read, the email rules feature, and a
-    member's own full-access credential (no API key, agent key or narrowed token).
+    with english and tree together. Because this gives your mail to someone else, only you do it, on the
+    dashboard, the Primitive CLI or the Primitive app: agents are refused. Before accepting, test it on
+    your mail: pass the request's tree to POST /v1/email-rules/test. To try it on an email that has not
+    arrived, pass the request's tree to POST /v1/email-rules/test-sample with one you make up, or have
+    look-alikes written (POST /v1/email-rules/look-alikes with request_id); neither stores anything.
+    expectation_samples are kept on the rule it writes. Accepting also needs mail:share_own. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):

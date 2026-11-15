@@ -43,8 +43,8 @@ class EmailRuleShare:
                 (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not.
             accepted_rule_version (int): The version of the rule that was accepted. A later version keeps the share: what
                 each version matches is shared from when it is saved.
-            edited_on_accept (bool): Whether the member who accepted changed the rule's English, tree or explanation before
-                accepting (a new name does not count).
+            edited_on_accept (bool): Whether the member who accepted changed the rule's English or tree before accepting (a
+                new name does not count).
             live (bool): Not ended, and both people are still members under the memberships that were recorded.
             delivery_paused (bool | None): True when the rule is active and the share live but new email is not being shared
                 now (what was shared stays visible); false when new email is shared. Null when it does not apply (share not

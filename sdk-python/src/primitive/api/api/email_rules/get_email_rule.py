@@ -118,11 +118,12 @@ def sync_detailed(
     """ Read a rule
 
      A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version
-    and its saved expectations. The current version's text (english, tree, explanation, assumptions,
-    warnings) is under current, and current_version is its number. What the scope comes to for its
-    author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when
-    include_sql is true. Needs mail:read, the email rules feature, and a member's own full-access
-    credential (no API key, agent key or narrowed token).
+    and its saved expectations. The current version is under current: english and tree, with Primitive's
+    reading (explanation) and notes (warnings) worked out from the tree on every read; and
+    current_version is its number. What the scope comes to for its author now is GET /email-
+    rules/{id}/scope. The SQL the version renders to is included only when include_sql is true. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -159,11 +160,12 @@ def sync(
     """ Read a rule
 
      A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version
-    and its saved expectations. The current version's text (english, tree, explanation, assumptions,
-    warnings) is under current, and current_version is its number. What the scope comes to for its
-    author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when
-    include_sql is true. Needs mail:read, the email rules feature, and a member's own full-access
-    credential (no API key, agent key or narrowed token).
+    and its saved expectations. The current version is under current: english and tree, with Primitive's
+    reading (explanation) and notes (warnings) worked out from the tree on every read; and
+    current_version is its number. What the scope comes to for its author now is GET /email-
+    rules/{id}/scope. The SQL the version renders to is included only when include_sql is true. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -195,11 +197,12 @@ async def asyncio_detailed(
     """ Read a rule
 
      A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version
-    and its saved expectations. The current version's text (english, tree, explanation, assumptions,
-    warnings) is under current, and current_version is its number. What the scope comes to for its
-    author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when
-    include_sql is true. Needs mail:read, the email rules feature, and a member's own full-access
-    credential (no API key, agent key or narrowed token).
+    and its saved expectations. The current version is under current: english and tree, with Primitive's
+    reading (explanation) and notes (warnings) worked out from the tree on every read; and
+    current_version is its number. What the scope comes to for its author now is GET /email-
+    rules/{id}/scope. The SQL the version renders to is included only when include_sql is true. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):
@@ -236,11 +239,12 @@ async def asyncio(
     """ Read a rule
 
      A rule, its scope (evaluation_scope, and scope_selection for a selected rule), its current version
-    and its saved expectations. The current version's text (english, tree, explanation, assumptions,
-    warnings) is under current, and current_version is its number. What the scope comes to for its
-    author now is GET /email-rules/{id}/scope. The SQL the version renders to is included only when
-    include_sql is true. Needs mail:read, the email rules feature, and a member's own full-access
-    credential (no API key, agent key or narrowed token).
+    and its saved expectations. The current version is under current: english and tree, with Primitive's
+    reading (explanation) and notes (warnings) worked out from the tree on every read; and
+    current_version is its number. What the scope comes to for its author now is GET /email-
+    rules/{id}/scope. The SQL the version renders to is included only when include_sql is true. Needs
+    mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key
+    or narrowed token).
 
     Args:
         id (UUID):

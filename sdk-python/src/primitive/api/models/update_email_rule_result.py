@@ -18,12 +18,12 @@ import datetime
 if TYPE_CHECKING:
   from ..models.email_rule_author import EmailRuleAuthor
   from ..models.email_rule_expectation_sample import EmailRuleExpectationSample
+  from ..models.email_rule_expectations_check import EmailRuleExpectationsCheck
   from ..models.email_rule_scope_names import EmailRuleScopeNames
   from ..models.email_rule_scope_warning import EmailRuleScopeWarning
   from ..models.email_rule_version import EmailRuleVersion
   from ..models.update_email_rule_result_affects import UpdateEmailRuleResultAffects
   from ..models.update_email_rule_result_expectations import UpdateEmailRuleResultExpectations
-  from ..models.update_email_rule_result_expectations_check import UpdateEmailRuleResultExpectationsCheck
   from ..models.update_email_rule_result_restored_from import UpdateEmailRuleResultRestoredFrom
 
 
@@ -46,8 +46,8 @@ class UpdateEmailRuleResult:
             is_author (bool): Whether you are its author, in your current membership. Only its author edits it.
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
-            current (EmailRuleVersion | None): Its current version: its text (english, tree, explanation, assumptions,
-                warnings) and who compiled it. current_version is its number. GET /email-rules lists rules without it.
+            current (EmailRuleVersion | None): Its current version: english and tree, with Primitive's reading and notes.
+                current_version is its number. GET /email-rules lists rules without it.
             kind (UpdateEmailRuleResultKind | Unset): grant: what it matches can be shared. do_not_share: it blocks sharing
                 what it matches.
             protection_note (str | Unset): On a do_not_share rule only: it protects nothing yet (not active), a classifier
@@ -72,22 +72,13 @@ class UpdateEmailRuleResult:
                 stored: on every create, and on an update that set or removed them.
             expectation_samples (list[EmailRuleExpectationSample] | Unset): Its saved made-up emails, when this write set or
                 added some.
-            expectations_check (UpdateEmailRuleResultExpectationsCheck | Unset): After a write that saved a version or
-                changed its expectations or made-up emails, if it has some: the emails by id judged on that version from stored
-                classifications without asking its questions, and any made-up emails listed as undecided. Undecided: one that
-                needs answers not yet kept for that version, is unclassified, skipped or not reached, or that its author does
-                not read. Absent when it could not be judged (the rule changed again, its author cannot be resolved, your access
-                shows headers only, it could not finish in time, or the check failed), and after a write that changed only made-
-                up emails on a rule with emails by id. Test by rule_id for the rest. With if_expectations_pass, the judgment
-                made before the save, which passed.
+            expectations_check (EmailRuleExpectationsCheck | Unset):
             restored_from (UpdateEmailRuleResultRestoredFrom | Unset): When this write saved an earlier version again
                 (restore_version): which, and that the scope is not part of a version.
             affects (UpdateEmailRuleResultAffects | Unset): After an update that saved a version, or turned a grant rule
                 active: API keys listing the rule and the webhooks they own, which read and receive what a grant rule grants
                 from now on. shares_ended is always 0: a new version keeps the rule's share (share_notice says so). Saving a
                 version does not by itself change the rule's state. Absent after any other write, and if not read.
-            notice (str | Unset): After a write that saved a version of an active rule keys, webhooks or a share read
-                without checking it first: what it changes, and how to have the next one checked.
             share_notice (str | Unset): After a write that saved a version of a rule with a live share: that the share goes
                 on under it, given even when affects is not, with whom it is and the version they accepted when those can be
                 read.
@@ -114,10 +105,9 @@ class UpdateEmailRuleResult:
     do_not_share_note: str | Unset = UNSET
     expectations: UpdateEmailRuleResultExpectations | Unset = UNSET
     expectation_samples: list[EmailRuleExpectationSample] | Unset = UNSET
-    expectations_check: UpdateEmailRuleResultExpectationsCheck | Unset = UNSET
+    expectations_check: EmailRuleExpectationsCheck | Unset = UNSET
     restored_from: UpdateEmailRuleResultRestoredFrom | Unset = UNSET
     affects: UpdateEmailRuleResultAffects | Unset = UNSET
-    notice: str | Unset = UNSET
     share_notice: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -128,12 +118,12 @@ class UpdateEmailRuleResult:
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
         from ..models.email_rule_expectation_sample import EmailRuleExpectationSample # noqa: PLC0415
+        from ..models.email_rule_expectations_check import EmailRuleExpectationsCheck # noqa: PLC0415
         from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
         from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
         from ..models.update_email_rule_result_affects import UpdateEmailRuleResultAffects # noqa: PLC0415
         from ..models.update_email_rule_result_expectations import UpdateEmailRuleResultExpectations # noqa: PLC0415
-        from ..models.update_email_rule_result_expectations_check import UpdateEmailRuleResultExpectationsCheck # noqa: PLC0415
         from ..models.update_email_rule_result_restored_from import UpdateEmailRuleResultRestoredFrom # noqa: PLC0415
         id = str(self.id)
 
@@ -224,8 +214,6 @@ class UpdateEmailRuleResult:
         if not isinstance(self.affects, Unset):
             affects = self.affects.to_dict()
 
-        notice = self.notice
-
         share_notice = self.share_notice
 
 
@@ -272,8 +260,6 @@ class UpdateEmailRuleResult:
             field_dict["restored_from"] = restored_from
         if affects is not UNSET:
             field_dict["affects"] = affects
-        if notice is not UNSET:
-            field_dict["notice"] = notice
         if share_notice is not UNSET:
             field_dict["share_notice"] = share_notice
 
@@ -285,12 +271,12 @@ class UpdateEmailRuleResult:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
         from ..models.email_rule_expectation_sample import EmailRuleExpectationSample # noqa: PLC0415
+        from ..models.email_rule_expectations_check import EmailRuleExpectationsCheck # noqa: PLC0415
         from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
         from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
         from ..models.update_email_rule_result_affects import UpdateEmailRuleResultAffects # noqa: PLC0415
         from ..models.update_email_rule_result_expectations import UpdateEmailRuleResultExpectations # noqa: PLC0415
-        from ..models.update_email_rule_result_expectations_check import UpdateEmailRuleResultExpectationsCheck # noqa: PLC0415
         from ..models.update_email_rule_result_restored_from import UpdateEmailRuleResultRestoredFrom # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
@@ -443,11 +429,11 @@ class UpdateEmailRuleResult:
 
 
         _expectations_check = d.pop("expectations_check", UNSET)
-        expectations_check: UpdateEmailRuleResultExpectationsCheck | Unset
+        expectations_check: EmailRuleExpectationsCheck | Unset
         if isinstance(_expectations_check,  Unset):
             expectations_check = UNSET
         else:
-            expectations_check = UpdateEmailRuleResultExpectationsCheck.from_dict(_expectations_check)
+            expectations_check = EmailRuleExpectationsCheck.from_dict(_expectations_check)
 
 
 
@@ -471,8 +457,6 @@ class UpdateEmailRuleResult:
 
 
 
-
-        notice = d.pop("notice", UNSET)
 
         share_notice = d.pop("share_notice", UNSET)
 
@@ -501,7 +485,6 @@ class UpdateEmailRuleResult:
             expectations_check=expectations_check,
             restored_from=restored_from,
             affects=affects,
-            notice=notice,
             share_notice=share_notice,
         )
 

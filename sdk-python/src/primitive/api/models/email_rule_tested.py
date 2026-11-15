@@ -28,15 +28,16 @@ class EmailRuleTested:
             id (None | UUID):
             version (int | None):
             vocabulary (str):
-            kind (EmailRuleTestedKind | Unset): The kind it was tested as.
-            note (str | Unset): Present when a tree was sent without kind, so it was tested as grant.
+            kind (EmailRuleTestedKind): The kind it was tested as.
+            warnings (list[str]): Primitive's notes on the tree tested, as a rule's warnings read: with a tree, over the
+                english sent with it.
      """
 
     id: None | UUID
     version: int | None
     vocabulary: str
-    kind: EmailRuleTestedKind | Unset = UNSET
-    note: str | Unset = UNSET
+    kind: EmailRuleTestedKind
+    warnings: list[str]
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -55,12 +56,11 @@ class EmailRuleTested:
 
         vocabulary = self.vocabulary
 
-        kind: str | Unset = UNSET
-        if not isinstance(self.kind, Unset):
-            kind = self.kind.value
+        kind = self.kind.value
+
+        warnings = self.warnings
 
 
-        note = self.note
 
 
         field_dict: dict[str, Any] = {}
@@ -69,11 +69,9 @@ class EmailRuleTested:
             "id": id,
             "version": version,
             "vocabulary": vocabulary,
+            "kind": kind,
+            "warnings": warnings,
         })
-        if kind is not UNSET:
-            field_dict["kind"] = kind
-        if note is not UNSET:
-            field_dict["note"] = note
 
         return field_dict
 
@@ -110,24 +108,20 @@ class EmailRuleTested:
 
         vocabulary = d.pop("vocabulary")
 
-        _kind = d.pop("kind", UNSET)
-        kind: EmailRuleTestedKind | Unset
-        if isinstance(_kind,  Unset):
-            kind = UNSET
-        else:
-            kind = EmailRuleTestedKind(_kind)
+        kind = EmailRuleTestedKind(d.pop("kind"))
 
 
 
 
-        note = d.pop("note", UNSET)
+        warnings = cast(list[str], d.pop("warnings"))
+
 
         email_rule_tested = cls(
             id=id,
             version=version,
             vocabulary=vocabulary,
             kind=kind,
-            note=note,
+            warnings=warnings,
         )
 
 

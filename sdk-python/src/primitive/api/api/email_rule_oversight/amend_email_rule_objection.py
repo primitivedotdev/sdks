@@ -129,7 +129,7 @@ def sync_detailed(
     sees. Records the version the rule has now (rule.amended_version). Refused unless the rule's current
     version is newer than when the objection was made (rule.objected_version). Needs mail:read, the
     email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
-    token). Only on your own dashboard session or the Primitive CLI.
+    token).
 
     Args:
         id (UUID):
@@ -173,7 +173,7 @@ def sync(
     sees. Records the version the rule has now (rule.amended_version). Refused unless the rule's current
     version is newer than when the objection was made (rule.objected_version). Needs mail:read, the
     email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
-    token). Only on your own dashboard session or the Primitive CLI.
+    token).
 
     Args:
         id (UUID):
@@ -212,7 +212,7 @@ async def asyncio_detailed(
     sees. Records the version the rule has now (rule.amended_version). Refused unless the rule's current
     version is newer than when the objection was made (rule.objected_version). Needs mail:read, the
     email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
-    token). Only on your own dashboard session or the Primitive CLI.
+    token).
 
     Args:
         id (UUID):
@@ -256,7 +256,7 @@ async def asyncio(
     sees. Records the version the rule has now (rule.amended_version). Refused unless the rule's current
     version is newer than when the objection was made (rule.objected_version). Needs mail:read, the
     email rules feature, and a member's own full-access credential (no API key, agent key or narrowed
-    token). Only on your own dashboard session or the Primitive CLI.
+    token).
 
     Args:
         id (UUID):
