@@ -25,6 +25,8 @@ const HAND_ROLLED_VISIBLE_TOPICS = new Set([
   "network",
   "otp",
   "signin",
+  // `skills install`, which installs the skills bundled in the package.
+  "skills",
   // Hand-rolled org-level secret commands; /v1/org/secrets is not a generated
   // operation, so these topics have no spec tag.
   "org",

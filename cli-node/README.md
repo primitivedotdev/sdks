@@ -1145,6 +1145,24 @@ pass, immediately before claiming. To keep both on
 purpose, rerun with `--keep-existing`. `--resume` continues a claim that
 already happened and is never refused.
 
+### Install the bundled skills
+
+`primitive skills install` copies the skills bundled in this package into a
+runtime's skills folder, for sessions that use a member login instead of
+`agent connect`:
+
+```sh
+primitive skills install --runtime claude
+primitive skills install primitive-connect --runtime codex --json
+```
+
+It installs every bundled skill, or only the one named, into
+`~/.claude/skills` or `$CODEX_HOME/skills` (`--project` uses `.claude/skills`
+or `.agents/skills` in the current directory), and reports each skill's path,
+state (`installed`, `updated`, `unchanged` or `failed`) and content version.
+A copy already at the bundled version is left unchanged, and a symlinked copy
+is replaced by a real directory. A name that is not bundled exits 2.
+
 ### Set up a machine for every coding session
 
 `primitive machine doctor` checks what lets each Claude Code, Codex and omp

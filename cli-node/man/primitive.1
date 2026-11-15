@@ -320,6 +320,11 @@ Manage the repeating sends you created.
 As the recipient, stop a repeat. ID is the repeat id from the message footer
 or the id of a received message of the repeat.
 .TP
+.B primitive skills install [NAME] --runtime claude|codex
+Install the skills bundled with this CLI, or only NAME, into the runtime's
+skills folder (--project for the current directory's). A copy already at the
+bundled version is left unchanged.
+.TP
 .B primitive list-operations
 Print the generated API operation manifest.
 .TP

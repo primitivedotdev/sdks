@@ -173,6 +173,7 @@ import SignupCommand, {
   SignupResendCommand,
   SignupStatusCommand,
 } from "./commands/signup.js";
+import SkillsInstallCommand from "./commands/skills-install.js";
 import {
   ThreadsMuteCommand,
   ThreadsMutedCommand,
@@ -710,6 +711,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   // `machine doctor` checks and repairs the per-machine setup that lets
   // coding sessions register and receive mail (hooks, instructions, skills).
   "machine:doctor": MachineDoctorCommand,
+  // `skills install` copies the skills bundled in this package into a
+  // runtime's skills folder, for people who sign in with `primitive login`
+  // and never run `agent connect`.
+  "skills:install": SkillsInstallCommand,
   // `emails:latest` is the inbox-triage shortcut: the most recent N
   // inbound emails as a compact text table. emails:list-emails stays
   // available for the full JSON envelope + cursor pagination.
