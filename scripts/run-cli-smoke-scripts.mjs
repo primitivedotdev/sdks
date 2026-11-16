@@ -40,6 +40,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SMOKES = [
+  ["smoke-command-suggestions.mjs"],
   ["smoke-inbox-next.mjs"],
   ["smoke-connected-agent-commands.mjs"],
   ["smoke-agent-enroll.mjs"],

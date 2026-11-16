@@ -74,6 +74,7 @@ describe("command not found", () => {
         Object.keys(grouped)
           .filter((id) => id.split(":").at(-1) === word)
           .sort(),
+      visible: Object.keys(grouped),
     };
     expect(
       commandNotFoundMessage(
@@ -82,6 +83,11 @@ describe("command not found", () => {
       ),
     ).toEqual({
       code: "command_not_found",
+      details: {
+        suggestions: [
+          "primitive email-rule-oversight list-email-rule-objections",
+        ],
+      },
       message:
         'Unknown command "primitive email-rules list-email-rule-objections". Did you mean "primitive email-rule-oversight list-email-rule-objections"? Run "primitive email-rules --help" to see the commands under it.',
     });
@@ -148,8 +154,209 @@ describe("command not found", () => {
     });
   });
 
+  it("suggests nearby visible commands in the current topic before other topics", () => {
+    const local = {
+      ...lookup,
+      visible: [...Object.keys(commands), "other:latest"],
+    };
+    for (const word of ["lst", "lsit"]) {
+      expect(commandNotFoundMessage(`network:${word}`, local)).toMatchObject({
+        code: "command_not_found",
+        details: { suggestions: ["primitive network list"] },
+        message: expect.stringContaining(
+          'Did you mean "primitive network list"?',
+        ),
+      });
+    }
+    expect(
+      commandNotFoundMessage("emails:list:lst", local).details,
+    ).toBeUndefined();
+    expect(
+      commandNotFoundMessage("emails:get:a-list", local).details,
+    ).toBeUndefined();
+    expect(
+      commandNotFoundMessage("emails:nosuch:list", local).details,
+    ).toBeUndefined();
+    expect(
+      commandNotFoundMessage(`emails:${"l".repeat(1000)}`, local).details,
+    ).toBeUndefined();
+  });
+
+  it("grounds short verbs and root spelling suggestions in the real registry", () => {
+    const registered = COMMANDS as Record<string, { hidden?: boolean }>;
+    const ids = Object.keys(registered);
+    const real: CommandLookup = {
+      find: (id) => (registered[id] ? { takesArguments: false } : undefined),
+      hasSubcommands: (id) => ids.some((other) => other.startsWith(`${id}:`)),
+      named: (word) =>
+        ids.filter(
+          (id) => !registered[id]?.hidden && id.split(":").at(-1) === word,
+        ),
+      visible: ids.filter((id) => !registered[id]?.hidden),
+      roots: ["webhook-deliveries", "org", "orgs", "emails"],
+    };
+    for (const [typed, expected] of [
+      ["webhook-deliveries:get", "primitive webhook-deliveries get-delivery"],
+      ["org:list", "primitive orgs"],
+      ["mail", "primitive emails --help"],
+    ]) {
+      const choices =
+        commandNotFoundMessage(typed, real).details?.suggestions ?? [];
+      expect(choices, typed).toContain(expected);
+      expect(choices.length).toBeLessThanOrEqual(3);
+      for (const suggestion of choices) {
+        const id = suggestion
+          .replace(/^primitive /, "")
+          .replace(/ --help$/, "")
+          .replaceAll(" ", ":");
+        expect(
+          registered[id] || real.hasSubcommands(id),
+          suggestion,
+        ).toBeTruthy();
+        expect(registered[id]?.hidden, suggestion).not.toBe(true);
+      }
+    }
+    // These remain mistakes, with no compatibility aliases installed.
+    expect(registered["webhook-deliveries:get"]).toBeUndefined();
+    expect(registered["org:list"]).toBeUndefined();
+    expect(registered.mail).toBeUndefined();
+  });
+
+  it("bounds and orders equally close matches independently of registry ordering", () => {
+    const ids = ["jobs:get-z", "jobs:get-c", "jobs:get-a", "jobs:get-b"];
+    const local: CommandLookup = {
+      find: (id) => (ids.includes(id) ? { takesArguments: false } : undefined),
+      hasSubcommands: (id) => ids.some((other) => other.startsWith(`${id}:`)),
+      visible: ids,
+    };
+    expect(commandNotFoundMessage("jobs:get", local).details).toEqual({
+      suggestions: [
+        "primitive jobs get-a",
+        "primitive jobs get-b",
+        "primitive jobs get-c",
+      ],
+    });
+  });
+
+  it("prefers a same-topic verb match over an exact verb from another topic", () => {
+    const ids = ["webhook-deliveries:get-delivery", "other:get"];
+    const local: CommandLookup = {
+      find: (id) => (ids.includes(id) ? { takesArguments: false } : undefined),
+      hasSubcommands: (id) => ids.some((other) => other.startsWith(`${id}:`)),
+      named: (word) => ids.filter((id) => id.split(":").at(-1) === word),
+      visible: ids,
+    };
+    expect(
+      commandNotFoundMessage("webhook-deliveries:get", local).details,
+    ).toEqual({
+      suggestions: ["primitive webhook-deliveries get-delivery"],
+    });
+  });
+
+  it("emits structured suggestions from the hook without suggesting hidden commands", async () => {
+    const config = {
+      commandIDs: [
+        "network:list",
+        "network:lst-hidden",
+        "config",
+        "config:list",
+      ],
+      commands: [
+        { id: "network:list" },
+        { id: "network:lst-hidden", hidden: true },
+        { id: "config", hidden: true },
+        { id: "config:list" },
+      ],
+      topics: [{ name: "network" }, { name: "config", hidden: true }],
+      findCommand: (id: string) =>
+        id === "network:list" ? { args: {} } : undefined,
+    };
+    const out = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+    const err = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+    const exitCode = process.exitCode;
+    try {
+      await hook.call(
+        {} as never,
+        { id: "network:lst", argv: ["--json"], config, context: {} } as never,
+      );
+      const document = JSON.parse(String(out.mock.calls[0]?.[0]));
+      expect(document.error.details.suggestions).toEqual([
+        "primitive network list",
+      ]);
+      expect(document.error.code).toBe("command_not_found");
+      expect(document.exit_code).toBe(2);
+      expect(err).not.toHaveBeenCalled();
+      out.mockClear();
+      await hook.call(
+        {} as never,
+        { id: "confg", argv: ["--json"], config, context: {} } as never,
+      );
+      const hidden = JSON.parse(String(out.mock.calls[0]?.[0]));
+      expect(hidden.error.details).toBeUndefined();
+      expect(hidden.error.message).not.toContain("Did you mean");
+    } finally {
+      process.exitCode = exitCode;
+      out.mockRestore();
+      err.mockRestore();
+    }
+  });
+
+  it.each([
+    { command: false, topic: false, expected: "primitive search" },
+    { command: false, topic: true, expected: "primitive search" },
+    { command: true, topic: false, expected: undefined },
+    { command: true, topic: true, expected: undefined },
+    { command: undefined, topic: false, expected: "primitive search --help" },
+    { command: undefined, topic: true, expected: undefined },
+    { command: undefined, topic: undefined, expected: undefined },
+  ])(
+    "uses command visibility before topic visibility for roots ($command, $topic)",
+    async ({ command, topic, expected }) => {
+      const entries = [
+        { id: "search:list" },
+        ...(command === undefined ? [] : [{ id: "search", hidden: command }]),
+      ];
+      const config = {
+        commands: entries,
+        commandIDs: entries.map(({ id }) => id),
+        topics: topic === undefined ? [] : [{ name: "search", hidden: topic }],
+        findCommand: (id: string) =>
+          entries.some((entry) => entry.id === id) ? { args: {} } : undefined,
+      };
+      const out = vi
+        .spyOn(process.stdout, "write")
+        .mockImplementation(() => true);
+      const err = vi
+        .spyOn(process.stderr, "write")
+        .mockImplementation(() => true);
+      const exitCode = process.exitCode;
+      try {
+        await hook.call(
+          {} as never,
+          { id: "serach", argv: ["--json"], config, context: {} } as never,
+        );
+        const error = JSON.parse(String(out.mock.calls[0]?.[0])).error;
+        expect(error.details?.suggestions).toEqual(
+          expected ? [expected] : undefined,
+        );
+        expect(error.code).toBe("command_not_found");
+        expect(err).not.toHaveBeenCalled();
+      } finally {
+        process.exitCode = exitCode;
+        out.mockRestore();
+        err.mockRestore();
+      }
+    },
+  );
+
   it("prints one JSON document on stdout under --json, and plain text on stderr otherwise", async () => {
     const config = {
+      topics: [],
+      commands: Object.keys(commands).map((id) => ({ id })),
       commandIDs: Object.keys(commands),
       findCommand: (id: string) =>
         commands[id]
