@@ -40,9 +40,9 @@ class UpdateEmailRuleRequest:
             tree (EmailRuleTreeInput | Unset):
             kind (UpdateEmailRuleRequestKind | Unset): Must be the rule's own (400 kind_mismatch).
             evaluation_scope (UpdateEmailRuleRequestEvaluationScope | Unset): own_mailboxes: mail to your own addresses and
-                agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
-                later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version
-                with the same conditions, and is refused while the rule is shared.
+                agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you
+                can read, inboxes added later included. selected: what scope_selection names. Left out, the scope stays. A
+                change saves a new version with the same conditions, and is refused while the rule is shared.
             scope_selection (EmailRuleScopeSelection | Unset): For a selected rule: inboxes, and domains (each address at
                 them the author reads); each one you can read.
             expectations (None | Unset | UpdateEmailRuleRequestExpectationsType0): Replaces its saved expectations (author

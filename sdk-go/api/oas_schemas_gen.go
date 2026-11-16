@@ -8598,7 +8598,8 @@ type CheckEmailRuleRequestTargetResult struct {
 	Target CheckEmailRuleRequestTargetResultTarget `json:"target"`
 	// Whether they can accept a rule request now under their role.
 	CanAccept bool `json:"can_accept"`
-	// The permission their role lacks for accepting, when can_accept is false.
+	// The permission their role lacks for accepting, when can_accept is false; null then means they have
+	// no own mailbox on the mail relay domains.
 	MissingPermission NilString `json:"missing_permission"`
 	// The same in words, with who can fix it.
 	Warning NilString `json:"warning"`
@@ -13503,9 +13504,9 @@ type CreateEmailRuleRequest struct {
 	// Observe (the default) records what the rule would match and grants or blocks nothing; draft is not
 	// evaluated; active only for a do_not_share rule.
 	State OptCreateEmailRuleRequestState `json:"state"`
-	// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-	// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-	// what scope_selection names.
+	// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+	// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+	// later included. selected: what scope_selection names.
 	EvaluationScope OptCreateEmailRuleRequestEvaluationScope `json:"evaluation_scope"`
 	ScopeSelection  OptEmailRuleScopeSelection               `json:"scope_selection"`
 	// Emails it must match and must not (at most 100): a test by rule_id judges them unless expect is
@@ -13646,9 +13647,9 @@ func (s *CreateEmailRuleRequestCreated) SetData(val CreateEmailRuleRequestResult
 
 func (*CreateEmailRuleRequestCreated) createEmailRuleRequestRes() {}
 
-// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-// what scope_selection names.
+// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+// later included. selected: what scope_selection names.
 type CreateEmailRuleRequestEvaluationScope string
 
 const (
@@ -53235,9 +53236,9 @@ type GenerateLookAlikesRequest struct {
 	Tree OptEmailRuleTreeInput `json:"tree"`
 	// What the tree is meant to match; without it, the tree is described in words.
 	English OptString `json:"english"`
-	// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-	// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-	// what scope_selection names.
+	// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+	// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+	// later included. selected: what scope_selection names.
 	EvaluationScope OptGenerateLookAlikesRequestEvaluationScope `json:"evaluation_scope"`
 	ScopeSelection  OptEmailRuleScopeSelection                  `json:"scope_selection"`
 	// A saved rule you can see, or one that covers your mailboxes (as you, sent to one of them;
@@ -53358,9 +53359,9 @@ func (s *GenerateLookAlikesRequest) SetTo(val OptString) {
 	s.To = val
 }
 
-// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-// what scope_selection names.
+// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+// later included. selected: what scope_selection names.
 type GenerateLookAlikesRequestEvaluationScope string
 
 const (
@@ -69845,12 +69846,13 @@ type ListEmailRuleScopeOptionsResult struct {
 	// Whether a do_not_share rule over only your own mail would run for you: it covers every own mailbox
 	// you read, including ones you could not share.
 	OwnMailToBlock bool `json:"own_mail_to_block"`
-	// Inboxes you can read, matching q. For someone who reads the whole organization, the inboxes known
-	// as someone's: member addresses, members' verified work emails at the organization's domains,
-	// agents' addresses and inboxes with shared access. Otherwise the inboxes your access lists (search
-	// with q for those past the first page). See may_name_unlisted for what else you may name.
+	// Inboxes on the mail relay domains you can read, matching q. For someone who reads the whole
+	// organization, the inboxes known as someone's: member addresses, members' verified work emails at
+	// the organization's domains, agents' addresses and inboxes with shared access. Otherwise the
+	// inboxes your access lists (search with q for those past the first page). See may_name_unlisted for
+	// what else you may name.
 	Addresses []string `json:"addresses"`
-	// Domains you can read, matching q.
+	// Mail relay domains you can read, matching q.
 	Domains []string `json:"domains"`
 	// More match than are listed.
 	More bool `json:"more"`
@@ -134597,9 +134599,9 @@ type TestEmailRuleOnSampleRequest struct {
 	// An unsaved rule tree, as the compile answer's rule gives it or written by hand. With rule_id: that
 	// tree as the rule's next version.
 	Tree OptEmailRuleTreeInput `json:"tree"`
-	// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-	// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-	// what scope_selection names.
+	// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+	// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+	// later included. selected: what scope_selection names.
 	EvaluationScope OptTestEmailRuleOnSampleRequestEvaluationScope `json:"evaluation_scope"`
 	ScopeSelection  OptEmailRuleScopeSelection                     `json:"scope_selection"`
 	// A saved rule you can see, or one that covers your mailboxes (as you; dashboard or Primitive CLI
@@ -134844,9 +134846,9 @@ func (s *TestEmailRuleOnSampleRequestEmailFrom) SetName(val OptString) {
 	s.Name = val
 }
 
-// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-// what scope_selection names.
+// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+// later included. selected: what scope_selection names.
 type TestEmailRuleOnSampleRequestEvaluationScope string
 
 const (
@@ -135543,9 +135545,9 @@ type TestEmailRuleRequest struct {
 	Tree OptEmailRuleTreeInput `json:"tree"`
 	// With tree: its description, which the answer's rule.warnings read.
 	English OptString `json:"english"`
-	// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-	// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-	// what scope_selection names.
+	// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+	// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+	// later included. selected: what scope_selection names.
 	EvaluationScope OptTestEmailRuleRequestEvaluationScope `json:"evaluation_scope"`
 	ScopeSelection  OptEmailRuleScopeSelection             `json:"scope_selection"`
 	// A saved rule you can see. Its current version is tested, with its author's access; one you see
@@ -135671,9 +135673,9 @@ func (s *TestEmailRuleRequest) SetExpect(val OptTestEmailRuleRequestExpect) {
 	s.Expect = val
 }
 
-// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-// what scope_selection names.
+// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+// later included. selected: what scope_selection names.
 type TestEmailRuleRequestEvaluationScope string
 
 const (
@@ -136463,11 +136465,13 @@ type TestEmailRuleResultResultsItem struct {
 	// reused because answers are sampled and asking again can differ. asked_now: asked by this test
 	// (always, for an unsaved tree). not_asked: no call could be made; error_class says why.
 	QuestionAnswersSource OptTestEmailRuleResultResultsItemQuestionAnswersSource `json:"question_answers_source"`
-	// Why a skipped email cannot be tested. unparsed: its content failed to parse, so it can never be
-	// classified. rejected: it was rejected and never delivered. content_discarded: its content has been
-	// discarded, or is being. Nothing is classified or asked about it and no stored answers are used, so
-	// it never counts as a pass. The recent window holds only mail that can be tested, apart from
-	// unparsed mail; an email you name is reported as skipped, whichever of these it is.
+	// Why a skipped email cannot be tested. not_relay_domain: it was not received on one of the
+	// organization's mail relay domains, and rules decide only that mail. unparsed: its content failed
+	// to parse, so it can never be classified. rejected: it was rejected and never delivered.
+	// content_discarded: its content has been discarded, or is being. Nothing is classified or asked
+	// about it and no stored answers are used, so it never counts as a pass. The recent window holds
+	// only mail on the mail relay domains that can be tested, apart from unparsed mail; an email you
+	// name is reported as skipped, whichever of these it is.
 	SkippedReason OptTestEmailRuleResultResultsItemSkippedReason `json:"skipped_reason"`
 	// Why an unclassified email has no classification. pending: not reached before the test stopped, or
 	// not classified here (it arrived within the last 2 hours and normal classification has not finished
@@ -136826,14 +136830,17 @@ func (s *TestEmailRuleResultResultsItemQuestionAnswersSource) UnmarshalText(data
 	}
 }
 
-// Why a skipped email cannot be tested. unparsed: its content failed to parse, so it can never be
-// classified. rejected: it was rejected and never delivered. content_discarded: its content has been
-// discarded, or is being. Nothing is classified or asked about it and no stored answers are used, so
-// it never counts as a pass. The recent window holds only mail that can be tested, apart from
-// unparsed mail; an email you name is reported as skipped, whichever of these it is.
+// Why a skipped email cannot be tested. not_relay_domain: it was not received on one of the
+// organization's mail relay domains, and rules decide only that mail. unparsed: its content failed
+// to parse, so it can never be classified. rejected: it was rejected and never delivered.
+// content_discarded: its content has been discarded, or is being. Nothing is classified or asked
+// about it and no stored answers are used, so it never counts as a pass. The recent window holds
+// only mail on the mail relay domains that can be tested, apart from unparsed mail; an email you
+// name is reported as skipped, whichever of these it is.
 type TestEmailRuleResultResultsItemSkippedReason string
 
 const (
+	TestEmailRuleResultResultsItemSkippedReasonNotRelayDomain   TestEmailRuleResultResultsItemSkippedReason = "not_relay_domain"
 	TestEmailRuleResultResultsItemSkippedReasonUnparsed         TestEmailRuleResultResultsItemSkippedReason = "unparsed"
 	TestEmailRuleResultResultsItemSkippedReasonRejected         TestEmailRuleResultResultsItemSkippedReason = "rejected"
 	TestEmailRuleResultResultsItemSkippedReasonContentDiscarded TestEmailRuleResultResultsItemSkippedReason = "content_discarded"
@@ -136842,6 +136849,7 @@ const (
 // AllValues returns all TestEmailRuleResultResultsItemSkippedReason values.
 func (TestEmailRuleResultResultsItemSkippedReason) AllValues() []TestEmailRuleResultResultsItemSkippedReason {
 	return []TestEmailRuleResultResultsItemSkippedReason{
+		TestEmailRuleResultResultsItemSkippedReasonNotRelayDomain,
 		TestEmailRuleResultResultsItemSkippedReasonUnparsed,
 		TestEmailRuleResultResultsItemSkippedReasonRejected,
 		TestEmailRuleResultResultsItemSkippedReasonContentDiscarded,
@@ -136851,6 +136859,8 @@ func (TestEmailRuleResultResultsItemSkippedReason) AllValues() []TestEmailRuleRe
 // MarshalText implements encoding.TextMarshaler.
 func (s TestEmailRuleResultResultsItemSkippedReason) MarshalText() ([]byte, error) {
 	switch s {
+	case TestEmailRuleResultResultsItemSkippedReasonNotRelayDomain:
+		return []byte(s), nil
 	case TestEmailRuleResultResultsItemSkippedReasonUnparsed:
 		return []byte(s), nil
 	case TestEmailRuleResultResultsItemSkippedReasonRejected:
@@ -136865,6 +136875,9 @@ func (s TestEmailRuleResultResultsItemSkippedReason) MarshalText() ([]byte, erro
 // UnmarshalText implements encoding.TextUnmarshaler.
 func (s *TestEmailRuleResultResultsItemSkippedReason) UnmarshalText(data []byte) error {
 	switch TestEmailRuleResultResultsItemSkippedReason(data) {
+	case TestEmailRuleResultResultsItemSkippedReasonNotRelayDomain:
+		*s = TestEmailRuleResultResultsItemSkippedReasonNotRelayDomain
+		return nil
 	case TestEmailRuleResultResultsItemSkippedReasonUnparsed:
 		*s = TestEmailRuleResultResultsItemSkippedReasonUnparsed
 		return nil
@@ -140823,10 +140836,10 @@ type UpdateEmailRuleRequest struct {
 	Tree OptEmailRuleTreeInput `json:"tree"`
 	// Must be the rule's own (400 kind_mismatch).
 	Kind OptUpdateEmailRuleRequestKind `json:"kind"`
-	// Own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own
-	// lets you share). author: all you can read, inboxes added later included. selected: what
-	// scope_selection names. Left out, the scope stays. A change saves a new version with the same
-	// conditions, and is refused while the rule is shared.
+	// Own_mailboxes: mail to your own addresses and agents on the mail relay domains (for a rule that
+	// shares, those mail:share_own lets you share). author: all you can read, inboxes added later
+	// included. selected: what scope_selection names. Left out, the scope stays. A change saves a new
+	// version with the same conditions, and is refused while the rule is shared.
 	EvaluationScope OptUpdateEmailRuleRequestEvaluationScope `json:"evaluation_scope"`
 	ScopeSelection  OptEmailRuleScopeSelection               `json:"scope_selection"`
 	// Replaces its saved expectations (author only); null removes them.
@@ -140964,10 +140977,10 @@ func (s *UpdateEmailRuleRequest) SetRestoreVersion(val OptInt) {
 	s.RestoreVersion = val
 }
 
-// Own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own
-// lets you share). author: all you can read, inboxes added later included. selected: what
-// scope_selection names. Left out, the scope stays. A change saves a new version with the same
-// conditions, and is refused while the rule is shared.
+// Own_mailboxes: mail to your own addresses and agents on the mail relay domains (for a rule that
+// shares, those mail:share_own lets you share). author: all you can read, inboxes added later
+// included. selected: what scope_selection names. Left out, the scope stays. A change saves a new
+// version with the same conditions, and is refused while the rule is shared.
 type UpdateEmailRuleRequestEvaluationScope string
 
 const (

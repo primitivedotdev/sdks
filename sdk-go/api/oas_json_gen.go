@@ -262901,6 +262901,8 @@ func (s *TestEmailRuleResultResultsItemSkippedReason) Decode(d *jx.Decoder) erro
 	}
 	// Try to use constant string.
 	switch TestEmailRuleResultResultsItemSkippedReason(v) {
+	case TestEmailRuleResultResultsItemSkippedReasonNotRelayDomain:
+		*s = TestEmailRuleResultResultsItemSkippedReasonNotRelayDomain
 	case TestEmailRuleResultResultsItemSkippedReasonUnparsed:
 		*s = TestEmailRuleResultResultsItemSkippedReasonUnparsed
 	case TestEmailRuleResultResultsItemSkippedReasonRejected:

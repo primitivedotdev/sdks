@@ -20700,7 +20700,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "Whether they can accept a rule request now under their role."
         },
         "missing_permission": {
-          "description": "The permission their role lacks for accepting, when can_accept is false.",
+          "description": "The permission their role lacks for accepting, when can_accept is false; null then means they have no own mailbox on the mail relay domains.",
           "type": [
             "string",
             "null"
@@ -21015,7 +21015,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "own_mailboxes",
             "selected"
           ],
-          "description": "own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
+          "description": "own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
         },
         "scope_selection": {
           "type": "object",
@@ -22648,7 +22648,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "own_mailboxes",
             "selected"
           ],
-          "description": "own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
+          "description": "own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
         },
         "scope_selection": {
           "type": "object",
@@ -25277,14 +25277,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "items": {
             "type": "string"
           },
-          "description": "Inboxes you can read, matching q. For someone who reads the whole organization, the inboxes known as someone's: member addresses, members' verified work emails at the organization's domains, agents' addresses and inboxes with shared access. Otherwise the inboxes your access lists (search with q for those past the first page). See may_name_unlisted for what else you may name."
+          "description": "Inboxes on the mail relay domains you can read, matching q. For someone who reads the whole organization, the inboxes known as someone's: member addresses, members' verified work emails at the organization's domains, agents' addresses and inboxes with shared access. Otherwise the inboxes your access lists (search with q for those past the first page). See may_name_unlisted for what else you may name."
         },
         "domains": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Domains you can read, matching q."
+          "description": "Mail relay domains you can read, matching q."
         },
         "more": {
           "type": "boolean",
@@ -26804,7 +26804,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "test-email-rule",
-    "description": "Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version, as its author), rule_id with tree (that tree as the rule's next version, as its author, against its saved expectations; its author only), or a pending rule request by request_id (its rule as asked, as you, over your own mailboxes). It reads only mail its author can read and its scope covers. A rule you see only because it covers your own mailboxes runs as you, over only those. Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+    "description": "Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version, as its author), rule_id with tree (that tree as the rule's next version, as its author, against its saved expectations; its author only), or a pending rule request by request_id (its rule as asked, as you, over your own mailboxes). It reads only mail its author can read and its scope covers. A rule you see only because it covers your own mailboxes runs as you, over only those. Without email_ids it tests the newest emails on the mail relay domains, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "testEmailRule",
@@ -26874,7 +26874,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "own_mailboxes",
             "selected"
           ],
-          "description": "own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
+          "description": "own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
         },
         "scope_selection": {
           "type": "object",
@@ -27495,9 +27495,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ]
               },
               "skipped_reason": {
-                "description": "Why a skipped email cannot be tested. unparsed: its content failed to parse, so it can never be classified. rejected: it was rejected and never delivered. content_discarded: its content has been discarded, or is being. Nothing is classified or asked about it and no stored answers are used, so it never counts as a pass. The recent window holds only mail that can be tested, apart from unparsed mail; an email you name is reported as skipped, whichever of these it is.",
+                "description": "Why a skipped email cannot be tested. not_relay_domain: it was not received on one of the organization's mail relay domains, and rules decide only that mail. unparsed: its content failed to parse, so it can never be classified. rejected: it was rejected and never delivered. content_discarded: its content has been discarded, or is being. Nothing is classified or asked about it and no stored answers are used, so it never counts as a pass. The recent window holds only mail on the mail relay domains that can be tested, apart from unparsed mail; an email you name is reported as skipped, whichever of these it is.",
                 "type": "string",
                 "enum": [
+                  "not_relay_domain",
                   "unparsed",
                   "rejected",
                   "content_discarded"
@@ -27940,7 +27941,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "own_mailboxes",
             "selected"
           ],
-          "description": "own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
+          "description": "own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
         },
         "scope_selection": {
           "type": "object",
@@ -28436,7 +28437,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "own_mailboxes",
             "selected"
           ],
-          "description": "own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version with the same conditions, and is refused while the rule is shared."
+          "description": "own_mailboxes: mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version with the same conditions, and is refused while the rule is shared."
         },
         "scope_selection": {
           "type": "object",

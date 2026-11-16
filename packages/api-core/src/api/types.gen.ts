@@ -6600,7 +6600,7 @@ export type TestEmailRuleRequest = {
      */
     english?: string;
     /**
-     * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
+     * own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
@@ -6753,9 +6753,9 @@ export type TestEmailRuleResult = {
          */
         question_answers_source?: 'stored' | 'asked_now' | 'not_asked';
         /**
-         * Why a skipped email cannot be tested. unparsed: its content failed to parse, so it can never be classified. rejected: it was rejected and never delivered. content_discarded: its content has been discarded, or is being. Nothing is classified or asked about it and no stored answers are used, so it never counts as a pass. The recent window holds only mail that can be tested, apart from unparsed mail; an email you name is reported as skipped, whichever of these it is.
+         * Why a skipped email cannot be tested. not_relay_domain: it was not received on one of the organization's mail relay domains, and rules decide only that mail. unparsed: its content failed to parse, so it can never be classified. rejected: it was rejected and never delivered. content_discarded: its content has been discarded, or is being. Nothing is classified or asked about it and no stored answers are used, so it never counts as a pass. The recent window holds only mail on the mail relay domains that can be tested, apart from unparsed mail; an email you name is reported as skipped, whichever of these it is.
          */
-        skipped_reason?: 'unparsed' | 'rejected' | 'content_discarded';
+        skipped_reason?: 'not_relay_domain' | 'unparsed' | 'rejected' | 'content_discarded';
         /**
          * Why an unclassified email has no classification. pending: not reached before the test stopped, or not classified here (it arrived within the last 2 hours and normal classification has not finished with it, or classify_missing was false); run the test again later.
          */
@@ -6885,7 +6885,7 @@ export type GenerateLookAlikesRequest = {
      */
     english?: string;
     /**
-     * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
+     * own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
@@ -6932,7 +6932,7 @@ export type GenerateLookAlikesResult = {
 export type TestEmailRuleOnSampleRequest = {
     tree?: EmailRuleTreeInput;
     /**
-     * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
+     * own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
@@ -7200,7 +7200,7 @@ export type CreateEmailRuleRequest = {
      */
     state?: 'draft' | 'observe' | 'active';
     /**
-     * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
+     * own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
@@ -7352,7 +7352,7 @@ export type UpdateEmailRuleRequest = {
      */
     kind?: 'grant' | 'do_not_share';
     /**
-     * own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version with the same conditions, and is refused while the rule is shared.
+     * own_mailboxes: mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version with the same conditions, and is refused while the rule is shared.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
@@ -7662,11 +7662,11 @@ export type ListEmailRuleScopeOptionsResult = {
      */
     own_mail_to_block: boolean;
     /**
-     * Inboxes you can read, matching q. For someone who reads the whole organization, the inboxes known as someone's: member addresses, members' verified work emails at the organization's domains, agents' addresses and inboxes with shared access. Otherwise the inboxes your access lists (search with q for those past the first page). See may_name_unlisted for what else you may name.
+     * Inboxes on the mail relay domains you can read, matching q. For someone who reads the whole organization, the inboxes known as someone's: member addresses, members' verified work emails at the organization's domains, agents' addresses and inboxes with shared access. Otherwise the inboxes your access lists (search with q for those past the first page). See may_name_unlisted for what else you may name.
      */
     addresses: Array<string>;
     /**
-     * Domains you can read, matching q.
+     * Mail relay domains you can read, matching q.
      */
     domains: Array<string>;
     /**
@@ -7808,7 +7808,7 @@ export type CheckEmailRuleRequestTargetResult = {
      */
     can_accept: boolean;
     /**
-     * The permission their role lacks for accepting, when can_accept is false.
+     * The permission their role lacks for accepting, when can_accept is false; null then means they have no own mailbox on the mail relay domains.
      */
     missing_permission: string | null;
     /**
@@ -21267,7 +21267,7 @@ export type TestEmailRuleErrors = {
      */
     404: ErrorResponse;
     /**
-     * email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, a request or a rule covering you, the caller). details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox. email_rule_request_not_pending: request_id names a request already decided.
+     * email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, a request or a rule covering you, the caller). details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_relay_mailbox (nothing on the mail relay domains to read), no_shareable_mailbox or no_selected_mailbox. email_rule_request_not_pending: request_id names a request already decided.
      */
     409: ErrorResponse;
     /**
@@ -21381,7 +21381,7 @@ export type TestEmailRuleOnSampleErrors = {
      */
     404: ErrorResponse;
     /**
-     * email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, a request or a rule covering you, you), so it would decide nothing for real. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox. email_rule_request_not_pending: request_id names a request already decided.
+     * email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, a request or a rule covering you, you), so it would decide nothing for real. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_relay_mailbox (nothing on the mail relay domains to read), no_shareable_mailbox or no_selected_mailbox. email_rule_request_not_pending: request_id names a request already decided.
      */
     409: ErrorResponse;
     /**
@@ -21479,11 +21479,11 @@ export type CreateEmailRuleErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read (details.addresses, details.domains).
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read, or (details.reason not_relay_domain) something off the mail relay domains (details.addresses, details.domains).
      */
     403: ErrorResponse;
     /**
-     * email_rule_author_unresolvable: the rule could not run as you over the chosen scope. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox or no_shareable_mailbox. With no evaluation_scope it covers only your own mail, so no_own_mailbox or no_shareable_mailbox there means a scope must be named.
+     * email_rule_author_unresolvable: the rule could not run as you over the chosen scope. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_relay_mailbox or no_shareable_mailbox. With no evaluation_scope it covers only your own mailboxes on the mail relay domains, so those reasons there mean a scope must be named.
      */
     409: ErrorResponse;
     /**
@@ -22331,7 +22331,7 @@ export type AcceptEmailRuleRequestErrors = {
      */
     404: ErrorResponse;
     /**
-     * email_rule_request_not_pending: the request was already decided (details.status). email_rule_request_party_left: one of the two people is no longer a member under the membership recorded (details.party). email_rule_share_limit: the member who asked already receives the most shared rules allowed (details.limit).
+     * email_rule_request_not_pending: the request was already decided (details.status). email_rule_request_party_left: one of the two people is no longer a member under the membership recorded (details.party). email_rule_share_limit: the member who asked already receives the most shared rules allowed (details.limit). email_rule_author_unresolvable with details.reason no_relay_mailbox: you have no own mailbox on the mail relay domains.
      */
     409: ErrorResponse;
     /**

@@ -61,10 +61,12 @@ class TestEmailRuleResultResultsItem:
                 again can differ. asked_now: asked by this test (always, for an unsaved tree). not_asked: no call could be made;
                 error_class says why.
             skipped_reason (TestEmailRuleResultResultsItemSkippedReason | Unset): Why a skipped email cannot be tested.
-                unparsed: its content failed to parse, so it can never be classified. rejected: it was rejected and never
-                delivered. content_discarded: its content has been discarded, or is being. Nothing is classified or asked about
-                it and no stored answers are used, so it never counts as a pass. The recent window holds only mail that can be
-                tested, apart from unparsed mail; an email you name is reported as skipped, whichever of these it is.
+                not_relay_domain: it was not received on one of the organization's mail relay domains, and rules decide only
+                that mail. unparsed: its content failed to parse, so it can never be classified. rejected: it was rejected and
+                never delivered. content_discarded: its content has been discarded, or is being. Nothing is classified or asked
+                about it and no stored answers are used, so it never counts as a pass. The recent window holds only mail on the
+                mail relay domains that can be tested, apart from unparsed mail; an email you name is reported as skipped,
+                whichever of these it is.
             unclassified_reason (TestEmailRuleResultResultsItemUnclassifiedReason | Unset): Why an unclassified email has no
                 classification. pending: not reached before the test stopped, or not classified here (it arrived within the last
                 2 hours and normal classification has not finished with it, or classify_missing was false); run the test again

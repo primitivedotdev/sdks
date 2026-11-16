@@ -74546,6 +74546,8 @@ func (s TestEmailRuleResultResultsItemQuestionAnswersSource) Validate() error {
 
 func (s TestEmailRuleResultResultsItemSkippedReason) Validate() error {
 	switch s {
+	case "not_relay_domain":
+		return nil
 	case "unparsed":
 		return nil
 	case "rejected":
@@ -90082,6 +90084,8 @@ func (s TestEmailRuleResultResultsItemQuestionAnswersSource) validateKnown() err
 
 func (s TestEmailRuleResultResultsItemSkippedReason) validateKnown() error {
 	switch s {
+	case "not_relay_domain":
+		return nil
 	case "unparsed":
 		return nil
 	case "rejected":
