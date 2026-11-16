@@ -14,6 +14,7 @@ import {
   focusEmptyHint,
   focusFlags,
   focusFlagValues,
+  queryScopesItself,
   resolveFocus,
   writeFocusLine,
 } from "../focus.js";
@@ -167,8 +168,7 @@ class EmailsWatchCommand extends Command {
       client: apiClient.client,
       flags: focusFlagValues(flags),
       explicitScope:
-        Boolean(flags["domain-id"] || flags.to) ||
-        /(?:^|\s)(?:domain|to):/i.test(flags.q ?? ""),
+        Boolean(flags["domain-id"] || flags.to) || queryScopesItself(flags.q),
       conflictingFlag: flags["domain-id"] ? "--domain-id" : undefined,
     });
     writeFocusLine(focus, false);
@@ -280,6 +280,7 @@ class EmailsWatchCommand extends Command {
       ) {
         elsewhereCheckedAt = Date.now();
         let total: number | null = null;
+        let capped = false;
         const note = await focusEmptyHint(focus, async () => {
           const counted = await fetchEmailSearchPage({
             apiClient,
@@ -289,7 +290,10 @@ class EmailsWatchCommand extends Command {
             since,
           });
           total = counted.ok ? (counted.total ?? null) : null;
-          return total;
+          capped = counted.ok && counted.totalCapped === true;
+          return total === null
+            ? null
+            : { total, bound: capped ? "atLeast" : undefined };
         });
         if (note && total !== null && total > 0) {
           process.stderr.write(`${note}\n`);

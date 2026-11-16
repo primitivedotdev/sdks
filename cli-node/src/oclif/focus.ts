@@ -543,10 +543,17 @@ export async function resolveFocus(
   }
 
   const saved = orgId ? loadSavedFocus(profile, orgId) : null;
+  const choice = saved?.choice ?? null;
+  // A saved domain that is gone fails first, even when one domain is left:
+  // listing the one left in its place would read as the focused domain.
+  if (readable && choice && "domains" in choice) {
+    const ids = new Set(readable.domains.map((d) => d.id));
+    const gone = choice.domains.filter((d) => !ids.has(d.id));
+    if (gone.length > 0) throw focusDomainGoneError(gone, profile);
+  }
   // One domain, or none: nothing to choose between.
   if (readable && readable.domains.length <= 1) return NO_FOCUS;
 
-  const choice = saved?.choice ?? null;
   if (choice) {
     if ("all" in choice) {
       return {
@@ -560,11 +567,6 @@ export async function resolveFocus(
           widen: [],
         },
       };
-    }
-    if (readable) {
-      const ids = new Set(readable.domains.map((d) => d.id));
-      const gone = choice.domains.filter((d) => !ids.has(d.id));
-      if (gone.length > 0) throw focusDomainGoneError(gone, profile);
     }
     return focusedOutcome(params.surface, choice.domains, "profile", readable);
   }
@@ -661,25 +663,63 @@ function focusedOutcome(
  * returns its total, or null when it cannot be read. Null when the result was
  * not focused.
  */
+/**
+ * A count of matching mail: exact, a lower bound (`atLeast`, such as a capped
+ * total), or an upper bound (`upTo`, such as one that keeps rows a listing
+ * skips).
+ */
+export type ElsewhereCount = {
+  total: number;
+  bound?: "atLeast" | "upTo" | undefined;
+};
+
+/** A listing answer's total as an ElsewhereCount, or null when it has none. */
+export function countFromMeta(
+  data: unknown,
+  bound?: ElsewhereCount["bound"],
+): ElsewhereCount | null {
+  const meta = isRecord(data) && isRecord(data.meta) ? data.meta : null;
+  if (!meta || typeof meta.total !== "number") return null;
+  return {
+    total: meta.total,
+    bound: meta.total_capped === true ? "atLeast" : bound,
+  };
+}
+
 export async function focusEmptyHint(
   outcome: FocusOutcome,
-  countElsewhere: () => Promise<number | null>,
-  /** The count is an upper bound, such as one that keeps rows a listing skips. */
-  upperBound = false,
+  countElsewhere: () => Promise<ElsewhereCount | null>,
 ): Promise<string | null> {
   if (!outcome.focused) return null;
   const names = joinNames(outcome.focused.map((d) => d.name));
-  let total: number | null;
+  let count: ElsewhereCount | null;
   try {
-    total = await countElsewhere();
+    count = await countElsewhere();
   } catch {
-    total = null;
+    count = null;
   }
+  const total = count?.total ?? null;
+  const prefix =
+    count?.bound === "atLeast"
+      ? "at least "
+      : count?.bound === "upTo"
+        ? "up to "
+        : "";
   if (total === null)
     return `Nothing matched on ${names}. Other domains may hold matching mail: pass --all-domains to look.`;
-  if (total === 0)
+  if (total === 0 && count?.bound !== "atLeast")
     return `Nothing matched on ${names}, and nothing matches on the other domains either.`;
-  return `Nothing matched on ${names}; ${upperBound ? "up to " : ""}${total} matching email${total === 1 ? "" : "s"} on other domains. Pass --all-domains to see ${total === 1 ? "it" : "them"}.`;
+  return `Nothing matched on ${names}; ${prefix}${total} matching email${total === 1 ? "" : "s"} on other domains. Pass --all-domains to see ${total === 1 ? "it" : "them"}.`;
+}
+
+/**
+ * Whether a search query scopes itself with a domain: or to: filter. Quoted
+ * phrases are text, not filters, so they are left out.
+ */
+export function queryScopesItself(q: string | undefined): boolean {
+  if (!q) return false;
+  const unquoted = q.replace(/"(?:[^"\\]|\\.)*"/g, " ");
+  return /(?:^|\s)(?:domain|to):/i.test(unquoted);
 }
 
 /** Remove the focus fields from a query, for the elsewhere count. */

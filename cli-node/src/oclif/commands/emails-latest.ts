@@ -11,6 +11,7 @@ import {
 } from "../api-command.js";
 import { emptyEmailListHint, readCallerMailFor } from "../empty-mail-hint.js";
 import {
+  countFromMeta,
   focusEmptyHint,
   focusFlags,
   focusFlagValues,
@@ -257,10 +258,7 @@ class EmailsLatestCommand extends Command {
                 },
                 responseStyle: "fields",
               });
-              const total = (
-                counted.data as { meta?: { total?: unknown } } | undefined
-              )?.meta?.total;
-              return counted.error || typeof total !== "number" ? null : total;
+              return counted.error ? null : countFromMeta(counted.data);
             })
           : null;
 

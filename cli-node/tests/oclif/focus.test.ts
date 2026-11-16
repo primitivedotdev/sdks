@@ -21,6 +21,7 @@ import {
   focusProfile,
   loadSavedFocus,
   NO_FOCUS,
+  queryScopesItself,
   type ReadableDomains,
   resolveFocus,
   saveFocus,
@@ -496,14 +497,25 @@ describe("empty focused results", () => {
   });
 
   it("words the hint for nothing elsewhere and for an unreadable count", async () => {
-    const outcome = await resolveWith();
-    expect(await focusEmptyHint(outcome, async () => 0)).toContain(
+    const focused = await resolveWith();
+    expect(await focusEmptyHint(focused, async () => ({ total: 0 }))).toContain(
       "nothing matches on the other domains either",
     );
-    expect(await focusEmptyHint(outcome, async () => null)).toContain(
+    expect(await focusEmptyHint(focused, async () => null)).toContain(
       "pass --all-domains to look",
     );
-    expect(await focusEmptyHint(NO_FOCUS, async () => 3)).toBeNull();
+    expect(
+      await focusEmptyHint(focused, async () => ({
+        total: 1,
+        bound: "atLeast",
+      })),
+    ).toContain("at least 1 matching email on other domains");
+    expect(
+      await focusEmptyHint(focused, async () => ({ total: 4, bound: "upTo" })),
+    ).toContain("up to 4 matching emails");
+    expect(
+      await focusEmptyHint(NO_FOCUS, async () => ({ total: 3 })),
+    ).toBeNull();
   });
 });
 
@@ -653,5 +665,30 @@ describe("review fixes", () => {
     const result = await run("focus:set", ["--domain", "x"]);
     expect(result.thrown).toMatchObject({ oclif: { exit: 2 } });
     expect((result.thrown as Error).message).toContain("--domain");
+  });
+});
+
+describe("automated review fixes", () => {
+  it("fails on a deleted saved domain even when one domain is left", async () => {
+    saveFocus(memberProfile(), ORG, () => ({ choice: { domains: [SUPPORT] } }));
+    await expect(
+      resolveWith({ readDomains: readable([SALES]) }),
+    ).rejects.toMatchObject({ code: "focus_domain_missing" });
+  });
+
+  it("keeps the focus when to: or domain: is only quoted text", () => {
+    expect(queryScopesItself('"please to:bob@example.com now"')).toBe(false);
+    expect(queryScopesItself("invoice to:bob@example.com")).toBe(true);
+    expect(queryScopesItself('"x" domain:example.com')).toBe(true);
+  });
+
+  it("says a capped or page-only count is a lower bound", async () => {
+    saveFocus(memberProfile(), ORG, () => ({ choice: { domains: [SUPPORT] } }));
+    emails = () => [];
+    total = (call) => (call.query.get("domain_id") ? 0 : 1);
+    const result = await run("emails:list", ["--search", "invoice"]);
+    expect(result.stderr).toContain(
+      "at least 1 matching email on other domains",
+    );
   });
 });

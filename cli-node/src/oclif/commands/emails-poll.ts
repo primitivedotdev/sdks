@@ -73,6 +73,8 @@ export type EmailSearchPageResult =
       rows: EmailSearchResult[];
       /** The server's total match count, when it counted. */
       total?: number | null;
+      /** True when the server stopped counting and `total` is a lower bound. */
+      totalCapped?: boolean;
     }
   | { ok: false; error: unknown; response?: Response };
 
@@ -479,6 +481,7 @@ export async function fetchEmailSearchPage(params: {
     rows,
     total:
       typeof envelope?.meta.total === "number" ? envelope.meta.total : null,
+    totalCapped: envelope?.meta.total_capped === true,
   };
 }
 

@@ -17,9 +17,11 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import {
+  countFromMeta,
   focusEmptyHint,
   focusFlags,
   focusFlagValues,
+  queryScopesItself,
   resolveFocus,
   withFocusMeta,
   withoutFocus,
@@ -374,7 +376,7 @@ class SearchCommand extends Command {
         flags: focusFlagValues(flags),
         explicitScope:
           Boolean(flags["domain-id"] || flags.to || threadId) ||
-          /(?:^|\s)(?:domain|to):/i.test(args.query),
+          queryScopesItself(args.query),
         conflictingFlag: flags["domain-id"] ? "--domain-id" : undefined,
       });
       const query: SearchQuery = {
@@ -461,10 +463,7 @@ class SearchCommand extends Command {
                 },
                 responseStyle: "fields",
               });
-              const total = (
-                counted.data as { meta?: { total?: unknown } } | undefined
-              )?.meta?.total;
-              return counted.error || typeof total !== "number" ? null : total;
+              return counted.error ? null : countFromMeta(counted.data);
             })
           : null;
 

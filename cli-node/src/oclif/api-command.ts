@@ -54,6 +54,7 @@ import {
 } from "./endpoints-test-redirect.js";
 import { withFlagSuggestion } from "./flag-suggestions.js";
 import {
+  countFromMeta,
   FOCUS_SERVER_SUPPORT,
   type FocusOutcome,
   type FocusSurface,
@@ -61,6 +62,7 @@ import {
   focusFlags,
   focusFlagValues,
   NO_FOCUS,
+  queryScopesItself,
   resolveFocus,
   withFocusMeta,
   withoutFocus,
@@ -1737,8 +1739,8 @@ export const FOCUS_OPERATIONS: Record<
   {
     surface: FocusSurface;
     scopeParams: readonly string[];
-    /** A DSL field in `q` that scopes the search by itself. */
-    scopeDsl?: RegExp;
+    /** Whether `q` holds a filter that scopes the search by itself. */
+    scopeDsl?: boolean;
     countParam?: string;
   }
 > = {
@@ -1750,7 +1752,7 @@ export const FOCUS_OPERATIONS: Record<
   searchEmails: {
     surface: "inbound",
     scopeParams: ["domain_id", "to", "thread_id", "reply_to_sent_email_id"],
-    scopeDsl: /(?:^|\s)(?:domain|to):/i,
+    scopeDsl: true,
     countParam: "count",
   },
   listSentEmails: { surface: "sent", scopeParams: ["from"] },
@@ -1765,7 +1767,7 @@ export function queryHasOwnScope(
   if (!spec) return false;
   if (spec.scopeParams.some((name) => query[name] !== undefined)) return true;
   return Boolean(
-    spec.scopeDsl && typeof query.q === "string" && spec.scopeDsl.test(query.q),
+    spec.scopeDsl && typeof query.q === "string" && queryScopesItself(query.q),
   );
 }
 
@@ -2391,10 +2393,13 @@ export function createOperationCommand(
               ...(countParam ? { [countParam]: "true" } : {}),
             });
             if (counted.error) return null;
-            const total = (
-              counted.data as { meta?: { total?: unknown } } | undefined
-            )?.meta?.total;
-            return typeof total === "number" ? total : null;
+            // GET /emails with --search counts only the page it read.
+            return countFromMeta(
+              counted.data,
+              operation.sdkName === "listEmails" && query.search !== undefined
+                ? "atLeast"
+                : undefined,
+            );
           });
           if (note && jsonOutput) summary.push(note);
           else if (note) process.stderr.write(`${note}\n`);

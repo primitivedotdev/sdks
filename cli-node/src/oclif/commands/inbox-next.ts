@@ -33,6 +33,7 @@ import {
   type AutomationHeaders,
 } from "../automated-mail.js";
 import {
+  countFromMeta,
   type FocusMeta,
   type FocusOutcome,
   focusEmptyHint,
@@ -1110,31 +1111,24 @@ class InboxNextCommand extends Command {
     // Focused and empty: how much awaits a reply on the other domains.
     const elsewhere =
       result.outcome === "empty"
-        ? await focusEmptyHint(
-            scope.focus,
-            async () => {
-              const query = {
-                awaiting: "you" as const,
-                exclude_fyi: "true" as const,
-                ...(flags["include-automated"]
-                  ? {}
-                  : { automated: "false" as const }),
-                limit: 1,
-                count: "true" as const,
-              };
-              const counted = await listEmails({
-                client: apiClient.client,
-                query: withoutFocus(query, scope.focus) as typeof query,
-                responseStyle: "fields",
-              });
-              const total = (
-                counted.data as { meta?: { total?: unknown } } | undefined
-              )?.meta?.total;
-              return counted.error || typeof total !== "number" ? null : total;
-              // Mail needing no reply is skipped by the listing, not the count.
-            },
-            true,
-          )
+        ? await focusEmptyHint(scope.focus, async () => {
+            const query = {
+              awaiting: "you" as const,
+              exclude_fyi: "true" as const,
+              ...(flags["include-automated"]
+                ? {}
+                : { automated: "false" as const }),
+              limit: 1,
+              count: "true" as const,
+            };
+            const counted = await listEmails({
+              client: apiClient.client,
+              query: withoutFocus(query, scope.focus) as typeof query,
+              responseStyle: "fields",
+            });
+            // Mail needing no reply is skipped by the listing, not the count.
+            return counted.error ? null : countFromMeta(counted.data, "upTo");
+          })
         : null;
     if (flags.json) {
       const document = toJson(result, bin);
