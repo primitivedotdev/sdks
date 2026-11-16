@@ -16,7 +16,111 @@ the same OpenAPI spec. See `RELEASE.md`.
 OpenAPI document the API serves, and every client is regenerated from it. Most
 of the changes below follow from that document.
 
-Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.18` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.18`), and `3.0.0rc18` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.17` (`3.0.0rc17`), which set the email rule and key fields and stopped promising `receivers_changed` notices, `3.0.0-preview.16` (`3.0.0rc16`), which kept a rule's share across a new version and added attachment names on rule tests, compile scope warnings, labelled sample details on judged writes, `stopped` coverage notices, the mail a rule test covered and the emails it matched, `--same-emails-as`, text length checks before sending and the API's message on a refused send, and printed webhook URLs as stored again, `3.0.0-preview.15` (`3.0.0rc15`), which added `rule_deliveries` on email reads, protection on sample tests, tests of a pending rule request, the test window's scope and compile's breadth scope, `existing` on an idempotent rule request, the successor's details on key rotation, `outside_scope` as a reason a rule did not run, `do_not_share_note` on grant rules and `rule_now` on coverage notices, `3.0.0-preview.14` (`3.0.0rc14`), which added email notification settings in the SDKs, `receivers_changed` coverage notices with their totals, webhook URL query strings hidden in endpoint output and activity read retries, `3.0.0-preview.13` (`3.0.0rc13`), which added email detail attachments, attachment names on made-up emails, compile scope, rule share and objection notices, objection box `mine` and the mail import operations, `3.0.0-preview.12` (`3.0.0rc12`), which added imported mail, pending coverage rows, endpoint and key warnings and the default check of writes to rules that keys or webhooks read, `3.0.0-preview.11` (`3.0.0rc11`), which added server notes on rule requests, rule receivers, `activity concerning` and the rule objection webhook events, `3.0.0-preview.10` (`3.0.0rc10`), which added email rule objections, the email rule scope flags and true or false on boolean flags, `3.0.0-preview.9` (`3.0.0rc9`), which added email rule oversight and look-alikes that carry `expected`, and changed what `hidden` counts on rule results, `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
+Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.19` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.19`), and `3.0.0rc19` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.18` (`3.0.0rc18`), which printed the API's response body under `--json`, gave CLI errors a code, reshaped the compile answer into the body rule writes take, put one expectations gate on rule writes, dropped the prose notes from rule answers, listed your own sends by default in `sent list`, required event types on a new webhook and added `primitive skills install`, `3.0.0-preview.17` (`3.0.0rc17`), which set the email rule and key fields and stopped promising `receivers_changed` notices, `3.0.0-preview.16` (`3.0.0rc16`), which kept a rule's share across a new version and added attachment names on rule tests, compile scope warnings, labelled sample details on judged writes, `stopped` coverage notices, the mail a rule test covered and the emails it matched, `--same-emails-as`, text length checks before sending and the API's message on a refused send, and printed webhook URLs as stored again, `3.0.0-preview.15` (`3.0.0rc15`), which added `rule_deliveries` on email reads, protection on sample tests, tests of a pending rule request, the test window's scope and compile's breadth scope, `existing` on an idempotent rule request, the successor's details on key rotation, `outside_scope` as a reason a rule did not run, `do_not_share_note` on grant rules and `rule_now` on coverage notices, `3.0.0-preview.14` (`3.0.0rc14`), which added email notification settings in the SDKs, `receivers_changed` coverage notices with their totals, webhook URL query strings hidden in endpoint output and activity read retries, `3.0.0-preview.13` (`3.0.0rc13`), which added email detail attachments, attachment names on made-up emails, compile scope, rule share and objection notices, objection box `mine` and the mail import operations, `3.0.0-preview.12` (`3.0.0rc12`), which added imported mail, pending coverage rows, endpoint and key warnings and the default check of writes to rules that keys or webhooks read, `3.0.0-preview.11` (`3.0.0rc11`), which added server notes on rule requests, rule receivers, `activity concerning` and the rule objection webhook events, `3.0.0-preview.10` (`3.0.0rc10`), which added email rule objections, the email rule scope flags and true or false on boolean flags, `3.0.0-preview.9` (`3.0.0rc9`), which added email rule oversight and look-alikes that carry `expected`, and changed what `hidden` counts on rule results, `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
+
+What `3.0.0-preview.19` (`3.0.0rc19`) changes from `3.0.0-preview.18`:
+
+CLI, breaking:
+
+- On a credential that reads mail on more than one domain, every mail
+  listing or search stops with exit 2 and error code `focus_required` until
+  a focus is chosen. The error names the domains and both choices:
+  `primitive focus set <domain...>` or `primitive focus set --all`. The
+  choice is saved, so it is made once; `primitive focus clear` brings the
+  question back. For one command, `--domain <name>` or `--all-domains`
+  answers it instead. A credential that reads one domain never sees this.
+  The commands are `emails list`, `emails latest`, `emails search`,
+  `search`, `emails watch`, `inbox next`, `sent list` and
+  `semantic-search`.
+- The generated `emails list-emails` and `emails search-emails` commands
+  take `--domain-ids` (comma-separated) in place of `--domain-id`,
+  following the API.
+- `search --domain` and `emails watch --domain` take a domain name as the
+  focus for that command, sent as its domain id, instead of adding a
+  `domain:` filter to the query.
+
+CLI, added:
+
+- `search --domain-id`, `emails watch --domain-id` and `emails wait
+  --domain-id` send `domain_ids`; they behave as before.
+- The generated `sending list-sent-emails` command takes `--domain-ids`,
+  and the generated list and search commands take `--domain` and
+  `--all-domains` for the focus. `search --domain` now works in semantic
+  mode too.
+- `primitive focus set <domain...>`, `primitive focus set --all`,
+  `primitive focus` (show the focus and the domains) and `primitive focus
+  clear`. Names are checked against the verified domains the credential
+  reads and saved with their ids; a name it does not read fails with
+  `focus_domain_unknown`, and a saved domain it no longer reads fails with
+  `focus_domain_missing`, naming it.
+- The focus is saved per profile and per organization: for the member
+  login in `focus.json` in the CLI config directory, for a connected agent
+  in `focus.json` in its own profile directory. It is never written to a
+  credential file.
+- Overrides, strongest first: `--domain <name>` or `--all-domains` on one
+  command, then `PRIMITIVE_FOCUS_DOMAINS=<name,...>` (or `all`) for a
+  session, then the saved focus. A command given its own scope
+  (`--domain-ids`, `--domain-id`, `--recipient`, `--to`, `--from` on
+  `sent list`, `--thread-id`,
+  `--reply-to-sent-email-id`, or a `domain:` or `to:` search filter) ignores
+  the session and saved focus.
+- Every focused command prints one stderr line naming the focus, where it
+  came from and how to widen it. Under `--json` that line is left out and
+  the document carries `meta.focus` (`domains`, `all`, `source`, `applied`,
+  `widen`, and `received_only` on a focused semantic search); `emails watch
+  --jsonl` keeps the line. An empty focused result says how much matching
+  mail is on the other domains (a semantic search points at
+  `--all-domains` instead); `emails watch` says it once per run.
+- `sent list` filters by the sending domain. `semantic-search` with a focus
+  searches received mail only; with sent mail in `--corpus` it covers every
+  domain and reports the focus as not applied, and `--domain` beside it is
+  refused.
+- The focus never filters reads by id, notifications (`listen`, `wait`,
+  `emails wait`, `agent check-mail`, `chat`) or the CLI's own reply
+  bookkeeping.
+- `create-email-rule-request --help` and `accept-email-rule-request --help`
+  say that `--scope-address` and `--scope-domain`, as well as
+  `--evaluation-scope`, add a scope to a compiled rule, so the saved
+  compile `rule` those two take must come from a compile without any of
+  them.
+
+API and SDKs, breaking:
+
+- `listEmails` and `searchEmails` no longer take `domain_id`. They take
+  `domain_ids`: domain ids, comma-separated or with the key repeated, at
+  most 50. In Python the `domain_id` argument is gone and `domain_ids` is a
+  `str`; in Go `DomainID` is gone and `DomainIds` is an `OptString`.
+- `testEmailRule`'s `skipped_reason` can be `not_relay_domain`: email rules
+  decide only mail received on the organization's mail relay domains. The
+  recent window holds only that mail, and an email named by id that was
+  received elsewhere is reported as skipped. In Python and Go the
+  `skipped_reason` enum gains the value.
+
+API and SDKs, added:
+
+- `listSentEmails` takes `domain_ids` (sends from an address at one of
+  them) and answers `meta.domain_ids`. `searchEmails` with `direction`
+  `outbound` or `any` also matches sent mail from an address at one of
+  them.
+- The `semanticSearch` body takes `domain_ids` (at most 50, received mail
+  only): it is refused with corpus `outbound`, and the default corpus
+  becomes `inbound`.
+- A filter by `domain_ids` only narrows: an id the caller cannot read, or
+  of another organization, matches no mail and is not reported. The list,
+  search, sent and semantic search answers echo the ids given, deduped and
+  lowercased, in `meta.domain_ids`.
+- `listEmails` declares `meta.total_capped` and `meta.total_unavailable`,
+  as the API already sends them.
+- Email rules: `email_rule_author_unresolvable` can carry
+  `details.reason` `no_relay_mailbox` (nothing on the mail relay domains to
+  read) on `testEmailRule`, `testEmailRuleOnSample`, `createEmailRule` and
+  `acceptEmailRuleRequest`. On `createEmailRule`,
+  `email_rule_scope_not_readable` can carry `details.reason`
+  `not_relay_domain` when the scope names an address or domain off the mail
+  relay domains. The `own_mailboxes` scope and the scope
+  options list cover only the mail relay domains, and a request target's
+  `missing_permission` is null with `can_accept` false when that member
+  has no own mailbox there.
 
 What `3.0.0-preview.18` (`3.0.0rc18`) changes from `3.0.0-preview.17`:
 
@@ -289,7 +393,7 @@ What `3.0.0-preview.17` (`3.0.0rc17`) changes from `3.0.0-preview.16`:
   CLI moves from 1.75.0.
 - The Go module path is `github.com/primitivedotdev/sdks/sdk-go/v3`. Update
   imports from `.../sdk-go/v2` and `.../sdk-go/v2/api`.
-- `primitive functions init` scaffolds projects on `^3.0.0-preview.18` of both
+- `primitive functions init` scaffolds projects on `^3.0.0-preview.19` of both
   `@primitivedotdev/sdk` and `primitive`.
 
 #### Removed code
@@ -636,10 +740,31 @@ Go (package `api`):
 #### Email list meta
 
 - `listEmails` answers `meta` as `EmailListMeta`, the pagination fields plus
-  `recipient_outside_access` and `recipient_rules_only`. In Go
+  `recipient_outside_access` and `recipient_rules_only`, and declares
+  `total_capped` and `total_unavailable`. In Go
   `ListEmailsOK.Meta` is `EmailListMeta` instead of `PaginationMeta`, and in
   Python `ListEmailsResponse200.meta` is `EmailListMeta`. Node's
   `EmailListMeta` extends `PaginationMeta`.
+
+#### Mail domain filter
+
+- `listEmails` and `searchEmails` no longer take `domain_id`; they take
+  `domain_ids`, domain ids comma-separated or with the key repeated, at
+  most 50. In Python the `domain_id` argument is gone and `domain_ids` is a
+  `str`; in Go `DomainID` is gone and `DomainIds` is an `OptString`. The
+  generated CLI commands take `--domain-ids` in place of `--domain-id`.
+
+#### CLI domain focus
+
+- On a credential that reads mail on more than one domain, `emails list`,
+  `emails latest`, `emails search`, `search`, `emails watch`, `inbox next`,
+  `sent list` and `semantic-search` stop with exit 2 and error code
+  `focus_required` until a focus is chosen with `primitive focus set
+  <domain...>` or `primitive focus set --all`, or the command passes
+  `--domain <name>` or `--all-domains`. A credential that reads one domain
+  is unaffected.
+- `search --domain` and `emails watch --domain` take a domain name as the
+  focus for that command instead of adding a `domain:` filter to the query.
 
 #### CLI `--json` output
 
@@ -1113,7 +1238,10 @@ date-time is kept as null and sorts last. A sync stops with an error after
   Conversation and thread messages gain `copies`, `copies_truncated` and
   `sent_email_id`.
 - `getThread`: `after`.
-- `listSentEmails`: `since`, `wait`.
+- `listSentEmails`: `since`, `wait`, `domain_ids`.
+- `searchEmails` and the `semanticSearch` body: `domain_ids`. A filter by
+  `domain_ids` only narrows, and the list, search, sent and semantic search
+  answers echo the ids in `meta.domain_ids`.
 - `listAgentConnections`: `include_hidden`.
 - `whoami`: `include`, `check`, `resource`.
 - Email rules:
@@ -1343,8 +1471,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
   retry after `Retry-After`.
 - Email rules:
   - `testEmailRule` can answer an email `skipped`, with `skipped_reason`
-    (`unparsed`, `rejected` or `content_discarded`), and its `counts`
-    carry `skipped`. A skipped expectation is undecided.
+    (`not_relay_domain`, `unparsed`, `rejected` or `content_discarded`),
+    and its `counts` carry `skipped`. A skipped expectation is undecided.
   - In the `expectations_check` of `createEmailRule` and `updateEmailRule`,
     `passed` says whether every expectation passed, beside the `failed` and
     `undecided` emails and made-up emails.
@@ -1597,6 +1725,13 @@ parsers.
 
 #### CLI
 
+- `primitive focus set <domain...>`, `focus set --all`, `focus` and `focus
+  clear` choose, show and clear the domains a profile lists and searches.
+  The focus is saved per profile and organization, never in a credential
+  file; `PRIMITIVE_FOCUS_DOMAINS` overrides it for a session and
+  `--domain` or `--all-domains` for one command. A focused command names
+  its focus on stderr, or in `meta.focus` under `--json`. Reads by id,
+  notifications and reply bookkeeping never follow it.
 - `endpoints get`, `list`, `create` and `update` print webhook URLs as
   stored again, in every output mode.
 - `primitive send` and `primitive reply` take `--text` as another name for
