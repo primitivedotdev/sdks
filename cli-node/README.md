@@ -520,6 +520,8 @@ and stderr stays empty. Output merged with `2>&1` therefore still parses:
   `error.details.missing`: an array of `{ field, flag, json_path }`, such as
   `{ "field": "email", "flag": "--email", "json_path": "$.email" }`.
   `flag` is null when the field must be supplied in JSON.
+- Unknown commands exit 2 with `error.code` `command_not_found`. When nearby
+  commands exist, `error.details.suggestions` lists their full invocations.
 - Generated API commands (`primitive sent list`, `primitive emails list`, ...)
   print the API's response body with `--json`: `data`, and `meta` with
   `meta.cursor` for the next page where the route sends it, plus the CLI's own
