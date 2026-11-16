@@ -104,7 +104,7 @@
     "ajv": "^8.17.1",
     "mailparser": "^3.9.40",
     "nodemailer": "^10.3.1",
-    "sanitize-html": "^2.18.1",
+    "sanitize-html": "^2.18.2",
     "tar-stream": "^3.2.2",
     "validator": "^13.15.35",
     "viem": "^2.57.16"
