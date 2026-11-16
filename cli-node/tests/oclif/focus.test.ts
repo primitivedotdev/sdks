@@ -738,6 +738,8 @@ describe("semantic search", () => {
     const result = await run("semantic-search", ["renewal"]);
     expect(semanticBodies()[0]?.domain_ids).toEqual([SUPPORT.id, SALES.id]);
     expect(result.stderr).toContain("received mail only");
+    const json = await run("semantic-search", ["renewal", "--json"]);
+    expect(JSON.parse(json.stdout).meta.focus.received_only).toBe(true);
   });
 
   it("leaves the focus out when --corpus asks for sent mail, and says so", async () => {

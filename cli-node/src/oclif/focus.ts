@@ -50,6 +50,9 @@ export const FOCUS_SERVER_SUPPORT: {
 /** Which kind of listing a command is, for FOCUS_SERVER_SUPPORT. */
 export type FocusSurface = "inbound" | "sent" | "semantic";
 
+/** The most domain ids one filter takes. */
+export const MAX_FOCUS_DOMAINS = 50;
+
 export type FocusDomain = { name: string; id: string };
 
 export type FocusChoice = { all: true } | { domains: FocusDomain[] };
@@ -72,6 +75,8 @@ export type FocusMeta = {
   source: FocusSource;
   /** False when this command cannot filter by domain yet. */
   applied: boolean;
+  /** Semantic search with a focus searches received mail only. */
+  received_only?: boolean;
   widen: string[];
 };
 
@@ -615,6 +620,12 @@ export function focusParams(
   const ids = domains.map((d) => d.id);
   const name = FOCUS_SERVER_SUPPORT[surface];
   if (!name) return null;
+  if (ids.length > MAX_FOCUS_DOMAINS)
+    throw focusError(
+      `A focus names at most ${MAX_FOCUS_DOMAINS} domains (got ${ids.length}). Name fewer, or use --all-domains.`,
+      "usage_error",
+      2,
+    );
   if (ids.length > 1 && !FOCUS_SERVER_SUPPORT.many)
     throw oneDomainAtATimeError(domains.map((d) => d.name));
   // The query routes take the ids comma-separated; the semantic body a list.
@@ -649,7 +660,14 @@ function focusedOutcome(
     params,
     focused: domains,
     readable: readable?.domains ?? null,
-    meta: { domains: names, all: false, source, applied: true, widen },
+    meta: {
+      domains: names,
+      all: false,
+      source,
+      applied: true,
+      widen,
+      ...(surface === "semantic" ? { received_only: true } : {}),
+    },
     line: `Showing mail on ${joinNames(names)} only (${SOURCE_TEXT[source]})${surface === "semantic" ? ", received mail only" : ""}. Widen: ${widenFor(source).join(" or ")}.`,
   };
 }
@@ -747,7 +765,7 @@ export function focusForCorpus(
     params: {},
     focused: null,
     meta: outcome.meta ? { ...outcome.meta, applied: false } : null,
-    line: `Focus on ${joinNames(names)} (${source === "none" ? "saved focus" : SOURCE_TEXT[source]}) not applied: --corpus outbound includes sent mail, which a domain focus does not filter, so this search covers every domain.`,
+    line: `Focus on ${joinNames(names)} (${SOURCE_TEXT[source as Exclude<FocusSource, "none">]}) not applied: --corpus outbound includes sent mail, which a domain focus does not filter, so this search covers every domain.`,
   };
 }
 
