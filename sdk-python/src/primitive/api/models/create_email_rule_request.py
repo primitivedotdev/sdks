@@ -40,8 +40,8 @@ class CreateEmailRuleRequest:
             state (CreateEmailRuleRequestState | Unset): observe (the default) records what the rule would match and grants
                 or blocks nothing; draft is not evaluated; active only for a do_not_share rule.
             evaluation_scope (CreateEmailRuleRequestEvaluationScope | Unset): own_mailboxes (the default): mail to your own
-                addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read,
-                inboxes added later included. selected: what scope_selection names.
+                addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share).
+                author: all you can read, inboxes added later included. selected: what scope_selection names.
             scope_selection (EmailRuleScopeSelection | Unset): For a selected rule: inboxes, and domains (each address at
                 them the author reads); each one you can read.
             expectations (CreateEmailRuleRequestExpectations | Unset): Emails it must match and must not (at most 100): a

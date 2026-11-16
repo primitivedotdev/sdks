@@ -2,6 +2,7 @@ from enum import StrEnum
 
 class TestEmailRuleResultResultsItemSkippedReason(StrEnum):
     CONTENT_DISCARDED = "content_discarded"
+    NOT_RELAY_DOMAIN = "not_relay_domain"
     REJECTED = "rejected"
     UNPARSED = "unparsed"
 

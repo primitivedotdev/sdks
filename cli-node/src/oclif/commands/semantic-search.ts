@@ -10,6 +10,16 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import {
+  FOCUS_SERVER_SUPPORT,
+  focusEmptyHint,
+  focusFlags,
+  focusFlagValues,
+  focusForCorpus,
+  resolveFocus,
+  withFocusMeta,
+  writeFocusLine,
+} from "../focus.js";
 
 // `primitive semantic-search` is the cross-corpus, meaning-aware search
 // surface. Distinct from `primitive emails list --search ...`, which is
@@ -129,6 +139,7 @@ class SemanticSearchCommand extends Command {
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
+    ...focusFlags(FOCUS_SERVER_SUPPORT.semantic === null),
   };
 
   async run(): Promise<void> {
@@ -142,9 +153,23 @@ class SemanticSearchCommand extends Command {
           configDir: this.config.configDir,
         });
 
+      // A focus narrows semantic search to received mail on those domains;
+      // with sent mail in --corpus it is not applied (focusForCorpus).
+      const focus = focusForCorpus(
+        await resolveFocus({
+          surface: "semantic",
+          configDir: this.config.configDir,
+          auth,
+          client: apiClient.client,
+          flags: focusFlagValues(flags),
+        }),
+        flags.corpus,
+      );
+      writeFocusLine(focus, flags.json);
       const result = await semanticSearch({
         client: apiClient.client,
         body: {
+          ...focus.params,
           query: args.query,
           mode: flags.mode as "hybrid" | "semantic" | "keyword",
           ...(flags.corpus
@@ -178,15 +203,31 @@ class SemanticSearchCommand extends Command {
           }
         | undefined;
 
+      const rows = envelope?.data ?? [];
+      // Semantic search reports no total, so an empty focused first page
+      // points at --all-domains instead of counting.
+      const elsewhere =
+        rows.length === 0 && !flags.cursor
+          ? await focusEmptyHint(focus, async () => null)
+          : null;
+
       if (flags.json) {
-        this.log(JSON.stringify(envelope ?? null, null, 2));
+        const document = withFocusMeta(envelope ?? null, focus);
+        this.log(
+          JSON.stringify(
+            elsewhere && document
+              ? { ...document, summary: elsewhere }
+              : document,
+            null,
+            2,
+          ),
+        );
         return;
       }
 
-      const rows = envelope?.data ?? [];
-
       if (rows.length === 0) {
         process.stderr.write("No matching mail.\n");
+        if (elsewhere) process.stderr.write(`${elsewhere}\n`);
         return;
       }
 

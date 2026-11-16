@@ -33,8 +33,8 @@ class TestEmailRuleOnSampleRequest:
             email (TestEmailRuleOnSampleRequestEmail): A made-up received email. Nothing about it is stored.
             tree (EmailRuleTreeInput | Unset):
             evaluation_scope (TestEmailRuleOnSampleRequestEvaluationScope | Unset): own_mailboxes (the default): mail to
-                your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can
-                read, inboxes added later included. selected: what scope_selection names.
+                your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you
+                share). author: all you can read, inboxes added later included. selected: what scope_selection names.
             scope_selection (EmailRuleScopeSelection | Unset): For a selected rule: inboxes, and domains (each address at
                 them the author reads); each one you can read.
             rule_id (UUID | Unset): A saved rule you can see, or one that covers your mailboxes (as you; dashboard or

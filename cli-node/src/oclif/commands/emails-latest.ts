@@ -11,6 +11,16 @@ import {
 } from "../api-command.js";
 import { emptyEmailListHint, readCallerMailFor } from "../empty-mail-hint.js";
 import {
+  countFromMeta,
+  focusEmptyHint,
+  focusFlags,
+  focusFlagValues,
+  resolveFocus,
+  withFocusMeta,
+  withoutFocus,
+  writeFocusLine,
+} from "../focus.js";
+import {
   AWAITING_FLAG_DESCRIPTION,
   AWAITING_VALUES,
   type Awaiting,
@@ -164,6 +174,7 @@ class EmailsLatestCommand extends Command {
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
+    ...focusFlags(),
   };
 
   async run(): Promise<void> {
@@ -178,9 +189,21 @@ class EmailsLatestCommand extends Command {
         });
 
       const awaiting = flags.awaiting as Awaiting | undefined;
+      const focus = await resolveFocus({
+        surface: "inbound",
+        configDir: this.config.configDir,
+        auth,
+        client: apiClient.client,
+        flags: focusFlagValues(flags),
+      });
+      const query = {
+        limit: flags.limit,
+        ...(awaiting ? { awaiting } : {}),
+        ...focus.params,
+      };
       const result = await listEmails({
         client: apiClient.client,
-        query: { limit: flags.limit, ...(awaiting ? { awaiting } : {}) },
+        query,
         responseStyle: "fields",
       });
 
@@ -221,17 +244,45 @@ class EmailsLatestCommand extends Command {
         }
       }
 
+      const rows = envelope?.data ?? [];
+      // Focused and empty: how much matches on the other domains.
+      const note =
+        rows.length === 0
+          ? await focusEmptyHint(focus, async () => {
+              const counted = await listEmails({
+                client: apiClient.client,
+                query: {
+                  ...withoutFocus(query, focus),
+                  limit: 1,
+                  count: "true",
+                },
+                responseStyle: "fields",
+              });
+              return counted.error ? null : countFromMeta(counted.data);
+            })
+          : null;
+
       if (flags.json) {
         // Raw envelope on stdout. Mirrors the shape `emails:list-emails`
         // emits so callers can swap one for the other when they want
         // table vs json without remembering different command names.
-        this.log(JSON.stringify(envelope ?? null, null, 2));
+        const document = withFocusMeta(envelope ?? null, focus);
+        this.log(
+          JSON.stringify(
+            note && document ? { ...document, summary: note } : document,
+            null,
+            2,
+          ),
+        );
         return;
       }
 
-      const rows = envelope?.data ?? [];
-
+      writeFocusLine(focus, false);
       if (rows.length === 0) {
+        if (note) {
+          process.stderr.write(`${note}\n`);
+          return;
+        }
         // What was asked, and what this credential reads: a key limited to
         // email rules sees only the mail they granted it.
         process.stderr.write(

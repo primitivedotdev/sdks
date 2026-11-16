@@ -1584,6 +1584,10 @@ export type EmailSearchMeta = {
      * Present and `true` when the search matched more than 1,000 emails, so `facets` aggregate only the most recent 1,000 matches, in the same way `total_capped` marks a capped `total`.
      */
     facets_capped?: boolean;
+    /**
+     * Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+     */
+    domain_ids?: Array<string>;
 };
 
 export type EmailSearchFacetBucket = {
@@ -3206,6 +3210,10 @@ export type SemanticSearchInput = {
      * Opaque pagination cursor from a prior response's `meta.cursor`.
      */
     cursor?: string;
+    /**
+     * Domain ids, at most 50: only received mail at one of them, tested on the ranked candidates, so a page can hold fewer than `limit` results. Received mail only: refused with corpus `outbound`, and the default corpus becomes `inbound`. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.
+     */
+    domain_ids?: Array<string>;
 };
 
 export type SemanticSearchSnippet = {
@@ -3311,6 +3319,10 @@ export type SemanticSearchMeta = {
      *
      */
     coverage: SemanticSearchCoverage | null;
+    /**
+     * Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+     */
+    domain_ids?: Array<string>;
 };
 
 /**
@@ -6151,6 +6163,18 @@ export type EmailListMeta = {
      * Whether another page follows this one, read from the page itself, so it is there with or without a count (`count=false`).
      */
     has_more?: boolean;
+    /**
+     * Present whenever `total` is. `true` when the count stopped at its cap, so `total` is a floor ("at least N") rather than an exact count. On the forward tail (`since`) and with `search`, no count runs: `total` is the rows the page read, and `true` means it saw a match past its last row, so more follow `meta.cursor` (`total` is then `limit` + 1, a floor).
+     */
+    total_capped?: boolean;
+    /**
+     * Present and `true` when a history page asked for a count that did not fit its time budget. The page and `meta.cursor` are still returned; only `total` and `total_capped` are absent. `has_more` still says whether another page follows.
+     */
+    total_unavailable?: boolean;
+    /**
+     * Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+     */
+    domain_ids?: Array<string>;
 };
 
 /**
@@ -6600,7 +6624,7 @@ export type TestEmailRuleRequest = {
      */
     english?: string;
     /**
-     * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
+     * own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
@@ -6753,9 +6777,9 @@ export type TestEmailRuleResult = {
          */
         question_answers_source?: 'stored' | 'asked_now' | 'not_asked';
         /**
-         * Why a skipped email cannot be tested. unparsed: its content failed to parse, so it can never be classified. rejected: it was rejected and never delivered. content_discarded: its content has been discarded, or is being. Nothing is classified or asked about it and no stored answers are used, so it never counts as a pass. The recent window holds only mail that can be tested, apart from unparsed mail; an email you name is reported as skipped, whichever of these it is.
+         * Why a skipped email cannot be tested. not_relay_domain: it was not received on one of the organization's mail relay domains, and rules decide only that mail. unparsed: its content failed to parse, so it can never be classified. rejected: it was rejected and never delivered. content_discarded: its content has been discarded, or is being. Nothing is classified or asked about it and no stored answers are used, so it never counts as a pass. The recent window holds only mail on the mail relay domains that can be tested, apart from unparsed mail; an email you name is reported as skipped, whichever of these it is.
          */
-        skipped_reason?: 'unparsed' | 'rejected' | 'content_discarded';
+        skipped_reason?: 'not_relay_domain' | 'unparsed' | 'rejected' | 'content_discarded';
         /**
          * Why an unclassified email has no classification. pending: not reached before the test stopped, or not classified here (it arrived within the last 2 hours and normal classification has not finished with it, or classify_missing was false); run the test again later.
          */
@@ -6885,7 +6909,7 @@ export type GenerateLookAlikesRequest = {
      */
     english?: string;
     /**
-     * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
+     * own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
@@ -6932,7 +6956,7 @@ export type GenerateLookAlikesResult = {
 export type TestEmailRuleOnSampleRequest = {
     tree?: EmailRuleTreeInput;
     /**
-     * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
+     * own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
@@ -7200,7 +7224,7 @@ export type CreateEmailRuleRequest = {
      */
     state?: 'draft' | 'observe' | 'active';
     /**
-     * own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
+     * own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
@@ -7352,7 +7376,7 @@ export type UpdateEmailRuleRequest = {
      */
     kind?: 'grant' | 'do_not_share';
     /**
-     * own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version with the same conditions, and is refused while the rule is shared.
+     * own_mailboxes: mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version with the same conditions, and is refused while the rule is shared.
      */
     evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
     scope_selection?: EmailRuleScopeSelection;
@@ -7662,11 +7686,11 @@ export type ListEmailRuleScopeOptionsResult = {
      */
     own_mail_to_block: boolean;
     /**
-     * Inboxes you can read, matching q. For someone who reads the whole organization, the inboxes known as someone's: member addresses, members' verified work emails at the organization's domains, agents' addresses and inboxes with shared access. Otherwise the inboxes your access lists (search with q for those past the first page). See may_name_unlisted for what else you may name.
+     * Inboxes on the mail relay domains you can read, matching q. For someone who reads the whole organization, the inboxes known as someone's: member addresses, members' verified work emails at the organization's domains, agents' addresses and inboxes with shared access. Otherwise the inboxes your access lists (search with q for those past the first page). See may_name_unlisted for what else you may name.
      */
     addresses: Array<string>;
     /**
-     * Domains you can read, matching q.
+     * Mail relay domains you can read, matching q.
      */
     domains: Array<string>;
     /**
@@ -7808,7 +7832,7 @@ export type CheckEmailRuleRequestTargetResult = {
      */
     can_accept: boolean;
     /**
-     * The permission their role lacks for accepting, when can_accept is false.
+     * The permission their role lacks for accepting, when can_accept is false; null then means they have no own mailbox on the mail relay domains.
      */
     missing_permission: string | null;
     /**
@@ -12523,10 +12547,6 @@ export type ListEmailsData = {
          */
         limit?: number;
         /**
-         * Filter by domain ID
-         */
-        domain_id?: string;
-        /**
          * Filter inbound rows by lifecycle status. See `EmailStatus`
          * for what each value means. Note that the webhook delivery
          * state is a SEPARATE lifecycle on the same row; filter by
@@ -12677,6 +12697,10 @@ export type ListEmailsData = {
          */
         group?: 'message';
         /**
+         * Domain ids, comma-separated or with the key repeated, at most 50: only mail received at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.
+         */
+        domain_ids?: string;
+        /**
          * Receiver presence mail: the presence probes sent to a connected agent and its answers. Left out by default for a connected-agent credential and listed by default for any other credential. `true` lists it, `false` leaves it out. Presence mail that inbound processing verified as presence on arrival expects no answer and does not count toward `awaiting`. Presence mail stored before that verification existed keeps the `awaiting` value it was stored with, so it can still count toward `awaiting`; `include_presence=true`, or any credential other than a connected agent's, still lists it. Combines with every other filter and with both `cursor` and `since`.
          */
         include_presence?: 'true' | 'false';
@@ -12737,10 +12761,6 @@ export type SearchEmailsData = {
          * Full-text search restricted to the parsed text body.
          */
         body?: string;
-        /**
-         * Filter by domain ID.
-         */
-        domain_id?: string;
         /**
          * Filter to inbound emails that are replies to a specific
          * outbound send. The value is a `sent_emails.id` (UUID). At
@@ -12896,6 +12916,10 @@ export type SearchEmailsData = {
          * Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`. Reads a page of messages in one request instead of one detail read per row. Parts are withheld where the detail read withholds them. Each body field is cut to 64 KiB per row and a response carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in `truncated_fields`. Unknown values are a `validation_error`.
          */
         include?: string;
+        /**
+         * Domain ids, comma-separated or with the key repeated, at most 50: received mail at one of them, and with `direction` `outbound` or `any`, sent mail from an address at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.
+         */
+        domain_ids?: string;
     };
     url: '/emails/search';
 };
@@ -15467,6 +15491,10 @@ export type ListSentEmailsData = {
          */
         include?: string;
         /**
+         * Domain ids, comma-separated or with the key repeated, at most 50: only sends from an address at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.
+         */
+        domain_ids?: string;
+        /**
          * Return only sends that set this header: `Name=Value` matches that exact value, `Name` alone any value. Name and value compare case-insensitively; the value is trimmed and matched whole, not as a substring, and only the first `=` separates the two. Matches only the `headers` the send request set. History pages only: with `since` or `wait` it is a `validation_error`, as is a name that is never stored (trace, signature or credential-like). Sends made before header search was available are not matched.
          */
         header?: string;
@@ -15507,6 +15535,12 @@ export type ListSentEmailsResponses = {
      */
     200: ListEnvelope & {
         data?: Array<SentEmailSummary>;
+        meta?: {
+            /**
+             * Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+             */
+            domain_ids?: Array<string>;
+        };
     };
 };
 
@@ -21267,7 +21301,7 @@ export type TestEmailRuleErrors = {
      */
     404: ErrorResponse;
     /**
-     * email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, a request or a rule covering you, the caller). details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox. email_rule_request_not_pending: request_id names a request already decided.
+     * email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, a request or a rule covering you, the caller). details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_relay_mailbox (nothing on the mail relay domains to read), no_shareable_mailbox or no_selected_mailbox. email_rule_request_not_pending: request_id names a request already decided.
      */
     409: ErrorResponse;
     /**
@@ -21381,7 +21415,7 @@ export type TestEmailRuleOnSampleErrors = {
      */
     404: ErrorResponse;
     /**
-     * email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, a request or a rule covering you, you), so it would decide nothing for real. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_shareable_mailbox or no_selected_mailbox. email_rule_request_not_pending: request_id names a request already decided.
+     * email_rule_author_unresolvable: the rule cannot run as its author (for an unsaved tree, a request or a rule covering you, you), so it would decide nothing for real. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_relay_mailbox (nothing on the mail relay domains to read), no_shareable_mailbox or no_selected_mailbox. email_rule_request_not_pending: request_id names a request already decided.
      */
     409: ErrorResponse;
     /**
@@ -21479,11 +21513,11 @@ export type CreateEmailRuleErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read (details.addresses, details.domains).
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. email_rule_scope_not_readable: scope_selection names something you cannot read, or (details.reason not_relay_domain) something off the mail relay domains (details.addresses, details.domains).
      */
     403: ErrorResponse;
     /**
-     * email_rule_author_unresolvable: the rule could not run as you over the chosen scope. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox or no_shareable_mailbox. With no evaluation_scope it covers only your own mail, so no_own_mailbox or no_shareable_mailbox there means a scope must be named.
+     * email_rule_author_unresolvable: the rule could not run as you over the chosen scope. details.reason is left, revoked, suspended, membership_ended, no_mail_read, no_own_mailbox, no_relay_mailbox or no_shareable_mailbox. With no evaluation_scope it covers only your own mailboxes on the mail relay domains, so those reasons there mean a scope must be named.
      */
     409: ErrorResponse;
     /**
@@ -22331,7 +22365,7 @@ export type AcceptEmailRuleRequestErrors = {
      */
     404: ErrorResponse;
     /**
-     * email_rule_request_not_pending: the request was already decided (details.status). email_rule_request_party_left: one of the two people is no longer a member under the membership recorded (details.party). email_rule_share_limit: the member who asked already receives the most shared rules allowed (details.limit).
+     * email_rule_request_not_pending: the request was already decided (details.status). email_rule_request_party_left: one of the two people is no longer a member under the membership recorded (details.party). email_rule_share_limit: the member who asked already receives the most shared rules allowed (details.limit). email_rule_author_unresolvable with details.reason no_relay_mailbox: you have no own mailbox on the mail relay domains.
      */
     409: ErrorResponse;
     /**

@@ -10,6 +10,7 @@ from ..types import UNSET, Unset
 
 from ..models.email_search_meta_sort import EmailSearchMetaSort
 from typing import cast
+from uuid import UUID
 
 
 
@@ -44,6 +45,8 @@ class EmailSearchMeta:
                 end of the results: only a null `meta.cursor` is.
             facets_capped (bool | Unset): Present and `true` when the search matched more than 1,000 emails, so `facets`
                 aggregate only the most recent 1,000 matches, in the same way `total_capped` marks a capped `total`.
+            domain_ids (list[UUID] | Unset): Present when the request filtered by `domain_ids`: the ids it was given,
+                deduped and lowercased.
      """
 
     total: int | None
@@ -55,6 +58,7 @@ class EmailSearchMeta:
     facets_unavailable: bool | Unset = UNSET
     partial: bool | Unset = UNSET
     facets_capped: bool | Unset = UNSET
+    domain_ids: list[UUID] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -82,6 +86,15 @@ class EmailSearchMeta:
 
         facets_capped = self.facets_capped
 
+        domain_ids: list[str] | Unset = UNSET
+        if not isinstance(self.domain_ids, Unset):
+            domain_ids = []
+            for domain_ids_item_data in self.domain_ids:
+                domain_ids_item = str(domain_ids_item_data)
+                domain_ids.append(domain_ids_item)
+
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -100,6 +113,8 @@ class EmailSearchMeta:
             field_dict["partial"] = partial
         if facets_capped is not UNSET:
             field_dict["facets_capped"] = facets_capped
+        if domain_ids is not UNSET:
+            field_dict["domain_ids"] = domain_ids
 
         return field_dict
 
@@ -141,6 +156,18 @@ class EmailSearchMeta:
 
         facets_capped = d.pop("facets_capped", UNSET)
 
+        _domain_ids = d.pop("domain_ids", UNSET)
+        domain_ids: list[UUID] | Unset = UNSET
+        if _domain_ids is not UNSET:
+            domain_ids = []
+            for domain_ids_item_data in _domain_ids:
+                domain_ids_item = UUID(domain_ids_item_data)
+
+
+
+                domain_ids.append(domain_ids_item)
+
+
         email_search_meta = cls(
             total=total,
             total_capped=total_capped,
@@ -151,6 +178,7 @@ class EmailSearchMeta:
             facets_unavailable=facets_unavailable,
             partial=partial,
             facets_capped=facets_capped,
+            domain_ids=domain_ids,
         )
 
 

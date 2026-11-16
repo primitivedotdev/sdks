@@ -29,11 +29,11 @@ class ListEmailRuleScopeOptionsResult:
             own_mail (bool): Whether a rule over only your own mail would run for you.
             own_mail_to_block (bool): Whether a do_not_share rule over only your own mail would run for you: it covers every
                 own mailbox you read, including ones you could not share.
-            addresses (list[str]): Inboxes you can read, matching q. For someone who reads the whole organization, the
-                inboxes known as someone's: member addresses, members' verified work emails at the organization's domains,
-                agents' addresses and inboxes with shared access. Otherwise the inboxes your access lists (search with q for
-                those past the first page). See may_name_unlisted for what else you may name.
-            domains (list[str]): Domains you can read, matching q.
+            addresses (list[str]): Inboxes on the mail relay domains you can read, matching q. For someone who reads the
+                whole organization, the inboxes known as someone's: member addresses, members' verified work emails at the
+                organization's domains, agents' addresses and inboxes with shared access. Otherwise the inboxes your access
+                lists (search with q for those past the first page). See may_name_unlisted for what else you may name.
+            domains (list[str]): Mail relay domains you can read, matching q.
             more (bool): More match than are listed.
             may_name_unlisted (bool): Whether you may also name an inbox this list never shows, however it is searched (more
                 only says whether a search would show further ones): true when you read the whole organization (any address,

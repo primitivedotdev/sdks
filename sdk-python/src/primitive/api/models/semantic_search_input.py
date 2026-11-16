@@ -13,6 +13,7 @@ from ..models.semantic_search_input_corpus_item import SemanticSearchInputCorpus
 from ..models.semantic_search_input_include_item import SemanticSearchInputIncludeItem
 from ..models.semantic_search_input_mode import SemanticSearchInputMode
 from typing import cast
+from uuid import UUID
 import datetime
 
 
@@ -50,6 +51,10 @@ class SemanticSearchInput:
                 always returned regardless of this field.
             limit (int | Unset): Maximum number of results to return. Default: 10.
             cursor (str | Unset): Opaque pagination cursor from a prior response's `meta.cursor`.
+            domain_ids (list[UUID] | Unset): Domain ids, at most 50: only received mail at one of them, tested on the ranked
+                candidates, so a page can hold fewer than `limit` results. Received mail only: refused with corpus `outbound`,
+                and the default corpus becomes `inbound`. Only narrows: an id you cannot read, or of another organization,
+                matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.
      """
 
     query: str | Unset = UNSET
@@ -62,6 +67,7 @@ class SemanticSearchInput:
     include: list[SemanticSearchInputIncludeItem] | Unset = UNSET
     limit: int | Unset = 10
     cursor: str | Unset = UNSET
+    domain_ids: list[UUID] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -124,6 +130,15 @@ class SemanticSearchInput:
 
         cursor = self.cursor
 
+        domain_ids: list[str] | Unset = UNSET
+        if not isinstance(self.domain_ids, Unset):
+            domain_ids = []
+            for domain_ids_item_data in self.domain_ids:
+                domain_ids_item = str(domain_ids_item_data)
+                domain_ids.append(domain_ids_item)
+
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -149,6 +164,8 @@ class SemanticSearchInput:
             field_dict["limit"] = limit
         if cursor is not UNSET:
             field_dict["cursor"] = cursor
+        if domain_ids is not UNSET:
+            field_dict["domain_ids"] = domain_ids
 
         return field_dict
 
@@ -241,6 +258,18 @@ class SemanticSearchInput:
 
         cursor = d.pop("cursor", UNSET)
 
+        _domain_ids = d.pop("domain_ids", UNSET)
+        domain_ids: list[UUID] | Unset = UNSET
+        if _domain_ids is not UNSET:
+            domain_ids = []
+            for domain_ids_item_data in _domain_ids:
+                domain_ids_item = UUID(domain_ids_item_data)
+
+
+
+                domain_ids.append(domain_ids_item)
+
+
         semantic_search_input = cls(
             query=query,
             mode=mode,
@@ -252,6 +281,7 @@ class SemanticSearchInput:
             include=include,
             limit=limit,
             cursor=cursor,
+            domain_ids=domain_ids,
         )
 
 

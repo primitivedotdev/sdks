@@ -33,6 +33,11 @@ export type EmailPollFilters = {
   body?: string;
   domain?: string;
   domainId?: string;
+  /**
+   * The domain focus's own query fields (focus.ts). Set only by the listings
+   * that follow the focus, never by waits or bookkeeping.
+   */
+  focus?: Record<string, unknown>;
   from?: string;
   hasAttachment?: boolean;
   q?: string;
@@ -66,6 +71,10 @@ export type EmailSearchPageResult =
       /** Whether the server says there is a further page. Readers that do not say leave it out. */
       more?: boolean;
       rows: EmailSearchResult[];
+      /** The server's total match count, when it counted. */
+      total?: number | null;
+      /** True when the server stopped counting and `total` is a lower bound. */
+      totalCapped?: boolean;
     }
   | { ok: false; error: unknown; response?: Response };
 
@@ -187,7 +196,7 @@ export function buildEmailSearchQuery(params: {
     query.automated = params.filters.automated ? "true" : "false";
   }
   if (params.filters.body) query.body = params.filters.body;
-  if (params.filters.domainId) query.domain_id = params.filters.domainId;
+  if (params.filters.domainId) query.domain_ids = params.filters.domainId;
   if (params.filters.from) query.from = params.filters.from;
   if (params.filters.hasAttachment !== undefined) {
     query.has_attachment = params.filters.hasAttachment ? "true" : "false";
@@ -206,6 +215,7 @@ export function buildEmailSearchQuery(params: {
   if (params.since) query.date_from = params.since;
   if (params.cursor) query.cursor = params.cursor;
   if (params.count === false) query.count = "false";
+  if (params.filters.focus) Object.assign(query, params.filters.focus);
 
   return query;
 }
@@ -469,6 +479,9 @@ export async function fetchEmailSearchPage(params: {
     cursor: envelope?.meta.cursor ?? cursorFromRows(rows),
     more: Boolean(envelope?.meta.cursor),
     rows,
+    total:
+      typeof envelope?.meta.total === "number" ? envelope.meta.total : null,
+    totalCapped: envelope?.meta.total_capped === true,
   };
 }
 

@@ -33,8 +33,8 @@ class GenerateLookAlikesRequest:
             tree (EmailRuleTreeInput | Unset):
             english (str | Unset): What the tree is meant to match; without it, the tree is described in words.
             evaluation_scope (GenerateLookAlikesRequestEvaluationScope | Unset): own_mailboxes (the default): mail to your
-                own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can
-                read, inboxes added later included. selected: what scope_selection names.
+                own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you
+                share). author: all you can read, inboxes added later included. selected: what scope_selection names.
             scope_selection (EmailRuleScopeSelection | Unset): For a selected rule: inboxes, and domains (each address at
                 them the author reads); each one you can read.
             rule_id (UUID | Unset): A saved rule you can see, or one that covers your mailboxes (as you, sent to one of

@@ -17,6 +17,18 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import {
+  countFromMeta,
+  focusEmptyHint,
+  focusFlags,
+  focusFlagValues,
+  focusForCorpus,
+  queryScopesItself,
+  resolveFocus,
+  withFocusMeta,
+  withoutFocus,
+  writeFocusLine,
+} from "../focus.js";
+import {
   AWAITING_VALUES,
   type Awaiting,
   assertAwaitingFilterRows,
@@ -31,7 +43,6 @@ import {
   formatRow as formatLexicalRow,
   pickIdWidth,
 } from "./emails-latest.js";
-import { quoteDslValue } from "./emails-poll.js";
 import {
   formatHeader as formatSemanticHeader,
   formatRow as formatSemanticRow,
@@ -73,7 +84,6 @@ const LEXICAL_ONLY_FLAGS = [
   "to",
   "subject",
   "body",
-  "domain",
   "domain-id",
   "has-attachment",
   "status",
@@ -172,9 +182,7 @@ class SearchCommand extends Command {
       description:
         "Lexical only. Full-text search restricted to the parsed text body.",
     }),
-    domain: Flags.string({
-      description: "Lexical only. Filter by the recipient's mail domain.",
-    }),
+    ...focusFlags(),
     "domain-id": Flags.string({
       description: "Lexical only. Filter by domain ID.",
     }),
@@ -292,9 +300,23 @@ class SearchCommand extends Command {
           return;
         }
 
+        // A focus narrows semantic search to received mail on those domains;
+        // with sent mail in --corpus it is not applied (focusForCorpus).
+        const focus = focusForCorpus(
+          await resolveFocus({
+            surface: "semantic",
+            configDir: this.config.configDir,
+            auth,
+            client: apiClient.client,
+            flags: focusFlagValues(flags),
+          }),
+          flags.corpus,
+        );
+        writeFocusLine(focus, flags.json);
         const result = await semanticSearch({
           client: apiClient.client,
           body: {
+            ...focus.params,
             query: args.query,
             mode: flags.mode as SemanticMode,
             ...(flags.corpus
@@ -314,15 +336,31 @@ class SearchCommand extends Command {
         }
 
         const envelope = result.data as SemanticEnvelope | undefined;
+        const rows = envelope?.data ?? [];
+        // Semantic search reports no total, so an empty focused first page
+        // points at --all-domains instead of counting.
+        const elsewhere =
+          rows.length === 0 && !flags.cursor
+            ? await focusEmptyHint(focus, async () => null)
+            : null;
 
         if (flags.json) {
-          this.log(JSON.stringify(envelope ?? null, null, 2));
+          const document = withFocusMeta(envelope ?? null, focus);
+          this.log(
+            JSON.stringify(
+              elsewhere && document
+                ? { ...document, summary: elsewhere }
+                : document,
+              null,
+              2,
+            ),
+          );
           return;
         }
 
-        const rows = envelope?.data ?? [];
         if (rows.length === 0) {
           process.stderr.write("No matching mail.\n");
+          if (elsewhere) process.stderr.write(`${elsewhere}\n`);
           return;
         }
 
@@ -346,14 +384,21 @@ class SearchCommand extends Command {
         return;
       }
 
+      // --domain and the saved focus filter by domain id. A search given
+      // --domain-id, --to or a domain: or to: filter keeps its own scope.
+      const focus = await resolveFocus({
+        surface: "inbound",
+        configDir: this.config.configDir,
+        auth,
+        client: apiClient.client,
+        flags: focusFlagValues(flags),
+        explicitScope:
+          Boolean(flags["domain-id"] || flags.to || threadId) ||
+          queryScopesItself(args.query),
+        conflictingFlag: flags["domain-id"] ? "--domain-id" : undefined,
+      });
       const query: SearchQuery = {
-        // `domain` is expressed via the DSL on `q` rather than a
-        // separate query param, mirroring how emails-poll composes it.
-        // It goes first so the user's last word stays last: --prefix only
-        // expands the final word, and a trailing field filter disables it.
-        q: flags.domain
-          ? `domain:${quoteDslValue(flags.domain)} ${args.query}`
-          : args.query,
+        q: args.query,
         limit: flags.limit,
       };
       const awaiting = flags.awaiting as Awaiting | undefined;
@@ -364,7 +409,7 @@ class SearchCommand extends Command {
       if (flags.to) query.to = flags.to;
       if (flags.subject) query.subject = flags.subject;
       if (flags.body) query.body = flags.body;
-      if (flags["domain-id"]) query.domain_id = flags["domain-id"];
+      if (flags["domain-id"]) query.domain_ids = flags["domain-id"];
       if (flags["has-attachment"]) {
         query.has_attachment = flags["has-attachment"] as "true" | "false";
       }
@@ -382,6 +427,7 @@ class SearchCommand extends Command {
       if (threadId) query.thread_id = threadId;
       if (flags.prefix) query.prefix = "true";
       if (flags.count === false) query.count = "false";
+      Object.assign(query, focus.params);
 
       const result = await searchEmails({
         client: apiClient.client,
@@ -421,14 +467,42 @@ class SearchCommand extends Command {
         }
       }
 
+      const rows = envelope?.data ?? [];
+      // Focused and empty on the first page: how much matches elsewhere.
+      const elsewhere =
+        rows.length === 0 && !flags.cursor
+          ? await focusEmptyHint(focus, async () => {
+              const counted = await searchEmails({
+                client: apiClient.client,
+                query: {
+                  ...(withoutFocus(query, focus) as SearchQuery),
+                  limit: 1,
+                  count: "true",
+                },
+                responseStyle: "fields",
+              });
+              return counted.error ? null : countFromMeta(counted.data);
+            })
+          : null;
+
       if (flags.json) {
-        this.log(JSON.stringify(envelope ?? null, null, 2));
+        const document = withFocusMeta(envelope ?? null, focus);
+        this.log(
+          JSON.stringify(
+            elsewhere && document && typeof document === "object"
+              ? { ...document, summary: elsewhere }
+              : document,
+            null,
+            2,
+          ),
+        );
         return;
       }
 
-      const rows = envelope?.data ?? [];
+      writeFocusLine(focus, false);
       if (rows.length === 0) {
         process.stderr.write("No matching mail.\n");
+        if (elsewhere) process.stderr.write(`${elsewhere}\n`);
       } else {
         const idWidth = pickIdWidth(Boolean(process.stdout.isTTY));
         process.stderr.write(`${formatLexicalHeader(idWidth)}\n`);

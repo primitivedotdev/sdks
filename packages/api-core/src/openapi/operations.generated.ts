@@ -20700,7 +20700,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "Whether they can accept a rule request now under their role."
         },
         "missing_permission": {
-          "description": "The permission their role lacks for accepting, when can_accept is false.",
+          "description": "The permission their role lacks for accepting, when can_accept is false; null then means they have no own mailbox on the mail relay domains.",
           "type": [
             "string",
             "null"
@@ -21015,7 +21015,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "own_mailboxes",
             "selected"
           ],
-          "description": "own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
+          "description": "own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
         },
         "scope_selection": {
           "type": "object",
@@ -22648,7 +22648,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "own_mailboxes",
             "selected"
           ],
-          "description": "own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
+          "description": "own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
         },
         "scope_selection": {
           "type": "object",
@@ -25277,14 +25277,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "items": {
             "type": "string"
           },
-          "description": "Inboxes you can read, matching q. For someone who reads the whole organization, the inboxes known as someone's: member addresses, members' verified work emails at the organization's domains, agents' addresses and inboxes with shared access. Otherwise the inboxes your access lists (search with q for those past the first page). See may_name_unlisted for what else you may name."
+          "description": "Inboxes on the mail relay domains you can read, matching q. For someone who reads the whole organization, the inboxes known as someone's: member addresses, members' verified work emails at the organization's domains, agents' addresses and inboxes with shared access. Otherwise the inboxes your access lists (search with q for those past the first page). See may_name_unlisted for what else you may name."
         },
         "domains": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Domains you can read, matching q."
+          "description": "Mail relay domains you can read, matching q."
         },
         "more": {
           "type": "boolean",
@@ -26804,7 +26804,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "test-email-rule",
-    "description": "Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version, as its author), rule_id with tree (that tree as the rule's next version, as its author, against its saved expectations; its author only), or a pending rule request by request_id (its rule as asked, as you, over your own mailboxes). It reads only mail its author can read and its scope covers. A rule you see only because it covers your own mailboxes runs as you, over only those. Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+    "description": "Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version, as its author), rule_id with tree (that tree as the rule's next version, as its author, against its saved expectations; its author only), or a pending rule request by request_id (its rule as asked, as you, over your own mailboxes). It reads only mail its author can read and its scope covers. A rule you see only because it covers your own mailboxes runs as you, over only those. Without email_ids it tests the newest emails on the mail relay domains, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "testEmailRule",
@@ -26874,7 +26874,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "own_mailboxes",
             "selected"
           ],
-          "description": "own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
+          "description": "own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
         },
         "scope_selection": {
           "type": "object",
@@ -27495,9 +27495,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ]
               },
               "skipped_reason": {
-                "description": "Why a skipped email cannot be tested. unparsed: its content failed to parse, so it can never be classified. rejected: it was rejected and never delivered. content_discarded: its content has been discarded, or is being. Nothing is classified or asked about it and no stored answers are used, so it never counts as a pass. The recent window holds only mail that can be tested, apart from unparsed mail; an email you name is reported as skipped, whichever of these it is.",
+                "description": "Why a skipped email cannot be tested. not_relay_domain: it was not received on one of the organization's mail relay domains, and rules decide only that mail. unparsed: its content failed to parse, so it can never be classified. rejected: it was rejected and never delivered. content_discarded: its content has been discarded, or is being. Nothing is classified or asked about it and no stored answers are used, so it never counts as a pass. The recent window holds only mail on the mail relay domains that can be tested, apart from unparsed mail; an email you name is reported as skipped, whichever of these it is.",
                 "type": "string",
                 "enum": [
+                  "not_relay_domain",
                   "unparsed",
                   "rejected",
                   "content_discarded"
@@ -27940,7 +27941,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "own_mailboxes",
             "selected"
           ],
-          "description": "own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
+          "description": "own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names."
         },
         "scope_selection": {
           "type": "object",
@@ -28436,7 +28437,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "own_mailboxes",
             "selected"
           ],
-          "description": "own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version with the same conditions, and is refused while the rule is shared."
+          "description": "own_mailboxes: mail to your own addresses and agents on the mail relay domains (for a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added later included. selected: what scope_selection names. Left out, the scope stays. A change saves a new version with the same conditions, and is refused while the rule is shared."
         },
         "scope_selection": {
           "type": "object",
@@ -32312,13 +32313,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "integer"
       },
       {
-        "description": "Filter by domain ID",
-        "enum": null,
-        "name": "domain_id",
-        "required": false,
-        "type": "string"
-      },
-      {
         "description": "Filter inbound rows by lifecycle status. See `EmailStatus`\nfor what each value means. Note that the webhook delivery\nstate is a SEPARATE lifecycle on the same row; filter by\n`webhook_status` semantics is not currently supported on\nthis endpoint.\n",
         "enum": null,
         "name": "status",
@@ -32504,6 +32498,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "message"
         ],
         "name": "group",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Domain ids, comma-separated or with the key repeated, at most 50: only mail received at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.",
+        "enum": null,
+        "name": "domain_ids",
         "required": false,
         "type": "string"
       },
@@ -33369,13 +33370,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "description": "Filter by domain ID.",
-        "enum": null,
-        "name": "domain_id",
-        "required": false,
-        "type": "string"
-      },
-      {
         "description": "Filter to inbound emails that are replies to a specific\noutbound send. The value is a `sent_emails.id` (UUID). At\ninbound ingest, Primitive matches the parsed In-Reply-To\nheader (or References as a fallback) against\n`sent_emails.message_id` in the same org and records the\nresolved id on `emails.reply_to_sent_email_id`. This filter\nis the strict-threading lookup behind `primitive chat` and\nany UI that wants to show the inbound reply to a given\nsend. NULL on inbound that isn't a threaded reply to one\nof your sends, so existing emails received before this\ningestion landed will not match.\n",
         "enum": null,
         "name": "reply_to_sent_email_id",
@@ -33552,6 +33546,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "description": "Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`. Reads a page of messages in one request instead of one detail read per row. Parts are withheld where the detail read withholds them. Each body field is cut to 64 KiB per row and a response carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in `truncated_fields`. Unknown values are a `validation_error`.",
         "enum": null,
         "name": "include",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Domain ids, comma-separated or with the key repeated, at most 50: received mail at one of them, and with `direction` `outbound` or `any`, sent mail from an address at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.",
+        "enum": null,
+        "name": "domain_ids",
         "required": false,
         "type": "string"
       }
@@ -54148,6 +54149,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "cursor": {
           "type": "string",
           "description": "Opaque pagination cursor from a prior response's `meta.cursor`."
+        },
+        "domain_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 50,
+          "description": "Domain ids, at most 50: only received mail at one of them, tested on the ranked candidates, so a page can hold fewer than `limit` results. Received mail only: refused with corpus `outbound`, and the default corpus becomes `inbound`. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given."
         }
       }
     },
@@ -58869,6 +58880,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "description": "Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`. Reads a page of messages in one request instead of one detail read per row. Parts are withheld where the detail read withholds them. Each body field is cut to 64 KiB per row and a response carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in `truncated_fields`. Unknown values are a `validation_error`.",
         "enum": null,
         "name": "include",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Domain ids, comma-separated or with the key repeated, at most 50: only sends from an address at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.",
+        "enum": null,
+        "name": "domain_ids",
         "required": false,
         "type": "string"
       },

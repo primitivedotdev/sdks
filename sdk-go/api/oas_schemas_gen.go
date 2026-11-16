@@ -8598,7 +8598,8 @@ type CheckEmailRuleRequestTargetResult struct {
 	Target CheckEmailRuleRequestTargetResultTarget `json:"target"`
 	// Whether they can accept a rule request now under their role.
 	CanAccept bool `json:"can_accept"`
-	// The permission their role lacks for accepting, when can_accept is false.
+	// The permission their role lacks for accepting, when can_accept is false; null then means they have
+	// no own mailbox on the mail relay domains.
 	MissingPermission NilString `json:"missing_permission"`
 	// The same in words, with who can fix it.
 	Warning NilString `json:"warning"`
@@ -13503,9 +13504,9 @@ type CreateEmailRuleRequest struct {
 	// Observe (the default) records what the rule would match and grants or blocks nothing; draft is not
 	// evaluated; active only for a do_not_share rule.
 	State OptCreateEmailRuleRequestState `json:"state"`
-	// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-	// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-	// what scope_selection names.
+	// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+	// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+	// later included. selected: what scope_selection names.
 	EvaluationScope OptCreateEmailRuleRequestEvaluationScope `json:"evaluation_scope"`
 	ScopeSelection  OptEmailRuleScopeSelection               `json:"scope_selection"`
 	// Emails it must match and must not (at most 100): a test by rule_id judges them unless expect is
@@ -13646,9 +13647,9 @@ func (s *CreateEmailRuleRequestCreated) SetData(val CreateEmailRuleRequestResult
 
 func (*CreateEmailRuleRequestCreated) createEmailRuleRequestRes() {}
 
-// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-// what scope_selection names.
+// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+// later included. selected: what scope_selection names.
 type CreateEmailRuleRequestEvaluationScope string
 
 const (
@@ -34032,6 +34033,17 @@ type EmailListMeta struct {
 	// Whether another page follows this one, read from the page itself, so it is there with or without a
 	// count (`count=false`).
 	HasMore OptBool `json:"has_more"`
+	// Present whenever `total` is. `true` when the count stopped at its cap, so `total` is a floor ("at
+	// least N") rather than an exact count. On the forward tail (`since`) and with `search`, no count
+	// runs: `total` is the rows the page read, and `true` means it saw a match past its last row, so
+	// more follow `meta.cursor` (`total` is then `limit` + 1, a floor).
+	TotalCapped OptBool `json:"total_capped"`
+	// Present and `true` when a history page asked for a count that did not fit its time budget. The
+	// page and `meta.cursor` are still returned; only `total` and `total_capped` are absent. `has_more`
+	// still says whether another page follows.
+	TotalUnavailable OptBool `json:"total_unavailable"`
+	// Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+	DomainIds []uuid.UUID `json:"domain_ids"`
 }
 
 // GetTotal returns the value of Total.
@@ -34064,6 +34076,21 @@ func (s *EmailListMeta) GetHasMore() OptBool {
 	return s.HasMore
 }
 
+// GetTotalCapped returns the value of TotalCapped.
+func (s *EmailListMeta) GetTotalCapped() OptBool {
+	return s.TotalCapped
+}
+
+// GetTotalUnavailable returns the value of TotalUnavailable.
+func (s *EmailListMeta) GetTotalUnavailable() OptBool {
+	return s.TotalUnavailable
+}
+
+// GetDomainIds returns the value of DomainIds.
+func (s *EmailListMeta) GetDomainIds() []uuid.UUID {
+	return s.DomainIds
+}
+
 // SetTotal sets the value of Total.
 func (s *EmailListMeta) SetTotal(val OptInt) {
 	s.Total = val
@@ -34092,6 +34119,21 @@ func (s *EmailListMeta) SetRecipientRulesOnly(val OptBool) {
 // SetHasMore sets the value of HasMore.
 func (s *EmailListMeta) SetHasMore(val OptBool) {
 	s.HasMore = val
+}
+
+// SetTotalCapped sets the value of TotalCapped.
+func (s *EmailListMeta) SetTotalCapped(val OptBool) {
+	s.TotalCapped = val
+}
+
+// SetTotalUnavailable sets the value of TotalUnavailable.
+func (s *EmailListMeta) SetTotalUnavailable(val OptBool) {
+	s.TotalUnavailable = val
+}
+
+// SetDomainIds sets the value of DomainIds.
+func (s *EmailListMeta) SetDomainIds(val []uuid.UUID) {
+	s.DomainIds = val
 }
 
 // Ref: #/components/schemas/EmailNotifications_getEmailNotificationPreferences_Result
@@ -42337,6 +42379,8 @@ type EmailSearchMeta struct {
 	// Present and `true` when the search matched more than 1,000 emails, so `facets` aggregate only the
 	// most recent 1,000 matches, in the same way `total_capped` marks a capped `total`.
 	FacetsCapped OptBool `json:"facets_capped"`
+	// Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+	DomainIds []uuid.UUID `json:"domain_ids"`
 }
 
 // GetTotal returns the value of Total.
@@ -42384,6 +42428,11 @@ func (s *EmailSearchMeta) GetFacetsCapped() OptBool {
 	return s.FacetsCapped
 }
 
+// GetDomainIds returns the value of DomainIds.
+func (s *EmailSearchMeta) GetDomainIds() []uuid.UUID {
+	return s.DomainIds
+}
+
 // SetTotal sets the value of Total.
 func (s *EmailSearchMeta) SetTotal(val NilInt) {
 	s.Total = val
@@ -42427,6 +42476,11 @@ func (s *EmailSearchMeta) SetPartial(val OptBool) {
 // SetFacetsCapped sets the value of FacetsCapped.
 func (s *EmailSearchMeta) SetFacetsCapped(val OptBool) {
 	s.FacetsCapped = val
+}
+
+// SetDomainIds sets the value of DomainIds.
+func (s *EmailSearchMeta) SetDomainIds(val []uuid.UUID) {
+	s.DomainIds = val
 }
 
 // Sort mode used for the result page.
@@ -53235,9 +53289,9 @@ type GenerateLookAlikesRequest struct {
 	Tree OptEmailRuleTreeInput `json:"tree"`
 	// What the tree is meant to match; without it, the tree is described in words.
 	English OptString `json:"english"`
-	// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-	// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-	// what scope_selection names.
+	// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+	// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+	// later included. selected: what scope_selection names.
 	EvaluationScope OptGenerateLookAlikesRequestEvaluationScope `json:"evaluation_scope"`
 	ScopeSelection  OptEmailRuleScopeSelection                  `json:"scope_selection"`
 	// A saved rule you can see, or one that covers your mailboxes (as you, sent to one of them;
@@ -53358,9 +53412,9 @@ func (s *GenerateLookAlikesRequest) SetTo(val OptString) {
 	s.To = val
 }
 
-// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-// what scope_selection names.
+// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+// later included. selected: what scope_selection names.
 type GenerateLookAlikesRequestEvaluationScope string
 
 const (
@@ -69845,12 +69899,13 @@ type ListEmailRuleScopeOptionsResult struct {
 	// Whether a do_not_share rule over only your own mail would run for you: it covers every own mailbox
 	// you read, including ones you could not share.
 	OwnMailToBlock bool `json:"own_mail_to_block"`
-	// Inboxes you can read, matching q. For someone who reads the whole organization, the inboxes known
-	// as someone's: member addresses, members' verified work emails at the organization's domains,
-	// agents' addresses and inboxes with shared access. Otherwise the inboxes your access lists (search
-	// with q for those past the first page). See may_name_unlisted for what else you may name.
+	// Inboxes on the mail relay domains you can read, matching q. For someone who reads the whole
+	// organization, the inboxes known as someone's: member addresses, members' verified work emails at
+	// the organization's domains, agents' addresses and inboxes with shared access. Otherwise the
+	// inboxes your access lists (search with q for those past the first page). See may_name_unlisted for
+	// what else you may name.
 	Addresses []string `json:"addresses"`
-	// Domains you can read, matching q.
+	// Mail relay domains you can read, matching q.
 	Domains []string `json:"domains"`
 	// More match than are listed.
 	More bool `json:"more"`
@@ -76806,9 +76861,10 @@ func (s *ListSentEmailsMine) UnmarshalText(data []byte) error {
 
 // Merged schema.
 type ListSentEmailsOK struct {
-	Success bool               `json:"success"`
-	Meta    PaginationMeta     `json:"meta"`
-	Data    []SentEmailSummary `json:"data"`
+	Success bool `json:"success"`
+	// Merged property.
+	Meta ListSentEmailsOKMeta `json:"meta"`
+	Data []SentEmailSummary   `json:"data"`
 }
 
 // GetSuccess returns the value of Success.
@@ -76817,7 +76873,7 @@ func (s *ListSentEmailsOK) GetSuccess() bool {
 }
 
 // GetMeta returns the value of Meta.
-func (s *ListSentEmailsOK) GetMeta() PaginationMeta {
+func (s *ListSentEmailsOK) GetMeta() ListSentEmailsOKMeta {
 	return s.Meta
 }
 
@@ -76832,7 +76888,7 @@ func (s *ListSentEmailsOK) SetSuccess(val bool) {
 }
 
 // SetMeta sets the value of Meta.
-func (s *ListSentEmailsOK) SetMeta(val PaginationMeta) {
+func (s *ListSentEmailsOK) SetMeta(val ListSentEmailsOKMeta) {
 	s.Meta = val
 }
 
@@ -76842,6 +76898,58 @@ func (s *ListSentEmailsOK) SetData(val []SentEmailSummary) {
 }
 
 func (*ListSentEmailsOK) listSentEmailsRes() {}
+
+// Merged schema.
+type ListSentEmailsOKMeta struct {
+	// Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+	DomainIds []uuid.UUID `json:"domain_ids"`
+	// Total number of matching records.
+	Total int `json:"total"`
+	// Page size used for this request.
+	Limit int `json:"limit"`
+	// Cursor for the next page, or null if no more results.
+	Cursor NilString `json:"cursor"`
+}
+
+// GetDomainIds returns the value of DomainIds.
+func (s *ListSentEmailsOKMeta) GetDomainIds() []uuid.UUID {
+	return s.DomainIds
+}
+
+// GetTotal returns the value of Total.
+func (s *ListSentEmailsOKMeta) GetTotal() int {
+	return s.Total
+}
+
+// GetLimit returns the value of Limit.
+func (s *ListSentEmailsOKMeta) GetLimit() int {
+	return s.Limit
+}
+
+// GetCursor returns the value of Cursor.
+func (s *ListSentEmailsOKMeta) GetCursor() NilString {
+	return s.Cursor
+}
+
+// SetDomainIds sets the value of DomainIds.
+func (s *ListSentEmailsOKMeta) SetDomainIds(val []uuid.UUID) {
+	s.DomainIds = val
+}
+
+// SetTotal sets the value of Total.
+func (s *ListSentEmailsOKMeta) SetTotal(val int) {
+	s.Total = val
+}
+
+// SetLimit sets the value of Limit.
+func (s *ListSentEmailsOKMeta) SetLimit(val int) {
+	s.Limit = val
+}
+
+// SetCursor sets the value of Cursor.
+func (s *ListSentEmailsOKMeta) SetCursor(val NilString) {
+	s.Cursor = val
+}
 
 type ListSentEmailsServiceUnavailable ErrorResponse
 
@@ -121797,6 +121905,12 @@ type SemanticSearchInput struct {
 	Limit OptInt `json:"limit"`
 	// Opaque pagination cursor from a prior response's `meta.cursor`.
 	Cursor OptString `json:"cursor"`
+	// Domain ids, at most 50: only received mail at one of them, tested on the ranked candidates, so a
+	// page can hold fewer than `limit` results. Received mail only: refused with corpus `outbound`, and
+	// the default corpus becomes `inbound`. Only narrows: an id you cannot read, or of another
+	// organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as
+	// given.
+	DomainIds []uuid.UUID `json:"domain_ids"`
 }
 
 // GetQuery returns the value of Query.
@@ -121849,6 +121963,11 @@ func (s *SemanticSearchInput) GetCursor() OptString {
 	return s.Cursor
 }
 
+// GetDomainIds returns the value of DomainIds.
+func (s *SemanticSearchInput) GetDomainIds() []uuid.UUID {
+	return s.DomainIds
+}
+
 // SetQuery sets the value of Query.
 func (s *SemanticSearchInput) SetQuery(val OptString) {
 	s.Query = val
@@ -121897,6 +122016,11 @@ func (s *SemanticSearchInput) SetLimit(val OptInt) {
 // SetCursor sets the value of Cursor.
 func (s *SemanticSearchInput) SetCursor(val OptString) {
 	s.Cursor = val
+}
+
+// SetDomainIds sets the value of DomainIds.
+func (s *SemanticSearchInput) SetDomainIds(val []uuid.UUID) {
+	s.DomainIds = val
 }
 
 type SemanticSearchInputCorpusItem string
@@ -122039,6 +122163,8 @@ type SemanticSearchMeta struct {
 	// Index-coverage snapshot, present only when requested via
 	// `include: [coverage]`; otherwise null.
 	Coverage NilSemanticSearchCoverage `json:"coverage"`
+	// Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+	DomainIds []uuid.UUID `json:"domain_ids"`
 }
 
 // GetLimit returns the value of Limit.
@@ -122061,6 +122187,11 @@ func (s *SemanticSearchMeta) GetCoverage() NilSemanticSearchCoverage {
 	return s.Coverage
 }
 
+// GetDomainIds returns the value of DomainIds.
+func (s *SemanticSearchMeta) GetDomainIds() []uuid.UUID {
+	return s.DomainIds
+}
+
 // SetLimit sets the value of Limit.
 func (s *SemanticSearchMeta) SetLimit(val int) {
 	s.Limit = val
@@ -122079,6 +122210,11 @@ func (s *SemanticSearchMeta) SetMode(val SemanticSearchMetaMode) {
 // SetCoverage sets the value of Coverage.
 func (s *SemanticSearchMeta) SetCoverage(val NilSemanticSearchCoverage) {
 	s.Coverage = val
+}
+
+// SetDomainIds sets the value of DomainIds.
+func (s *SemanticSearchMeta) SetDomainIds(val []uuid.UUID) {
+	s.DomainIds = val
 }
 
 // Ranking mode used for this response.
@@ -134597,9 +134733,9 @@ type TestEmailRuleOnSampleRequest struct {
 	// An unsaved rule tree, as the compile answer's rule gives it or written by hand. With rule_id: that
 	// tree as the rule's next version.
 	Tree OptEmailRuleTreeInput `json:"tree"`
-	// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-	// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-	// what scope_selection names.
+	// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+	// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+	// later included. selected: what scope_selection names.
 	EvaluationScope OptTestEmailRuleOnSampleRequestEvaluationScope `json:"evaluation_scope"`
 	ScopeSelection  OptEmailRuleScopeSelection                     `json:"scope_selection"`
 	// A saved rule you can see, or one that covers your mailboxes (as you; dashboard or Primitive CLI
@@ -134844,9 +134980,9 @@ func (s *TestEmailRuleOnSampleRequestEmailFrom) SetName(val OptString) {
 	s.Name = val
 }
 
-// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-// what scope_selection names.
+// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+// later included. selected: what scope_selection names.
 type TestEmailRuleOnSampleRequestEvaluationScope string
 
 const (
@@ -135543,9 +135679,9 @@ type TestEmailRuleRequest struct {
 	Tree OptEmailRuleTreeInput `json:"tree"`
 	// With tree: its description, which the answer's rule.warnings read.
 	English OptString `json:"english"`
-	// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-	// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-	// what scope_selection names.
+	// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+	// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+	// later included. selected: what scope_selection names.
 	EvaluationScope OptTestEmailRuleRequestEvaluationScope `json:"evaluation_scope"`
 	ScopeSelection  OptEmailRuleScopeSelection             `json:"scope_selection"`
 	// A saved rule you can see. Its current version is tested, with its author's access; one you see
@@ -135671,9 +135807,9 @@ func (s *TestEmailRuleRequest) SetExpect(val OptTestEmailRuleRequestExpect) {
 	s.Expect = val
 }
 
-// Own_mailboxes (the default): mail to your own addresses and agents (for a rule that shares, those
-// mail:share_own lets you share). author: all you can read, inboxes added later included. selected:
-// what scope_selection names.
+// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
+// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
+// later included. selected: what scope_selection names.
 type TestEmailRuleRequestEvaluationScope string
 
 const (
@@ -136463,11 +136599,13 @@ type TestEmailRuleResultResultsItem struct {
 	// reused because answers are sampled and asking again can differ. asked_now: asked by this test
 	// (always, for an unsaved tree). not_asked: no call could be made; error_class says why.
 	QuestionAnswersSource OptTestEmailRuleResultResultsItemQuestionAnswersSource `json:"question_answers_source"`
-	// Why a skipped email cannot be tested. unparsed: its content failed to parse, so it can never be
-	// classified. rejected: it was rejected and never delivered. content_discarded: its content has been
-	// discarded, or is being. Nothing is classified or asked about it and no stored answers are used, so
-	// it never counts as a pass. The recent window holds only mail that can be tested, apart from
-	// unparsed mail; an email you name is reported as skipped, whichever of these it is.
+	// Why a skipped email cannot be tested. not_relay_domain: it was not received on one of the
+	// organization's mail relay domains, and rules decide only that mail. unparsed: its content failed
+	// to parse, so it can never be classified. rejected: it was rejected and never delivered.
+	// content_discarded: its content has been discarded, or is being. Nothing is classified or asked
+	// about it and no stored answers are used, so it never counts as a pass. The recent window holds
+	// only mail on the mail relay domains that can be tested, apart from unparsed mail; an email you
+	// name is reported as skipped, whichever of these it is.
 	SkippedReason OptTestEmailRuleResultResultsItemSkippedReason `json:"skipped_reason"`
 	// Why an unclassified email has no classification. pending: not reached before the test stopped, or
 	// not classified here (it arrived within the last 2 hours and normal classification has not finished
@@ -136826,14 +136964,17 @@ func (s *TestEmailRuleResultResultsItemQuestionAnswersSource) UnmarshalText(data
 	}
 }
 
-// Why a skipped email cannot be tested. unparsed: its content failed to parse, so it can never be
-// classified. rejected: it was rejected and never delivered. content_discarded: its content has been
-// discarded, or is being. Nothing is classified or asked about it and no stored answers are used, so
-// it never counts as a pass. The recent window holds only mail that can be tested, apart from
-// unparsed mail; an email you name is reported as skipped, whichever of these it is.
+// Why a skipped email cannot be tested. not_relay_domain: it was not received on one of the
+// organization's mail relay domains, and rules decide only that mail. unparsed: its content failed
+// to parse, so it can never be classified. rejected: it was rejected and never delivered.
+// content_discarded: its content has been discarded, or is being. Nothing is classified or asked
+// about it and no stored answers are used, so it never counts as a pass. The recent window holds
+// only mail on the mail relay domains that can be tested, apart from unparsed mail; an email you
+// name is reported as skipped, whichever of these it is.
 type TestEmailRuleResultResultsItemSkippedReason string
 
 const (
+	TestEmailRuleResultResultsItemSkippedReasonNotRelayDomain   TestEmailRuleResultResultsItemSkippedReason = "not_relay_domain"
 	TestEmailRuleResultResultsItemSkippedReasonUnparsed         TestEmailRuleResultResultsItemSkippedReason = "unparsed"
 	TestEmailRuleResultResultsItemSkippedReasonRejected         TestEmailRuleResultResultsItemSkippedReason = "rejected"
 	TestEmailRuleResultResultsItemSkippedReasonContentDiscarded TestEmailRuleResultResultsItemSkippedReason = "content_discarded"
@@ -136842,6 +136983,7 @@ const (
 // AllValues returns all TestEmailRuleResultResultsItemSkippedReason values.
 func (TestEmailRuleResultResultsItemSkippedReason) AllValues() []TestEmailRuleResultResultsItemSkippedReason {
 	return []TestEmailRuleResultResultsItemSkippedReason{
+		TestEmailRuleResultResultsItemSkippedReasonNotRelayDomain,
 		TestEmailRuleResultResultsItemSkippedReasonUnparsed,
 		TestEmailRuleResultResultsItemSkippedReasonRejected,
 		TestEmailRuleResultResultsItemSkippedReasonContentDiscarded,
@@ -136851,6 +136993,8 @@ func (TestEmailRuleResultResultsItemSkippedReason) AllValues() []TestEmailRuleRe
 // MarshalText implements encoding.TextMarshaler.
 func (s TestEmailRuleResultResultsItemSkippedReason) MarshalText() ([]byte, error) {
 	switch s {
+	case TestEmailRuleResultResultsItemSkippedReasonNotRelayDomain:
+		return []byte(s), nil
 	case TestEmailRuleResultResultsItemSkippedReasonUnparsed:
 		return []byte(s), nil
 	case TestEmailRuleResultResultsItemSkippedReasonRejected:
@@ -136865,6 +137009,9 @@ func (s TestEmailRuleResultResultsItemSkippedReason) MarshalText() ([]byte, erro
 // UnmarshalText implements encoding.TextUnmarshaler.
 func (s *TestEmailRuleResultResultsItemSkippedReason) UnmarshalText(data []byte) error {
 	switch TestEmailRuleResultResultsItemSkippedReason(data) {
+	case TestEmailRuleResultResultsItemSkippedReasonNotRelayDomain:
+		*s = TestEmailRuleResultResultsItemSkippedReasonNotRelayDomain
+		return nil
 	case TestEmailRuleResultResultsItemSkippedReasonUnparsed:
 		*s = TestEmailRuleResultResultsItemSkippedReasonUnparsed
 		return nil
@@ -140823,10 +140970,10 @@ type UpdateEmailRuleRequest struct {
 	Tree OptEmailRuleTreeInput `json:"tree"`
 	// Must be the rule's own (400 kind_mismatch).
 	Kind OptUpdateEmailRuleRequestKind `json:"kind"`
-	// Own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own
-	// lets you share). author: all you can read, inboxes added later included. selected: what
-	// scope_selection names. Left out, the scope stays. A change saves a new version with the same
-	// conditions, and is refused while the rule is shared.
+	// Own_mailboxes: mail to your own addresses and agents on the mail relay domains (for a rule that
+	// shares, those mail:share_own lets you share). author: all you can read, inboxes added later
+	// included. selected: what scope_selection names. Left out, the scope stays. A change saves a new
+	// version with the same conditions, and is refused while the rule is shared.
 	EvaluationScope OptUpdateEmailRuleRequestEvaluationScope `json:"evaluation_scope"`
 	ScopeSelection  OptEmailRuleScopeSelection               `json:"scope_selection"`
 	// Replaces its saved expectations (author only); null removes them.
@@ -140964,10 +141111,10 @@ func (s *UpdateEmailRuleRequest) SetRestoreVersion(val OptInt) {
 	s.RestoreVersion = val
 }
 
-// Own_mailboxes: mail to your own addresses and agents (for a rule that shares, those mail:share_own
-// lets you share). author: all you can read, inboxes added later included. selected: what
-// scope_selection names. Left out, the scope stays. A change saves a new version with the same
-// conditions, and is refused while the rule is shared.
+// Own_mailboxes: mail to your own addresses and agents on the mail relay domains (for a rule that
+// shares, those mail:share_own lets you share). author: all you can read, inboxes added later
+// included. selected: what scope_selection names. Left out, the scope stays. A change saves a new
+// version with the same conditions, and is refused while the rule is shared.
 type UpdateEmailRuleRequestEvaluationScope string
 
 const (

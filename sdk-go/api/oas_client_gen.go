@@ -3601,11 +3601,11 @@ type Invoker interface {
 	// its saved expectations; its author only), or a pending rule request by request_id (its rule as
 	// asked, as you, over your own mailboxes). It reads only mail its author can read and its scope
 	// covers. A rule you see only because it covers your own mailboxes runs as you, over only those.
-	// Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any
-	// expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing
-	// is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs
-	// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
-	// key or narrowed token).
+	// Without email_ids it tests the newest emails on the mail relay domains, at most 200 and none older
+	// than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first
+	// unless classify_missing is false. It records no decision and grants nothing, and stops at about 90
+	// seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no
+	// API key, agent key or narrowed token).
 	//
 	// POST /email-rules/test
 	TestEmailRule(ctx context.Context, request *TestEmailRuleRequest, params TestEmailRuleParams) (TestEmailRuleRes, error)
@@ -30959,23 +30959,6 @@ func (c *Client) sendListEmails(ctx context.Context, params ListEmailsParams) (r
 		}
 	}
 	{
-		// Encode "domain_id" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "domain_id",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := params.DomainID.Get(); ok {
-				return e.EncodeValue(conv.UUIDToString(val))
-			}
-			return nil
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	{
 		// Encode "status" parameter.
 		cfg := uri.QueryParameterEncodingConfig{
 			Name:    "status",
@@ -31326,6 +31309,23 @@ func (c *Client) sendListEmails(ctx context.Context, params ListEmailsParams) (r
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Group.Get(); ok {
 				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "domain_ids" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "domain_ids",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.DomainIds.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
 			}
 			return nil
 		}); err != nil {
@@ -36233,6 +36233,23 @@ func (c *Client) sendListSentEmails(ctx context.Context, params ListSentEmailsPa
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Include.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "domain_ids" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "domain_ids",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.DomainIds.Get(); ok {
 				return e.EncodeValue(conv.StringToString(val))
 			}
 			return nil
@@ -43349,23 +43366,6 @@ func (c *Client) sendSearchEmails(ctx context.Context, params SearchEmailsParams
 		}
 	}
 	{
-		// Encode "domain_id" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "domain_id",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := params.DomainID.Get(); ok {
-				return e.EncodeValue(conv.UUIDToString(val))
-			}
-			return nil
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	{
 		// Encode "reply_to_sent_email_id" parameter.
 		cfg := uri.QueryParameterEncodingConfig{
 			Name:    "reply_to_sent_email_id",
@@ -43698,6 +43698,23 @@ func (c *Client) sendSearchEmails(ctx context.Context, params SearchEmailsParams
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Include.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "domain_ids" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "domain_ids",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.DomainIds.Get(); ok {
 				return e.EncodeValue(conv.StringToString(val))
 			}
 			return nil
@@ -47422,11 +47439,11 @@ func (c *Client) sendSuspendFunctionRuntimeKey(ctx context.Context, request *Sus
 // its saved expectations; its author only), or a pending rule request by request_id (its rule as
 // asked, as you, over your own mailboxes). It reads only mail its author can read and its scope
 // covers. A rule you see only because it covers your own mailboxes runs as you, over only those.
-// Without email_ids it tests the newest emails, at most 200 and none older than 30 days, plus any
-// expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing
-// is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs
-// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
-// key or narrowed token).
+// Without email_ids it tests the newest emails on the mail relay domains, at most 200 and none older
+// than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first
+// unless classify_missing is false. It records no decision and grants nothing, and stops at about 90
+// seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no
+// API key, agent key or narrowed token).
 //
 // POST /email-rules/test
 func (c *Client) TestEmailRule(ctx context.Context, request *TestEmailRuleRequest, params TestEmailRuleParams) (TestEmailRuleRes, error) {

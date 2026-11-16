@@ -35,7 +35,6 @@ def _get_kwargs(
     to: str | Unset = UNSET,
     subject: str | Unset = UNSET,
     body: str | Unset = UNSET,
-    domain_id: UUID | Unset = UNSET,
     reply_to_sent_email_id: UUID | Unset = UNSET,
     status: EmailStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
@@ -56,6 +55,7 @@ def _get_kwargs(
     from_verified: SearchEmailsFromVerified | Unset = UNSET,
     direction: SearchEmailsDirection | Unset = SearchEmailsDirection.INBOUND,
     include: str | Unset = UNSET,
+    domain_ids: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
@@ -73,11 +73,6 @@ def _get_kwargs(
     params["subject"] = subject
 
     params["body"] = body
-
-    json_domain_id: str | Unset = UNSET
-    if not isinstance(domain_id, Unset):
-        json_domain_id = str(domain_id)
-    params["domain_id"] = json_domain_id
 
     json_reply_to_sent_email_id: str | Unset = UNSET
     if not isinstance(reply_to_sent_email_id, Unset):
@@ -175,6 +170,8 @@ def _get_kwargs(
 
     params["include"] = include
 
+    params["domain_ids"] = domain_ids
+
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
@@ -256,7 +253,6 @@ def sync_detailed(
     to: str | Unset = UNSET,
     subject: str | Unset = UNSET,
     body: str | Unset = UNSET,
-    domain_id: UUID | Unset = UNSET,
     reply_to_sent_email_id: UUID | Unset = UNSET,
     status: EmailStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
@@ -277,6 +273,7 @@ def sync_detailed(
     from_verified: SearchEmailsFromVerified | Unset = UNSET,
     direction: SearchEmailsDirection | Unset = SearchEmailsDirection.INBOUND,
     include: str | Unset = UNSET,
+    domain_ids: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SearchEmailsResponse200]:
     """ Search inbound emails
@@ -319,7 +316,6 @@ def sync_detailed(
         to (str | Unset):
         subject (str | Unset):
         body (str | Unset):
-        domain_id (UUID | Unset):
         reply_to_sent_email_id (UUID | Unset):
         status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
             table). Distinct from `SentEmailStatus`, which describes
@@ -367,6 +363,7 @@ def sync_detailed(
         from_verified (SearchEmailsFromVerified | Unset):
         direction (SearchEmailsDirection | Unset):  Default: SearchEmailsDirection.INBOUND.
         include (str | Unset):  Example: body_text,headers.
+        domain_ids (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -383,7 +380,6 @@ from_=from_,
 to=to,
 subject=subject,
 body=body,
-domain_id=domain_id,
 reply_to_sent_email_id=reply_to_sent_email_id,
 status=status,
 date_from=date_from,
@@ -404,6 +400,7 @@ count=count,
 from_verified=from_verified,
 direction=direction,
 include=include,
+domain_ids=domain_ids,
 
     )
 
@@ -421,7 +418,6 @@ def sync(
     to: str | Unset = UNSET,
     subject: str | Unset = UNSET,
     body: str | Unset = UNSET,
-    domain_id: UUID | Unset = UNSET,
     reply_to_sent_email_id: UUID | Unset = UNSET,
     status: EmailStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
@@ -442,6 +438,7 @@ def sync(
     from_verified: SearchEmailsFromVerified | Unset = UNSET,
     direction: SearchEmailsDirection | Unset = SearchEmailsDirection.INBOUND,
     include: str | Unset = UNSET,
+    domain_ids: str | Unset = UNSET,
 
 ) -> ErrorResponse | SearchEmailsResponse200 | None:
     """ Search inbound emails
@@ -484,7 +481,6 @@ def sync(
         to (str | Unset):
         subject (str | Unset):
         body (str | Unset):
-        domain_id (UUID | Unset):
         reply_to_sent_email_id (UUID | Unset):
         status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
             table). Distinct from `SentEmailStatus`, which describes
@@ -532,6 +528,7 @@ def sync(
         from_verified (SearchEmailsFromVerified | Unset):
         direction (SearchEmailsDirection | Unset):  Default: SearchEmailsDirection.INBOUND.
         include (str | Unset):  Example: body_text,headers.
+        domain_ids (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -549,7 +546,6 @@ from_=from_,
 to=to,
 subject=subject,
 body=body,
-domain_id=domain_id,
 reply_to_sent_email_id=reply_to_sent_email_id,
 status=status,
 date_from=date_from,
@@ -570,6 +566,7 @@ count=count,
 from_verified=from_verified,
 direction=direction,
 include=include,
+domain_ids=domain_ids,
 
     ).parsed
 
@@ -581,7 +578,6 @@ async def asyncio_detailed(
     to: str | Unset = UNSET,
     subject: str | Unset = UNSET,
     body: str | Unset = UNSET,
-    domain_id: UUID | Unset = UNSET,
     reply_to_sent_email_id: UUID | Unset = UNSET,
     status: EmailStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
@@ -602,6 +598,7 @@ async def asyncio_detailed(
     from_verified: SearchEmailsFromVerified | Unset = UNSET,
     direction: SearchEmailsDirection | Unset = SearchEmailsDirection.INBOUND,
     include: str | Unset = UNSET,
+    domain_ids: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SearchEmailsResponse200]:
     """ Search inbound emails
@@ -644,7 +641,6 @@ async def asyncio_detailed(
         to (str | Unset):
         subject (str | Unset):
         body (str | Unset):
-        domain_id (UUID | Unset):
         reply_to_sent_email_id (UUID | Unset):
         status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
             table). Distinct from `SentEmailStatus`, which describes
@@ -692,6 +688,7 @@ async def asyncio_detailed(
         from_verified (SearchEmailsFromVerified | Unset):
         direction (SearchEmailsDirection | Unset):  Default: SearchEmailsDirection.INBOUND.
         include (str | Unset):  Example: body_text,headers.
+        domain_ids (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -708,7 +705,6 @@ from_=from_,
 to=to,
 subject=subject,
 body=body,
-domain_id=domain_id,
 reply_to_sent_email_id=reply_to_sent_email_id,
 status=status,
 date_from=date_from,
@@ -729,6 +725,7 @@ count=count,
 from_verified=from_verified,
 direction=direction,
 include=include,
+domain_ids=domain_ids,
 
     )
 
@@ -746,7 +743,6 @@ async def asyncio(
     to: str | Unset = UNSET,
     subject: str | Unset = UNSET,
     body: str | Unset = UNSET,
-    domain_id: UUID | Unset = UNSET,
     reply_to_sent_email_id: UUID | Unset = UNSET,
     status: EmailStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
@@ -767,6 +763,7 @@ async def asyncio(
     from_verified: SearchEmailsFromVerified | Unset = UNSET,
     direction: SearchEmailsDirection | Unset = SearchEmailsDirection.INBOUND,
     include: str | Unset = UNSET,
+    domain_ids: str | Unset = UNSET,
 
 ) -> ErrorResponse | SearchEmailsResponse200 | None:
     """ Search inbound emails
@@ -809,7 +806,6 @@ async def asyncio(
         to (str | Unset):
         subject (str | Unset):
         body (str | Unset):
-        domain_id (UUID | Unset):
         reply_to_sent_email_id (UUID | Unset):
         status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
             table). Distinct from `SentEmailStatus`, which describes
@@ -857,6 +853,7 @@ async def asyncio(
         from_verified (SearchEmailsFromVerified | Unset):
         direction (SearchEmailsDirection | Unset):  Default: SearchEmailsDirection.INBOUND.
         include (str | Unset):  Example: body_text,headers.
+        domain_ids (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -874,7 +871,6 @@ from_=from_,
 to=to,
 subject=subject,
 body=body,
-domain_id=domain_id,
 reply_to_sent_email_id=reply_to_sent_email_id,
 status=status,
 date_from=date_from,
@@ -895,5 +891,6 @@ count=count,
 from_verified=from_verified,
 direction=direction,
 include=include,
+domain_ids=domain_ids,
 
     )).parsed

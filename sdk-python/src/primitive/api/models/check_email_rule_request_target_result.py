@@ -27,7 +27,8 @@ class CheckEmailRuleRequestTargetResult:
         Attributes:
             target (CheckEmailRuleRequestTargetResultTarget):
             can_accept (bool): Whether they can accept a rule request now under their role.
-            missing_permission (None | str): The permission their role lacks for accepting, when can_accept is false.
+            missing_permission (None | str): The permission their role lacks for accepting, when can_accept is false; null
+                then means they have no own mailbox on the mail relay domains.
             warning (None | str): The same in words, with who can fix it.
      """
 

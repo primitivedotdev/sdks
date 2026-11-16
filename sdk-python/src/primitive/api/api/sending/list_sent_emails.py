@@ -34,6 +34,7 @@ def _get_kwargs(
     wait: int | Unset = 0,
     mine: ListSentEmailsMine | Unset = UNSET,
     include: str | Unset = UNSET,
+    domain_ids: str | Unset = UNSET,
     header: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
@@ -85,6 +86,8 @@ def _get_kwargs(
     params["mine"] = json_mine
 
     params["include"] = include
+
+    params["domain_ids"] = domain_ids
 
     params["header"] = header
 
@@ -170,6 +173,7 @@ def sync_detailed(
     wait: int | Unset = 0,
     mine: ListSentEmailsMine | Unset = UNSET,
     include: str | Unset = UNSET,
+    domain_ids: str | Unset = UNSET,
     header: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListSentEmailsResponse200]:
@@ -238,6 +242,7 @@ def sync_detailed(
         wait (int | Unset):  Default: 0.
         mine (ListSentEmailsMine | Unset):
         include (str | Unset):  Example: body_text,headers.
+        domain_ids (str | Unset):
         header (str | Unset):
 
     Raises:
@@ -263,6 +268,7 @@ since=since,
 wait=wait,
 mine=mine,
 include=include,
+domain_ids=domain_ids,
 header=header,
 
     )
@@ -289,6 +295,7 @@ def sync(
     wait: int | Unset = 0,
     mine: ListSentEmailsMine | Unset = UNSET,
     include: str | Unset = UNSET,
+    domain_ids: str | Unset = UNSET,
     header: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListSentEmailsResponse200 | None:
@@ -357,6 +364,7 @@ def sync(
         wait (int | Unset):  Default: 0.
         mine (ListSentEmailsMine | Unset):
         include (str | Unset):  Example: body_text,headers.
+        domain_ids (str | Unset):
         header (str | Unset):
 
     Raises:
@@ -383,6 +391,7 @@ since=since,
 wait=wait,
 mine=mine,
 include=include,
+domain_ids=domain_ids,
 header=header,
 
     ).parsed
@@ -403,6 +412,7 @@ async def asyncio_detailed(
     wait: int | Unset = 0,
     mine: ListSentEmailsMine | Unset = UNSET,
     include: str | Unset = UNSET,
+    domain_ids: str | Unset = UNSET,
     header: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListSentEmailsResponse200]:
@@ -471,6 +481,7 @@ async def asyncio_detailed(
         wait (int | Unset):  Default: 0.
         mine (ListSentEmailsMine | Unset):
         include (str | Unset):  Example: body_text,headers.
+        domain_ids (str | Unset):
         header (str | Unset):
 
     Raises:
@@ -496,6 +507,7 @@ since=since,
 wait=wait,
 mine=mine,
 include=include,
+domain_ids=domain_ids,
 header=header,
 
     )
@@ -522,6 +534,7 @@ async def asyncio(
     wait: int | Unset = 0,
     mine: ListSentEmailsMine | Unset = UNSET,
     include: str | Unset = UNSET,
+    domain_ids: str | Unset = UNSET,
     header: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListSentEmailsResponse200 | None:
@@ -590,6 +603,7 @@ async def asyncio(
         wait (int | Unset):  Default: 0.
         mine (ListSentEmailsMine | Unset):
         include (str | Unset):  Example: body_text,headers.
+        domain_ids (str | Unset):
         header (str | Unset):
 
     Raises:
@@ -616,6 +630,7 @@ since=since,
 wait=wait,
 mine=mine,
 include=include,
+domain_ids=domain_ids,
 header=header,
 
     )).parsed

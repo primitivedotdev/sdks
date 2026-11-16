@@ -68,6 +68,11 @@ import { createEmailsGetCommand } from "./commands/emails-get.js";
 import EmailsLatestCommand from "./commands/emails-latest.js";
 import EmailsWaitCommand from "./commands/emails-wait.js";
 import EmailsWatchCommand from "./commands/emails-watch.js";
+import {
+  FocusClearCommand,
+  FocusCommand,
+  FocusSetCommand,
+} from "./commands/focus.js";
 import FunctionsDeployCommand from "./commands/functions-deploy.js";
 import FunctionsInitCommand from "./commands/functions-init.js";
 import FunctionsLogsCommand from "./commands/functions-logs.js";
@@ -719,6 +724,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   // inbound emails as a compact text table. emails:list-emails stays
   // available for the full JSON envelope + cursor pagination.
   "emails:latest": EmailsLatestCommand,
+  // `focus` chooses which domains mail listings and searches show.
+  focus: FocusCommand,
+  "focus:set": FocusSetCommand,
+  "focus:clear": FocusClearCommand,
   // `emails:attachment` downloads one attachment by its exact filename, and
   // `emails:attachment-members` lists (or, with --member, fetches) the files
   // inside a zip or tar attachment. The generated operations stay available.

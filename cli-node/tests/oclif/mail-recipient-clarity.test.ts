@@ -2,6 +2,14 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// These tests pin each command's requests without a domain focus;
+// focus.test.ts covers the focus and the GET /domains read it makes.
+vi.mock("../../src/oclif/focus.js", async (original) => {
+  const actual = await original<typeof import("../../src/oclif/focus.js")>();
+  return { ...actual, resolveFocus: async () => actual.NO_FOCUS };
+});
+
 import { saveConnectedAgentProfile } from "../../src/oclif/connected-agent-profile.js";
 import {
   suggestFlag,

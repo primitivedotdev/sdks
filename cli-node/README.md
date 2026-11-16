@@ -245,6 +245,21 @@ Against a server without organization switching, and for logins saved by earlier
 
 `primitive login --permission <permission>` asks for a narrowed login. A server that does not offer narrowed CLI logins refuses it, and the CLI stops rather than logging in with a wider grant.
 
+### Focusing on some domains
+
+When a credential reads mail on more than one domain, a mail listing or search without a focus stops (exit 2, error code `focus_required`), names the domains and asks for a choice. It keeps stopping until a focus is chosen; the choice is saved, so it is made once. A credential with one domain never sees any of this.
+
+```bash
+primitive focus set support.example.com sales.example.com   # list and search only these domains
+primitive focus set --all                 # every domain
+primitive focus                           # show the saved focus and the domains
+primitive focus clear                     # forget it
+```
+
+The focus is saved per profile: for the member login in the CLI config directory, for a connected agent in its profile directory. It is never written to a credential file. `PRIMITIVE_FOCUS_DOMAINS=<name,...>` (or `all`) overrides it for a session, and `--domain <name>` or `--all-domains` for one command.
+
+It applies to `emails list`, `emails latest`, `emails search`, `search`, `emails watch`, `inbox next`, `sent list` and `semantic-search`. Each prints one stderr line naming the focus, where it came from and how to widen it; `--json` carries `meta.focus` instead. An empty focused result also says how much matching mail is on the other domains. `sent list` filters by the sending domain. `semantic-search` with a focus searches received mail only; with `--corpus outbound` it covers every domain and says the focus was not applied. A command given its own scope (`--domain-ids` on `emails list` and `emails search`, `--domain-id` on `search` and `emails watch`, `--recipient`, `--to`, `--thread-id`, or a `domain:` or `to:` search filter) ignores the saved focus. Reads by id, notifications (`listen`, `wait`, `emails wait`, `agent check-mail`) and the CLI's own reply bookkeeping never follow it.
+
 ### Grants and keys
 
 `primitive whoami` shows your member address, your organization, your built-in role and the credential's grant when the server reports them; only a person's own login has a role line. `primitive whoami --check mail:send` asks whether the current credential may use a permission, prints the decision, and exits 1 when it may not; nothing is enforced by asking. A request refused because the credential's grant lacks a permission fails with `grant_forbidden`, and the CLI names the permission.
