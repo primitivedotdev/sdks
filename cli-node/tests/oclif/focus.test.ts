@@ -213,8 +213,8 @@ function resolveWith(
   });
 }
 
-describe("the one-time refusal", () => {
-  it("refuses the first unfocused listing once with focus_required, then never again", async () => {
+describe("the refusal until a focus is chosen", () => {
+  it("refuses every unfocused listing with focus_required until a choice is saved", async () => {
     const first = await resolveWith().catch((error: unknown) => error);
     expect(first).toMatchObject({
       code: "focus_required",
@@ -232,10 +232,19 @@ describe("the one-time refusal", () => {
       choices: ["primitive focus set <domain...>", "primitive focus set --all"],
     });
 
-    const second = await resolveWith();
-    expect(second.params).toEqual({});
-    expect(second.meta).toMatchObject({ all: true, source: "none" });
-    expect(second.line).toContain("No focus chosen");
+    // Ignoring it changes nothing: the next listing is refused too.
+    await expect(resolveWith()).rejects.toMatchObject({
+      code: "focus_required",
+    });
+    await expect(resolveWith()).rejects.toMatchObject({
+      code: "focus_required",
+    });
+    // Nothing is recorded for an unanswered refusal.
+    expect(existsSync(memberProfile().path)).toBe(false);
+
+    saveFocus(memberProfile(), ORG, () => ({ choice: { domains: [SUPPORT] } }));
+    const chosen = await resolveWith();
+    expect(chosen.params).toEqual({ domain_ids: SUPPORT.id });
   });
 
   it("never asks a credential with one domain, and saves nothing for it", async () => {
@@ -261,7 +270,7 @@ describe("the one-time refusal", () => {
     });
   });
 
-  it("refuses emails list once with exit 2 and a focus_required JSON error", async () => {
+  it("refuses emails list with exit 2 and a focus_required JSON error, every time", async () => {
     const first = await run("emails:list", ["--json"]);
     expect(first.exitCode).toBe(2);
     const document = JSON.parse(first.stdout);
@@ -271,8 +280,14 @@ describe("the one-time refusal", () => {
     expect(emailCalls()).toHaveLength(0);
 
     const second = await run("emails:list", []);
-    expect(second.thrown).toBeUndefined();
-    expect(second.stderr).toContain("No focus chosen");
+    expect(second.thrown).toMatchObject({
+      code: "focus_required",
+      oclif: { exit: 2 },
+    });
+    expect(emailCalls()).toHaveLength(0);
+
+    const widened = await run("emails:list", ["--all-domains"]);
+    expect(widened.thrown).toBeUndefined();
     expect(emailCalls()[0]?.query.get("domain_ids")).toBeNull();
   });
 });
@@ -346,13 +361,12 @@ describe("persistence", () => {
     expect(emailCalls()).toHaveLength(0);
   });
 
-  it("clears the focus without asking again", async () => {
+  it("asks for a choice again after the focus is cleared", async () => {
     await run("focus:set", ["--all"]);
     const cleared = await run("focus:clear", []);
     expect(cleared.stdout).toContain("Cleared the focus");
     const listed = await run("emails:list", []);
-    expect(listed.thrown).toBeUndefined();
-    expect(listed.stderr).toContain("No focus chosen");
+    expect(listed.thrown).toMatchObject({ code: "focus_required" });
   });
 
   it("names one domain at a time while the server takes one", async () => {
@@ -684,7 +698,7 @@ describe("review fixes", () => {
     expect(shown.stdout).toContain("support.example.com");
     const cleared = await run("focus:clear", []);
     expect(cleared.thrown).toBeUndefined();
-    expect(loadSavedFocus(memberProfile(), ORG)?.choice).toBeNull();
+    expect(loadSavedFocus(memberProfile(), ORG)).toBeNull();
   });
 
   it("refuses a flag-like argument to focus set", async () => {

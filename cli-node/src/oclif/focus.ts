@@ -61,8 +61,6 @@ export type FocusChoice = { all: true } | { domains: FocusDomain[] };
 export type SavedFocus = {
   choice: FocusChoice | null;
   chosen_at?: string;
-  /** When the one-time "choose a focus" refusal was shown. */
-  refused_at?: string;
 };
 
 export type FocusSource = "flag" | "env" | "profile" | "none";
@@ -201,9 +199,6 @@ function parseSaved(value: unknown): SavedFocus | null {
     ...(typeof value.chosen_at === "string"
       ? { chosen_at: value.chosen_at }
       : {}),
-    ...(typeof value.refused_at === "string"
-      ? { refused_at: value.refused_at }
-      : {}),
   };
 }
 
@@ -332,7 +327,7 @@ export function focusRequiredError(domains: FocusDomain[]): Errors.CLIError {
   const names = domains.map((d) => d.name);
   const example = names[0] ?? "<domain>";
   return focusError(
-    `This credential reads mail on ${names.length} domains: ${joinNames(names)}. Choose which this profile lists and searches, once: \`primitive focus set ${example}\` (one or more domains) or \`primitive focus set --all\` (every domain). This is asked only once; for one command, pass --domain <name> or --all-domains.`,
+    `This credential reads mail on ${names.length} domains: ${joinNames(names)}. Choose which this profile lists and searches: \`primitive focus set ${example}\` (one or more domains) or \`primitive focus set --all\` (every domain). The choice is saved for this profile, and listings and searches are refused until it is made; for one command, pass --domain <name> or --all-domains.`,
     "focus_required",
     2,
     {
@@ -578,38 +573,11 @@ export async function resolveFocus(
     return focusedOutcome(params.surface, choice.domains, "profile", readable);
   }
 
-  // Never chosen. Without the domains there is nothing to name, so no ask.
+  // Never chosen: refused until a choice is saved, so no listing ever shows
+  // mail from a domain nobody chose. Without the domains there is nothing to
+  // name, so no ask.
   if (!readable || !orgId) return NO_FOCUS;
-  if (!saved?.refused_at) {
-    const at = (params.now ?? (() => new Date()))().toISOString();
-    try {
-      saveFocus(profile, orgId, (current) => ({
-        choice: current?.choice ?? null,
-        ...(current?.chosen_at ? { chosen_at: current.chosen_at } : {}),
-        refused_at: at,
-      }));
-    } catch {
-      // Unsaved, the refusal would repeat on every run: list instead.
-      return unchosenOutcome(readable);
-    }
-    throw focusRequiredError(readable.domains);
-  }
-  return unchosenOutcome(readable);
-}
-
-function unchosenOutcome(readable: ReadableDomains): FocusOutcome {
-  return {
-    ...NO_FOCUS,
-    readable: readable.domains,
-    meta: {
-      domains: [],
-      all: true,
-      source: "none",
-      applied: true,
-      widen: [],
-    },
-    line: `No focus chosen: showing mail on all ${readable.domains.length} domains. Narrow it with \`primitive focus set <domain...>\`, or keep every domain with \`primitive focus set --all\`.`,
-  };
+  throw focusRequiredError(readable.domains);
 }
 
 /** The request fields for a focus on these domains, or null where the surface cannot filter. */

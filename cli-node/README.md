@@ -247,7 +247,7 @@ Against a server without organization switching, and for logins saved by earlier
 
 ### Focusing on some domains
 
-When a credential reads mail on more than one domain, the first mail listing or search without a focus stops once (exit 2, error code `focus_required`), names the domains and asks for a choice. After that it never asks again. A credential with one domain never sees any of this.
+When a credential reads mail on more than one domain, a mail listing or search without a focus stops (exit 2, error code `focus_required`), names the domains and asks for a choice. It keeps stopping until a focus is chosen; the choice is saved, so it is made once. A credential with one domain never sees any of this.
 
 ```bash
 primitive focus set support.example.com sales.example.com   # list and search only these domains

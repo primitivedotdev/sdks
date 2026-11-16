@@ -40,7 +40,7 @@ type CommonFlags = {
 
 const FOCUS_DESCRIPTION = `Which domains mail listings and searches show.
 
-On a credential that reads mail on more than one domain, the first listing or search with no focus chosen asks once for a choice: \`primitive focus set <domain...>\` to see only those domains, or \`primitive focus set --all\` to see every domain. The choice is saved for this profile (the member login, or the connected agent selected by PRIMITIVE_AGENT_PROFILE), never in a credential file.
+On a credential that reads mail on more than one domain, listings and searches are refused until a focus is chosen: \`primitive focus set <domain...>\` to see only those domains, or \`primitive focus set --all\` to see every domain. The choice is saved for this profile (the member login, or the connected agent selected by PRIMITIVE_AGENT_PROFILE), never in a credential file.
 
 A focus applies to \`emails list\`, \`emails latest\`, \`emails search\`, \`search\`, \`emails watch\`, \`inbox next\`, \`sent list\` and \`semantic-search\`. Every focused command says so on stderr, and under --json in \`meta.focus\`. It never applies to reads by id or to notifications (\`listen\`, \`wait\`, \`emails wait\`, \`agent check-mail\`).
 
@@ -250,10 +250,9 @@ ${FOCUS_DESCRIPTION}`;
           ),
         };
     const at = new Date().toISOString();
-    saveFocus(state.profile, state.orgId, (current) => ({
+    saveFocus(state.profile, state.orgId, () => ({
       choice,
       chosen_at: at,
-      ...(current?.refused_at ? { refused_at: current.refused_at } : {}),
     }));
     if (flags.json) {
       this.log(
@@ -277,7 +276,7 @@ export class FocusClearCommand extends Command {
   static summary = "Forget the saved focus for this profile";
 
   static description =
-    `Forget this profile's saved focus. Listings and searches then show every domain, with a line saying no focus is chosen.
+    `Forget this profile's saved focus. On a credential that reads mail on more than one domain, listings and searches are then refused until a focus is chosen again.
 
 ${FOCUS_DESCRIPTION}`;
 
@@ -291,13 +290,7 @@ ${FOCUS_DESCRIPTION}`;
     let had = false;
     saveFocus(state.profile, state.orgId, (current) => {
       had = Boolean(current?.choice);
-      // The one-time ask stays answered: clearing never asks again.
-      return current?.refused_at || current?.choice
-        ? {
-            choice: null,
-            refused_at: current?.refused_at ?? new Date().toISOString(),
-          }
-        : null;
+      return null;
     });
     if (flags.json) {
       this.log(
@@ -311,7 +304,7 @@ ${FOCUS_DESCRIPTION}`;
     }
     this.log(
       had
-        ? `Cleared the focus for ${profileLabel(state.profile)}; listings and searches show every domain.`
+        ? `Cleared the focus for ${profileLabel(state.profile)}; listings and searches ask for a choice again (or pass --domain or --all-domains).`
         : `No focus was saved for ${profileLabel(state.profile)}.`,
     );
   }
