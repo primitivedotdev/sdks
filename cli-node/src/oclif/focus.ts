@@ -764,7 +764,9 @@ export function focusForCorpus(
     ...outcome,
     params: {},
     focused: null,
-    meta: outcome.meta ? { ...outcome.meta, applied: false } : null,
+    meta: outcome.meta
+      ? { ...outcome.meta, applied: false, received_only: undefined }
+      : null,
     line: `Focus on ${joinNames(names)} (${SOURCE_TEXT[source as Exclude<FocusSource, "none">]}) not applied: --corpus outbound includes sent mail, which a domain focus does not filter, so this search covers every domain.`,
   };
 }

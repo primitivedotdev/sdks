@@ -8,6 +8,7 @@ import {
   focusProfile,
   joinNames,
   loadSavedFocus,
+  MAX_FOCUS_DOMAINS,
   manyDomainsSupported,
   normalizeDomainNames,
   oneDomainAtATimeError,
@@ -231,6 +232,13 @@ ${FOCUS_DESCRIPTION}`;
       );
     if (names.length > 1 && !manyDomainsSupported())
       throw oneDomainAtATimeError(names);
+    // Checked before saving, so a choice no listing could send never
+    // replaces a working one.
+    if (names.length > MAX_FOCUS_DOMAINS)
+      throw new Errors.CLIError(
+        `A focus names at most ${MAX_FOCUS_DOMAINS} domains (got ${names.length}).`,
+        { exit: 2, code: "usage_error" },
+      );
     const state = await readState(this, flags);
     const choice: FocusChoice = flags.all
       ? { all: true }

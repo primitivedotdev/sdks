@@ -752,7 +752,9 @@ describe("semantic search", () => {
       "--json",
     ]);
     expect(semanticBodies()[0]).not.toHaveProperty("domain_ids");
-    expect(JSON.parse(result.stdout).meta.focus.applied).toBe(false);
+    const focus = JSON.parse(result.stdout).meta.focus;
+    expect(focus.applied).toBe(false);
+    expect(focus).not.toHaveProperty("received_only");
   });
 
   it("refuses --domain with sent mail in --corpus", async () => {
@@ -765,5 +767,28 @@ describe("semantic search", () => {
     ]);
     expect(result.thrown).toMatchObject({ oclif: { exit: 2 } });
     expect(semanticBodies()).toHaveLength(0);
+  });
+});
+
+describe("second review round", () => {
+  it("points an empty focused semantic search at --all-domains", async () => {
+    saveFocus(memberProfile(), ORG, () => ({ choice: { domains: [SUPPORT] } }));
+    const text = await run("semantic-search", ["renewal"]);
+    expect(text.stderr).toContain("pass --all-domains to look");
+    const json = await run("search", ["renewal", "--mode", "hybrid", "--json"]);
+    expect(JSON.parse(json.stdout).summary).toContain("pass --all-domains");
+  });
+
+  it("refuses to save a focus of more than 50 domains", async () => {
+    domains = Array.from({ length: 51 }, (_, i) => ({
+      name: `d${i}.example.com`,
+      id: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+    }));
+    const result = await run(
+      "focus:set",
+      domains.map((d) => d.name),
+    );
+    expect(result.thrown).toMatchObject({ oclif: { exit: 2 } });
+    expect(existsSync(memberProfile().path)).toBe(false);
   });
 });

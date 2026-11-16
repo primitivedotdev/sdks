@@ -336,17 +336,31 @@ class SearchCommand extends Command {
         }
 
         const envelope = result.data as SemanticEnvelope | undefined;
+        const rows = envelope?.data ?? [];
+        // Semantic search reports no total, so an empty focused first page
+        // points at --all-domains instead of counting.
+        const elsewhere =
+          rows.length === 0 && !flags.cursor
+            ? await focusEmptyHint(focus, async () => null)
+            : null;
 
         if (flags.json) {
+          const document = withFocusMeta(envelope ?? null, focus);
           this.log(
-            JSON.stringify(withFocusMeta(envelope ?? null, focus), null, 2),
+            JSON.stringify(
+              elsewhere && document
+                ? { ...document, summary: elsewhere }
+                : document,
+              null,
+              2,
+            ),
           );
           return;
         }
 
-        const rows = envelope?.data ?? [];
         if (rows.length === 0) {
           process.stderr.write("No matching mail.\n");
+          if (elsewhere) process.stderr.write(`${elsewhere}\n`);
           return;
         }
 
