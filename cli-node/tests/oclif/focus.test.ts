@@ -562,7 +562,7 @@ describe("poll loops and inbox listings", () => {
         .filter((c) => c.query.get("count") !== "true")
         .every((c) => c.query.get("domain_id") === SUPPORT.id),
     ).toBe(true);
-    expect(JSON.parse(result.stdout).focus).toMatchObject({
+    expect(JSON.parse(result.stdout).meta.focus).toMatchObject({
       domains: ["support.example.com"],
       source: "profile",
     });
@@ -587,4 +587,71 @@ describe("poll loops and inbox listings", () => {
     ).toHaveLength(1);
     expect(result.stderr).toContain("Showing mail on support.example.com only");
   }, 10_000);
+});
+
+describe("review fixes", () => {
+  beforeEach(() => {
+    saveFocus(memberProfile(), ORG, () => ({ choice: { domains: [SUPPORT] } }));
+  });
+
+  it("keeps a query after --domain as the query", async () => {
+    const result = await run("search", [
+      "--domain",
+      "sales.example.com",
+      "invoice",
+    ]);
+    expect(result.thrown).toBeUndefined();
+    const searched = calls.find((c) => c.path === "/v1/emails/search");
+    expect(searched?.query.get("q")).toBe("invoice");
+    expect(searched?.query.get("domain_id")).toBe(SALES.id);
+  });
+
+  it("treats a thread as the command's own scope", async () => {
+    await run("emails:list", [
+      "--thread-id",
+      "55555555-5555-4555-8555-555555555555",
+    ]);
+    await run("search", [
+      "x",
+      "--thread-id",
+      "55555555-5555-4555-8555-555555555555",
+    ]);
+    expect(emailCalls().map((c) => c.query.get("domain_id"))).toEqual([
+      null,
+      null,
+    ]);
+  });
+
+  it("ignores the session variable on a credential with one domain", async () => {
+    for (const value of ["all", "elsewhere.example.com"]) {
+      const outcome = await resolveWith({
+        env: { [FOCUS_ENV]: value },
+        readDomains: readable([SUPPORT]),
+      });
+      expect(outcome).toEqual(NO_FOCUS);
+    }
+  });
+
+  it("clears and shows the saved focus when the domains cannot be read", async () => {
+    mocks.createAuthenticatedCliApiClient.mockImplementation(async () => ({
+      apiClient: new PrimitiveApiClient({
+        apiKey: "fixture",
+        apiBaseUrl: "https://example.test/v1",
+        fetch: async () => new Response(null, { status: 503 }),
+      }),
+      auth,
+      baseUrlOverridden: false,
+    }));
+    const shown = await run("focus", []);
+    expect(shown.stdout).toContain("support.example.com");
+    const cleared = await run("focus:clear", []);
+    expect(cleared.thrown).toBeUndefined();
+    expect(loadSavedFocus(memberProfile(), ORG)?.choice).toBeNull();
+  });
+
+  it("refuses a flag-like argument to focus set", async () => {
+    const result = await run("focus:set", ["--domain", "x"]);
+    expect(result.thrown).toMatchObject({ oclif: { exit: 2 } });
+    expect((result.thrown as Error).message).toContain("--domain");
+  });
 });

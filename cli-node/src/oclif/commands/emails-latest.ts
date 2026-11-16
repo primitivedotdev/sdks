@@ -243,32 +243,44 @@ class EmailsLatestCommand extends Command {
         }
       }
 
+      const rows = envelope?.data ?? [];
+      // Focused and empty: how much matches on the other domains.
+      const note =
+        rows.length === 0
+          ? await focusEmptyHint(focus, async () => {
+              const counted = await listEmails({
+                client: apiClient.client,
+                query: {
+                  ...withoutFocus(query, focus),
+                  limit: 1,
+                  count: "true",
+                },
+                responseStyle: "fields",
+              });
+              const total = (
+                counted.data as { meta?: { total?: unknown } } | undefined
+              )?.meta?.total;
+              return counted.error || typeof total !== "number" ? null : total;
+            })
+          : null;
+
       if (flags.json) {
         // Raw envelope on stdout. Mirrors the shape `emails:list-emails`
         // emits so callers can swap one for the other when they want
         // table vs json without remembering different command names.
+        const document = withFocusMeta(envelope ?? null, focus);
         this.log(
-          JSON.stringify(withFocusMeta(envelope ?? null, focus), null, 2),
+          JSON.stringify(
+            note && document ? { ...document, summary: note } : document,
+            null,
+            2,
+          ),
         );
         return;
       }
 
       writeFocusLine(focus, false);
-      const rows = envelope?.data ?? [];
-
       if (rows.length === 0) {
-        // Focused and empty: how much matches on the other domains.
-        const note = await focusEmptyHint(focus, async () => {
-          const counted = await listEmails({
-            client: apiClient.client,
-            query: { ...withoutFocus(query, focus), limit: 1, count: "true" },
-            responseStyle: "fields",
-          });
-          const total = (
-            counted.data as { meta?: { total?: unknown } } | undefined
-          )?.meta?.total;
-          return counted.error || typeof total !== "number" ? null : total;
-        });
         if (note) {
           process.stderr.write(`${note}\n`);
           return;

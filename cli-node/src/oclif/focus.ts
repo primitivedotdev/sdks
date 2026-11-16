@@ -100,11 +100,19 @@ export const ALL_DOMAINS_FLAG_DESCRIPTION =
   "Mail on every domain this credential reads, for this command, ignoring the saved focus and PRIMITIVE_FOCUS_DOMAINS.";
 
 /** The two focus flags every focused listing takes. */
-export function focusFlags() {
+/**
+ * The two focus flags every focused listing takes. `unfiltered` marks a
+ * command the server cannot filter by domain yet, whose --domain is refused.
+ */
+export function focusFlags(unfiltered = false) {
   return {
     domain: Flags.string({
-      description: DOMAIN_FLAG_DESCRIPTION,
+      description: unfiltered
+        ? "Not available here yet: this command cannot filter by domain, so it lists every domain. See `primitive focus`."
+        : DOMAIN_FLAG_DESCRIPTION,
+      // Repeatable, but never greedy: a positional query after it stays one.
       multiple: true,
+      multipleNonGreedy: true,
     }),
     "all-domains": Flags.boolean({
       description: ALL_DOMAINS_FLAG_DESCRIPTION,
@@ -480,7 +488,9 @@ export async function resolveFocus(
       "usage_error",
       2,
     );
-  if (asked && "all" in asked) {
+  // --all-domains needs no domains. The session variable does, so that a
+  // credential with one domain never sees it.
+  if (asked?.source === "flag" && "all" in asked) {
     return {
       ...NO_FOCUS,
       meta: {
@@ -502,6 +512,20 @@ export async function resolveFocus(
     params.auth.credentials?.org_id ??
     null;
 
+  if (asked?.source === "env" && readable && readable.domains.length <= 1)
+    return NO_FOCUS;
+  if (asked && "all" in asked) {
+    return {
+      ...NO_FOCUS,
+      meta: {
+        domains: [],
+        all: true,
+        source: asked.source,
+        applied: true,
+        widen: [],
+      },
+    };
+  }
   if (asked) {
     if (!readable) {
       throw focusError(
@@ -640,6 +664,8 @@ function focusedOutcome(
 export async function focusEmptyHint(
   outcome: FocusOutcome,
   countElsewhere: () => Promise<number | null>,
+  /** The count is an upper bound, such as one that keeps rows a listing skips. */
+  upperBound = false,
 ): Promise<string | null> {
   if (!outcome.focused) return null;
   const names = joinNames(outcome.focused.map((d) => d.name));
@@ -653,7 +679,7 @@ export async function focusEmptyHint(
     return `Nothing matched on ${names}. Other domains may hold matching mail: pass --all-domains to look.`;
   if (total === 0)
     return `Nothing matched on ${names}, and nothing matches on the other domains either.`;
-  return `Nothing matched on ${names}; ${total} matching email${total === 1 ? "" : "s"} on other domains. Pass --all-domains to see ${total === 1 ? "it" : "them"}.`;
+  return `Nothing matched on ${names}; ${upperBound ? "up to " : ""}${total} matching email${total === 1 ? "" : "s"} on other domains. Pass --all-domains to see ${total === 1 ? "it" : "them"}.`;
 }
 
 /** Remove the focus fields from a query, for the elsewhere count. */

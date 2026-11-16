@@ -54,6 +54,7 @@ import {
 } from "./endpoints-test-redirect.js";
 import { withFlagSuggestion } from "./flag-suggestions.js";
 import {
+  FOCUS_SERVER_SUPPORT,
   type FocusOutcome,
   type FocusSurface,
   focusEmptyHint,
@@ -1339,7 +1340,12 @@ function buildFlags(operation: PrimitiveOperationManifest): {
 
   // Listings and searches follow the domain focus (see focus.ts).
   if (FOCUS_OPERATIONS[operation.sdkName]) {
-    for (const [name, flag] of Object.entries(focusFlags())) {
+    const spec = FOCUS_OPERATIONS[operation.sdkName];
+    const unfiltered =
+      spec?.surface !== undefined &&
+      spec.surface !== "inbound" &&
+      FOCUS_SERVER_SUPPORT[spec.surface] === null;
+    for (const [name, flag] of Object.entries(focusFlags(unfiltered))) {
       if (flags[name] !== undefined)
         throw new Error(
           `${operation.sdkName}: --${name} is both a generated flag and the focus flag`,
@@ -1738,12 +1744,12 @@ export const FOCUS_OPERATIONS: Record<
 > = {
   listEmails: {
     surface: "inbound",
-    scopeParams: ["domain_id", "recipient"],
+    scopeParams: ["domain_id", "recipient", "thread_id"],
     countParam: "count",
   },
   searchEmails: {
     surface: "inbound",
-    scopeParams: ["domain_id", "to"],
+    scopeParams: ["domain_id", "to", "thread_id", "reply_to_sent_email_id"],
     scopeDsl: /(?:^|\s)(?:domain|to):/i,
     countParam: "count",
   },

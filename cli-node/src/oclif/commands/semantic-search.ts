@@ -11,6 +11,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import {
+  FOCUS_SERVER_SUPPORT,
   focusFlags,
   focusFlagValues,
   resolveFocus,
@@ -136,7 +137,7 @@ class SemanticSearchCommand extends Command {
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
-    ...focusFlags(),
+    ...focusFlags(FOCUS_SERVER_SUPPORT.semantic === null),
   };
 
   async run(): Promise<void> {

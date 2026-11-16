@@ -373,7 +373,7 @@ class SearchCommand extends Command {
         client: apiClient.client,
         flags: focusFlagValues(flags),
         explicitScope:
-          Boolean(flags["domain-id"] || flags.to) ||
+          Boolean(flags["domain-id"] || flags.to || threadId) ||
           /(?:^|\s)(?:domain|to):/i.test(args.query),
         conflictingFlag: flags["domain-id"] ? "--domain-id" : undefined,
       });

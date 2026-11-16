@@ -184,8 +184,10 @@ export type InboxNextJson = {
   /** The commands that answer `email`, best first; empty when none is needed. */
   next_actions: NextAction[];
   automated_awaiting: InboxNextAutomatedAwaiting | null;
-  /** The domain focus this answer was read under (see `primitive focus`). */
-  focus?: FocusMeta;
+  /** `meta.focus`: the domain focus this answer was read under (see `primitive focus`). */
+  meta?: { focus: FocusMeta };
+  /** How much awaits a reply on the other domains, when a focused answer is empty. */
+  summary?: string;
   error?: { code: string; message: string };
 };
 
@@ -1090,9 +1092,12 @@ class InboxNextCommand extends Command {
       try {
         result = {
           ...found,
+          // One request: the focus filter, never the wait's retries.
           automated_awaiting: await countAutomatedAwaiting({
             apiClient,
-            api: scope.api,
+            api: scope.focus.focused
+              ? focusedInboxApi(undefined, scope.focus.params)
+              : undefined,
           }),
         };
       } catch (error) {
@@ -1105,34 +1110,41 @@ class InboxNextCommand extends Command {
     // Focused and empty: how much awaits a reply on the other domains.
     const elsewhere =
       result.outcome === "empty"
-        ? await focusEmptyHint(scope.focus, async () => {
-            const query = {
-              awaiting: "you" as const,
-              exclude_fyi: "true" as const,
-              ...(flags["include-automated"]
-                ? {}
-                : { automated: "false" as const }),
-              limit: 1,
-              count: "true" as const,
-            };
-            const counted = await listEmails({
-              client: apiClient.client,
-              query: withoutFocus(query, scope.focus) as typeof query,
-              responseStyle: "fields",
-            });
-            const total = (
-              counted.data as { meta?: { total?: unknown } } | undefined
-            )?.meta?.total;
-            return counted.error || typeof total !== "number" ? null : total;
-          })
+        ? await focusEmptyHint(
+            scope.focus,
+            async () => {
+              const query = {
+                awaiting: "you" as const,
+                exclude_fyi: "true" as const,
+                ...(flags["include-automated"]
+                  ? {}
+                  : { automated: "false" as const }),
+                limit: 1,
+                count: "true" as const,
+              };
+              const counted = await listEmails({
+                client: apiClient.client,
+                query: withoutFocus(query, scope.focus) as typeof query,
+                responseStyle: "fields",
+              });
+              const total = (
+                counted.data as { meta?: { total?: unknown } } | undefined
+              )?.meta?.total;
+              return counted.error || typeof total !== "number" ? null : total;
+              // Mail needing no reply is skipped by the listing, not the count.
+            },
+            true,
+          )
         : null;
     if (flags.json) {
       const document = toJson(result, bin);
       this.log(
         JSON.stringify(
-          scope.focus.meta
-            ? { ...document, focus: scope.focus.meta }
-            : document,
+          {
+            ...document,
+            ...(scope.focus.meta ? { meta: { focus: scope.focus.meta } } : {}),
+            ...(elsewhere ? { summary: elsewhere } : {}),
+          },
           null,
           2,
         ),

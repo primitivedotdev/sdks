@@ -48,12 +48,24 @@ Override it for one command with --domain <name> or --all-domains, or for a sess
 type FocusState = {
   profile: FocusProfile;
   orgId: string;
-  readable: ReadableDomains;
+  /** Null when the domains could not be read and the caller allows it. */
+  readable: ReadableDomains | null;
 };
 
 async function readState(
   command: Command,
   flags: CommonFlags,
+  lookupOptional: true,
+): Promise<FocusState>;
+async function readState(
+  command: Command,
+  flags: CommonFlags,
+  lookupOptional?: false,
+): Promise<FocusState & { readable: ReadableDomains }>;
+async function readState(
+  command: Command,
+  flags: CommonFlags,
+  lookupOptional = false,
 ): Promise<FocusState> {
   const { apiClient, auth } = await createAuthenticatedCliApiClient({
     configDir: command.config.configDir,
@@ -61,6 +73,16 @@ async function readState(
     apiBaseUrl: flags["api-base-url"],
   });
   const readable = await readReadableDomains(apiClient.client);
+  // Showing and clearing a saved focus work from the credential's own
+  // organization when the domains cannot be read, as listings do.
+  const fallbackOrg =
+    auth.connectedAgent?.orgId ?? auth.credentials?.org_id ?? null;
+  if (!readable && lookupOptional && fallbackOrg)
+    return {
+      profile: focusProfile(command.config.configDir, auth),
+      orgId: fallbackOrg,
+      readable: null,
+    };
   if (!readable)
     throw new Errors.CLIError(
       "Could not read this credential's domains; retry in a moment.",
@@ -117,11 +139,11 @@ export class FocusCommand extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(FocusCommand);
-    const state = await readState(this, flags);
+    const state = await readState(this, flags, true);
     const saved = loadSavedFocus(state.profile, state.orgId);
     const choice = saved?.choice ?? null;
     const session = process.env[FOCUS_ENV]?.trim() || null;
-    const names = state.readable.domains.map((d) => d.name);
+    const names = state.readable?.domains.map((d) => d.name) ?? null;
     if (flags.json) {
       this.log(
         JSON.stringify(
@@ -130,7 +152,7 @@ export class FocusCommand extends Command {
             saved: choiceJson(choice),
             session_override: session,
             domains: names,
-            applies: names.length > 1,
+            applies: names === null ? null : names.length > 1,
           },
           null,
           2,
@@ -138,7 +160,7 @@ export class FocusCommand extends Command {
       );
       return;
     }
-    if (names.length <= 1) {
+    if (names !== null && names.length <= 1) {
       this.log(
         `This credential reads mail on ${names.length === 1 ? `one domain, ${names[0]}` : "no verified domain"}, so listings are never focused.`,
       );
@@ -149,7 +171,11 @@ export class FocusCommand extends Command {
     );
     if (session)
       this.log(`${FOCUS_ENV}=${session} overrides it in this session.`);
-    this.log(`Domains this credential reads mail on: ${joinNames(names)}.`);
+    this.log(
+      names === null
+        ? "Could not read this credential's domains just now."
+        : `Domains this credential reads mail on: ${joinNames(names)}.`,
+    );
     if (!choice)
       this.log(
         "Choose with `primitive focus set <domain...>` or `primitive focus set --all`.",
@@ -183,9 +209,16 @@ ${FOCUS_DESCRIPTION}`;
 
   async run(): Promise<void> {
     const { flags, argv } = await this.parse(FocusSetCommand);
-    const names = normalizeDomainNames(
-      (argv as unknown[]).filter((a): a is string => typeof a === "string"),
+    const given = (argv as unknown[]).filter(
+      (a): a is string => typeof a === "string",
     );
+    const flagLike = given.find((a) => a.startsWith("-"));
+    if (flagLike)
+      throw new Errors.CLIError(
+        `${flagLike} is not a flag of focus set: name domains as arguments, or pass --all.`,
+        { exit: 2, code: "usage_error" },
+      );
+    const names = normalizeDomainNames(given);
     if (flags.all && names.length > 0)
       throw new Errors.CLIError("Name domains or pass --all, not both.", {
         exit: 2,
@@ -246,7 +279,7 @@ ${FOCUS_DESCRIPTION}`;
 
   async run(): Promise<void> {
     const { flags } = await this.parse(FocusClearCommand);
-    const state = await readState(this, flags);
+    const state = await readState(this, flags, true);
     let had = false;
     saveFocus(state.profile, state.orgId, (current) => {
       had = Boolean(current?.choice);
