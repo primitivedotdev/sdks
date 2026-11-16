@@ -41,6 +41,7 @@ import {
   agentProfileDirectory,
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
+import * as connectedReplyWait from "../../src/oclif/connected-reply-wait.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 import {
   composeJsonDocument,
@@ -612,6 +613,46 @@ function placeholderFor(parameter: {
   return "00000000-0000-4000-8000-000000000001";
 }
 
+/** Minimal request fixtures so the output tests reach their successful API responder. */
+function requestExample(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const schema = raw as Record<string, unknown>;
+  if (Object.hasOwn(schema, "const")) return schema.const;
+  if (Object.hasOwn(schema, "default")) return schema.default;
+  if (Array.isArray(schema.enum)) return schema.enum[0];
+  const alternatives = schema.oneOf ?? schema.anyOf;
+  const branches = [
+    ...(Array.isArray(schema.allOf) ? schema.allOf : []),
+    ...(Array.isArray(alternatives) ? alternatives.slice(0, 1) : []),
+  ];
+  const type = Array.isArray(schema.type) ? schema.type[0] : schema.type;
+  if (type === "array")
+    return Array.from({ length: Number(schema.minItems ?? 0) }, () =>
+      requestExample(schema.items),
+    );
+  if (type === "null") return null;
+  if (type === "boolean") return false;
+  if (type === "number" || type === "integer") return schema.minimum ?? 1;
+  if (type === "string") {
+    if (schema.format === "uuid") return "00000000-0000-4000-8000-000000000001";
+    if (schema.format === "email") return "member@example.com";
+    return "test";
+  }
+  const properties = (schema.properties ?? {}) as Record<string, unknown>;
+  const value: Record<string, unknown> = {};
+  for (const name of Array.isArray(schema.required) ? schema.required : []) {
+    if (typeof name === "string")
+      value[name] = requestExample(properties[name]);
+  }
+  for (const branch of branches) {
+    const example = requestExample(branch);
+    if (example && typeof example === "object" && !Array.isArray(example))
+      Object.assign(value, example);
+    else if (type !== "object" && !schema.properties) return example;
+  }
+  return value;
+}
+
 function operationArgv(operation: PrimitiveOperationManifest): string[] {
   const argv: string[] = [];
   for (const parameter of [...operation.pathParams, ...operation.queryParams]) {
@@ -626,7 +667,10 @@ function operationArgv(operation: PrimitiveOperationManifest): string[] {
     argv.push(`--${headerFlagName(parameter.name)}`, placeholderFor(parameter));
   }
   if (operation.hasJsonBody && operation.bodyRequired) {
-    argv.push("--raw-body", "{}");
+    argv.push(
+      "--raw-body",
+      JSON.stringify(requestExample(operation.requestSchema)),
+    );
   }
   argv.push("--json");
   return argv;
@@ -2520,10 +2564,19 @@ describe("collaboration commands with --json", () => {
     );
     expect(replied.warnings).toContain(warning);
     responder = notFound;
-    const chatted = expectOneDocument(
-      await runMerged("chat", [peer, "hello", "--json"]),
-    );
-    expect(chatted.warnings).toContain(warning);
+    // The warning is emitted before chat opens its receiver. This output
+    // test needs no background receiver or subscription startup.
+    const wait = vi
+      .spyOn(connectedReplyWait, "openConnectedReplyWait")
+      .mockRejectedValueOnce(new Error("Fixture receiver unavailable"));
+    try {
+      const chatted = expectOneDocument(
+        await runMerged("chat", [peer, "hello", "--json"]),
+      );
+      expect(chatted.warnings).toContain(warning);
+    } finally {
+      wait.mockRestore();
+    }
   });
 
   it("send --fyi reports a stable key", async () => {

@@ -515,6 +515,11 @@ and stderr stays empty. Output merged with `2>&1` therefore still parses:
   CLI raises itself carries a `code`: `usage_error` (exit 2) when it refused
   before sending anything, such as a bad flag or an unreadable file, and
   `cli_error` otherwise.
+- Generated commands check missing required request-body fields after merging
+  flags and JSON, before authentication or HTTP requests. Their `usage_error` includes
+  `error.details.missing`: an array of `{ field, flag, json_path }`, such as
+  `{ "field": "email", "flag": "--email", "json_path": "$.email" }`.
+  `flag` is null when the field must be supplied in JSON.
 - Generated API commands (`primitive sent list`, `primitive emails list`, ...)
   print the API's response body with `--json`: `data`, and `meta` with
   `meta.cursor` for the next page where the route sends it, plus the CLI's own

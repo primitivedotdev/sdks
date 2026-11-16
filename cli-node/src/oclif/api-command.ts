@@ -93,6 +93,7 @@ import {
   ReplyStateUnsupportedError,
   replyStateSurfaceForOperation,
 } from "./reply-state.js";
+import { assertRequiredBodyFields } from "./required-body-fields.js";
 import { RULE_NOTES_TAGS, ruleNotesReport } from "./rule-notes.js";
 import {
   ALL_SENDERS_FLAG,
@@ -1413,7 +1414,7 @@ async function applyEventTypesFlag(params: {
     return withEventTypes(params.body, eventTypes, baseRules);
   } catch (error) {
     if (error instanceof EventTypesFlagError) {
-      throw new Errors.CLIError(error.message);
+      throw cliError(error.message);
     }
     throw error;
   }
@@ -1872,6 +1873,96 @@ export function createOperationCommand(
       ) {
         requireDefaultLoginProfile();
       }
+      // Two body sources, merged: explicit JSON via --raw-body /
+      // --body-file (the base) plus per-field flags (the
+      // overrides). Per-field flag values take precedence on key
+      // conflicts so a caller can pass a base payload via --raw-body
+      // and override one field on the command line.
+      let body: unknown;
+      if (operation.hasJsonBody) {
+        const explicit = readJsonBody(parsedFlags);
+        const overrides = collectBodyFieldFlags(
+          parsedFlags,
+          bodyFieldFlagToProperty,
+        );
+        // Fields an extension's flags set, merged like the per-field
+        // flags. Named by the flag that set them in the error below.
+        const extensionFlagFor = new Map<string, string>();
+        for (const field of extension?.bodyFields?.(parsedFlags, explicit) ??
+          []) {
+          overrides[field.property] = field.value;
+          extensionFlagFor.set(field.property, field.flag);
+        }
+
+        if (Object.keys(overrides).length > 0) {
+          if (explicit === undefined) {
+            body = overrides;
+          } else if (
+            explicit !== null &&
+            typeof explicit === "object" &&
+            !Array.isArray(explicit)
+          ) {
+            body = { ...(explicit as Record<string, unknown>), ...overrides };
+          } else {
+            // Caller passed --raw-body as null, an array, or a
+            // primitive AND also passed per-field flags. We can't
+            // merge per-field overrides into a non-object body
+            // shape, and silently dropping either source would
+            // leave the caller's actual intent unclear. Refuse
+            // loudly so the next attempt is unambiguous.
+            const explicitKind =
+              explicit === null
+                ? "null"
+                : Array.isArray(explicit)
+                  ? "array"
+                  : typeof explicit;
+            const overrideFlags = Object.keys(overrides)
+              .map((p) => extensionFlagFor.get(p) ?? `--${flagName(p)}`)
+              .join(", ");
+            throw cliError(
+              `--raw-body must be a JSON object when also passing per-field flags (got ${explicitKind}); supplied per-field flags: ${overrideFlags}. Either drop --raw-body and rely on the per-field flags, or move every field into the JSON --raw-body and drop the flags.`,
+            );
+          }
+        } else {
+          body = explicit;
+        }
+      }
+
+      // Prepare local event-type fields before checking requirements. An
+      // update still reads the current rules after authentication to retain
+      // fields that PATCH would otherwise replace.
+      const bodyBeforeEventTypes = body;
+      const eventTypes =
+        EVENT_TYPES_FLAG_OPERATIONS.has(operation.sdkName) &&
+        Array.isArray(parsedFlags["event-types"])
+          ? (parsedFlags["event-types"] as string[])
+          : undefined;
+      if (eventTypes) {
+        try {
+          body = withEventTypes(body, parseEventTypesFlag(eventTypes));
+        } catch (error) {
+          if (error instanceof EventTypesFlagError)
+            throw cliError(error.message);
+          throw error;
+        }
+      } else if (operation.sdkName === "createEndpoint") {
+        body = withDefaultEventTypes(body);
+      }
+      const bodyPropertyFlags = new Map(
+        [...bodyFieldFlagToProperty].map(([flag, property]) => [
+          property,
+          `--${flag}`,
+        ]),
+      );
+      assertRequiredBodyFields(
+        operation.requestSchema,
+        body,
+        bodyPropertyFlags,
+        operation.bodyRequired,
+      );
+      const tooLong = overLongBodyField(operation.requestSchema, body);
+      if (tooLong) throw cliError(tooLong);
+
       await runWithTiming(parsedFlags.time === true, async () => {
         const { apiClient, auth, baseUrlOverridden } =
           await createAuthenticatedCliApiClient({
@@ -1886,93 +1977,23 @@ export function createOperationCommand(
             configDir: this.config.configDir,
           });
 
-        // Two body sources, merged: explicit JSON via --body /
-        // --body-file (the base) plus per-field flags (the
-        // overrides). Per-field flag values take precedence on key
-        // conflicts so a caller can pass a base payload via --body
-        // and override one field on the command line.
-        let body: unknown;
-        if (operation.hasJsonBody) {
-          const explicit = readJsonBody(parsedFlags);
-          const overrides = collectBodyFieldFlags(
-            parsedFlags,
-            bodyFieldFlagToProperty,
-          );
-          // Fields an extension's flags set, merged like the per-field
-          // flags. Named by the flag that set them in the error below.
-          const extensionFlagFor = new Map<string, string>();
-          for (const field of extension?.bodyFields?.(parsedFlags, explicit) ??
-            []) {
-            overrides[field.property] = field.value;
-            extensionFlagFor.set(field.property, field.flag);
-          }
-
-          if (Object.keys(overrides).length > 0) {
-            if (explicit === undefined) {
-              body = overrides;
-            } else if (
-              explicit !== null &&
-              typeof explicit === "object" &&
-              !Array.isArray(explicit)
-            ) {
-              body = { ...(explicit as Record<string, unknown>), ...overrides };
-            } else {
-              // Caller passed --raw-body as null, an array, or a
-              // primitive AND also passed per-field flags. We can't
-              // merge per-field overrides into a non-object body
-              // shape, and silently dropping either source would
-              // leave the caller's actual intent unclear. Refuse
-              // loudly so the next attempt is unambiguous.
-              const explicitKind =
-                explicit === null
-                  ? "null"
-                  : Array.isArray(explicit)
-                    ? "array"
-                    : typeof explicit;
-              const overrideFlags = Object.keys(overrides)
-                .map((p) => extensionFlagFor.get(p) ?? `--${flagName(p)}`)
-                .join(", ");
-              throw new Errors.CLIError(
-                `--raw-body must be a JSON object when also passing per-field flags (got ${explicitKind}); supplied per-field flags: ${overrideFlags}. Either drop --raw-body and rely on the per-field flags, or move every field into the JSON --raw-body and drop the flags.`,
-              );
-            }
-          } else {
-            body = explicit;
-          }
-        }
-
         if (
-          EVENT_TYPES_FLAG_OPERATIONS.has(operation.sdkName) &&
-          Array.isArray(parsedFlags["event-types"])
+          eventTypes &&
+          operation.sdkName === "updateEndpoint" &&
+          !bodyHasRules(bodyBeforeEventTypes)
         ) {
           body = await applyEventTypesFlag({
-            body,
-            values: parsedFlags["event-types"] as string[],
+            body: bodyBeforeEventTypes,
+            values: eventTypes,
             endpointId:
-              operation.sdkName === "updateEndpoint" &&
-              typeof parsedFlags.id === "string"
-                ? parsedFlags.id
-                : undefined,
+              typeof parsedFlags.id === "string" ? parsedFlags.id : undefined,
             listEndpoints: () =>
               operations.listEndpoints({
                 client: apiClient.client,
                 responseStyle: "fields",
               }) as ReturnType<ListEndpointsFn>,
           });
-        } else if (operation.sdkName === "createEndpoint") {
-          // A create always states what it receives: email.received unless
-          // the flag or the body names event types.
-          body = withDefaultEventTypes(body);
         }
-
-        if (operation.bodyRequired && body === undefined) {
-          throw new Errors.CLIError(
-            `Operation ${operation.operationId} requires a body. Pass each field as a --flag (see --help) or supply JSON via --raw-body / --body-file.`,
-          );
-        }
-
-        const tooLong = overLongBodyField(operation.requestSchema, body);
-        if (tooLong) throw new Errors.CLIError(tooLong, { exit: 2 });
 
         const operationFn = operations[
           operation.sdkName as OperationName
