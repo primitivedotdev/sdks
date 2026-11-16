@@ -1,0 +1,681 @@
+// Domain focus: which of the credential's domains mail listings and searches
+// show. A person or agent on an account with several domains chooses once,
+// with `primitive focus set <domain...>` or `primitive focus set --all`; the
+// choice is saved per profile (the member login in the CLI config directory,
+// a connected agent in its own profile directory, never in a credential file)
+// and every filtered command says so on stderr, or in `meta.focus` under
+// --json. `--domain <name...>` and `--all-domains` override it for one
+// command, PRIMITIVE_FOCUS_DOMAINS for a session.
+//
+// Focus narrows listings and searches only. Reads by id, notifications (listen,
+// wait-for-mail, check-mail wake-ups) and the CLI's own bookkeeping never
+// follow it, so they are built without this module.
+import { randomUUID } from "node:crypto";
+import {
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join } from "node:path";
+import { Errors, Flags } from "@oclif/core";
+import { listDomains } from "@primitivedotdev/api-core";
+import { agentProfileDirectory } from "./connected-agent-profile.js";
+
+export const FOCUS_ENV = "PRIMITIVE_FOCUS_DOMAINS";
+
+/**
+ * The request parameter each kind of listing filters domains with, or null
+ * where the server has none yet. A command whose parameter is null runs
+ * unfiltered and says the focus was not applied.
+ *
+ * `inboundMany` is the parameter GET /emails and GET /emails/search take
+ * several domain ids in. While it is null a focus names one domain at a time.
+ */
+export const FOCUS_SERVER_SUPPORT: {
+  inbound: string;
+  inboundMany: string | null;
+  sent: string | null;
+  semantic: string | null;
+} = {
+  inbound: "domain_id",
+  inboundMany: null,
+  sent: null,
+  semantic: null,
+};
+
+/** Which kind of listing a command is, for FOCUS_SERVER_SUPPORT. */
+export type FocusSurface = "inbound" | "sent" | "semantic";
+
+export type FocusDomain = { name: string; id: string };
+
+export type FocusChoice = { all: true } | { domains: FocusDomain[] };
+
+/** What one profile saved for one organization. */
+export type SavedFocus = {
+  choice: FocusChoice | null;
+  chosen_at?: string;
+  /** When the one-time "choose a focus" refusal was shown. */
+  refused_at?: string;
+};
+
+export type FocusSource = "flag" | "env" | "profile" | "none";
+
+/** `meta.focus` under --json. */
+export type FocusMeta = {
+  /** The focused domain names; empty when every domain is shown. */
+  domains: string[];
+  all: boolean;
+  source: FocusSource;
+  /** False when this command cannot filter by domain yet. */
+  applied: boolean;
+  widen: string[];
+};
+
+/** How a listing is focused: what to send, and what to tell the caller. */
+export type FocusOutcome = {
+  /** Query (or body) fields that narrow the request. */
+  params: Record<string, unknown>;
+  meta: FocusMeta | null;
+  /** The stderr line in text mode, or null for none. */
+  line: string | null;
+  /** The focused domains when a filter was sent. */
+  focused: FocusDomain[] | null;
+  /** The credential's domains, when they were read. */
+  readable: FocusDomain[] | null;
+};
+
+export const NO_FOCUS: FocusOutcome = {
+  params: {},
+  meta: null,
+  line: null,
+  focused: null,
+  readable: null,
+};
+
+export const DOMAIN_FLAG_DESCRIPTION =
+  "Only mail on this domain, by name, for this command (overrides the saved focus and PRIMITIVE_FOCUS_DOMAINS). See `primitive focus`.";
+export const ALL_DOMAINS_FLAG_DESCRIPTION =
+  "Mail on every domain this credential reads, for this command, ignoring the saved focus and PRIMITIVE_FOCUS_DOMAINS.";
+
+/** The two focus flags every focused listing takes. */
+export function focusFlags() {
+  return {
+    domain: Flags.string({
+      description: DOMAIN_FLAG_DESCRIPTION,
+      multiple: true,
+    }),
+    "all-domains": Flags.boolean({
+      description: ALL_DOMAINS_FLAG_DESCRIPTION,
+    }),
+  };
+}
+
+export type FocusFlagValues = {
+  domain?: string[] | undefined;
+  allDomains?: boolean | undefined;
+};
+
+export function focusFlagValues(
+  flags: Record<string, unknown>,
+): FocusFlagValues {
+  const domain = flags.domain;
+  return {
+    domain: Array.isArray(domain)
+      ? domain.filter((d): d is string => typeof d === "string")
+      : typeof domain === "string"
+        ? [domain]
+        : undefined,
+    allDomains: flags["all-domains"] === true,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Storage
+
+/** Where a profile's focus is saved. */
+export type FocusProfile =
+  | { kind: "member"; path: string }
+  | { kind: "agent"; name: string; path: string };
+
+const FOCUS_FILE = "focus.json";
+
+export function focusProfile(
+  configDir: string,
+  auth: { connectedAgent?: { profileName: string } | undefined },
+): FocusProfile {
+  const name = auth.connectedAgent?.profileName;
+  if (name) {
+    return {
+      kind: "agent",
+      name,
+      path: join(agentProfileDirectory(configDir, name), FOCUS_FILE),
+    };
+  }
+  return { kind: "member", path: join(configDir, FOCUS_FILE) };
+}
+
+type FocusFile = { version: 1; orgs: Record<string, SavedFocus> };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function parseChoice(value: unknown): FocusChoice | null {
+  if (!isRecord(value)) return null;
+  if (value.all === true) return { all: true };
+  if (!Array.isArray(value.domains)) return null;
+  const domains: FocusDomain[] = [];
+  for (const entry of value.domains) {
+    if (
+      !isRecord(entry) ||
+      typeof entry.name !== "string" ||
+      typeof entry.id !== "string"
+    )
+      return null;
+    domains.push({ name: entry.name, id: entry.id });
+  }
+  return domains.length > 0 ? { domains } : null;
+}
+
+function parseSaved(value: unknown): SavedFocus | null {
+  if (!isRecord(value)) return null;
+  return {
+    choice: parseChoice(value.choice),
+    ...(typeof value.chosen_at === "string"
+      ? { chosen_at: value.chosen_at }
+      : {}),
+    ...(typeof value.refused_at === "string"
+      ? { refused_at: value.refused_at }
+      : {}),
+  };
+}
+
+function readFocusFile(path: string): FocusFile {
+  let raw: string;
+  try {
+    raw = readFileSync(path, "utf8");
+  } catch {
+    return { version: 1, orgs: {} };
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!isRecord(parsed) || !isRecord(parsed.orgs))
+      return { version: 1, orgs: {} };
+    const orgs: Record<string, SavedFocus> = {};
+    for (const [org, saved] of Object.entries(parsed.orgs)) {
+      const value = parseSaved(saved);
+      if (value) orgs[org] = value;
+    }
+    return { version: 1, orgs };
+  } catch {
+    // A damaged file reads as no focus; the next choice rewrites it.
+    return { version: 1, orgs: {} };
+  }
+}
+
+function writeFocusFile(path: string, file: FocusFile): void {
+  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+  const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(temporary, `${JSON.stringify(file, null, 2)}\n`, {
+      mode: 0o600,
+    });
+    renameSync(temporary, path);
+  } catch (error) {
+    rmSync(temporary, { force: true });
+    throw error;
+  }
+}
+
+export function loadSavedFocus(
+  profile: FocusProfile,
+  orgId: string,
+): SavedFocus | null {
+  return readFocusFile(profile.path).orgs[orgId] ?? null;
+}
+
+export function saveFocus(
+  profile: FocusProfile,
+  orgId: string,
+  update: (current: SavedFocus | null) => SavedFocus | null,
+): void {
+  const file = readFocusFile(profile.path);
+  const next = update(file.orgs[orgId] ?? null);
+  if (next === null) delete file.orgs[orgId];
+  else file.orgs[orgId] = next;
+  writeFocusFile(profile.path, file);
+}
+
+// ---------------------------------------------------------------------------
+// The credential's domains
+
+type DomainsClient = NonNullable<Parameters<typeof listDomains>[0]>["client"];
+
+export type ReadableDomains = { orgId: string | null; domains: FocusDomain[] };
+
+/** How long reading the domains may take before focus gives up on them. */
+export const DOMAINS_TIMEOUT_MS = 5_000;
+
+/**
+ * The verified domains this credential can read mail on, from GET /domains,
+ * which lists only the domains a credential confined to some mailboxes
+ * reaches. Null when they cannot be read.
+ */
+export async function readReadableDomains(
+  client: DomainsClient,
+  timeoutMs = DOMAINS_TIMEOUT_MS,
+): Promise<ReadableDomains | null> {
+  try {
+    const result = await listDomains({
+      client,
+      responseStyle: "fields",
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (result.error) return null;
+    const rows = (result.data as { data?: unknown } | undefined)?.data;
+    if (!Array.isArray(rows)) return null;
+    let orgId: string | null = null;
+    const domains: FocusDomain[] = [];
+    for (const row of rows) {
+      if (!isRecord(row) || row.verified !== true) continue;
+      if (typeof row.id !== "string" || typeof row.domain !== "string")
+        continue;
+      if (typeof row.org_id === "string") orgId ??= row.org_id;
+      domains.push({ name: row.domain.toLowerCase(), id: row.id });
+    }
+    domains.sort((a, b) => a.name.localeCompare(b.name));
+    return { orgId, domains };
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Errors
+
+function focusError(
+  message: string,
+  code: string,
+  exit: number,
+  details?: Record<string, unknown>,
+): Errors.CLIError {
+  const error = new Errors.CLIError(message, { exit, code });
+  if (details)
+    (error as Errors.CLIError & { details?: unknown }).details = details;
+  return error;
+}
+
+export function joinNames(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+/** The refusal a multi-domain credential sees once before it chooses. */
+export function focusRequiredError(domains: FocusDomain[]): Errors.CLIError {
+  const names = domains.map((d) => d.name);
+  const example = names[0] ?? "<domain>";
+  return focusError(
+    `This credential reads mail on ${names.length} domains: ${joinNames(names)}. Choose which this profile lists and searches, once: \`primitive focus set ${example}\` (one or more domains) or \`primitive focus set --all\` (every domain). This is asked only once; for one command, pass --domain <name> or --all-domains.`,
+    "focus_required",
+    2,
+    {
+      domains: names,
+      choices: ["primitive focus set <domain...>", "primitive focus set --all"],
+    },
+  );
+}
+
+/** Refused while the server filters one domain at a time. */
+export function oneDomainAtATimeError(names: string[]): Errors.CLIError {
+  return focusError(
+    `A focus names one domain for now (got ${joinNames(names)}): mail listings filter one domain at a time. Name one, or use --all-domains.`,
+    "usage_error",
+    2,
+  );
+}
+
+/** Whether a focus may name more than one domain. */
+export function manyDomainsSupported(): boolean {
+  return FOCUS_SERVER_SUPPORT.inboundMany !== null;
+}
+
+/** Names normalized: trimmed, lower case, without duplicates. */
+export function normalizeDomainNames(names: readonly string[]): string[] {
+  const seen = new Set<string>();
+  for (const raw of names) {
+    for (const part of raw.split(/[\s,]+/)) {
+      const name = part.trim().toLowerCase().replace(/\.$/, "");
+      if (name) seen.add(name);
+    }
+  }
+  return [...seen];
+}
+
+/** The named domains, looked up among the readable ones, or an error naming those missing. */
+export function resolveDomainNames(
+  names: readonly string[],
+  readable: readonly FocusDomain[],
+  origin: string,
+): FocusDomain[] {
+  const byName = new Map(readable.map((d) => [d.name, d]));
+  const missing = names.filter((n) => !byName.has(n));
+  if (missing.length > 0) {
+    throw focusError(
+      `${origin} names ${joinNames(missing)}, which ${missing.length === 1 ? "is not a domain" : "are not domains"} this credential reads mail on. ${
+        readable.length > 0
+          ? `It reads ${joinNames(readable.map((d) => d.name))}.`
+          : "It reads no verified domain."
+      }`,
+      "focus_domain_unknown",
+      2,
+      { unknown: missing, domains: readable.map((d) => d.name) },
+    );
+  }
+  return names.map((n) => byName.get(n) as FocusDomain);
+}
+
+/** A saved domain the credential no longer reads (deleted, or access removed). */
+export function focusDomainGoneError(
+  gone: FocusDomain[],
+  profile: FocusProfile,
+): Errors.CLIError {
+  const names = gone.map((d) => d.name);
+  return focusError(
+    `The saved focus${profile.kind === "agent" ? ` of agent profile ${profile.name}` : ""} names ${joinNames(names)}, which this credential no longer reads mail on (the domain may have been deleted). Choose again with \`primitive focus set <domain...>\` or \`primitive focus set --all\`, or run \`primitive focus clear\`.`,
+    "focus_domain_missing",
+    1,
+    { missing: names },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Resolution
+
+/** What the caller asked for, before it is checked against the domains. */
+type Requested =
+  | { source: "flag" | "env"; all: true }
+  | { source: "flag" | "env"; names: string[] };
+
+function requested(
+  flags: FocusFlagValues,
+  env: Record<string, string | undefined>,
+): Requested | null {
+  if (flags.allDomains && flags.domain && flags.domain.length > 0) {
+    throw focusError(
+      "Pass --domain or --all-domains, not both.",
+      "usage_error",
+      2,
+    );
+  }
+  if (flags.allDomains) return { source: "flag", all: true };
+  if (flags.domain && flags.domain.length > 0) {
+    const names = normalizeDomainNames(flags.domain);
+    if (names.length === 0)
+      throw focusError("--domain needs a domain name.", "usage_error", 2);
+    return { source: "flag", names };
+  }
+  const fromEnv = env[FOCUS_ENV]?.trim();
+  if (fromEnv) {
+    if (fromEnv.toLowerCase() === "all") return { source: "env", all: true };
+    return { source: "env", names: normalizeDomainNames([fromEnv]) };
+  }
+  return null;
+}
+
+const SOURCE_TEXT: Record<Exclude<FocusSource, "none">, string> = {
+  flag: "from --domain",
+  env: `from ${FOCUS_ENV}`,
+  profile: "saved focus",
+};
+
+function widenFor(source: FocusSource): string[] {
+  if (source === "flag") return ["drop --domain", "--all-domains"];
+  if (source === "env") return ["--all-domains", `unset ${FOCUS_ENV}`];
+  return ["--all-domains", "primitive focus clear"];
+}
+
+export type ResolveFocusParams = {
+  surface: FocusSurface;
+  configDir: string;
+  auth: {
+    credentials?: { org_id?: string } | null | undefined;
+    connectedAgent?: { profileName: string; orgId?: string } | undefined;
+  };
+  client: DomainsClient;
+  flags: FocusFlagValues;
+  /**
+   * Set when the command was given a scope of its own, such as --domain-id or
+   * an exact recipient: the session's and the profile's focus then neither
+   * apply nor ask.
+   */
+  explicitScope?: boolean;
+  /** A flag of the command's own that --domain cannot be given with, such as --domain-id. */
+  conflictingFlag?: string | undefined;
+  env?: Record<string, string | undefined>;
+  /** Read the domains (tests replace it). */
+  readDomains?: (client: DomainsClient) => Promise<ReadableDomains | null>;
+  now?: () => Date;
+};
+
+/**
+ * How this listing is focused: from --domain or --all-domains, then
+ * PRIMITIVE_FOCUS_DOMAINS, then the profile's saved focus. A credential that
+ * reads mail on more than one domain and never chose is refused once with
+ * `focus_required` (exit 2); after that refusal, or once it chose, it is
+ * never asked again. A credential with one domain never sees any of it.
+ */
+export async function resolveFocus(
+  params: ResolveFocusParams,
+): Promise<FocusOutcome> {
+  const env = params.env ?? process.env;
+  const asked = requested(params.flags, env);
+  // A scope the command was given wins over the session's and the profile's
+  // focus; only --domain or --all-domains on the same command still apply.
+  if (params.explicitScope && asked?.source !== "flag") return NO_FOCUS;
+  if (params.conflictingFlag && asked?.source === "flag" && "names" in asked)
+    throw focusError(
+      `Pass --domain or ${params.conflictingFlag}, not both.`,
+      "usage_error",
+      2,
+    );
+  if (asked && "all" in asked) {
+    return {
+      ...NO_FOCUS,
+      meta: {
+        domains: [],
+        all: true,
+        source: asked.source,
+        applied: true,
+        widen: [],
+      },
+    };
+  }
+
+  const profile = focusProfile(params.configDir, params.auth);
+  const read = params.readDomains ?? readReadableDomains;
+  const readable = await read(params.client);
+  const orgId =
+    readable?.orgId ??
+    params.auth.connectedAgent?.orgId ??
+    params.auth.credentials?.org_id ??
+    null;
+
+  if (asked) {
+    if (!readable) {
+      throw focusError(
+        `Could not read this credential's domains to look up ${joinNames(asked.names)}; retry, or pass --all-domains.`,
+        "focus_lookup_failed",
+        1,
+      );
+    }
+    const domains = resolveDomainNames(
+      asked.names,
+      readable.domains,
+      asked.source === "flag" ? "--domain" : FOCUS_ENV,
+    );
+    return focusedOutcome(params.surface, domains, asked.source, readable);
+  }
+
+  const saved = orgId ? loadSavedFocus(profile, orgId) : null;
+  // One domain, or none: nothing to choose between.
+  if (readable && readable.domains.length <= 1) return NO_FOCUS;
+
+  const choice = saved?.choice ?? null;
+  if (choice) {
+    if ("all" in choice) {
+      return {
+        ...NO_FOCUS,
+        readable: readable?.domains ?? null,
+        meta: {
+          domains: [],
+          all: true,
+          source: "profile",
+          applied: true,
+          widen: [],
+        },
+      };
+    }
+    if (readable) {
+      const ids = new Set(readable.domains.map((d) => d.id));
+      const gone = choice.domains.filter((d) => !ids.has(d.id));
+      if (gone.length > 0) throw focusDomainGoneError(gone, profile);
+    }
+    return focusedOutcome(params.surface, choice.domains, "profile", readable);
+  }
+
+  // Never chosen. Without the domains there is nothing to name, so no ask.
+  if (!readable || !orgId) return NO_FOCUS;
+  if (!saved?.refused_at) {
+    const at = (params.now ?? (() => new Date()))().toISOString();
+    try {
+      saveFocus(profile, orgId, (current) => ({
+        choice: current?.choice ?? null,
+        ...(current?.chosen_at ? { chosen_at: current.chosen_at } : {}),
+        refused_at: at,
+      }));
+    } catch {
+      // Unsaved, the refusal would repeat on every run: list instead.
+      return unchosenOutcome(readable);
+    }
+    throw focusRequiredError(readable.domains);
+  }
+  return unchosenOutcome(readable);
+}
+
+function unchosenOutcome(readable: ReadableDomains): FocusOutcome {
+  return {
+    ...NO_FOCUS,
+    readable: readable.domains,
+    meta: {
+      domains: [],
+      all: true,
+      source: "none",
+      applied: true,
+      widen: [],
+    },
+    line: `No focus chosen: showing mail on all ${readable.domains.length} domains. Narrow it with \`primitive focus set <domain...>\`, or keep every domain with \`primitive focus set --all\`.`,
+  };
+}
+
+/** The request fields for a focus on these domains, or null where the surface cannot filter. */
+export function focusParams(
+  surface: FocusSurface,
+  domains: readonly FocusDomain[],
+): Record<string, unknown> | null {
+  const ids = domains.map((d) => d.id);
+  if (surface === "inbound") {
+    if (ids.length === 1) return { [FOCUS_SERVER_SUPPORT.inbound]: ids[0] };
+    const many = FOCUS_SERVER_SUPPORT.inboundMany;
+    if (!many) throw oneDomainAtATimeError(domains.map((d) => d.name));
+    return { [many]: ids };
+  }
+  const name = FOCUS_SERVER_SUPPORT[surface];
+  return name ? { [name]: ids } : null;
+}
+
+function focusedOutcome(
+  surface: FocusSurface,
+  domains: FocusDomain[],
+  source: Exclude<FocusSource, "none">,
+  readable: ReadableDomains | null,
+): FocusOutcome {
+  const names = domains.map((d) => d.name);
+  const params = focusParams(surface, domains);
+  const widen = widenFor(source);
+  if (params === null) {
+    if (source === "flag")
+      throw focusError(
+        "--domain cannot filter this command yet: it lists every domain. Leave --domain out.",
+        "usage_error",
+        2,
+      );
+    return {
+      params: {},
+      focused: null,
+      readable: readable?.domains ?? null,
+      meta: { domains: names, all: false, source, applied: false, widen },
+      line: `Focus on ${joinNames(names)} (${SOURCE_TEXT[source]}) not applied: this command cannot filter by domain yet, so it shows every domain.`,
+    };
+  }
+  return {
+    params,
+    focused: domains,
+    readable: readable?.domains ?? null,
+    meta: { domains: names, all: false, source, applied: true, widen },
+    line: `Showing mail on ${joinNames(names)} only (${SOURCE_TEXT[source]}). Widen: ${widenFor(source).join(" or ")}.`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Empty focused results
+
+/**
+ * The note an empty focused result adds: how much matching mail the other
+ * domains hold. `countElsewhere` runs the same request without the focus and
+ * returns its total, or null when it cannot be read. Null when the result was
+ * not focused.
+ */
+export async function focusEmptyHint(
+  outcome: FocusOutcome,
+  countElsewhere: () => Promise<number | null>,
+): Promise<string | null> {
+  if (!outcome.focused) return null;
+  const names = joinNames(outcome.focused.map((d) => d.name));
+  let total: number | null;
+  try {
+    total = await countElsewhere();
+  } catch {
+    total = null;
+  }
+  if (total === null)
+    return `Nothing matched on ${names}. Other domains may hold matching mail: pass --all-domains to look.`;
+  if (total === 0)
+    return `Nothing matched on ${names}, and nothing matches on the other domains either.`;
+  return `Nothing matched on ${names}; ${total} matching email${total === 1 ? "" : "s"} on other domains. Pass --all-domains to see ${total === 1 ? "it" : "them"}.`;
+}
+
+/** Remove the focus fields from a query, for the elsewhere count. */
+export function withoutFocus(
+  query: Record<string, unknown>,
+  outcome: FocusOutcome,
+): Record<string, unknown> {
+  const rest = { ...query };
+  for (const key of Object.keys(outcome.params)) delete rest[key];
+  return rest;
+}
+
+/** Write the focus line to stderr unless --json. */
+export function writeFocusLine(outcome: FocusOutcome, json: boolean): void {
+  if (!json && outcome.line) process.stderr.write(`${outcome.line}\n`);
+}
+
+/** The envelope with `meta.focus` added, when there is a focus to report. */
+export function withFocusMeta<T>(envelope: T, outcome: FocusOutcome): T {
+  if (!outcome.meta || envelope === null || typeof envelope !== "object")
+    return envelope;
+  const record = envelope as Record<string, unknown>;
+  const meta = isRecord(record.meta) ? record.meta : {};
+  return { ...record, meta: { ...meta, focus: outcome.meta } } as T;
+}
