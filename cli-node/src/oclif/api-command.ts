@@ -2393,13 +2393,9 @@ export function createOperationCommand(
               ...(countParam ? { [countParam]: "true" } : {}),
             });
             if (counted.error) return null;
-            // GET /emails with --search counts only the page it read.
-            return countFromMeta(
-              counted.data,
-              operation.sdkName === "listEmails" && query.search !== undefined
-                ? "atLeast"
-                : undefined,
-            );
+            // A total the server capped (as GET /emails does for --search,
+            // past the page it read) is worded as a lower bound.
+            return countFromMeta(counted.data);
           });
           if (note && jsonOutput) summary.push(note);
           else if (note) process.stderr.write(`${note}\n`);

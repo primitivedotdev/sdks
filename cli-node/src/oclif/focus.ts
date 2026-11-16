@@ -658,12 +658,6 @@ function focusedOutcome(
 // Empty focused results
 
 /**
- * The note an empty focused result adds: how much matching mail the other
- * domains hold. `countElsewhere` runs the same request without the focus and
- * returns its total, or null when it cannot be read. Null when the result was
- * not focused.
- */
-/**
  * A count of matching mail: exact, a lower bound (`atLeast`, such as a capped
  * total), or an upper bound (`upTo`, such as one that keeps rows a listing
  * skips).
@@ -682,10 +676,17 @@ export function countFromMeta(
   if (!meta || typeof meta.total !== "number") return null;
   return {
     total: meta.total,
-    bound: meta.total_capped === true ? "atLeast" : bound,
+    // A capped total is a lower bound, unless the count already over-counts.
+    bound: bound ?? (meta.total_capped === true ? "atLeast" : undefined),
   };
 }
 
+/**
+ * The note an empty focused result adds: how much matching mail the other
+ * domains hold. `countElsewhere` runs the same request without the focus and
+ * returns its count, or null when it cannot be read. Null when the result was
+ * not focused.
+ */
 export async function focusEmptyHint(
   outcome: FocusOutcome,
   countElsewhere: () => Promise<ElsewhereCount | null>,
@@ -707,9 +708,9 @@ export async function focusEmptyHint(
         : "";
   if (total === null)
     return `Nothing matched on ${names}. Other domains may hold matching mail: pass --all-domains to look.`;
-  if (total === 0 && count?.bound !== "atLeast")
+  if (total === 0)
     return `Nothing matched on ${names}, and nothing matches on the other domains either.`;
-  return `Nothing matched on ${names}; ${prefix}${total} matching email${total === 1 ? "" : "s"} on other domains. Pass --all-domains to see ${total === 1 ? "it" : "them"}.`;
+  return `Nothing matched on ${names}; ${prefix}${total} matching email${total === 1 ? "" : "s"} on other domains. Pass --all-domains to see ${total === 1 && !count?.bound ? "it" : "them"}.`;
 }
 
 /**
@@ -718,7 +719,8 @@ export async function focusEmptyHint(
  */
 export function queryScopesItself(q: string | undefined): boolean {
   if (!q) return false;
-  const unquoted = q.replace(/"(?:[^"\\]|\\.)*"/g, " ");
+  // As the server reads a phrase: only \" is an escape inside it.
+  const unquoted = q.replace(/"(?:\\"|[^"])*"/g, " ");
   return /(?:^|\s)(?:domain|to):/i.test(unquoted);
 }
 

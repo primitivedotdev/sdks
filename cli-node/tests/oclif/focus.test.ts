@@ -45,6 +45,7 @@ let calls: Call[] = [];
 let domains: FocusDomain[] = [SALES, SUPPORT];
 let emails: (call: Call) => unknown[] = () => [];
 let total: (call: Call) => number = () => 0;
+let capped: (call: Call) => boolean = () => false;
 let tempHome: string;
 let configDir: string;
 let previousEnv: Record<string, string | undefined>;
@@ -78,7 +79,12 @@ function client() {
         return Response.json({
           success: true,
           data: emails(call),
-          meta: { limit: 50, cursor: null, total: total(call) },
+          meta: {
+            limit: 50,
+            cursor: null,
+            total: total(call),
+            total_capped: capped(call),
+          },
         });
       if (url.pathname === "/v1/sent-emails")
         return Response.json({
@@ -147,6 +153,7 @@ beforeEach(() => {
   domains = [SALES, SUPPORT];
   emails = () => [];
   total = () => 0;
+  capped = () => false;
   previousEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
   for (const key of ENV_KEYS) delete process.env[key];
   tempHome = mkdtempSync(join(tmpdir(), "primitive-focus-"));
@@ -680,15 +687,17 @@ describe("automated review fixes", () => {
     expect(queryScopesItself('"please to:bob@example.com now"')).toBe(false);
     expect(queryScopesItself("invoice to:bob@example.com")).toBe(true);
     expect(queryScopesItself('"x" domain:example.com')).toBe(true);
+    expect(queryScopesItself('"say \\"to:a@b.c\\" now"')).toBe(false);
   });
 
   it("says a capped or page-only count is a lower bound", async () => {
     saveFocus(memberProfile(), ORG, () => ({ choice: { domains: [SUPPORT] } }));
     emails = () => [];
-    total = (call) => (call.query.get("domain_id") ? 0 : 1);
+    total = (call) => (call.query.get("domain_id") ? 0 : 2);
+    capped = (call) => !call.query.get("domain_id");
     const result = await run("emails:list", ["--search", "invoice"]);
     expect(result.stderr).toContain(
-      "at least 1 matching email on other domains",
+      "at least 2 matching emails on other domains",
     );
   });
 });
