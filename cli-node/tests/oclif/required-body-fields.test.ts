@@ -95,6 +95,19 @@ describe("required request body fields", () => {
     ).toEqual([email, requestId]);
   });
 
+  it("does not invent requirements from unresolved recursive references", () => {
+    const ref = { $ref: "#/components/schemas/MemoryJsonValue" };
+    expect(missingBodyFields(ref, {}, flags, true)).toEqual([]);
+    expect(
+      missingBodyFields(
+        { required: ["value"], properties: { value: ref } },
+        { value: { nested: {} } },
+        flags,
+        true,
+      ),
+    ).toEqual([]);
+  });
+
   it("does not require every alternative, and narrows only on supplied literal choices", () => {
     const branches = [
       {
@@ -133,6 +146,9 @@ describe("required request body fields", () => {
     for (const body of [null, false, "invalid", []]) {
       expect(missingBodyFields(schema, body, flags, true)).toEqual([]);
     }
+    expect(() =>
+      assertRequiredBodyFields(schema, null, flags, true),
+    ).not.toThrow();
     expect(() =>
       assertRequiredBodyFields(null, undefined, flags, true),
     ).toThrow(

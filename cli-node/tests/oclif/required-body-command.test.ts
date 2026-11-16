@@ -144,4 +144,11 @@ describe("required bodies through the command registry", () => {
     ).rejects.toThrow("Reached authentication");
     expect(auth.create).toHaveBeenCalledOnce();
   });
+
+  it("leaves an explicit --raw-body null for server validation", async () => {
+    await expect(command.run(["--raw-body", "null"], { root })).rejects.toThrow(
+      "Reached authentication",
+    );
+    expect(auth.create).toHaveBeenCalledOnce();
+  });
 });

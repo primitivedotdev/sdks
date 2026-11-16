@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { openapiDocument, operationManifest } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
+import { OPERATION_EXTENSIONS } from "../../src/oclif/api-command.js";
 import {
   CLI_OMITTED_OPERATION_IDS,
   CREDENTIAL_HEADER_OPERATION_IDS,
@@ -50,6 +51,35 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("requires flag metadata before an extension starts supplying a required body property", () => {
+    function requiredProperties(schema: unknown): string[] {
+      if (!schema || typeof schema !== "object" || Array.isArray(schema))
+        return [];
+      const node = schema as Record<string, unknown>;
+      return [
+        ...(Array.isArray(node.required)
+          ? node.required.filter(
+              (name): name is string => typeof name === "string",
+            )
+          : []),
+        ...[node.allOf, node.oneOf, node.anyOf].flatMap((branches) =>
+          Array.isArray(branches) ? branches.flatMap(requiredProperties) : [],
+        ),
+      ];
+    }
+    for (const operation of cliOperationManifest) {
+      const supplied =
+        OPERATION_EXTENSIONS[operation.sdkName]?.bodyProperties ?? [];
+      const required = requiredProperties(operation.requestSchema);
+      // Required extension fields need a missing-field flag mapping before
+      // they are introduced; otherwise errors incorrectly advise JSON only.
+      expect(
+        supplied.filter((name) => required.includes(name)),
+        `${operation.sdkName}: map required extension fields to their flags`,
+      ).toEqual([]);
+    }
+  });
+
   it("registers agent network parent, convenience commands, and generated operations", () => {
     for (const name of [
       "network",

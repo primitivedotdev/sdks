@@ -188,6 +188,34 @@ describe("currentEndpointRules", () => {
 });
 
 describe("endpoints create/update --event-types", () => {
+  it.each([
+    ["createEndpoint", []],
+    ["updateEndpoint", ["--id", ENDPOINT_ID]],
+    ["updateEndpoint", ["--id", ENDPOINT_ID, "--raw-body", '{"rules":{}}']],
+  ])(
+    "rejects empty event types with exit 2 before auth for %s %j",
+    async (name, argv) => {
+      const calls = fixture();
+      await expect(
+        command(name).run([...argv, "--event-types", " , "], { root }),
+      ).rejects.toMatchObject({ oclif: { exit: 2 } });
+      expect(auth.create).not.toHaveBeenCalled();
+      expect(calls).toEqual([]);
+    },
+  );
+
+  it("uses exit 2 when event-type preparation cannot read existing rules after auth", async () => {
+    const calls = fixture({ body: { success: true, data: [] } });
+    await expect(
+      command("updateEndpoint").run(
+        ["--id", ENDPOINT_ID, "--event-types", "email.received"],
+        { root },
+      ),
+    ).rejects.toMatchObject({ oclif: { exit: 2 } });
+    expect(auth.create).toHaveBeenCalledOnce();
+    expect(calls.map((call) => call.method)).toEqual(["GET"]);
+  });
+
   it("is only offered on endpoint create and update", () => {
     expect(command("createEndpoint").flags["event-types"]).toBeDefined();
     expect(command("updateEndpoint").flags["event-types"]).toBeDefined();

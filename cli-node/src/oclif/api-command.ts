@@ -1414,7 +1414,7 @@ async function applyEventTypesFlag(params: {
     return withEventTypes(params.body, eventTypes, baseRules);
   } catch (error) {
     if (error instanceof EventTypesFlagError) {
-      throw new Errors.CLIError(error.message);
+      throw cliError(error.message);
     }
     throw error;
   }
