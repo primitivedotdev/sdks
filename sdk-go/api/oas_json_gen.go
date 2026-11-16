@@ -76567,15 +76567,40 @@ func (s *EmailListMeta) encodeFields(e *jx.Encoder) {
 			s.HasMore.Encode(e)
 		}
 	}
+	{
+		if s.TotalCapped.Set {
+			e.FieldStart("total_capped")
+			s.TotalCapped.Encode(e)
+		}
+	}
+	{
+		if s.TotalUnavailable.Set {
+			e.FieldStart("total_unavailable")
+			s.TotalUnavailable.Encode(e)
+		}
+	}
+	{
+		if s.DomainIds != nil {
+			e.FieldStart("domain_ids")
+			e.ArrStart()
+			for _, elem := range s.DomainIds {
+				json.EncodeUUID(e, elem)
+			}
+			e.ArrEnd()
+		}
+	}
 }
 
-var jsonFieldsNameOfEmailListMeta = [6]string{
+var jsonFieldsNameOfEmailListMeta = [9]string{
 	0: "total",
 	1: "limit",
 	2: "cursor",
 	3: "recipient_outside_access",
 	4: "recipient_rules_only",
 	5: "has_more",
+	6: "total_capped",
+	7: "total_unavailable",
+	8: "domain_ids",
 }
 
 // Decode decodes EmailListMeta from json.
@@ -76583,7 +76608,7 @@ func (s *EmailListMeta) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode EmailListMeta to nil")
 	}
-	var requiredBitSet [1]uint8
+	var requiredBitSet [2]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -76649,6 +76674,45 @@ func (s *EmailListMeta) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"has_more\"")
 			}
+		case "total_capped":
+			if err := func() error {
+				s.TotalCapped.Reset()
+				if err := s.TotalCapped.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"total_capped\"")
+			}
+		case "total_unavailable":
+			if err := func() error {
+				s.TotalUnavailable.Reset()
+				if err := s.TotalUnavailable.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"total_unavailable\"")
+			}
+		case "domain_ids":
+			if err := func() error {
+				s.DomainIds = make([]uuid.UUID, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem uuid.UUID
+					v, err := json.DecodeUUID(d)
+					elem = v
+					if err != nil {
+						return err
+					}
+					s.DomainIds = append(s.DomainIds, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"domain_ids\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -76658,8 +76722,9 @@ func (s *EmailListMeta) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
+	for i, mask := range [2]uint8{
 		0b00000110,
+		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -92838,9 +92903,19 @@ func (s *EmailSearchMeta) encodeFields(e *jx.Encoder) {
 			s.FacetsCapped.Encode(e)
 		}
 	}
+	{
+		if s.DomainIds != nil {
+			e.FieldStart("domain_ids")
+			e.ArrStart()
+			for _, elem := range s.DomainIds {
+				json.EncodeUUID(e, elem)
+			}
+			e.ArrEnd()
+		}
+	}
 }
 
-var jsonFieldsNameOfEmailSearchMeta = [9]string{
+var jsonFieldsNameOfEmailSearchMeta = [10]string{
 	0: "total",
 	1: "total_capped",
 	2: "limit",
@@ -92850,6 +92925,7 @@ var jsonFieldsNameOfEmailSearchMeta = [9]string{
 	6: "facets_unavailable",
 	7: "partial",
 	8: "facets_capped",
+	9: "domain_ids",
 }
 
 // Decode decodes EmailSearchMeta from json.
@@ -92954,6 +93030,25 @@ func (s *EmailSearchMeta) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"facets_capped\"")
+			}
+		case "domain_ids":
+			if err := func() error {
+				s.DomainIds = make([]uuid.UUID, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem uuid.UUID
+					v, err := json.DecodeUUID(d)
+					elem = v
+					if err != nil {
+						return err
+					}
+					s.DomainIds = append(s.DomainIds, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"domain_ids\"")
 			}
 		default:
 			return d.Skip()
@@ -168970,6 +169065,164 @@ func (s *ListSentEmailsOK) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode implements json.Marshaler.
+func (s *ListSentEmailsOKMeta) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ListSentEmailsOKMeta) encodeFields(e *jx.Encoder) {
+	{
+		if s.DomainIds != nil {
+			e.FieldStart("domain_ids")
+			e.ArrStart()
+			for _, elem := range s.DomainIds {
+				json.EncodeUUID(e, elem)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		e.FieldStart("total")
+		e.Int(s.Total)
+	}
+	{
+		e.FieldStart("limit")
+		e.Int(s.Limit)
+	}
+	{
+		e.FieldStart("cursor")
+		s.Cursor.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfListSentEmailsOKMeta = [4]string{
+	0: "domain_ids",
+	1: "total",
+	2: "limit",
+	3: "cursor",
+}
+
+// Decode decodes ListSentEmailsOKMeta from json.
+func (s *ListSentEmailsOKMeta) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListSentEmailsOKMeta to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "domain_ids":
+			if err := func() error {
+				s.DomainIds = make([]uuid.UUID, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem uuid.UUID
+					v, err := json.DecodeUUID(d)
+					elem = v
+					if err != nil {
+						return err
+					}
+					s.DomainIds = append(s.DomainIds, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"domain_ids\"")
+			}
+		case "total":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Int()
+				s.Total = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"total\"")
+			}
+		case "limit":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Int()
+				s.Limit = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"limit\"")
+			}
+		case "cursor":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				if err := s.Cursor.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"cursor\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ListSentEmailsOKMeta")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001110,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfListSentEmailsOKMeta) {
+					name = jsonFieldsNameOfListSentEmailsOKMeta[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ListSentEmailsOKMeta) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListSentEmailsOKMeta) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes ListSentEmailsServiceUnavailable as json.
 func (s *ListSentEmailsServiceUnavailable) Encode(e *jx.Encoder) {
 	unwrapped := (*ErrorResponse)(s)
@@ -230477,19 +230730,30 @@ func (s *SemanticSearchInput) encodeFields(e *jx.Encoder) {
 			s.Cursor.Encode(e)
 		}
 	}
+	{
+		if s.DomainIds != nil {
+			e.FieldStart("domain_ids")
+			e.ArrStart()
+			for _, elem := range s.DomainIds {
+				json.EncodeUUID(e, elem)
+			}
+			e.ArrEnd()
+		}
+	}
 }
 
-var jsonFieldsNameOfSemanticSearchInput = [10]string{
-	0: "query",
-	1: "mode",
-	2: "corpus",
-	3: "search_in",
-	4: "exclude",
-	5: "date_from",
-	6: "date_to",
-	7: "include",
-	8: "limit",
-	9: "cursor",
+var jsonFieldsNameOfSemanticSearchInput = [11]string{
+	0:  "query",
+	1:  "mode",
+	2:  "corpus",
+	3:  "search_in",
+	4:  "exclude",
+	5:  "date_from",
+	6:  "date_to",
+	7:  "include",
+	8:  "limit",
+	9:  "cursor",
+	10: "domain_ids",
 }
 
 // Decode decodes SemanticSearchInput from json.
@@ -230628,6 +230892,25 @@ func (s *SemanticSearchInput) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"cursor\"")
+			}
+		case "domain_ids":
+			if err := func() error {
+				s.DomainIds = make([]uuid.UUID, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem uuid.UUID
+					v, err := json.DecodeUUID(d)
+					elem = v
+					if err != nil {
+						return err
+					}
+					s.DomainIds = append(s.DomainIds, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"domain_ids\"")
 			}
 		default:
 			return d.Skip()
@@ -230836,13 +231119,24 @@ func (s *SemanticSearchMeta) encodeFields(e *jx.Encoder) {
 		e.FieldStart("coverage")
 		s.Coverage.Encode(e)
 	}
+	{
+		if s.DomainIds != nil {
+			e.FieldStart("domain_ids")
+			e.ArrStart()
+			for _, elem := range s.DomainIds {
+				json.EncodeUUID(e, elem)
+			}
+			e.ArrEnd()
+		}
+	}
 }
 
-var jsonFieldsNameOfSemanticSearchMeta = [4]string{
+var jsonFieldsNameOfSemanticSearchMeta = [5]string{
 	0: "limit",
 	1: "cursor",
 	2: "mode",
 	3: "coverage",
+	4: "domain_ids",
 }
 
 // Decode decodes SemanticSearchMeta from json.
@@ -230895,6 +231189,25 @@ func (s *SemanticSearchMeta) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"coverage\"")
+			}
+		case "domain_ids":
+			if err := func() error {
+				s.DomainIds = make([]uuid.UUID, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem uuid.UUID
+					v, err := json.DecodeUUID(d)
+					elem = v
+					if err != nil {
+						return err
+					}
+					s.DomainIds = append(s.DomainIds, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"domain_ids\"")
 			}
 		default:
 			return d.Skip()

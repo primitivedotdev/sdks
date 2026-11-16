@@ -4360,15 +4360,6 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "Number of results per page"
           },
           {
-            "name": "domain_id",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Filter by domain ID"
-          },
-          {
             "name": "status",
             "in": "query",
             "schema": {
@@ -4615,6 +4606,15 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "With `message`, one row per message instead of one per mailbox copy (a message to several mailboxes of the org is stored once per mailbox). The row is the copy in your own mailbox (the `recipient` filter, then your bound address, then your member address), else the copy that arrived first, rejected or not, the same row in history and forward-tail paging. A message is listed when at least one copy you can read matches every filter at once: `awaiting=you` means some copy awaits you, `status=completed` that some copy completed, `search` that some copy matches; the row shown is still the representative. Under a connected agent key, which reads one mailbox, filters test the row itself. A filter other than `recipient` is tested copy by copy, so such a page is a bounded walk and can answer 504 `search_timeout`. With `thread_id`, only copies in that thread are grouped. `meta.total` counts messages. Each row adds `copies` and, when you can read the send, `sent_email_id`. A row can be replaced by a better-ranked copy that becomes visible later: drop any row whose id is in a newer row's `copies`. Paging history, a message whose representative was deleted or outranked between pages can show again on a later page under another id."
           },
           {
+            "name": "domain_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Domain ids, comma-separated or with the key repeated, at most 50: only mail received at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given."
+          },
+          {
             "name": "include_presence",
             "in": "query",
             "required": false,
@@ -4797,15 +4797,6 @@ export const openapiDocument: Record<string, unknown> = {
               "maxLength": 2000
             },
             "description": "Full-text search restricted to the parsed text body."
-          },
-          {
-            "name": "domain_id",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Filter by domain ID."
           },
           {
             "name": "reply_to_sent_email_id",
@@ -5031,6 +5022,15 @@ export const openapiDocument: Record<string, unknown> = {
               "example": "body_text,headers"
             },
             "description": "Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`. Reads a page of messages in one request instead of one detail read per row. Parts are withheld where the detail read withholds them. Each body field is cut to 64 KiB per row and a response carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in `truncated_fields`. Unknown values are a `validation_error`."
+          },
+          {
+            "name": "domain_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Domain ids, comma-separated or with the key repeated, at most 50: received mail at one of them, and with `direction` `outbound` or `any`, sent mail from an address at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given."
           }
         ],
         "responses": {
@@ -13489,6 +13489,15 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`. Reads a page of messages in one request instead of one detail read per row. Parts are withheld where the detail read withholds them. Each body field is cut to 64 KiB per row and a response carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in `truncated_fields`. Unknown values are a `validation_error`."
           },
           {
+            "name": "domain_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Domain ids, comma-separated or with the key repeated, at most 50: only sends from an address at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given."
+          },
+          {
             "name": "header",
             "in": "query",
             "required": false,
@@ -13517,6 +13526,19 @@ export const openapiDocument: Record<string, unknown> = {
                           "type": "array",
                           "items": {
                             "$ref": "#/components/schemas/SentEmailSummary"
+                          }
+                        },
+                        "meta": {
+                          "type": "object",
+                          "properties": {
+                            "domain_ids": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "description": "Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased."
+                            }
                           }
                         }
                       }
@@ -69626,6 +69648,14 @@ export const openapiDocument: Record<string, unknown> = {
           "facets_capped": {
             "type": "boolean",
             "description": "Present and `true` when the search matched more than 1,000 emails, so `facets` aggregate only the most recent 1,000 matches, in the same way `total_capped` marks a capped `total`."
+          },
+          "domain_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased."
           }
         },
         "required": [
@@ -72576,6 +72606,16 @@ export const openapiDocument: Record<string, unknown> = {
           "cursor": {
             "type": "string",
             "description": "Opaque pagination cursor from a prior response's `meta.cursor`."
+          },
+          "domain_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 50,
+            "description": "Domain ids, at most 50: only received mail at one of them, tested on the ranked candidates, so a page can hold fewer than `limit` results. Received mail only: refused with corpus `outbound`, and the default corpus becomes `inbound`. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given."
           }
         }
       },
@@ -72792,6 +72832,14 @@ export const openapiDocument: Record<string, unknown> = {
                 "type": "null"
               }
             ]
+          },
+          "domain_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased."
           }
         },
         "required": [
@@ -79629,6 +79677,22 @@ export const openapiDocument: Record<string, unknown> = {
               "has_more": {
                 "type": "boolean",
                 "description": "Whether another page follows this one, read from the page itself, so it is there with or without a count (`count=false`)."
+              },
+              "total_capped": {
+                "type": "boolean",
+                "description": "Present whenever `total` is. `true` when the count stopped at its cap, so `total` is a floor (\"at least N\") rather than an exact count. On the forward tail (`since`) and with `search`, no count runs: `total` is the rows the page read, and `true` means it saw a match past its last row, so more follow `meta.cursor` (`total` is then `limit` + 1, a floor)."
+              },
+              "total_unavailable": {
+                "type": "boolean",
+                "description": "Present and `true` when a history page asked for a count that did not fit its time budget. The page and `meta.cursor` are still returned; only `total` and `total_capped` are absent. `has_more` still says whether another page follows."
+              },
+              "domain_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased."
               }
             }
           }

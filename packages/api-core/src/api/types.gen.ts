@@ -1584,6 +1584,10 @@ export type EmailSearchMeta = {
      * Present and `true` when the search matched more than 1,000 emails, so `facets` aggregate only the most recent 1,000 matches, in the same way `total_capped` marks a capped `total`.
      */
     facets_capped?: boolean;
+    /**
+     * Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+     */
+    domain_ids?: Array<string>;
 };
 
 export type EmailSearchFacetBucket = {
@@ -3206,6 +3210,10 @@ export type SemanticSearchInput = {
      * Opaque pagination cursor from a prior response's `meta.cursor`.
      */
     cursor?: string;
+    /**
+     * Domain ids, at most 50: only received mail at one of them, tested on the ranked candidates, so a page can hold fewer than `limit` results. Received mail only: refused with corpus `outbound`, and the default corpus becomes `inbound`. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.
+     */
+    domain_ids?: Array<string>;
 };
 
 export type SemanticSearchSnippet = {
@@ -3311,6 +3319,10 @@ export type SemanticSearchMeta = {
      *
      */
     coverage: SemanticSearchCoverage | null;
+    /**
+     * Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+     */
+    domain_ids?: Array<string>;
 };
 
 /**
@@ -6151,6 +6163,18 @@ export type EmailListMeta = {
      * Whether another page follows this one, read from the page itself, so it is there with or without a count (`count=false`).
      */
     has_more?: boolean;
+    /**
+     * Present whenever `total` is. `true` when the count stopped at its cap, so `total` is a floor ("at least N") rather than an exact count. On the forward tail (`since`) and with `search`, no count runs: `total` is the rows the page read, and `true` means it saw a match past its last row, so more follow `meta.cursor` (`total` is then `limit` + 1, a floor).
+     */
+    total_capped?: boolean;
+    /**
+     * Present and `true` when a history page asked for a count that did not fit its time budget. The page and `meta.cursor` are still returned; only `total` and `total_capped` are absent. `has_more` still says whether another page follows.
+     */
+    total_unavailable?: boolean;
+    /**
+     * Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+     */
+    domain_ids?: Array<string>;
 };
 
 /**
@@ -12523,10 +12547,6 @@ export type ListEmailsData = {
          */
         limit?: number;
         /**
-         * Filter by domain ID
-         */
-        domain_id?: string;
-        /**
          * Filter inbound rows by lifecycle status. See `EmailStatus`
          * for what each value means. Note that the webhook delivery
          * state is a SEPARATE lifecycle on the same row; filter by
@@ -12677,6 +12697,10 @@ export type ListEmailsData = {
          */
         group?: 'message';
         /**
+         * Domain ids, comma-separated or with the key repeated, at most 50: only mail received at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.
+         */
+        domain_ids?: string;
+        /**
          * Receiver presence mail: the presence probes sent to a connected agent and its answers. Left out by default for a connected-agent credential and listed by default for any other credential. `true` lists it, `false` leaves it out. Presence mail that inbound processing verified as presence on arrival expects no answer and does not count toward `awaiting`. Presence mail stored before that verification existed keeps the `awaiting` value it was stored with, so it can still count toward `awaiting`; `include_presence=true`, or any credential other than a connected agent's, still lists it. Combines with every other filter and with both `cursor` and `since`.
          */
         include_presence?: 'true' | 'false';
@@ -12737,10 +12761,6 @@ export type SearchEmailsData = {
          * Full-text search restricted to the parsed text body.
          */
         body?: string;
-        /**
-         * Filter by domain ID.
-         */
-        domain_id?: string;
         /**
          * Filter to inbound emails that are replies to a specific
          * outbound send. The value is a `sent_emails.id` (UUID). At
@@ -12896,6 +12916,10 @@ export type SearchEmailsData = {
          * Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`. Reads a page of messages in one request instead of one detail read per row. Parts are withheld where the detail read withholds them. Each body field is cut to 64 KiB per row and a response carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in `truncated_fields`. Unknown values are a `validation_error`.
          */
         include?: string;
+        /**
+         * Domain ids, comma-separated or with the key repeated, at most 50: received mail at one of them, and with `direction` `outbound` or `any`, sent mail from an address at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.
+         */
+        domain_ids?: string;
     };
     url: '/emails/search';
 };
@@ -15467,6 +15491,10 @@ export type ListSentEmailsData = {
          */
         include?: string;
         /**
+         * Domain ids, comma-separated or with the key repeated, at most 50: only sends from an address at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.
+         */
+        domain_ids?: string;
+        /**
          * Return only sends that set this header: `Name=Value` matches that exact value, `Name` alone any value. Name and value compare case-insensitively; the value is trimmed and matched whole, not as a substring, and only the first `=` separates the two. Matches only the `headers` the send request set. History pages only: with `since` or `wait` it is a `validation_error`, as is a name that is never stored (trace, signature or credential-like). Sends made before header search was available are not matched.
          */
         header?: string;
@@ -15507,6 +15535,12 @@ export type ListSentEmailsResponses = {
      */
     200: ListEnvelope & {
         data?: Array<SentEmailSummary>;
+        meta?: {
+            /**
+             * Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+             */
+            domain_ids?: Array<string>;
+        };
     };
 };
 

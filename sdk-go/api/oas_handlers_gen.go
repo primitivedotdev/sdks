@@ -36848,10 +36848,6 @@ func (s *Server) handleListEmailsRequest(args [0]string, argsEscaped bool, w htt
 					In:   "query",
 				}: params.Limit,
 				{
-					Name: "domain_id",
-					In:   "query",
-				}: params.DomainID,
-				{
 					Name: "status",
 					In:   "query",
 				}: params.Status,
@@ -36935,6 +36931,10 @@ func (s *Server) handleListEmailsRequest(args [0]string, argsEscaped bool, w htt
 					Name: "group",
 					In:   "query",
 				}: params.Group,
+				{
+					Name: "domain_ids",
+					In:   "query",
+				}: params.DomainIds,
 				{
 					Name: "include_presence",
 					In:   "query",
@@ -43074,6 +43074,10 @@ func (s *Server) handleListSentEmailsRequest(args [0]string, argsEscaped bool, w
 					Name: "include",
 					In:   "query",
 				}: params.Include,
+				{
+					Name: "domain_ids",
+					In:   "query",
+				}: params.DomainIds,
 				{
 					Name: "header",
 					In:   "query",
@@ -53094,10 +53098,6 @@ func (s *Server) handleSearchEmailsRequest(args [0]string, argsEscaped bool, w h
 					In:   "query",
 				}: params.Body,
 				{
-					Name: "domain_id",
-					In:   "query",
-				}: params.DomainID,
-				{
 					Name: "reply_to_sent_email_id",
 					In:   "query",
 				}: params.ReplyToSentEmailID,
@@ -53177,6 +53177,10 @@ func (s *Server) handleSearchEmailsRequest(args [0]string, argsEscaped bool, w h
 					Name: "include",
 					In:   "query",
 				}: params.Include,
+				{
+					Name: "domain_ids",
+					In:   "query",
+				}: params.DomainIds,
 			},
 			Raw: r,
 		}

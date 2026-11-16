@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from typing import cast
+from uuid import UUID
 
 
 
@@ -35,6 +36,15 @@ class EmailListMeta:
                 some mail through email rules: the page holds only the mail those rules give it there. Absent otherwise.
             has_more (bool | Unset): Whether another page follows this one, read from the page itself, so it is there with
                 or without a count (`count=false`).
+            total_capped (bool | Unset): Present whenever `total` is. `true` when the count stopped at its cap, so `total`
+                is a floor ("at least N") rather than an exact count. On the forward tail (`since`) and with `search`, no count
+                runs: `total` is the rows the page read, and `true` means it saw a match past its last row, so more follow
+                `meta.cursor` (`total` is then `limit` + 1, a floor).
+            total_unavailable (bool | Unset): Present and `true` when a history page asked for a count that did not fit its
+                time budget. The page and `meta.cursor` are still returned; only `total` and `total_capped` are absent.
+                `has_more` still says whether another page follows.
+            domain_ids (list[UUID] | Unset): Present when the request filtered by `domain_ids`: the ids it was given,
+                deduped and lowercased.
      """
 
     limit: int
@@ -43,6 +53,9 @@ class EmailListMeta:
     recipient_outside_access: bool | Unset = UNSET
     recipient_rules_only: bool | Unset = UNSET
     has_more: bool | Unset = UNSET
+    total_capped: bool | Unset = UNSET
+    total_unavailable: bool | Unset = UNSET
+    domain_ids: list[UUID] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -63,6 +76,19 @@ class EmailListMeta:
 
         has_more = self.has_more
 
+        total_capped = self.total_capped
+
+        total_unavailable = self.total_unavailable
+
+        domain_ids: list[str] | Unset = UNSET
+        if not isinstance(self.domain_ids, Unset):
+            domain_ids = []
+            for domain_ids_item_data in self.domain_ids:
+                domain_ids_item = str(domain_ids_item_data)
+                domain_ids.append(domain_ids_item)
+
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -78,6 +104,12 @@ class EmailListMeta:
             field_dict["recipient_rules_only"] = recipient_rules_only
         if has_more is not UNSET:
             field_dict["has_more"] = has_more
+        if total_capped is not UNSET:
+            field_dict["total_capped"] = total_capped
+        if total_unavailable is not UNSET:
+            field_dict["total_unavailable"] = total_unavailable
+        if domain_ids is not UNSET:
+            field_dict["domain_ids"] = domain_ids
 
         return field_dict
 
@@ -104,6 +136,22 @@ class EmailListMeta:
 
         has_more = d.pop("has_more", UNSET)
 
+        total_capped = d.pop("total_capped", UNSET)
+
+        total_unavailable = d.pop("total_unavailable", UNSET)
+
+        _domain_ids = d.pop("domain_ids", UNSET)
+        domain_ids: list[UUID] | Unset = UNSET
+        if _domain_ids is not UNSET:
+            domain_ids = []
+            for domain_ids_item_data in _domain_ids:
+                domain_ids_item = UUID(domain_ids_item_data)
+
+
+
+                domain_ids.append(domain_ids_item)
+
+
         email_list_meta = cls(
             limit=limit,
             cursor=cursor,
@@ -111,6 +159,9 @@ class EmailListMeta:
             recipient_outside_access=recipient_outside_access,
             recipient_rules_only=recipient_rules_only,
             has_more=has_more,
+            total_capped=total_capped,
+            total_unavailable=total_unavailable,
+            domain_ids=domain_ids,
         )
 
 

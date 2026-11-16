@@ -22924,8 +22924,6 @@ type ListEmailsParams struct {
 	Cursor OptString `json:",omitempty,omitzero"`
 	// Number of results per page.
 	Limit OptInt `json:",omitempty,omitzero"`
-	// Filter by domain ID.
-	DomainID OptUUID `json:",omitempty,omitzero"`
 	// Filter inbound rows by lifecycle status. See `EmailStatus`
 	// for what each value means. Note that the webhook delivery
 	// state is a SEPARATE lifecycle on the same row; filter by
@@ -23070,6 +23068,10 @@ type ListEmailsParams struct {
 	// any row whose id is in a newer row's `copies`. Paging history, a message whose representative was
 	// deleted or outranked between pages can show again on a later page under another id.
 	Group OptListEmailsGroup `json:",omitempty,omitzero"`
+	// Domain ids, comma-separated or with the key repeated, at most 50: only mail received at one of
+	// them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not
+	// reported as unknown. `meta.domain_ids` echoes the list as given.
+	DomainIds OptString `json:",omitempty,omitzero"`
 	// Receiver presence mail: the presence probes sent to a connected agent and its answers. Left out by
 	// default for a connected-agent credential and listed by default for any other credential. `true`
 	// lists it, `false` leaves it out. Presence mail that inbound processing verified as presence on
@@ -23097,15 +23099,6 @@ func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsPara
 		}
 		if v, ok := packed[key]; ok {
 			params.Limit = v.(OptInt)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "domain_id",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.DomainID = v.(OptUUID)
 		}
 	}
 	{
@@ -23299,6 +23292,15 @@ func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsPara
 	}
 	{
 		key := middleware.ParameterKey{
+			Name: "domain_ids",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.DomainIds = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
 			Name: "include_presence",
 			In:   "query",
 		}
@@ -23419,47 +23421,6 @@ func decodeListEmailsParams(args [0]string, argsEscaped bool, r *http.Request) (
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "limit",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: domain_id.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "domain_id",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotDomainIDVal uuid.UUID
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToUUID(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotDomainIDVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.DomainID.SetTo(paramsDotDomainIDVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "domain_id",
 			In:   "query",
 			Err:  err,
 		}
@@ -24649,6 +24610,47 @@ func decodeListEmailsParams(args [0]string, argsEscaped bool, r *http.Request) (
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "group",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: domain_ids.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "domain_ids",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotDomainIdsVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotDomainIdsVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.DomainIds.SetTo(paramsDotDomainIdsVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "domain_ids",
 			In:   "query",
 			Err:  err,
 		}
@@ -29482,6 +29484,10 @@ type ListSentEmailsParams struct {
 	// carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in
 	// `truncated_fields`. Unknown values are a `validation_error`.
 	Include OptString `json:",omitempty,omitzero"`
+	// Domain ids, comma-separated or with the key repeated, at most 50: only sends from an address at
+	// one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and
+	// is not reported as unknown. `meta.domain_ids` echoes the list as given.
+	DomainIds OptString `json:",omitempty,omitzero"`
 	// Return only sends that set this header: `Name=Value` matches that exact value, `Name` alone any
 	// value. Name and value compare case-insensitively; the value is trimmed and matched whole, not as a
 	// substring, and only the first `=` separates the two. Matches only the `headers` the send request
@@ -29607,6 +29613,15 @@ func unpackListSentEmailsParams(packed middleware.Parameters) (params ListSentEm
 		}
 		if v, ok := packed[key]; ok {
 			params.Include = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "domain_ids",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.DomainIds = v.(OptString)
 		}
 	}
 	{
@@ -30323,6 +30338,47 @@ func decodeListSentEmailsParams(args [0]string, argsEscaped bool, r *http.Reques
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "include",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: domain_ids.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "domain_ids",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotDomainIdsVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotDomainIdsVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.DomainIds.SetTo(paramsDotDomainIdsVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "domain_ids",
 			In:   "query",
 			Err:  err,
 		}
@@ -36303,8 +36359,6 @@ type SearchEmailsParams struct {
 	Subject OptString `json:",omitempty,omitzero"`
 	// Full-text search restricted to the parsed text body.
 	Body OptString `json:",omitempty,omitzero"`
-	// Filter by domain ID.
-	DomainID OptUUID `json:",omitempty,omitzero"`
 	// Filter to inbound emails that are replies to a specific
 	// outbound send. The value is a `sent_emails.id` (UUID). At
 	// inbound ingest, Primitive matches the parsed In-Reply-To
@@ -36451,6 +36505,11 @@ type SearchEmailsParams struct {
 	// carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in
 	// `truncated_fields`. Unknown values are a `validation_error`.
 	Include OptString `json:",omitempty,omitzero"`
+	// Domain ids, comma-separated or with the key repeated, at most 50: received mail at one of them,
+	// and with `direction` `outbound` or `any`, sent mail from an address at one of them. Only narrows:
+	// an id you cannot read, or of another organization, matches no mail and is not reported as unknown.
+	// `meta.domain_ids` echoes the list as given.
+	DomainIds OptString `json:",omitempty,omitzero"`
 }
 
 func unpackSearchEmailsParams(packed middleware.Parameters) (params SearchEmailsParams) {
@@ -36497,15 +36556,6 @@ func unpackSearchEmailsParams(packed middleware.Parameters) (params SearchEmails
 		}
 		if v, ok := packed[key]; ok {
 			params.Body = v.(OptString)
-		}
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "domain_id",
-			In:   "query",
-		}
-		if v, ok := packed[key]; ok {
-			params.DomainID = v.(OptUUID)
 		}
 	}
 	{
@@ -36686,6 +36736,15 @@ func unpackSearchEmailsParams(packed middleware.Parameters) (params SearchEmails
 		}
 		if v, ok := packed[key]; ok {
 			params.Include = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "domain_ids",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.DomainIds = v.(OptString)
 		}
 	}
 	return params
@@ -37029,47 +37088,6 @@ func decodeSearchEmailsParams(args [0]string, argsEscaped bool, r *http.Request)
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "body",
-			In:   "query",
-			Err:  err,
-		}
-	}
-	// Decode query: domain_id.
-	if err := func() error {
-		cfg := uri.QueryParameterDecodingConfig{
-			Name:    "domain_id",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.HasParam(cfg); err == nil {
-			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotDomainIDVal uuid.UUID
-				if err := func() error {
-					val, err := d.DecodeValue()
-					if err != nil {
-						return err
-					}
-
-					c, err := conv.ToUUID(val)
-					if err != nil {
-						return err
-					}
-
-					paramsDotDomainIDVal = c
-					return nil
-				}(); err != nil {
-					return err
-				}
-				params.DomainID.SetTo(paramsDotDomainIDVal)
-				return nil
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "domain_id",
 			In:   "query",
 			Err:  err,
 		}
@@ -38194,6 +38212,47 @@ func decodeSearchEmailsParams(args [0]string, argsEscaped bool, r *http.Request)
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "include",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: domain_ids.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "domain_ids",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotDomainIdsVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotDomainIdsVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.DomainIds.SetTo(paramsDotDomainIdsVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "domain_ids",
 			In:   "query",
 			Err:  err,
 		}

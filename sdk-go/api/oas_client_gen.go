@@ -30959,23 +30959,6 @@ func (c *Client) sendListEmails(ctx context.Context, params ListEmailsParams) (r
 		}
 	}
 	{
-		// Encode "domain_id" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "domain_id",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := params.DomainID.Get(); ok {
-				return e.EncodeValue(conv.UUIDToString(val))
-			}
-			return nil
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	{
 		// Encode "status" parameter.
 		cfg := uri.QueryParameterEncodingConfig{
 			Name:    "status",
@@ -31326,6 +31309,23 @@ func (c *Client) sendListEmails(ctx context.Context, params ListEmailsParams) (r
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Group.Get(); ok {
 				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "domain_ids" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "domain_ids",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.DomainIds.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
 			}
 			return nil
 		}); err != nil {
@@ -36233,6 +36233,23 @@ func (c *Client) sendListSentEmails(ctx context.Context, params ListSentEmailsPa
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Include.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "domain_ids" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "domain_ids",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.DomainIds.Get(); ok {
 				return e.EncodeValue(conv.StringToString(val))
 			}
 			return nil
@@ -43349,23 +43366,6 @@ func (c *Client) sendSearchEmails(ctx context.Context, params SearchEmailsParams
 		}
 	}
 	{
-		// Encode "domain_id" parameter.
-		cfg := uri.QueryParameterEncodingConfig{
-			Name:    "domain_id",
-			Style:   uri.QueryStyleForm,
-			Explode: true,
-		}
-
-		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := params.DomainID.Get(); ok {
-				return e.EncodeValue(conv.UUIDToString(val))
-			}
-			return nil
-		}); err != nil {
-			return res, errors.Wrap(err, "encode query")
-		}
-	}
-	{
 		// Encode "reply_to_sent_email_id" parameter.
 		cfg := uri.QueryParameterEncodingConfig{
 			Name:    "reply_to_sent_email_id",
@@ -43698,6 +43698,23 @@ func (c *Client) sendSearchEmails(ctx context.Context, params SearchEmailsParams
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Include.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "domain_ids" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "domain_ids",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.DomainIds.Get(); ok {
 				return e.EncodeValue(conv.StringToString(val))
 			}
 			return nil

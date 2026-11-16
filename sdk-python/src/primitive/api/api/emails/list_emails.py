@@ -35,7 +35,6 @@ def _get_kwargs(
     *,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
-    domain_id: UUID | Unset = UNSET,
     status: EmailStatus | Unset = UNSET,
     search: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
@@ -57,6 +56,7 @@ def _get_kwargs(
     content_discarded: ListEmailsContentDiscarded | Unset = UNSET,
     count: ListEmailsCount | Unset = UNSET,
     group: ListEmailsGroup | Unset = UNSET,
+    domain_ids: str | Unset = UNSET,
     include_presence: ListEmailsIncludePresence | Unset = UNSET,
 
 ) -> dict[str, Any]:
@@ -69,11 +69,6 @@ def _get_kwargs(
     params["cursor"] = cursor
 
     params["limit"] = limit
-
-    json_domain_id: str | Unset = UNSET
-    if not isinstance(domain_id, Unset):
-        json_domain_id = str(domain_id)
-    params["domain_id"] = json_domain_id
 
     json_status: str | Unset = UNSET
     if not isinstance(status, Unset):
@@ -178,6 +173,8 @@ def _get_kwargs(
 
     params["group"] = json_group
 
+    params["domain_ids"] = domain_ids
+
     json_include_presence: str | Unset = UNSET
     if not isinstance(include_presence, Unset):
         json_include_presence = include_presence.value
@@ -248,7 +245,6 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
-    domain_id: UUID | Unset = UNSET,
     status: EmailStatus | Unset = UNSET,
     search: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
@@ -270,6 +266,7 @@ def sync_detailed(
     content_discarded: ListEmailsContentDiscarded | Unset = UNSET,
     count: ListEmailsCount | Unset = UNSET,
     group: ListEmailsGroup | Unset = UNSET,
+    domain_ids: str | Unset = UNSET,
     include_presence: ListEmailsIncludePresence | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListEmailsResponse200]:
@@ -294,7 +291,6 @@ def sync_detailed(
     Args:
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
-        domain_id (UUID | Unset):
         status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
             table). Distinct from `SentEmailStatus`, which describes
             the OUTBOUND lifecycle (the `sent_emails` table) and uses
@@ -342,6 +338,7 @@ def sync_detailed(
         content_discarded (ListEmailsContentDiscarded | Unset):
         count (ListEmailsCount | Unset):
         group (ListEmailsGroup | Unset):
+        domain_ids (str | Unset):
         include_presence (ListEmailsIncludePresence | Unset):
 
     Raises:
@@ -356,7 +353,6 @@ def sync_detailed(
     kwargs = _get_kwargs(
         cursor=cursor,
 limit=limit,
-domain_id=domain_id,
 status=status,
 search=search,
 date_from=date_from,
@@ -378,6 +374,7 @@ kind=kind,
 content_discarded=content_discarded,
 count=count,
 group=group,
+domain_ids=domain_ids,
 include_presence=include_presence,
 
     )
@@ -393,7 +390,6 @@ def sync(
     client: AuthenticatedClient | Client,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
-    domain_id: UUID | Unset = UNSET,
     status: EmailStatus | Unset = UNSET,
     search: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
@@ -415,6 +411,7 @@ def sync(
     content_discarded: ListEmailsContentDiscarded | Unset = UNSET,
     count: ListEmailsCount | Unset = UNSET,
     group: ListEmailsGroup | Unset = UNSET,
+    domain_ids: str | Unset = UNSET,
     include_presence: ListEmailsIncludePresence | Unset = UNSET,
 
 ) -> ErrorResponse | ListEmailsResponse200 | None:
@@ -439,7 +436,6 @@ def sync(
     Args:
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
-        domain_id (UUID | Unset):
         status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
             table). Distinct from `SentEmailStatus`, which describes
             the OUTBOUND lifecycle (the `sent_emails` table) and uses
@@ -487,6 +483,7 @@ def sync(
         content_discarded (ListEmailsContentDiscarded | Unset):
         count (ListEmailsCount | Unset):
         group (ListEmailsGroup | Unset):
+        domain_ids (str | Unset):
         include_presence (ListEmailsIncludePresence | Unset):
 
     Raises:
@@ -502,7 +499,6 @@ def sync(
         client=client,
 cursor=cursor,
 limit=limit,
-domain_id=domain_id,
 status=status,
 search=search,
 date_from=date_from,
@@ -524,6 +520,7 @@ kind=kind,
 content_discarded=content_discarded,
 count=count,
 group=group,
+domain_ids=domain_ids,
 include_presence=include_presence,
 
     ).parsed
@@ -533,7 +530,6 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
-    domain_id: UUID | Unset = UNSET,
     status: EmailStatus | Unset = UNSET,
     search: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
@@ -555,6 +551,7 @@ async def asyncio_detailed(
     content_discarded: ListEmailsContentDiscarded | Unset = UNSET,
     count: ListEmailsCount | Unset = UNSET,
     group: ListEmailsGroup | Unset = UNSET,
+    domain_ids: str | Unset = UNSET,
     include_presence: ListEmailsIncludePresence | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListEmailsResponse200]:
@@ -579,7 +576,6 @@ async def asyncio_detailed(
     Args:
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
-        domain_id (UUID | Unset):
         status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
             table). Distinct from `SentEmailStatus`, which describes
             the OUTBOUND lifecycle (the `sent_emails` table) and uses
@@ -627,6 +623,7 @@ async def asyncio_detailed(
         content_discarded (ListEmailsContentDiscarded | Unset):
         count (ListEmailsCount | Unset):
         group (ListEmailsGroup | Unset):
+        domain_ids (str | Unset):
         include_presence (ListEmailsIncludePresence | Unset):
 
     Raises:
@@ -641,7 +638,6 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         cursor=cursor,
 limit=limit,
-domain_id=domain_id,
 status=status,
 search=search,
 date_from=date_from,
@@ -663,6 +659,7 @@ kind=kind,
 content_discarded=content_discarded,
 count=count,
 group=group,
+domain_ids=domain_ids,
 include_presence=include_presence,
 
     )
@@ -678,7 +675,6 @@ async def asyncio(
     client: AuthenticatedClient | Client,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
-    domain_id: UUID | Unset = UNSET,
     status: EmailStatus | Unset = UNSET,
     search: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
@@ -700,6 +696,7 @@ async def asyncio(
     content_discarded: ListEmailsContentDiscarded | Unset = UNSET,
     count: ListEmailsCount | Unset = UNSET,
     group: ListEmailsGroup | Unset = UNSET,
+    domain_ids: str | Unset = UNSET,
     include_presence: ListEmailsIncludePresence | Unset = UNSET,
 
 ) -> ErrorResponse | ListEmailsResponse200 | None:
@@ -724,7 +721,6 @@ async def asyncio(
     Args:
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
-        domain_id (UUID | Unset):
         status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
             table). Distinct from `SentEmailStatus`, which describes
             the OUTBOUND lifecycle (the `sent_emails` table) and uses
@@ -772,6 +768,7 @@ async def asyncio(
         content_discarded (ListEmailsContentDiscarded | Unset):
         count (ListEmailsCount | Unset):
         group (ListEmailsGroup | Unset):
+        domain_ids (str | Unset):
         include_presence (ListEmailsIncludePresence | Unset):
 
     Raises:
@@ -787,7 +784,6 @@ async def asyncio(
         client=client,
 cursor=cursor,
 limit=limit,
-domain_id=domain_id,
 status=status,
 search=search,
 date_from=date_from,
@@ -809,6 +805,7 @@ kind=kind,
 content_discarded=content_discarded,
 count=count,
 group=group,
+domain_ids=domain_ids,
 include_presence=include_presence,
 
     )).parsed

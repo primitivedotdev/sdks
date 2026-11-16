@@ -32313,13 +32313,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "integer"
       },
       {
-        "description": "Filter by domain ID",
-        "enum": null,
-        "name": "domain_id",
-        "required": false,
-        "type": "string"
-      },
-      {
         "description": "Filter inbound rows by lifecycle status. See `EmailStatus`\nfor what each value means. Note that the webhook delivery\nstate is a SEPARATE lifecycle on the same row; filter by\n`webhook_status` semantics is not currently supported on\nthis endpoint.\n",
         "enum": null,
         "name": "status",
@@ -32505,6 +32498,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "message"
         ],
         "name": "group",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Domain ids, comma-separated or with the key repeated, at most 50: only mail received at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.",
+        "enum": null,
+        "name": "domain_ids",
         "required": false,
         "type": "string"
       },
@@ -33370,13 +33370,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "description": "Filter by domain ID.",
-        "enum": null,
-        "name": "domain_id",
-        "required": false,
-        "type": "string"
-      },
-      {
         "description": "Filter to inbound emails that are replies to a specific\noutbound send. The value is a `sent_emails.id` (UUID). At\ninbound ingest, Primitive matches the parsed In-Reply-To\nheader (or References as a fallback) against\n`sent_emails.message_id` in the same org and records the\nresolved id on `emails.reply_to_sent_email_id`. This filter\nis the strict-threading lookup behind `primitive chat` and\nany UI that wants to show the inbound reply to a given\nsend. NULL on inbound that isn't a threaded reply to one\nof your sends, so existing emails received before this\ningestion landed will not match.\n",
         "enum": null,
         "name": "reply_to_sent_email_id",
@@ -33553,6 +33546,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "description": "Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`. Reads a page of messages in one request instead of one detail read per row. Parts are withheld where the detail read withholds them. Each body field is cut to 64 KiB per row and a response carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in `truncated_fields`. Unknown values are a `validation_error`.",
         "enum": null,
         "name": "include",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Domain ids, comma-separated or with the key repeated, at most 50: received mail at one of them, and with `direction` `outbound` or `any`, sent mail from an address at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.",
+        "enum": null,
+        "name": "domain_ids",
         "required": false,
         "type": "string"
       }
@@ -54149,6 +54149,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "cursor": {
           "type": "string",
           "description": "Opaque pagination cursor from a prior response's `meta.cursor`."
+        },
+        "domain_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 50,
+          "description": "Domain ids, at most 50: only received mail at one of them, tested on the ranked candidates, so a page can hold fewer than `limit` results. Received mail only: refused with corpus `outbound`, and the default corpus becomes `inbound`. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given."
         }
       }
     },
@@ -58870,6 +58880,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "description": "Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`. Reads a page of messages in one request instead of one detail read per row. Parts are withheld where the detail read withholds them. Each body field is cut to 64 KiB per row and a response carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in `truncated_fields`. Unknown values are a `validation_error`.",
         "enum": null,
         "name": "include",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Domain ids, comma-separated or with the key repeated, at most 50: only sends from an address at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.",
+        "enum": null,
+        "name": "domain_ids",
         "required": false,
         "type": "string"
       },

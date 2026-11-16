@@ -34033,6 +34033,17 @@ type EmailListMeta struct {
 	// Whether another page follows this one, read from the page itself, so it is there with or without a
 	// count (`count=false`).
 	HasMore OptBool `json:"has_more"`
+	// Present whenever `total` is. `true` when the count stopped at its cap, so `total` is a floor ("at
+	// least N") rather than an exact count. On the forward tail (`since`) and with `search`, no count
+	// runs: `total` is the rows the page read, and `true` means it saw a match past its last row, so
+	// more follow `meta.cursor` (`total` is then `limit` + 1, a floor).
+	TotalCapped OptBool `json:"total_capped"`
+	// Present and `true` when a history page asked for a count that did not fit its time budget. The
+	// page and `meta.cursor` are still returned; only `total` and `total_capped` are absent. `has_more`
+	// still says whether another page follows.
+	TotalUnavailable OptBool `json:"total_unavailable"`
+	// Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+	DomainIds []uuid.UUID `json:"domain_ids"`
 }
 
 // GetTotal returns the value of Total.
@@ -34065,6 +34076,21 @@ func (s *EmailListMeta) GetHasMore() OptBool {
 	return s.HasMore
 }
 
+// GetTotalCapped returns the value of TotalCapped.
+func (s *EmailListMeta) GetTotalCapped() OptBool {
+	return s.TotalCapped
+}
+
+// GetTotalUnavailable returns the value of TotalUnavailable.
+func (s *EmailListMeta) GetTotalUnavailable() OptBool {
+	return s.TotalUnavailable
+}
+
+// GetDomainIds returns the value of DomainIds.
+func (s *EmailListMeta) GetDomainIds() []uuid.UUID {
+	return s.DomainIds
+}
+
 // SetTotal sets the value of Total.
 func (s *EmailListMeta) SetTotal(val OptInt) {
 	s.Total = val
@@ -34093,6 +34119,21 @@ func (s *EmailListMeta) SetRecipientRulesOnly(val OptBool) {
 // SetHasMore sets the value of HasMore.
 func (s *EmailListMeta) SetHasMore(val OptBool) {
 	s.HasMore = val
+}
+
+// SetTotalCapped sets the value of TotalCapped.
+func (s *EmailListMeta) SetTotalCapped(val OptBool) {
+	s.TotalCapped = val
+}
+
+// SetTotalUnavailable sets the value of TotalUnavailable.
+func (s *EmailListMeta) SetTotalUnavailable(val OptBool) {
+	s.TotalUnavailable = val
+}
+
+// SetDomainIds sets the value of DomainIds.
+func (s *EmailListMeta) SetDomainIds(val []uuid.UUID) {
+	s.DomainIds = val
 }
 
 // Ref: #/components/schemas/EmailNotifications_getEmailNotificationPreferences_Result
@@ -42338,6 +42379,8 @@ type EmailSearchMeta struct {
 	// Present and `true` when the search matched more than 1,000 emails, so `facets` aggregate only the
 	// most recent 1,000 matches, in the same way `total_capped` marks a capped `total`.
 	FacetsCapped OptBool `json:"facets_capped"`
+	// Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+	DomainIds []uuid.UUID `json:"domain_ids"`
 }
 
 // GetTotal returns the value of Total.
@@ -42385,6 +42428,11 @@ func (s *EmailSearchMeta) GetFacetsCapped() OptBool {
 	return s.FacetsCapped
 }
 
+// GetDomainIds returns the value of DomainIds.
+func (s *EmailSearchMeta) GetDomainIds() []uuid.UUID {
+	return s.DomainIds
+}
+
 // SetTotal sets the value of Total.
 func (s *EmailSearchMeta) SetTotal(val NilInt) {
 	s.Total = val
@@ -42428,6 +42476,11 @@ func (s *EmailSearchMeta) SetPartial(val OptBool) {
 // SetFacetsCapped sets the value of FacetsCapped.
 func (s *EmailSearchMeta) SetFacetsCapped(val OptBool) {
 	s.FacetsCapped = val
+}
+
+// SetDomainIds sets the value of DomainIds.
+func (s *EmailSearchMeta) SetDomainIds(val []uuid.UUID) {
+	s.DomainIds = val
 }
 
 // Sort mode used for the result page.
@@ -76808,9 +76861,10 @@ func (s *ListSentEmailsMine) UnmarshalText(data []byte) error {
 
 // Merged schema.
 type ListSentEmailsOK struct {
-	Success bool               `json:"success"`
-	Meta    PaginationMeta     `json:"meta"`
-	Data    []SentEmailSummary `json:"data"`
+	Success bool `json:"success"`
+	// Merged property.
+	Meta ListSentEmailsOKMeta `json:"meta"`
+	Data []SentEmailSummary   `json:"data"`
 }
 
 // GetSuccess returns the value of Success.
@@ -76819,7 +76873,7 @@ func (s *ListSentEmailsOK) GetSuccess() bool {
 }
 
 // GetMeta returns the value of Meta.
-func (s *ListSentEmailsOK) GetMeta() PaginationMeta {
+func (s *ListSentEmailsOK) GetMeta() ListSentEmailsOKMeta {
 	return s.Meta
 }
 
@@ -76834,7 +76888,7 @@ func (s *ListSentEmailsOK) SetSuccess(val bool) {
 }
 
 // SetMeta sets the value of Meta.
-func (s *ListSentEmailsOK) SetMeta(val PaginationMeta) {
+func (s *ListSentEmailsOK) SetMeta(val ListSentEmailsOKMeta) {
 	s.Meta = val
 }
 
@@ -76844,6 +76898,58 @@ func (s *ListSentEmailsOK) SetData(val []SentEmailSummary) {
 }
 
 func (*ListSentEmailsOK) listSentEmailsRes() {}
+
+// Merged schema.
+type ListSentEmailsOKMeta struct {
+	// Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+	DomainIds []uuid.UUID `json:"domain_ids"`
+	// Total number of matching records.
+	Total int `json:"total"`
+	// Page size used for this request.
+	Limit int `json:"limit"`
+	// Cursor for the next page, or null if no more results.
+	Cursor NilString `json:"cursor"`
+}
+
+// GetDomainIds returns the value of DomainIds.
+func (s *ListSentEmailsOKMeta) GetDomainIds() []uuid.UUID {
+	return s.DomainIds
+}
+
+// GetTotal returns the value of Total.
+func (s *ListSentEmailsOKMeta) GetTotal() int {
+	return s.Total
+}
+
+// GetLimit returns the value of Limit.
+func (s *ListSentEmailsOKMeta) GetLimit() int {
+	return s.Limit
+}
+
+// GetCursor returns the value of Cursor.
+func (s *ListSentEmailsOKMeta) GetCursor() NilString {
+	return s.Cursor
+}
+
+// SetDomainIds sets the value of DomainIds.
+func (s *ListSentEmailsOKMeta) SetDomainIds(val []uuid.UUID) {
+	s.DomainIds = val
+}
+
+// SetTotal sets the value of Total.
+func (s *ListSentEmailsOKMeta) SetTotal(val int) {
+	s.Total = val
+}
+
+// SetLimit sets the value of Limit.
+func (s *ListSentEmailsOKMeta) SetLimit(val int) {
+	s.Limit = val
+}
+
+// SetCursor sets the value of Cursor.
+func (s *ListSentEmailsOKMeta) SetCursor(val NilString) {
+	s.Cursor = val
+}
 
 type ListSentEmailsServiceUnavailable ErrorResponse
 
@@ -121799,6 +121905,12 @@ type SemanticSearchInput struct {
 	Limit OptInt `json:"limit"`
 	// Opaque pagination cursor from a prior response's `meta.cursor`.
 	Cursor OptString `json:"cursor"`
+	// Domain ids, at most 50: only received mail at one of them, tested on the ranked candidates, so a
+	// page can hold fewer than `limit` results. Received mail only: refused with corpus `outbound`, and
+	// the default corpus becomes `inbound`. Only narrows: an id you cannot read, or of another
+	// organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as
+	// given.
+	DomainIds []uuid.UUID `json:"domain_ids"`
 }
 
 // GetQuery returns the value of Query.
@@ -121851,6 +121963,11 @@ func (s *SemanticSearchInput) GetCursor() OptString {
 	return s.Cursor
 }
 
+// GetDomainIds returns the value of DomainIds.
+func (s *SemanticSearchInput) GetDomainIds() []uuid.UUID {
+	return s.DomainIds
+}
+
 // SetQuery sets the value of Query.
 func (s *SemanticSearchInput) SetQuery(val OptString) {
 	s.Query = val
@@ -121899,6 +122016,11 @@ func (s *SemanticSearchInput) SetLimit(val OptInt) {
 // SetCursor sets the value of Cursor.
 func (s *SemanticSearchInput) SetCursor(val OptString) {
 	s.Cursor = val
+}
+
+// SetDomainIds sets the value of DomainIds.
+func (s *SemanticSearchInput) SetDomainIds(val []uuid.UUID) {
+	s.DomainIds = val
 }
 
 type SemanticSearchInputCorpusItem string
@@ -122041,6 +122163,8 @@ type SemanticSearchMeta struct {
 	// Index-coverage snapshot, present only when requested via
 	// `include: [coverage]`; otherwise null.
 	Coverage NilSemanticSearchCoverage `json:"coverage"`
+	// Present when the request filtered by `domain_ids`: the ids it was given, deduped and lowercased.
+	DomainIds []uuid.UUID `json:"domain_ids"`
 }
 
 // GetLimit returns the value of Limit.
@@ -122063,6 +122187,11 @@ func (s *SemanticSearchMeta) GetCoverage() NilSemanticSearchCoverage {
 	return s.Coverage
 }
 
+// GetDomainIds returns the value of DomainIds.
+func (s *SemanticSearchMeta) GetDomainIds() []uuid.UUID {
+	return s.DomainIds
+}
+
 // SetLimit sets the value of Limit.
 func (s *SemanticSearchMeta) SetLimit(val int) {
 	s.Limit = val
@@ -122081,6 +122210,11 @@ func (s *SemanticSearchMeta) SetMode(val SemanticSearchMetaMode) {
 // SetCoverage sets the value of Coverage.
 func (s *SemanticSearchMeta) SetCoverage(val NilSemanticSearchCoverage) {
 	s.Coverage = val
+}
+
+// SetDomainIds sets the value of DomainIds.
+func (s *SemanticSearchMeta) SetDomainIds(val []uuid.UUID) {
+	s.DomainIds = val
 }
 
 // Ranking mode used for this response.
