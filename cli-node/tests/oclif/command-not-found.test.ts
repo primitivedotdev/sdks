@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import hook, {
   type CommandLookup,
@@ -305,25 +306,37 @@ describe("command not found", () => {
     }
   });
 
-  it.each([
-    { command: false, topic: false, expected: "primitive search" },
-    { command: false, topic: true, expected: "primitive search" },
-    { command: true, topic: false, expected: undefined },
-    { command: true, topic: true, expected: undefined },
-    { command: undefined, topic: false, expected: "primitive search --help" },
-    { command: undefined, topic: true, expected: undefined },
-    { command: undefined, topic: undefined, expected: undefined },
-  ])(
-    "uses command visibility before topic visibility for roots ($command, $topic)",
-    async ({ command, topic, expected }) => {
+  it.each(
+    [
+      { command: false, topic: false, expected: "primitive search" },
+      { command: false, topic: true, expected: "primitive search" },
+      { command: true, topic: false, expected: undefined },
+      { command: true, topic: true, expected: undefined },
+      { command: undefined, topic: false, expected: "primitive search --help" },
+      { command: undefined, topic: true, expected: undefined },
+      { command: undefined, topic: undefined, expected: undefined },
+    ].flatMap((example) =>
+      ["", "agent:", "agent:contacts:"].map((prefix) => ({
+        ...example,
+        prefix,
+      })),
+    ),
+  )(
+    "uses command visibility before topic visibility at $prefix ($command, $topic)",
+    async ({ command, topic, expected, prefix }) => {
       const entries = [
-        { id: "search:list" },
-        ...(command === undefined ? [] : [{ id: "search", hidden: command }]),
+        { id: `${prefix}search:list` },
+        ...(command === undefined
+          ? []
+          : [{ id: `${prefix}search`, hidden: command }]),
       ];
       const config = {
         commands: entries,
         commandIDs: entries.map(({ id }) => id),
-        topics: topic === undefined ? [] : [{ name: "search", hidden: topic }],
+        topics:
+          topic === undefined
+            ? []
+            : [{ name: `${prefix}search`, hidden: topic }],
         findCommand: (id: string) =>
           entries.some((entry) => entry.id === id) ? { args: {} } : undefined,
       };
@@ -337,11 +350,23 @@ describe("command not found", () => {
       try {
         await hook.call(
           {} as never,
-          { id: "serach", argv: ["--json"], config, context: {} } as never,
+          {
+            id: `${prefix}serach`,
+            argv: ["--json"],
+            config,
+            context: {},
+          } as never,
         );
         const error = JSON.parse(String(out.mock.calls[0]?.[0])).error;
         expect(error.details?.suggestions).toEqual(
-          expected ? [expected] : undefined,
+          expected
+            ? [
+                expected.replace(
+                  "primitive search",
+                  `primitive ${prefix.replaceAll(":", " ")}search`,
+                ),
+              ]
+            : undefined,
         );
         expect(error.code).toBe("command_not_found");
         expect(err).not.toHaveBeenCalled();
@@ -352,6 +377,54 @@ describe("command not found", () => {
       }
     },
   );
+
+  it("suggests the real middle topic when a command group is misspelled", async () => {
+    const registered = COMMANDS as Record<string, { hidden?: boolean }>;
+    const packageJson = JSON.parse(
+      readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+    ) as { oclif: { topics: Record<string, { hidden?: boolean }> } };
+    const config = {
+      commands: Object.entries(registered).map(([id, command]) => ({
+        id,
+        hidden: command.hidden,
+      })),
+      commandIDs: Object.keys(registered),
+      topics: Object.entries(packageJson.oclif.topics).map(([name, topic]) => ({
+        name,
+        hidden: topic.hidden,
+      })),
+      findCommand: (id: string) => (registered[id] ? { args: {} } : undefined),
+    };
+    const out = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+    const err = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+    const exitCode = process.exitCode;
+    try {
+      await hook.call(
+        {} as never,
+        {
+          id: "agent:contcts:list",
+          argv: ["--json"],
+          config,
+          context: {},
+        } as never,
+      );
+      const document = JSON.parse(String(out.mock.calls[0]?.[0]));
+      expect(document.error.code).toBe("command_not_found");
+      expect(document.error.details.suggestions[0]).toBe(
+        "primitive agent contacts --help",
+      );
+      expect(document.exit_code).toBe(2);
+      expect(err).not.toHaveBeenCalled();
+    } finally {
+      process.exitCode = exitCode;
+      out.mockRestore();
+      err.mockRestore();
+    }
+  });
 
   it("prints one JSON document on stdout under --json, and plain text on stderr otherwise", async () => {
     const config = {

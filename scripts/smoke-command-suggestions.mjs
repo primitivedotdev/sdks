@@ -41,7 +41,7 @@ function run(args) {
 }
 
 try {
-  for (const parent of ["webhook-deliveries", "org", "emails"]) {
+  for (const parent of ["webhook-deliveries", "org", "emails", "agent"]) {
     const result = await run([parent]);
     assert.equal(result.code, 0, result.stderr);
     assert.match(result.stdout, /COMMANDS|USAGE/);
@@ -52,6 +52,7 @@ try {
     [["mail"], "primitive emails --help"],
     [["serach"], "primitive search"],
     [["emails", "lsit"], "primitive emails list"],
+    [["agent", "contcts", "list"], "primitive agent contacts --help"],
   ]) {
     const result = await run([...args, "--json"]);
     assert.equal(result.code, 2, result.stdout + result.stderr);

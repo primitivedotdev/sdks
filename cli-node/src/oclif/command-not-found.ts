@@ -9,9 +9,9 @@ export type CommandLookup = {
   hasSubcommands(id: string): boolean;
   /** The ids of the commands shown in help whose last word is `word`. */
   named?(word: string): readonly string[];
-  /** Visible command ids, used for nearby spelling and topic matches. */
+  /** Visible commands and routable registry topics, used for nearby matches. */
   visible?: readonly string[];
-  /** Explicitly visible root commands and topics, never inferred from children. */
+  /** Visible root commands and topics supplied by the registry. */
   roots?: readonly string[];
 };
 
@@ -129,24 +129,18 @@ function unknown(
 }
 
 /** A command owns its visibility; topic visibility applies only without one. */
-function visibleRoots(
+function visibleEntries(
   commands: readonly { id: string; hidden?: boolean }[],
   topics: readonly { name: string; hidden?: boolean }[],
 ): string[] {
-  const rootCommands = commands.filter((command) => !command.id.includes(":"));
-  const declared = new Set(rootCommands.map((command) => command.id));
+  const declared = new Set(commands.map((command) => command.id));
   return [
     ...new Set([
-      ...rootCommands
+      ...commands
         .filter((command) => !command.hidden)
         .map((command) => command.id),
       ...topics
-        .filter(
-          (topic) =>
-            !topic.name.includes(":") &&
-            !declared.has(topic.name) &&
-            !topic.hidden,
-        )
+        .filter((topic) => !declared.has(topic.name) && !topic.hidden)
         .map((topic) => topic.name),
     ]),
   ];
@@ -215,10 +209,8 @@ export function commandNotFoundMessage(
  */
 const hook: Hook<"command_not_found"> = async (options) => {
   const { config } = options;
-  const visible = config.commands
-    .filter((command) => !command.hidden)
-    .map((command) => command.id);
-  const roots = visibleRoots(config.commands, config.topics);
+  const visible = visibleEntries(config.commands, config.topics);
+  const roots = visible.filter((id) => !id.includes(":"));
   const error = commandNotFoundMessage(options.id, {
     find: (id) => {
       const command = config.findCommand(id);
