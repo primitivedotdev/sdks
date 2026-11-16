@@ -54,6 +54,18 @@ import {
 } from "./endpoints-test-redirect.js";
 import { withFlagSuggestion } from "./flag-suggestions.js";
 import {
+  type FocusOutcome,
+  type FocusSurface,
+  focusEmptyHint,
+  focusFlags,
+  focusFlagValues,
+  NO_FOCUS,
+  resolveFocus,
+  withFocusMeta,
+  withoutFocus,
+  writeFocusLine,
+} from "./focus.js";
+import {
   assertFromVerifiedRows,
   FromVerifiedFilterUnsupportedError,
   fromVerifiedExpectation,
@@ -1325,6 +1337,17 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     });
   }
 
+  // Listings and searches follow the domain focus (see focus.ts).
+  if (FOCUS_OPERATIONS[operation.sdkName]) {
+    for (const [name, flag] of Object.entries(focusFlags())) {
+      if (flags[name] !== undefined)
+        throw new Error(
+          `${operation.sdkName}: --${name} is both a generated flag and the focus flag`,
+        );
+      flags[name] = flag;
+    }
+  }
+
   // A flag an extension adds would change meaning if the spec gained a
   // parameter of the same name; refuse to build rather than guess.
   const extension = OPERATION_EXTENSIONS[operation.sdkName];
@@ -1698,6 +1721,48 @@ export const OPERATION_SUCCESS_HOOKS: Record<
   },
 };
 
+/**
+ * The generated listings that follow the domain focus, keyed by sdkName: the
+ * kind of listing, and the query parameters that give a request a scope of
+ * its own, which then wins over the session's and the profile's focus.
+ */
+export const FOCUS_OPERATIONS: Record<
+  string,
+  {
+    surface: FocusSurface;
+    scopeParams: readonly string[];
+    /** A DSL field in `q` that scopes the search by itself. */
+    scopeDsl?: RegExp;
+    countParam?: string;
+  }
+> = {
+  listEmails: {
+    surface: "inbound",
+    scopeParams: ["domain_id", "recipient"],
+    countParam: "count",
+  },
+  searchEmails: {
+    surface: "inbound",
+    scopeParams: ["domain_id", "to"],
+    scopeDsl: /(?:^|\s)(?:domain|to):/i,
+    countParam: "count",
+  },
+  listSentEmails: { surface: "sent", scopeParams: ["from"] },
+};
+
+/** Whether a query already scopes itself to some domain or mailbox. */
+export function queryHasOwnScope(
+  sdkName: string,
+  query: Record<string, unknown>,
+): boolean {
+  const spec = FOCUS_OPERATIONS[sdkName];
+  if (!spec) return false;
+  if (spec.scopeParams.some((name) => query[name] !== undefined)) return true;
+  return Boolean(
+    spec.scopeDsl && typeof query.q === "string" && spec.scopeDsl.test(query.q),
+  );
+}
+
 export function createOperationCommand(
   operation: PrimitiveOperationManifest,
 ): typeof Command {
@@ -1910,10 +1975,26 @@ export function createOperationCommand(
           operation.sdkName,
         );
         // sent list lists your own sends unless --all-senders.
-        const query =
+        const unfocused =
           operation.sdkName === "listSentEmails"
             ? withMineDefault(given, parsedFlags)
             : given;
+        // The domain focus: refused once on a multi-domain credential that
+        // never chose, then sent as a filter.
+        const focusSpec = FOCUS_OPERATIONS[operation.sdkName];
+        const focus: FocusOutcome = focusSpec
+          ? await resolveFocus({
+              surface: focusSpec.surface,
+              configDir: this.config.configDir,
+              auth,
+              client: apiClient.client,
+              flags: focusFlagValues(parsedFlags),
+              explicitScope: queryHasOwnScope(operation.sdkName, unfocused),
+              conflictingFlag:
+                unfocused.domain_id !== undefined ? "--domain-id" : undefined,
+            })
+          : NO_FOCUS;
+        const query = { ...unfocused, ...focus.params };
         // Set when this list or search call asked for reply state, so an
         // older server that lacks it fails loudly instead of returning
         // unfiltered mail that looks filtered.
@@ -2234,6 +2315,7 @@ export function createOperationCommand(
         // travels, and stderr stays empty, so a merged stream parses as one
         // document.
         const jsonOutput = parsedFlags.json === true;
+        writeFocusLine(focus, jsonOutput);
         const cursor = envelope?.meta?.cursor;
         if (cursor && !jsonOutput) {
           process.stderr.write(`next cursor: ${cursor}\n`);
@@ -2284,6 +2366,32 @@ export function createOperationCommand(
                 EMPTY_RESULT_HINTS[operation.sdkName]);
           if (hint && jsonOutput) summary.push(hint);
           else if (hint) process.stderr.write(`${hint}\n`);
+        }
+
+        // An empty focused one-shot result says how much matching mail the
+        // other domains hold. A --since tail is polled, so it does not.
+        if (
+          Array.isArray(envelope?.data) &&
+          envelope.data.length === 0 &&
+          focus.focused &&
+          query.since === undefined &&
+          query.cursor === undefined
+        ) {
+          const countParam = focusSpec?.countParam;
+          const note = await focusEmptyHint(focus, async () => {
+            const counted = await callOperation(undefined, {
+              ...withoutFocus(query, focus),
+              limit: 1,
+              ...(countParam ? { [countParam]: "true" } : {}),
+            });
+            if (counted.error) return null;
+            const total = (
+              counted.data as { meta?: { total?: unknown } } | undefined
+            )?.meta?.total;
+            return typeof total === "number" ? total : null;
+          });
+          if (note && jsonOutput) summary.push(note);
+          else if (note) process.stderr.write(`${note}\n`);
         }
 
         // What the answer's meta says about the data, such as a --recipient
@@ -2384,7 +2492,7 @@ export function createOperationCommand(
             };
         }
         let printed = jsonOutput
-          ? operationJsonDocument(envelope, summary)
+          ? operationJsonDocument(withFocusMeta(envelope, focus), summary)
           : operationOutputPayload(envelope);
         if (
           jsonOutput &&

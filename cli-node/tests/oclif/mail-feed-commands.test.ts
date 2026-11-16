@@ -320,7 +320,9 @@ describe("from_verified filter guard", () => {
         meta: { limit: 50, cursor: null },
       });
     const result = await run("emails:list", ["--from-verified", "true"]);
-    expect(calls[0]?.path).toContain("from_verified=true");
+    expect(
+      calls.find((call) => call.path.startsWith("/v1/emails"))?.path,
+    ).toContain("from_verified=true");
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("did not apply the `from_verified` filter");
     expect(result.stdout).not.toContain(SEND_ID);

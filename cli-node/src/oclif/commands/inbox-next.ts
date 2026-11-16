@@ -33,6 +33,17 @@ import {
   type AutomationHeaders,
 } from "../automated-mail.js";
 import {
+  type FocusMeta,
+  type FocusOutcome,
+  focusEmptyHint,
+  focusFlags,
+  focusFlagValues,
+  NO_FOCUS,
+  resolveFocus,
+  withoutFocus,
+  writeFocusLine,
+} from "../focus.js";
+import {
   type EmailInteraction,
   interactionHumanLine,
   interactionNextActions,
@@ -173,6 +184,8 @@ export type InboxNextJson = {
   /** The commands that answer `email`, best first; empty when none is needed. */
   next_actions: NextAction[];
   automated_awaiting: InboxNextAutomatedAwaiting | null;
+  /** The domain focus this answer was read under (see `primitive focus`). */
+  focus?: FocusMeta;
   error?: { code: string; message: string };
 };
 
@@ -313,6 +326,26 @@ export type InboxNextApi = {
 };
 
 const DEFAULT_API: InboxNextApi = { getConversation, getEmail, listEmails };
+
+/**
+ * The API with the domain focus's fields added to every listing. Reads by id
+ * are left as they are.
+ */
+export function focusedInboxApi(
+  api: InboxNextApi | undefined,
+  params: Record<string, unknown>,
+): InboxNextApi {
+  const base = api ?? DEFAULT_API;
+  if (Object.keys(params).length === 0) return base;
+  return {
+    ...base,
+    listEmails: ((input: Parameters<typeof listEmails>[0]) =>
+      base.listEmails({
+        ...input,
+        query: { ...(input?.query ?? {}), ...params },
+      } as Parameters<typeof listEmails>[0])) as typeof listEmails,
+  };
+}
 
 /**
  * The API for a wait: a rate limit, gateway failure or network error backs
@@ -889,6 +922,7 @@ class InboxNextCommand extends Command {
       description:
         "Do not skip automated mail (bounces, mailer-daemon, own addresses, reports, Auto-Submitted, bulk and list mail): drops the server-side `automated=false` filter.",
     }),
+    ...focusFlags(),
   };
 
   async run(): Promise<void> {
@@ -936,7 +970,25 @@ class InboxNextCommand extends Command {
         ? Date.now() + flags.timeout * 1000
         : null;
 
-    const api = flags.wait ? waitingInboxApi(deadline) : undefined;
+    // Only mail on the focused domains (see `primitive focus`).
+    const focus = await resolveFocus({
+      surface: "inbound",
+      configDir: this.config.configDir,
+      auth,
+      client: apiClient.client,
+      flags: focusFlagValues(flags),
+    });
+    writeFocusLine(focus, flags.json);
+    const api = focus.focused
+      ? focusedInboxApi(
+          flags.wait ? waitingInboxApi(deadline) : undefined,
+          focus.params,
+        )
+      : flags.wait
+        ? waitingInboxApi(deadline)
+        : undefined;
+    const print = (result: InboxNextResult) =>
+      this.printResult(result, bin, flags, apiClient, { api, focus });
 
     try {
       // Taken before the first check so the wait cannot miss mail that
@@ -952,7 +1004,7 @@ class InboxNextCommand extends Command {
         });
 
         if (result.outcome === "email" || !flags.wait || since === null) {
-          await this.printResult(result, bin, flags, apiClient);
+          await print(result);
           return;
         }
 
@@ -961,7 +1013,7 @@ class InboxNextCommand extends Command {
             ? MAX_LONG_POLL_SECONDS * 1000
             : deadline - Date.now();
         if (remainingMs <= 0) {
-          await this.printResult(result, bin, flags, apiClient);
+          await print(result);
           return;
         }
         if (!announcedWait && !flags.json) {
@@ -997,12 +1049,7 @@ class InboxNextCommand extends Command {
       if (error instanceof WaitDeadlineReached) {
         // The API stayed rate limited or unavailable until --timeout: the
         // same outcome as a wait that saw nothing.
-        await this.printResult(
-          { outcome: "empty", automated_awaiting: null },
-          bin,
-          flags,
-          apiClient,
-        );
+        await print({ outcome: "empty", automated_awaiting: null });
         return;
       }
       if (
@@ -1029,6 +1076,9 @@ class InboxNextCommand extends Command {
     bin: string,
     flags: { json: boolean; "include-automated": boolean },
     apiClient: PrimitiveApiClient,
+    scope: { api?: InboxNextApi | undefined; focus: FocusOutcome } = {
+      focus: NO_FOCUS,
+    },
   ): Promise<void> {
     // Nothing from a person awaits: say how much automated mail does,
     // from the server's bounded count (one request, never a scan). The
@@ -1040,7 +1090,10 @@ class InboxNextCommand extends Command {
       try {
         result = {
           ...found,
-          automated_awaiting: await countAutomatedAwaiting({ apiClient }),
+          automated_awaiting: await countAutomatedAwaiting({
+            apiClient,
+            api: scope.api,
+          }),
         };
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
@@ -1049,8 +1102,41 @@ class InboxNextCommand extends Command {
         );
       }
     }
+    // Focused and empty: how much awaits a reply on the other domains.
+    const elsewhere =
+      result.outcome === "empty"
+        ? await focusEmptyHint(scope.focus, async () => {
+            const query = {
+              awaiting: "you" as const,
+              exclude_fyi: "true" as const,
+              ...(flags["include-automated"]
+                ? {}
+                : { automated: "false" as const }),
+              limit: 1,
+              count: "true" as const,
+            };
+            const counted = await listEmails({
+              client: apiClient.client,
+              query: withoutFocus(query, scope.focus) as typeof query,
+              responseStyle: "fields",
+            });
+            const total = (
+              counted.data as { meta?: { total?: unknown } } | undefined
+            )?.meta?.total;
+            return counted.error || typeof total !== "number" ? null : total;
+          })
+        : null;
     if (flags.json) {
-      this.log(JSON.stringify(toJson(result, bin), null, 2));
+      const document = toJson(result, bin);
+      this.log(
+        JSON.stringify(
+          scope.focus.meta
+            ? { ...document, focus: scope.focus.meta }
+            : document,
+          null,
+          2,
+        ),
+      );
     } else if (result.outcome === "email") {
       this.log(formatTranscript(result, bin));
     } else {
@@ -1062,6 +1148,7 @@ class InboxNextCommand extends Command {
       process.stderr.write(
         `Nothing awaits your reply.${pending && pending.total > 0 ? ` ${count} automated email${one ? "" : "s"} also await${one ? "s" : ""} a reply; pass --include-automated to see ${one ? "it" : "them"}.` : ""}\n`,
       );
+      if (elsewhere) process.stderr.write(`${elsewhere}\n`);
     }
     process.exitCode =
       result.outcome === "email"

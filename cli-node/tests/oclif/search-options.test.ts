@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   createAuthenticatedCliApiClient: vi.fn(),
+  listDomains: vi.fn(),
   searchEmails: vi.fn(),
   semanticSearch: vi.fn(),
 }));
@@ -12,6 +13,7 @@ vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
     await importOriginal<typeof import("@primitivedotdev/api-core")>();
   return {
     ...actual,
+    listDomains: mocks.listDomains,
     searchEmails: mocks.searchEmails,
     semanticSearch: mocks.semanticSearch,
   };
@@ -175,11 +177,19 @@ describe("search --thread-id, --prefix, --no-count", () => {
     expect(parsed.data[0]?.direction).toBe("inbound");
   });
 
-  it("keeps the unfinished word last when --domain is combined with --prefix", async () => {
+  it("sends --domain as the domain id and leaves the query, and --prefix, as typed", async () => {
+    mocks.listDomains.mockResolvedValueOnce({
+      data: {
+        data: [
+          { id: "d-1", org_id: "org-1", domain: "example.com", verified: true },
+          { id: "d-2", org_id: "org-1", domain: "other.test", verified: true },
+        ],
+      },
+    });
     await runSearch(["quarterly invoi", "--prefix", "--domain", "example.com"]);
-    const q = String(sentQuery().q);
-    expect(q.startsWith("domain:")).toBe(true);
-    expect(q.endsWith("quarterly invoi")).toBe(true);
+    expect(sentQuery().q).toBe("quarterly invoi");
+    expect(sentQuery().domain_id).toBe("d-1");
+    expect(sentQuery().prefix).toBe("true");
   });
 
   it("prints the total footer for an empty result", async () => {

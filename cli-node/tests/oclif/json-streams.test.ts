@@ -24,6 +24,13 @@ vi.mock("node:child_process", async (original) => {
   };
 });
 
+// These tests pin each command's requests and output without a domain focus;
+// focus.test.ts covers the focus and the GET /domains read it makes.
+vi.mock("../../src/oclif/focus.js", async (original) => {
+  const actual = await original<typeof import("../../src/oclif/focus.js")>();
+  return { ...actual, resolveFocus: async () => actual.NO_FOCUS };
+});
+
 import { headerFlagName } from "../../src/oclif/api-command.js";
 import {
   claimAutoRead,

@@ -11,6 +11,13 @@ import {
   AutomatedFilterUnsupportedError,
 } from "../automated-filter.js";
 import {
+  focusEmptyHint,
+  focusFlags,
+  focusFlagValues,
+  resolveFocus,
+  writeFocusLine,
+} from "../focus.js";
+import {
   AWAITING_FLAG_DESCRIPTION,
   AWAITING_VALUES,
   ReplyStateUnsupportedError,
@@ -35,6 +42,8 @@ import {
   sinceFromFlags,
   sleep,
 } from "./emails-poll.js";
+
+const ELSEWHERE_CHECK_MS = 60_000;
 
 function cliError(message: string): Errors.CLIError {
   return new Errors.CLIError(message, { exit: 1 });
@@ -76,9 +85,7 @@ class EmailsWatchCommand extends Command {
     body: Flags.string({
       description: "Full-text body filter",
     }),
-    domain: Flags.string({
-      description: "Filter by inbound email domain",
-    }),
+    ...focusFlags(),
     "domain-id": Flags.string({
       description: "Filter by domain UUID",
     }),
@@ -151,7 +158,28 @@ class EmailsWatchCommand extends Command {
       throw cliError(error instanceof Error ? error.message : String(error));
     }
 
-    const filters = filtersFromFlags(flags);
+    // --domain and the saved focus filter by domain id; --domain-id, --to
+    // or a domain: or to: filter in --q keep their own scope.
+    const focus = await resolveFocus({
+      surface: "inbound",
+      configDir: this.config.configDir,
+      auth,
+      client: apiClient.client,
+      flags: focusFlagValues(flags),
+      explicitScope:
+        Boolean(flags["domain-id"] || flags.to) ||
+        /(?:^|\s)(?:domain|to):/i.test(flags.q ?? ""),
+      conflictingFlag: flags["domain-id"] ? "--domain-id" : undefined,
+    });
+    writeFocusLine(focus, false);
+    const filters = {
+      ...filtersFromFlags({ ...flags, domain: undefined }),
+      ...(focus.focused ? { focus: focus.params } : {}),
+    };
+    // The note on mail elsewhere is printed once, checked at most once a
+    // minute while the focused watch finds nothing.
+    let elsewhereNoted = !focus.focused;
+    let elsewhereCheckedAt = 0;
     const deadline = flags.seconds ? Date.now() + flags.seconds * 1000 : null;
     const idWidth = pickIdWidth(Boolean(process.stdout.isTTY));
     const seenIds = new Set<string>();
@@ -243,6 +271,30 @@ class EmailsWatchCommand extends Command {
         }
         printed += 1;
         if (flags.number && printed >= flags.number) return;
+      }
+
+      if (
+        printed === 0 &&
+        !elsewhereNoted &&
+        Date.now() - elsewhereCheckedAt >= ELSEWHERE_CHECK_MS
+      ) {
+        elsewhereCheckedAt = Date.now();
+        let total: number | null = null;
+        const note = await focusEmptyHint(focus, async () => {
+          const counted = await fetchEmailSearchPage({
+            apiClient,
+            count: true,
+            filters: { ...filters, focus: undefined },
+            pageSize: 1,
+            since,
+          });
+          total = counted.ok ? (counted.total ?? null) : null;
+          return total;
+        });
+        if (note && total !== null && total > 0) {
+          process.stderr.write(`${note}\n`);
+          elsewhereNoted = true;
+        }
       }
 
       if (cursorAdvanced) continue;

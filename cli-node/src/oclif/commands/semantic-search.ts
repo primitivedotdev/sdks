@@ -10,6 +10,13 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import {
+  focusFlags,
+  focusFlagValues,
+  resolveFocus,
+  withFocusMeta,
+  writeFocusLine,
+} from "../focus.js";
 
 // `primitive semantic-search` is the cross-corpus, meaning-aware search
 // surface. Distinct from `primitive emails list --search ...`, which is
@@ -129,6 +136,7 @@ class SemanticSearchCommand extends Command {
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
+    ...focusFlags(),
   };
 
   async run(): Promise<void> {
@@ -142,9 +150,20 @@ class SemanticSearchCommand extends Command {
           configDir: this.config.configDir,
         });
 
+      // Semantic search filters no domain yet: the focus is reported as not
+      // applied until the server takes one (see FOCUS_SERVER_SUPPORT).
+      const focus = await resolveFocus({
+        surface: "semantic",
+        configDir: this.config.configDir,
+        auth,
+        client: apiClient.client,
+        flags: focusFlagValues(flags),
+      });
+      writeFocusLine(focus, flags.json);
       const result = await semanticSearch({
         client: apiClient.client,
         body: {
+          ...focus.params,
           query: args.query,
           mode: flags.mode as "hybrid" | "semantic" | "keyword",
           ...(flags.corpus
@@ -179,7 +198,9 @@ class SemanticSearchCommand extends Command {
         | undefined;
 
       if (flags.json) {
-        this.log(JSON.stringify(envelope ?? null, null, 2));
+        this.log(
+          JSON.stringify(withFocusMeta(envelope ?? null, focus), null, 2),
+        );
         return;
       }
 
