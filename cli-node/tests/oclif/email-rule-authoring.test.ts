@@ -1283,7 +1283,7 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
     );
     const result = await run("email-rules:create-email-rule", [
       "--raw-body",
-      JSON.stringify({ tree, expectations: { match: [E] } }),
+      JSON.stringify({ tree, kind: "grant", expectations: { match: [E] } }),
       "--name",
       "Cold outreach",
       "--english",
@@ -1294,6 +1294,7 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
     expect(result.exitCode, result.stderr).toBe(0);
     expect(calls[0]?.body).toEqual({
       tree,
+      kind: "grant",
       name: "Cold outreach",
       english: "cold outreach",
       expectations: { match: [A], no_match: [B] },
@@ -1407,7 +1408,11 @@ describe("email-rules samples files and --pick", () => {
     answer(written);
     const result = await run("email-rules:create-email-rule", [
       "--raw-body",
-      JSON.stringify({ tree, expectation_samples: [sample("raw")] }),
+      JSON.stringify({
+        tree,
+        kind: "grant",
+        expectation_samples: [sample("raw")],
+      }),
       "--name",
       "Bills",
       "--english",
@@ -1420,6 +1425,7 @@ describe("email-rules samples files and --pick", () => {
     expect(result.exitCode, result.stderr).toBe(0);
     expect(calls[0]?.body).toEqual({
       tree,
+      kind: "grant",
       name: "Bills",
       english: "bills",
       expectation_samples: [samples[2], samples[0]],
@@ -2091,7 +2097,12 @@ describe("--scope-address and --scope-domain", () => {
     answer(written);
     const result = await run("email-rules:create-email-rule", [
       "--raw-body",
-      JSON.stringify({ tree, name: "Support mail", english: "support mail" }),
+      JSON.stringify({
+        tree,
+        kind: "grant",
+        name: "Support mail",
+        english: "support mail",
+      }),
       "--evaluation-scope",
       "selected",
       "--scope-address",
@@ -2107,6 +2118,7 @@ describe("--scope-address and --scope-domain", () => {
     ]);
     expect(calls[0]?.body).toEqual({
       tree,
+      kind: "grant",
       name: "Support mail",
       english: "support mail",
       evaluation_scope: "selected",
@@ -2162,17 +2174,30 @@ describe("--scope-address and --scope-domain", () => {
       "email-rules:generate-look-alikes",
     ]) {
       calls = [];
+      const input = {
+        tree,
+        kind: "grant",
+        ...(id.endsWith("on-sample")
+          ? {
+              email: {
+                from: { address: "sender@example.com" },
+                to: ["support@example.com"],
+                text: "Sample mail",
+              },
+            }
+          : {}),
+      };
       answer({});
       await run(id, [
         "--raw-body",
-        JSON.stringify({ tree }),
+        JSON.stringify(input),
         "--evaluation-scope",
         "selected",
         "--scope-address",
         "support@example.com",
       ]);
       expect(calls[0]?.body, id).toEqual({
-        tree,
+        ...input,
         evaluation_scope: "selected",
         scope_selection: { addresses: ["support@example.com"], domains: [] },
       });
@@ -2213,7 +2238,13 @@ describe("--scope-address and --scope-domain", () => {
       [
         [
           "--raw-body",
-          JSON.stringify({ tree, name: "n", evaluation_scope: "author" }),
+          JSON.stringify({
+            tree,
+            name: "n",
+            kind: "grant",
+            english: "scope rule",
+            evaluation_scope: "author",
+          }),
         ],
         "author",
       ],
@@ -2231,6 +2262,12 @@ describe("--scope-address and --scope-domain", () => {
       calls = [];
       const result = await run("email-rules:create-email-rule", [
         ...argv,
+        "--name",
+        "Scope rule",
+        "--kind",
+        "grant",
+        "--english",
+        "scope rule",
         "--scope-address",
         "support@example.com",
       ]);
@@ -2253,7 +2290,13 @@ describe("--scope-address and --scope-domain", () => {
 
     const file = tempFile(
       "selected.json",
-      JSON.stringify({ tree, name: "n", evaluation_scope: "selected" }),
+      JSON.stringify({
+        tree,
+        name: "n",
+        kind: "grant",
+        english: "scope rule",
+        evaluation_scope: "selected",
+      }),
     );
     const fromFile = await run("email-rules:create-email-rule", [
       "--body-file",
@@ -2265,6 +2308,8 @@ describe("--scope-address and --scope-domain", () => {
     expect(calls[0]?.body).toEqual({
       tree,
       name: "n",
+      kind: "grant",
+      english: "scope rule",
       evaluation_scope: "selected",
       scope_selection: { addresses: [], domains: ["example.org"] },
     });
@@ -2272,7 +2317,13 @@ describe("--scope-address and --scope-domain", () => {
     calls = [];
     const overridden = await run("email-rules:create-email-rule", [
       "--raw-body",
-      JSON.stringify({ tree, name: "n", evaluation_scope: "author" }),
+      JSON.stringify({
+        tree,
+        name: "n",
+        kind: "grant",
+        english: "scope rule",
+        evaluation_scope: "author",
+      }),
       "--evaluation-scope",
       "selected",
       "--scope-domain",

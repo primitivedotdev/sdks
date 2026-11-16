@@ -55,6 +55,7 @@ const SMOKES = [
   ["smoke-late-contact-notices.mjs"],
   ["smoke-attachment-parts.mjs"],
   ["smoke-pull-commands.mjs"],
+  ["smoke-required-body-fields.mjs"],
   ["smoke-mail-deletion.mjs"],
   ["smoke-listen.mjs"],
   ["smoke-session-notifications.mjs"],
