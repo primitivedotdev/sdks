@@ -196,7 +196,7 @@ export function buildEmailSearchQuery(params: {
     query.automated = params.filters.automated ? "true" : "false";
   }
   if (params.filters.body) query.body = params.filters.body;
-  if (params.filters.domainId) query.domain_id = params.filters.domainId;
+  if (params.filters.domainId) query.domain_ids = params.filters.domainId;
   if (params.filters.from) query.from = params.filters.from;
   if (params.filters.hasAttachment !== undefined) {
     query.has_attachment = params.filters.hasAttachment ? "true" : "false";

@@ -40,7 +40,12 @@ const SALES: FocusDomain = {
   id: "22222222-2222-4222-8222-222222222222",
 };
 
-type Call = { method: string; path: string; query: URLSearchParams };
+type Call = {
+  method: string;
+  path: string;
+  query: URLSearchParams;
+  body?: unknown;
+};
 let calls: Call[] = [];
 let domains: FocusDomain[] = [SALES, SUPPORT];
 let emails: (call: Call) => unknown[] = () => [];
@@ -67,10 +72,12 @@ function client() {
     fetch: async (input, init) => {
       const request = new Request(input, init);
       const url = new URL(request.url);
+      const text = request.method === "POST" ? await request.text() : "";
       const call = {
         method: request.method,
         path: url.pathname,
         query: url.searchParams,
+        body: text ? JSON.parse(text) : undefined,
       };
       calls.push(call);
       if (url.pathname === "/v1/domains")
@@ -85,6 +92,12 @@ function client() {
             total: total(call),
             total_capped: capped(call),
           },
+        });
+      if (url.pathname === "/v1/semantic-search")
+        return Response.json({
+          success: true,
+          data: [],
+          meta: { cursor: null },
         });
       if (url.pathname === "/v1/sent-emails")
         return Response.json({
@@ -173,8 +186,8 @@ afterEach(() => {
     else process.env[key] = value;
   }
   rmSync(tempHome, { recursive: true, force: true });
-  FOCUS_SERVER_SUPPORT.inboundMany = null;
-  FOCUS_SERVER_SUPPORT.sent = null;
+  FOCUS_SERVER_SUPPORT.many = true;
+  FOCUS_SERVER_SUPPORT.sent = "domain_ids";
 });
 
 function readable(list: FocusDomain[] = [SALES, SUPPORT]) {
@@ -260,7 +273,7 @@ describe("the one-time refusal", () => {
     const second = await run("emails:list", []);
     expect(second.thrown).toBeUndefined();
     expect(second.stderr).toContain("No focus chosen");
-    expect(emailCalls()[0]?.query.get("domain_id")).toBeNull();
+    expect(emailCalls()[0]?.query.get("domain_ids")).toBeNull();
   });
 });
 
@@ -276,7 +289,7 @@ describe("persistence", () => {
     expect(existsSync(join(configDir, "credentials.json"))).toBe(false);
 
     const listed = await run("emails:list", []);
-    expect(emailCalls()[0]?.query.get("domain_id")).toBe(SUPPORT.id);
+    expect(emailCalls()[0]?.query.get("domain_ids")).toBe(SUPPORT.id);
     expect(listed.stderr).toContain(
       "Showing mail on support.example.com only (saved focus). Widen: --all-domains or primitive focus clear.",
     );
@@ -342,7 +355,8 @@ describe("persistence", () => {
     expect(listed.stderr).toContain("No focus chosen");
   });
 
-  it("names one domain at a time until the server takes several", async () => {
+  it("names one domain at a time while the server takes one", async () => {
+    FOCUS_SERVER_SUPPORT.many = false;
     const set = await run("focus:set", [
       "support.example.com",
       "sales.example.com",
@@ -351,11 +365,10 @@ describe("persistence", () => {
     expect((set.thrown as Error).message).toContain("one domain for now");
   });
 
-  it("sends several domains once the server's parameter is named", async () => {
-    FOCUS_SERVER_SUPPORT.inboundMany = "domain_id";
+  it("sends several domains as domain_ids", async () => {
     await run("focus:set", ["support.example.com", "sales.example.com"]);
     await run("emails:list", []);
-    expect(emailCalls()[0]?.query.getAll("domain_id").sort()).toEqual(
+    expect(emailCalls()[0]?.query.get("domain_ids")?.split(",").sort()).toEqual(
       [SALES.id, SUPPORT.id].sort(),
     );
   });
@@ -370,7 +383,7 @@ describe("overrides", () => {
     const outcome = await resolveWith({
       env: { [FOCUS_ENV]: "sales.example.com" },
     });
-    expect(outcome.params).toEqual({ domain_id: SALES.id });
+    expect(outcome.params).toEqual({ domain_ids: SALES.id });
     expect(outcome.meta?.source).toBe("env");
     expect(outcome.line).toContain(`from ${FOCUS_ENV}`);
   });
@@ -384,10 +397,10 @@ describe("overrides", () => {
   it("--domain beats the session variable, and --all-domains beats both", async () => {
     process.env[FOCUS_ENV] = "support.example.com";
     await run("emails:list", ["--domain", "sales.example.com"]);
-    expect(emailCalls()[0]?.query.get("domain_id")).toBe(SALES.id);
+    expect(emailCalls()[0]?.query.get("domain_ids")).toBe(SALES.id);
     calls = [];
     const wide = await run("emails:list", ["--all-domains", "--json"]);
-    expect(emailCalls()[0]?.query.get("domain_id")).toBeNull();
+    expect(emailCalls()[0]?.query.get("domain_ids")).toBeNull();
     expect(JSON.parse(wide.stdout).meta.focus).toMatchObject({
       all: true,
       source: "flag",
@@ -396,7 +409,7 @@ describe("overrides", () => {
 
   it("a command's own scope wins over the saved focus", async () => {
     await run("emails:list", ["--recipient", "a@sales.example.com"]);
-    expect(emailCalls()[0]?.query.get("domain_id")).toBeNull();
+    expect(emailCalls()[0]?.query.get("domain_ids")).toBeNull();
     const outcome = await resolveWith({ explicitScope: true });
     expect(outcome).toEqual(NO_FOCUS);
   });
@@ -423,7 +436,7 @@ describe("visibility", () => {
 
   it("prints one focus line on stderr in text mode", async () => {
     const result = await run("emails:latest", []);
-    expect(emailCalls()[0]?.query.get("domain_id")).toBe(SUPPORT.id);
+    expect(emailCalls()[0]?.query.get("domain_ids")).toBe(SUPPORT.id);
     expect(
       result.stderr.split("\n").filter((l) => l.startsWith("Showing mail on")),
     ).toEqual([
@@ -447,16 +460,17 @@ describe("visibility", () => {
     await run("search", ["invoice"]);
     await run("emails:search", ["--q", "invoice"]);
     const searches = calls.filter((c) => c.path === "/v1/emails/search");
-    expect(searches.map((c) => c.query.get("domain_id"))).toEqual([
+    expect(searches.map((c) => c.query.get("domain_ids"))).toEqual([
       SUPPORT.id,
       SUPPORT.id,
     ]);
   });
 
-  it("reports the focus as not applied on sent list until the server filters it", async () => {
+  it("reports the focus as not applied where the server cannot filter", async () => {
+    FOCUS_SERVER_SUPPORT.sent = null;
     const result = await run("sent:list", ["--json"]);
     const sent = calls.find((c) => c.path === "/v1/sent-emails");
-    expect([...(sent?.query.keys() ?? [])]).not.toContain("domain_id");
+    expect([...(sent?.query.keys() ?? [])]).not.toContain("domain_ids");
     expect(JSON.parse(result.stdout).meta.focus).toMatchObject({
       applied: false,
       domains: ["support.example.com"],
@@ -468,10 +482,9 @@ describe("visibility", () => {
   });
 
   it("sends the sent-list filter once its parameter is named", async () => {
-    FOCUS_SERVER_SUPPORT.sent = "domain_id";
     await run("sent:list", []);
     const sent = calls.find((c) => c.path === "/v1/sent-emails");
-    expect(sent?.query.get("domain_id")).toBe(SUPPORT.id);
+    expect(sent?.query.get("domain_ids")).toBe(SUPPORT.id);
   });
 });
 
@@ -479,13 +492,13 @@ describe("empty focused results", () => {
   beforeEach(() => {
     saveFocus(memberProfile(), ORG, () => ({ choice: { domains: [SUPPORT] } }));
     emails = () => [];
-    total = (call) => (call.query.get("domain_id") ? 0 : 7);
+    total = (call) => (call.query.get("domain_ids") ? 0 : 7);
   });
 
   it("says how much matching mail the other domains hold", async () => {
     const result = await run("emails:list", ["--status", "completed"]);
     const counted = emailCalls()[1];
-    expect(counted?.query.get("domain_id")).toBeNull();
+    expect(counted?.query.get("domain_ids")).toBeNull();
     expect(counted?.query.get("status")).toBe("completed");
     expect(counted?.query.get("count")).toBe("true");
     expect(result.stderr).toContain(
@@ -552,8 +565,14 @@ describe("exemptions", () => {
   });
 
   it("leaves the shared search poll unfocused unless a listing asks", () => {
+    const scoped = buildEmailSearchQuery({
+      filters: { domainId: SUPPORT.id },
+      pageSize: 10,
+    });
+    expect(scoped.domain_ids).toBe(SUPPORT.id);
+    expect(scoped).not.toHaveProperty("domain_id");
     const query = buildEmailSearchQuery({ filters: {}, pageSize: 10 });
-    expect(query).not.toHaveProperty("domain_id");
+    expect(query).not.toHaveProperty("domain_ids");
   });
 
   it("does not focus a read by id", async () => {
@@ -567,7 +586,7 @@ describe("poll loops and inbox listings", () => {
   beforeEach(() => {
     saveFocus(memberProfile(), ORG, () => ({ choice: { domains: [SUPPORT] } }));
     emails = () => [];
-    total = (call) => (call.query.get("domain_id") ? 0 : 2);
+    total = (call) => (call.query.get("domain_ids") ? 0 : 2);
   });
 
   it("inbox next lists only the focused domain and reports the focus", async () => {
@@ -579,7 +598,7 @@ describe("poll loops and inbox listings", () => {
     expect(
       listed
         .filter((c) => c.query.get("count") !== "true")
-        .every((c) => c.query.get("domain_id") === SUPPORT.id),
+        .every((c) => c.query.get("domain_ids") === SUPPORT.id),
     ).toBe(true);
     expect(JSON.parse(result.stdout).meta.focus).toMatchObject({
       domains: ["support.example.com"],
@@ -598,7 +617,7 @@ describe("poll loops and inbox listings", () => {
       (c) => c.path === "/v1/emails/search" && c.query.get("limit") !== "1",
     );
     expect(polls.length).toBeGreaterThan(1);
-    expect(polls.every((c) => c.query.get("domain_id") === SUPPORT.id)).toBe(
+    expect(polls.every((c) => c.query.get("domain_ids") === SUPPORT.id)).toBe(
       true,
     );
     expect(
@@ -622,7 +641,7 @@ describe("review fixes", () => {
     expect(result.thrown).toBeUndefined();
     const searched = calls.find((c) => c.path === "/v1/emails/search");
     expect(searched?.query.get("q")).toBe("invoice");
-    expect(searched?.query.get("domain_id")).toBe(SALES.id);
+    expect(searched?.query.get("domain_ids")).toBe(SALES.id);
   });
 
   it("treats a thread as the command's own scope", async () => {
@@ -635,7 +654,7 @@ describe("review fixes", () => {
       "--thread-id",
       "55555555-5555-4555-8555-555555555555",
     ]);
-    expect(emailCalls().map((c) => c.query.get("domain_id"))).toEqual([
+    expect(emailCalls().map((c) => c.query.get("domain_ids"))).toEqual([
       null,
       null,
     ]);
@@ -693,11 +712,56 @@ describe("automated review fixes", () => {
   it("says a capped or page-only count is a lower bound", async () => {
     saveFocus(memberProfile(), ORG, () => ({ choice: { domains: [SUPPORT] } }));
     emails = () => [];
-    total = (call) => (call.query.get("domain_id") ? 0 : 2);
-    capped = (call) => !call.query.get("domain_id");
+    total = (call) => (call.query.get("domain_ids") ? 0 : 2);
+    capped = (call) => !call.query.get("domain_ids");
     const result = await run("emails:list", ["--search", "invoice"]);
     expect(result.stderr).toContain(
       "at least 2 matching emails on other domains",
     );
+  });
+});
+
+describe("semantic search", () => {
+  beforeEach(() => {
+    saveFocus(memberProfile(), ORG, () => ({
+      choice: { domains: [SUPPORT, SALES] },
+    }));
+  });
+
+  function semanticBodies() {
+    return calls
+      .filter((c) => c.path === "/v1/semantic-search")
+      .map((c) => c.body as Record<string, unknown>);
+  }
+
+  it("sends the focused domains in the body and says it covers received mail only", async () => {
+    const result = await run("semantic-search", ["renewal"]);
+    expect(semanticBodies()[0]?.domain_ids).toEqual([SUPPORT.id, SALES.id]);
+    expect(result.stderr).toContain("received mail only");
+  });
+
+  it("leaves the focus out when --corpus asks for sent mail, and says so", async () => {
+    const result = await run("search", [
+      "renewal",
+      "--mode",
+      "keyword",
+      "--corpus",
+      "outbound",
+      "--json",
+    ]);
+    expect(semanticBodies()[0]).not.toHaveProperty("domain_ids");
+    expect(JSON.parse(result.stdout).meta.focus.applied).toBe(false);
+  });
+
+  it("refuses --domain with sent mail in --corpus", async () => {
+    const result = await run("semantic-search", [
+      "renewal",
+      "--domain",
+      "support.example.com",
+      "--corpus",
+      "outbound",
+    ]);
+    expect(result.thrown).toMatchObject({ oclif: { exit: 2 } });
+    expect(semanticBodies()).toHaveLength(0);
   });
 });

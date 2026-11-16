@@ -14,6 +14,7 @@ import {
   FOCUS_SERVER_SUPPORT,
   focusFlags,
   focusFlagValues,
+  focusForCorpus,
   resolveFocus,
   withFocusMeta,
   writeFocusLine,
@@ -151,15 +152,18 @@ class SemanticSearchCommand extends Command {
           configDir: this.config.configDir,
         });
 
-      // Semantic search filters no domain yet: the focus is reported as not
-      // applied until the server takes one (see FOCUS_SERVER_SUPPORT).
-      const focus = await resolveFocus({
-        surface: "semantic",
-        configDir: this.config.configDir,
-        auth,
-        client: apiClient.client,
-        flags: focusFlagValues(flags),
-      });
+      // A focus narrows semantic search to received mail on those domains;
+      // with sent mail in --corpus it is not applied (focusForCorpus).
+      const focus = focusForCorpus(
+        await resolveFocus({
+          surface: "semantic",
+          configDir: this.config.configDir,
+          auth,
+          client: apiClient.client,
+          flags: focusFlagValues(flags),
+        }),
+        flags.corpus,
+      );
       writeFocusLine(focus, flags.json);
       const result = await semanticSearch({
         client: apiClient.client,

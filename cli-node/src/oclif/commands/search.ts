@@ -21,6 +21,7 @@ import {
   focusEmptyHint,
   focusFlags,
   focusFlagValues,
+  focusForCorpus,
   queryScopesItself,
   resolveFocus,
   withFocusMeta,
@@ -299,15 +300,18 @@ class SearchCommand extends Command {
           return;
         }
 
-        // Semantic search filters no domain yet: the focus is reported as
-        // not applied (see FOCUS_SERVER_SUPPORT).
-        const focus = await resolveFocus({
-          surface: "semantic",
-          configDir: this.config.configDir,
-          auth,
-          client: apiClient.client,
-          flags: focusFlagValues(flags),
-        });
+        // A focus narrows semantic search to received mail on those domains;
+        // with sent mail in --corpus it is not applied (focusForCorpus).
+        const focus = focusForCorpus(
+          await resolveFocus({
+            surface: "semantic",
+            configDir: this.config.configDir,
+            auth,
+            client: apiClient.client,
+            flags: focusFlagValues(flags),
+          }),
+          flags.corpus,
+        );
         writeFocusLine(focus, flags.json);
         const result = await semanticSearch({
           client: apiClient.client,
@@ -391,7 +395,7 @@ class SearchCommand extends Command {
       if (flags.to) query.to = flags.to;
       if (flags.subject) query.subject = flags.subject;
       if (flags.body) query.body = flags.body;
-      if (flags["domain-id"]) query.domain_id = flags["domain-id"];
+      if (flags["domain-id"]) query.domain_ids = flags["domain-id"];
       if (flags["has-attachment"]) {
         query.has_attachment = flags["has-attachment"] as "true" | "false";
       }

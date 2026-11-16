@@ -26,23 +26,25 @@ import { agentProfileDirectory } from "./connected-agent-profile.js";
 export const FOCUS_ENV = "PRIMITIVE_FOCUS_DOMAINS";
 
 /**
- * The request parameter each kind of listing filters domains with, or null
- * where the server has none yet. A command whose parameter is null runs
- * unfiltered and says the focus was not applied.
+ * The request parameter each kind of listing filters domains with, a list of
+ * domain ids, or null where the server has none. A command whose parameter is
+ * null runs unfiltered and says the focus was not applied.
  *
- * `inboundMany` is the parameter GET /emails and GET /emails/search take
- * several domain ids in. While it is null a focus names one domain at a time.
+ * inbound: GET /emails and GET /emails/search (the receiving domain). sent:
+ * GET /sent-emails (the sending domain). semantic: the POST /semantic-search
+ * body, which then searches received mail only. `many` says a focus may name
+ * several domains; while false it names one at a time.
  */
 export const FOCUS_SERVER_SUPPORT: {
-  inbound: string;
-  inboundMany: string | null;
+  inbound: string | null;
   sent: string | null;
   semantic: string | null;
+  many: boolean;
 } = {
-  inbound: "domain_id",
-  inboundMany: null,
-  sent: null,
-  semantic: null,
+  inbound: "domain_ids",
+  sent: "domain_ids",
+  semantic: "domain_ids",
+  many: true,
 };
 
 /** Which kind of listing a command is, for FOCUS_SERVER_SUPPORT. */
@@ -346,7 +348,7 @@ export function oneDomainAtATimeError(names: string[]): Errors.CLIError {
 
 /** Whether a focus may name more than one domain. */
 export function manyDomainsSupported(): boolean {
-  return FOCUS_SERVER_SUPPORT.inboundMany !== null;
+  return FOCUS_SERVER_SUPPORT.many;
 }
 
 /** Names normalized: trimmed, lower case, without duplicates. */
@@ -611,14 +613,12 @@ export function focusParams(
   domains: readonly FocusDomain[],
 ): Record<string, unknown> | null {
   const ids = domains.map((d) => d.id);
-  if (surface === "inbound") {
-    if (ids.length === 1) return { [FOCUS_SERVER_SUPPORT.inbound]: ids[0] };
-    const many = FOCUS_SERVER_SUPPORT.inboundMany;
-    if (!many) throw oneDomainAtATimeError(domains.map((d) => d.name));
-    return { [many]: ids };
-  }
   const name = FOCUS_SERVER_SUPPORT[surface];
-  return name ? { [name]: ids } : null;
+  if (!name) return null;
+  if (ids.length > 1 && !FOCUS_SERVER_SUPPORT.many)
+    throw oneDomainAtATimeError(domains.map((d) => d.name));
+  // The query routes take the ids comma-separated; the semantic body a list.
+  return { [name]: surface === "semantic" ? ids : ids.join(",") };
 }
 
 function focusedOutcome(
@@ -650,7 +650,7 @@ function focusedOutcome(
     focused: domains,
     readable: readable?.domains ?? null,
     meta: { domains: names, all: false, source, applied: true, widen },
-    line: `Showing mail on ${joinNames(names)} only (${SOURCE_TEXT[source]}). Widen: ${widenFor(source).join(" or ")}.`,
+    line: `Showing mail on ${joinNames(names)} only (${SOURCE_TEXT[source]})${surface === "semantic" ? ", received mail only" : ""}. Widen: ${widenFor(source).join(" or ")}.`,
   };
 }
 
@@ -722,6 +722,33 @@ export function queryScopesItself(q: string | undefined): boolean {
   // As the server reads a phrase: only \" is an escape inside it.
   const unquoted = q.replace(/"(?:\\"|[^"])*"/g, " ");
   return /(?:^|\s)(?:domain|to):/i.test(unquoted);
+}
+
+/**
+ * Semantic search filters domains on received mail only, and refuses a domain
+ * filter with sent mail in --corpus. Such a search keeps every domain and says
+ * the focus was not applied; a --domain given with it is refused.
+ */
+export function focusForCorpus(
+  outcome: FocusOutcome,
+  corpus: readonly string[] | undefined,
+): FocusOutcome {
+  if (!outcome.focused || !corpus?.includes("outbound")) return outcome;
+  const names = outcome.focused.map((d) => d.name);
+  const source = outcome.meta?.source ?? "profile";
+  if (source === "flag")
+    throw focusError(
+      "--domain filters received mail only: drop --corpus outbound, or leave --domain out.",
+      "usage_error",
+      2,
+    );
+  return {
+    ...outcome,
+    params: {},
+    focused: null,
+    meta: outcome.meta ? { ...outcome.meta, applied: false } : null,
+    line: `Focus on ${joinNames(names)} (${source === "none" ? "saved focus" : SOURCE_TEXT[source]}) not applied: --corpus outbound includes sent mail, which a domain focus does not filter, so this search covers every domain.`,
+  };
 }
 
 /** Remove the focus fields from a query, for the elsewhere count. */

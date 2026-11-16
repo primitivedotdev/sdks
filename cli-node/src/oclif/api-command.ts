@@ -1746,16 +1746,16 @@ export const FOCUS_OPERATIONS: Record<
 > = {
   listEmails: {
     surface: "inbound",
-    scopeParams: ["domain_id", "recipient", "thread_id"],
+    scopeParams: ["domain_ids", "recipient", "thread_id"],
     countParam: "count",
   },
   searchEmails: {
     surface: "inbound",
-    scopeParams: ["domain_id", "to", "thread_id", "reply_to_sent_email_id"],
+    scopeParams: ["domain_ids", "to", "thread_id", "reply_to_sent_email_id"],
     scopeDsl: true,
     countParam: "count",
   },
-  listSentEmails: { surface: "sent", scopeParams: ["from"] },
+  listSentEmails: { surface: "sent", scopeParams: ["from", "domain_ids"] },
 };
 
 /** Whether a query already scopes itself to some domain or mailbox. */
@@ -1999,7 +1999,7 @@ export function createOperationCommand(
               flags: focusFlagValues(parsedFlags),
               explicitScope: queryHasOwnScope(operation.sdkName, unfocused),
               conflictingFlag:
-                unfocused.domain_id !== undefined ? "--domain-id" : undefined,
+                unfocused.domain_ids !== undefined ? "--domain-ids" : undefined,
             })
           : NO_FOCUS;
         const query = { ...unfocused, ...focus.params };

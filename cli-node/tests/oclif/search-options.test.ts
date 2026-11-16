@@ -188,7 +188,7 @@ describe("search --thread-id, --prefix, --no-count", () => {
     });
     await runSearch(["quarterly invoi", "--prefix", "--domain", "example.com"]);
     expect(sentQuery().q).toBe("quarterly invoi");
-    expect(sentQuery().domain_id).toBe("d-1");
+    expect(sentQuery().domain_ids).toBe("d-1");
     expect(sentQuery().prefix).toBe("true");
   });
 
