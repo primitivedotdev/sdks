@@ -257,6 +257,7 @@ describe("EmailDetail type contract", () => {
           size_bytes: 2048,
           sha256: null,
           part_index: 0,
+          description: null,
         },
       ],
     };

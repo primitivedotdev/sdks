@@ -6,7 +6,7 @@ import datetime
 # from_known_address, sender_connected_agent_verified, body_text, body_html). A future regen that
 # drops one of these fields would silently break the SDK contract;
 # this test fails loudly when that happens.
-from primitive.api.models.email_attachment import EmailAttachment
+from primitive.api.models.email_detail_attachment import EmailDetailAttachment
 from primitive.api.models.email_detail import EmailDetail
 from primitive.api.models.email_detail_awaiting import EmailDetailAwaiting
 from primitive.api.models.email_detail_imported_type_0 import (
@@ -302,15 +302,17 @@ def test_email_detail_attachments_are_required_and_round_trip() -> None:
         "size_bytes": 2048,
         "sha256": None,
         "part_index": 0,
+        "description": "A one-page invoice.",
     }
     detail = EmailDetail.from_dict({**SAMPLE, "attachments": [part]})
     assert len(detail.attachments) == 1
     attachment = detail.attachments[0]
-    assert isinstance(attachment, EmailAttachment)
+    assert isinstance(attachment, EmailDetailAttachment)
     assert attachment.filename == "invoice.pdf"
     assert attachment.content_type == "application/pdf"
     assert attachment.size_bytes == 2048
     assert attachment.sha256 is None
     assert attachment.part_index == 0
+    assert attachment.description == "A one-page invoice."
     again = EmailDetail.from_dict(detail.to_dict())
     assert [a.to_dict() for a in again.attachments] == [part]

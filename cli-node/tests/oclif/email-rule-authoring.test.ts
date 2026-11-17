@@ -319,11 +319,24 @@ function withResults(
 
 const FAILED_EXPECTATIONS: TestEmailRuleResult["expectations"] = {
   passed: false,
-  counts: { passed: 1, failed: 1, undecided: 1 },
+  counts: { passed: 1, failed: 1, undecided: 1, close_calls: 0 },
   results: [
-    { email_id: A, expected: "match", outcome: "matched", status: "passed" },
-    { email_id: B, expected: "match", outcome: "no_match", status: "failed" },
     {
+      email_id: A,
+      expected: "match",
+      outcome: "matched",
+      status: "passed",
+      close_call: false,
+    },
+    {
+      email_id: B,
+      expected: "match",
+      outcome: "no_match",
+      status: "failed",
+      close_call: false,
+    },
+    {
+      close_call: false,
       email_id: D,
       expected: "no_match",
       outcome: "unclassified",
@@ -336,10 +349,17 @@ const FAILED_EXPECTATIONS: TestEmailRuleResult["expectations"] = {
 
 const UNDECIDED_EXPECTATIONS: TestEmailRuleResult["expectations"] = {
   passed: false,
-  counts: { passed: 1, failed: 0, undecided: 1 },
+  counts: { passed: 1, failed: 0, undecided: 1, close_calls: 0 },
   results: [
-    { email_id: A, expected: "match", outcome: "matched", status: "passed" },
     {
+      email_id: A,
+      expected: "match",
+      outcome: "matched",
+      status: "passed",
+      close_call: false,
+    },
+    {
+      close_call: false,
       email_id: D,
       expected: "no_match",
       outcome: "unclassified",
@@ -352,10 +372,17 @@ const UNDECIDED_EXPECTATIONS: TestEmailRuleResult["expectations"] = {
 
 const PASSED_EXPECTATIONS: TestEmailRuleResult["expectations"] = {
   passed: true,
-  counts: { passed: 2, failed: 0, undecided: 0 },
+  counts: { passed: 2, failed: 0, undecided: 0, close_calls: 0 },
   results: [
-    { email_id: A, expected: "match", outcome: "matched", status: "passed" },
     {
+      email_id: A,
+      expected: "match",
+      outcome: "matched",
+      status: "passed",
+      close_call: false,
+    },
+    {
+      close_call: false,
       email_id: B,
       expected: "no_match",
       outcome: "no_match",
@@ -657,15 +684,17 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
   it("exits 1 with expectations_undecided for an email the rule cannot find", async () => {
     const data = withResults([{ email_id: E, outcome: "not_found" }], {
       passed: false,
-      counts: { passed: 1, failed: 0, undecided: 1 },
+      counts: { passed: 1, failed: 0, undecided: 1, close_calls: 0 },
       results: [
         {
+          close_call: false,
           email_id: A,
           expected: "match",
           outcome: "matched",
           status: "passed",
         },
         {
+          close_call: false,
           email_id: E,
           expected: "match",
           outcome: "not_found",
@@ -739,9 +768,10 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
       [{ email_id: E, outcome: "skipped", skipped_reason: "unparsed" }],
       {
         passed: false,
-        counts: { passed: 0, failed: 0, undecided: 1 },
+        counts: { passed: 0, failed: 0, undecided: 1, close_calls: 0 },
         results: [
           {
+            close_call: false,
             email_id: E,
             expected: "match",
             outcome: "skipped",
@@ -774,9 +804,10 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     const data = {
       ...testResult({
         passed: false,
-        counts: { passed: 0, failed: 0, undecided: 2 },
+        counts: { passed: 0, failed: 0, undecided: 2, close_calls: 0 },
         results: [
           {
+            close_call: false,
             email_id: C,
             expected: "match",
             outcome: "near_miss",
@@ -785,6 +816,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
             retryable: true,
           },
           {
+            close_call: false,
             email_id: D,
             expected: "no_match",
             outcome: "unclassified",
@@ -832,15 +864,17 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     answer(
       withResults([{ email_id: E, outcome: "not_found" }], {
         passed: false,
-        counts: { passed: 0, failed: 1, undecided: 1 },
+        counts: { passed: 0, failed: 1, undecided: 1, close_calls: 0 },
         results: [
           {
+            close_call: false,
             email_id: B,
             expected: "match",
             outcome: "no_match",
             status: "failed",
           },
           {
+            close_call: false,
             email_id: E,
             expected: "no_match",
             outcome: "not_found",
