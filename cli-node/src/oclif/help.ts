@@ -1,10 +1,24 @@
-import { type Command, Help } from "@oclif/core";
+import {
+  type Command,
+  CommandHelp,
+  Help,
+  type HelpSectionRenderer,
+} from "@oclif/core";
+import {
+  HELP_GROUP_HEADERS,
+  HELP_GROUPS,
+  type HelpGroup,
+  type HelpInputs,
+  helpFlagGroup,
+} from "./help-inputs.js";
 
 export const FULL_HELP_FLAG = "--help-full";
 
 const NON_TTY_WIDTH = 100;
 const MAX_FLAG_NAME_WIDTH = 32;
 const EXAMPLE_LIMIT = 2;
+const SHORT_HELP_MAX_LINES = 40;
+const SHORT_HELP_MAX_BYTES = 3000;
 
 /**
  * Commands whose `--help` text is read as a capability check by code already
@@ -26,6 +40,7 @@ type ShortHelpFlag = {
   description?: string;
   exactlyOne?: readonly string[];
   helpValue?: string | string[];
+  helpGroup?: HelpGroup;
   hidden?: boolean;
   multiple?: boolean;
   required?: boolean;
@@ -41,6 +56,7 @@ type ShortHelpCommand = {
   examples?: readonly ShortHelpExample[];
   flags?: Record<string, ShortHelpFlag>;
   id: string;
+  helpInputs?: HelpInputs;
   summary?: string;
 };
 
@@ -138,6 +154,7 @@ function formatShortHelp(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([name, flag]) => ({
       name: flagName(name, flag),
+      group: flag.helpGroup ?? "command",
       text:
         flagRule(flag) +
         render(firstSentence(flag.summary ?? flag.description ?? "")),
@@ -161,23 +178,105 @@ function formatShortHelp(
     summary !== "" &&
     described.length > firstSentence(command.description ?? "").length;
   const fullHelp = `${bin} ${command.id} ${FULL_HELP_FLAG}`;
-  return [
-    ...(summary ? [summary] : []),
-    ...(more ? [`Summary only. Full description: \`${fullHelp}\`.`] : []),
-    ...section("USAGE", [usageLine(command, bin)]),
-    ...section(
-      "FLAGS",
-      flags.map(({ name, text }) => listLine(name, text)),
-    ),
-    ...section(
-      "COMMANDS",
-      subcommands.map(({ id, summary: text }) =>
-        listLine(id, render(firstSentence(text ?? ""))),
+  const renderSections = (compactCommon: boolean) =>
+    HELP_GROUPS.flatMap((group) => {
+      const members = flags.filter((flag) => flag.group === group);
+      const rows = members.map(({ name, text }) => listLine(name, text));
+      if (group === "required") {
+        rows.push(
+          ...jsonInputRows(command.helpInputs).map(([name, text]) =>
+            listLine(name, text),
+          ),
+        );
+      }
+      const lines = section(
+        HELP_GROUP_HEADERS[group],
+        group === "common" && compactCommon
+          ? compactFlagNames(
+              members.map((flag) => flag.name),
+              width - 2,
+            )
+          : rows,
+      );
+      return group === "common" && compactCommon ? lines.slice(1) : lines;
+    });
+  const renderPage = (compactCommon: boolean) =>
+    [
+      ...(summary ? [summary] : []),
+      ...(more ? [`Summary only. Full description: \`${fullHelp}\`.`] : []),
+      ...section("USAGE", [usageLine(command, bin)]),
+      ...renderSections(compactCommon),
+      ...section(
+        "COMMANDS",
+        subcommands.map(({ id, summary: text }) =>
+          listLine(id, render(firstSentence(text ?? ""))),
+        ),
       ),
-    ),
-    ...section("EXAMPLES", examples),
-    ...(more ? [] : ["", `Full help: ${fullHelp}`]),
-  ].join("\n");
+      ...section("EXAMPLES", examples),
+      ...(more ? [] : ["", `Full help: ${fullHelp}`]),
+    ].join("\n");
+  const page = renderPage(false);
+  return page.split("\n").length > SHORT_HELP_MAX_LINES ||
+    Buffer.byteLength(page) + 1 > SHORT_HELP_MAX_BYTES
+    ? renderPage(true)
+    : page;
+}
+
+function jsonInputRows(
+  inputs: HelpInputs | undefined,
+): Array<[string, string]> {
+  return (inputs?.requiredJsonFields ?? []).map((path) => [
+    path,
+    path === "$"
+      ? "Request body: use command fields or JSON."
+      : "JSON field: supply via --raw-body or --body-file.",
+  ]);
+}
+
+function compactFlagNames(names: readonly string[], width: number): string[] {
+  const lines: string[] = [];
+  for (const name of names) {
+    const last = lines.length - 1;
+    if (last < 0 || (lines[last]?.length ?? 0) + name.length + 2 > width)
+      lines.push(name);
+    else lines[last] += `  ${name}`;
+  }
+  return lines;
+}
+
+class GroupedCommandHelp extends CommandHelp {
+  protected override sections(): Array<{
+    generate: HelpSectionRenderer;
+    header: string;
+  }> {
+    return super.sections().map((section) =>
+      section.header !== "FLAGS"
+        ? section
+        : {
+            ...section,
+            generate: ({ flags }) =>
+              HELP_GROUPS.map((group) => {
+                const rows =
+                  this.flags(
+                    flags.filter((flag) => flag.helpGroup === group),
+                  ) ?? [];
+                if (group === "required")
+                  rows.push(
+                    ...jsonInputRows(
+                      (
+                        this.command as Command.Loadable & {
+                          helpInputs?: HelpInputs;
+                        }
+                      ).helpInputs,
+                    ),
+                  );
+                return rows.length
+                  ? { header: HELP_GROUP_HEADERS[group], body: rows }
+                  : undefined;
+              }),
+          },
+    );
+  }
 }
 
 function terminalWidth(): number {
@@ -193,14 +292,40 @@ function terminalWidth(): number {
 export default class PrimitiveHelp extends Help {
   private full = false;
 
+  protected override CommandHelpClass = GroupedCommandHelp;
+
   async showHelp(argv: string[]): Promise<void> {
     this.full = argv.includes(FULL_HELP_FLAG);
     await super.showHelp(argv);
   }
 
   async showCommandHelp(command: Command.Loadable): Promise<void> {
+    const loaded = await command.load();
+    const helpInputs = (loaded as typeof Command & { helpInputs?: HelpInputs })
+      .helpInputs;
+    const flagNames = new Set(Object.keys(command.flags ?? {}));
+    // Rendering mutates flag names; keep both parser and cached definitions intact.
+    const flags = Object.fromEntries(
+      Object.entries(command.flags ?? {}).map(([name, flag]) => {
+        const exactlyOne = loaded.flags?.[name]?.exactlyOne;
+        return [
+          name,
+          {
+            ...flag,
+            exactlyOne,
+            helpGroup: helpFlagGroup(
+              name,
+              { ...flag, exactlyOne },
+              helpInputs,
+              flagNames,
+            ),
+          },
+        ];
+      }),
+    );
+    const grouped = { ...command, flags, helpInputs };
     if (this.full || FULL_HELP_COMMANDS.has(command.id)) {
-      await super.showCommandHelp(command);
+      await super.showCommandHelp(grouped);
       return;
     }
     const depth = command.id.split(":").length;
@@ -214,17 +339,9 @@ export default class PrimitiveHelp extends Help {
         id: sub.id.replaceAll(":", " "),
         summary: sub.summary ?? sub.description,
       }));
-    // The cached manifest drops `exactlyOne`, so read it from the command class.
-    const loaded = await command.load();
-    const flags = Object.fromEntries(
-      Object.entries(command.flags ?? {}).map(([name, flag]) => [
-        name,
-        { ...flag, exactlyOne: loaded.flags?.[name]?.exactlyOne },
-      ]),
-    );
     this.log(
       formatShortHelp(
-        { ...command, flags, id: command.id.replaceAll(":", " ") },
+        { ...grouped, id: command.id.replaceAll(":", " ") },
         { bin: this.config.bin, subcommands, width: terminalWidth() },
       ),
     );

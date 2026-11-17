@@ -141,7 +141,7 @@ primitive emails latest --limit 5
 primitive inbox next
 ```
 
-Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`, or `-h`) is one screen: a summary, usage, one line per flag, and two examples. `primitive functions deploy --help-full` prints the complete text, with every flag's full description, behavior notes, and all examples, so an agent can compose any operation without leaving the terminal.
+Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`, or `-h`) is one screen: a summary, usage, required inputs, command options, common flags, and up to two examples. Common flags compact to names when needed to fit. Required request-body fields can be supplied as flags or JSON. `primitive functions deploy --help-full` prints the complete text, with every flag's full description, behavior notes, and all examples, so an agent can compose any operation without leaving the terminal.
 
 ## Verification codes and sign-in links
 

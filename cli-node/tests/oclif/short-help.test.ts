@@ -35,6 +35,8 @@ const commandHelp = (id: string, flag = "--help") =>
   renderHelp([...id.split(":"), flag]);
 
 const oneLine = (text: string) => text.replaceAll(/\s+/g, " ");
+const groupBody = (text: string, heading: string) =>
+  text.split(`${heading}\n`)[1]?.split(/\n[A-Z][A-Z ]+\n/, 1)[0] ?? "";
 
 let isTTY: boolean;
 beforeEach(() => {
@@ -55,8 +57,12 @@ describe("short command help", () => {
   it("fits every command in one screen", async () => {
     const over: string[] = [];
     for (const id of Object.keys(COMMANDS)) {
-      if (FULL_HELP_COMMANDS.has(id)) continue;
       const help = await commandHelp(id);
+      for (const [name, flag] of Object.entries(COMMANDS[id].flags ?? {})) {
+        if (!flag.hidden)
+          expect(help, `${id}: --${name}`).toContain(`--${name}`);
+      }
+      if (FULL_HELP_COMMANDS.has(id)) continue;
       const lines = help.trimEnd().split("\n").length;
       const bytes = Buffer.byteLength(help);
       const full = `primitive ${id.replaceAll(":", " ")} --help-full`;
@@ -75,6 +81,80 @@ describe("short command help", () => {
     // Renders help for every command, which runs past the 5s default on a
     // busy CI runner.
   }, 30_000);
+
+  it.each(["--help", "--help-full"])(
+    "groups generated fields before common flags with %s",
+    async (mode) => {
+      const help = await commandHelp(
+        "organizations:invite-organization-member",
+        mode,
+      );
+      const required = help.indexOf("REQUIRED INPUTS\n");
+      const options = help.indexOf("COMMAND OPTIONS\n");
+      const common = help.indexOf("COMMON FLAGS\n");
+      expect(required).toBeGreaterThan(-1);
+      expect(options).toBeGreaterThan(required);
+      expect(common).toBeGreaterThan(options);
+      expect(help.slice(required, options)).toContain("--email");
+      expect(help.slice(required, options)).toContain("--request-id");
+      expect(help.slice(required, options)).not.toContain("--api-key");
+      expect(help.slice(options, common)).toContain("--role");
+      for (const flag of [
+        "--api-key",
+        "--body-file",
+        "--idempotency-key",
+        "--json",
+        "--raw-body",
+        "--step-up-token",
+        "--time",
+      ])
+        expect(help.slice(common)).toContain(flag);
+    },
+  );
+
+  it.each(["--help", "--help-full"])(
+    "shows JSON-only requirements and handwritten body files accurately with %s",
+    async (mode) => {
+      const note = await commandHelp("address-notes:put-address-note", mode);
+      expect(
+        note.slice(
+          note.indexOf("REQUIRED INPUTS"),
+          note.indexOf("COMMON FLAGS"),
+        ),
+      ).toContain("$.value");
+      expect(note).toContain(
+        "JSON field: supply via --raw-body or --body-file.",
+      );
+      const send = await commandHelp("send", mode);
+      expect(groupBody(send, "COMMAND OPTIONS")).toContain("--body-file");
+      expect(groupBody(send, "COMMON FLAGS")).not.toContain("--body-file");
+    },
+  );
+
+  it("groups body inputs without making individual flags parser-required or changing cached definitions", async () => {
+    const command = COMMANDS[
+      "organizations:invite-organization-member"
+    ] as unknown as {
+      flags: Record<string, { required?: boolean; helpGroup?: string }>;
+    };
+    expect(command.flags.email.required).not.toBe(true);
+    expect(command.flags.email.helpGroup).toBeUndefined();
+    await commandHelp("organizations:invite-organization-member");
+    await commandHelp(
+      "organizations:invite-organization-member",
+      "--help-full",
+    );
+    expect(command.flags.email.required).not.toBe(true);
+    expect(command.flags.email.helpGroup).toBeUndefined();
+  });
+
+  it("keeps optional bodies optional and parent help discoverable", async () => {
+    const help = await commandHelp("email-rules:accept-email-rule-request");
+    expect(help).not.toContain("Request body: use command fields or JSON.");
+    expect(await renderHelp(["organizations"])).toContain(
+      "invite-organization-member",
+    );
+  });
 
   it("prints one line per flag, clipped to 100 columns off a terminal", async () => {
     const help = await commandHelp("reply");
