@@ -34,6 +34,11 @@ import { withBooleanFlagValues } from "./boolean-flag-values.js";
 import { requireDefaultLoginProfile } from "./connected-agent-profile.js";
 import { EMAIL_RULE_OPERATION_EXTENSIONS } from "./email-rule-authoring.js";
 import {
+  EMAIL_RULE_LISTING_EXTENSIONS,
+  emptyRuleListHint,
+  listEmailRulesErrorHint,
+} from "./email-rule-listings.js";
+import {
   emptyEmailListHint,
   listFilters,
   readCallerMailFor,
@@ -48,6 +53,10 @@ import {
   withDefaultEventTypes,
   withEventTypes,
 } from "./endpoint-event-types.js";
+import {
+  ENDPOINT_HEADER_EXTENSIONS,
+  headersNeedUrl,
+} from "./endpoint-headers.js";
 import {
   type ListEndpointsFn,
   maybeWriteFunctionEndpointRedirect,
@@ -246,6 +255,11 @@ export type PathFlagOverride = {
   description?: string;
   /** The values it takes, when not the spec's. */
   options?: readonly string[];
+  /**
+   * A query parameter whose spec values are "true" and "false", taken as a
+   * plain switch: given, it sends true; left out, nothing.
+   */
+  boolean?: true;
 };
 
 const EMAIL_ID_NOT_SENT =
@@ -270,6 +284,13 @@ export const OPERATION_PATH_FLAGS: Record<
   signalEmail: { id: { flag: "email-id", description: EMAIL_ID_NOT_SENT } },
   stopRepeatFromEmail: {
     id: { flag: "email-id", description: EMAIL_ID_NOT_SENT },
+  },
+  listEmailRules: {
+    all: {
+      boolean: true,
+      description:
+        "List every rule in the organization, whoever wrote it, each with who receives what it matches (RECEIVERS). For owners and admins signed in themselves. Not with --matched-email-id.",
+    },
   },
 };
 
@@ -618,7 +639,7 @@ export function flagForParameter(
     ...(override?.flag ? { aliases: [flagName(parameter.name)] } : {}),
   };
 
-  if (parameter.type === "boolean") {
+  if (parameter.type === "boolean" || override?.boolean) {
     return Flags.boolean(common);
   }
 
@@ -1438,6 +1459,37 @@ async function applyEventTypesFlag(params: {
   }
 }
 
+/**
+ * A webhook's stored URL, read so an update that sets request headers can
+ * send it unchanged. Refused (exit 2) when it cannot be read, or the endpoint
+ * is not a webhook, so headers are never sent without the URL they are for.
+ */
+async function currentWebhookUrl(
+  client: Parameters<typeof operations.getEndpoint>[0]["client"],
+  id: string | undefined,
+): Promise<string> {
+  const refused = (why: string) =>
+    cliError(
+      `${why} Setting request headers needs the webhook's URL in the same request: pass it with --url.`,
+    );
+  if (!id) throw refused("No endpoint id was given.");
+  const read = await operations.getEndpoint({
+    client,
+    path: { id },
+    responseStyle: "fields",
+  });
+  if (read.error) throw refused("Could not read the endpoint's current URL.");
+  const endpoint = (read.data as { data?: { kind?: unknown; url?: unknown } })
+    ?.data;
+  if (endpoint?.kind !== undefined && endpoint.kind !== "http")
+    throw cliError(
+      "Request headers are only for webhooks; this endpoint is not one.",
+    );
+  if (typeof endpoint?.url !== "string" || endpoint.url === "")
+    throw refused("The endpoint has no URL to send.");
+  return endpoint.url;
+}
+
 function collectValues(
   parameters: PrimitiveParameterManifest[],
   flags: Record<string, unknown>,
@@ -1657,6 +1709,8 @@ export const OPERATION_EXTRA_BODY_FLAGS: Record<
 // answer. See operation-extension.ts.
 export const OPERATION_EXTENSIONS: Record<string, OperationExtension> = {
   ...EMAIL_RULE_OPERATION_EXTENSIONS,
+  ...EMAIL_RULE_LISTING_EXTENSIONS,
+  ...ENDPOINT_HEADER_EXTENSIONS,
   ...ANSWER_REPORT_EXTENSIONS,
 };
 
@@ -1681,6 +1735,8 @@ export const OPERATION_ERROR_HINTS: Record<
 > = {
   inviteOrganizationMember: (code, body, payload) =>
     inviteRefusalHint(code, body, payload),
+  listEmailRules: (code, _body, payload, _path, flags) =>
+    listEmailRulesErrorHint(code, payload, flags),
 
   verifyDomain: (code, _body, payload) =>
     code === "dns_verification_failed"
@@ -1702,9 +1758,11 @@ export const OPERATION_ERROR_HINTS: Record<
 // Operations whose error hint, when it applies, stands in for the generic
 // hint for the error code: inviting with Member (where members read all
 // mail) or a role above it is refused with grant_forbidden, whose generic
-// advice (widen the credential's grant) no CLI request can follow.
+// advice (widen the credential's grant) no CLI request can follow. So is
+// list-email-rules --all from a member, or from an API key, which no grant
+// change lets list every rule.
 export const OPERATION_ERROR_HINTS_REPLACING_CODE_HINT: ReadonlySet<string> =
-  new Set(["inviteOrganizationMember"]);
+  new Set(["inviteOrganizationMember", "listEmailRules"]);
 
 // Per-operation post-success hooks keyed by operation.sdkName. Fires
 // AFTER the API call returns a non-error response and BEFORE the
@@ -2025,6 +2083,18 @@ export function createOperationCommand(
                 responseStyle: "fields",
               }) as ReturnType<ListEndpointsFn>,
           });
+        }
+
+        // The API takes request headers on an update only with the URL in
+        // the same request: without --url, send the webhook's current one.
+        if (operation.sdkName === "updateEndpoint" && headersNeedUrl(body)) {
+          body = {
+            ...(body as Record<string, unknown>),
+            url: await currentWebhookUrl(
+              apiClient.client,
+              typeof parsedFlags.id === "string" ? parsedFlags.id : undefined,
+            ),
+          };
         }
 
         const operationFn = operations[
@@ -2423,8 +2493,10 @@ export function createOperationCommand(
                       ? null
                       : await readCallerMailFor(auth, apiClient.client),
                 })
-              : (emptyDeliveriesHint(operation.sdkName, query) ??
-                EMPTY_RESULT_HINTS[operation.sdkName]);
+              : operation.sdkName === "listEmailRules"
+                ? emptyRuleListHint(query.all === true)
+                : (emptyDeliveriesHint(operation.sdkName, query) ??
+                  EMPTY_RESULT_HINTS[operation.sdkName]);
           if (hint && jsonOutput) summary.push(hint);
           else if (hint) process.stderr.write(`${hint}\n`);
         }
@@ -2528,6 +2600,7 @@ export function createOperationCommand(
               operation.sdkName,
             ),
             flags: parsedFlags,
+            meta: envelope?.meta,
           });
         } catch (error) {
           reportError = error instanceof Error ? error.message : String(error);
