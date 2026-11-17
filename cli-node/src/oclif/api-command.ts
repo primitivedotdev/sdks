@@ -73,6 +73,7 @@ import {
   FromVerifiedFilterUnsupportedError,
   fromVerifiedExpectation,
 } from "./from-verified-filter.js";
+import { operationHelpInputs } from "./help-inputs.js";
 import { writeIdempotentReplayBannerIfReplay } from "./idempotent-replay-banner.js";
 import {
   inviteRefusalHint,
@@ -1811,6 +1812,12 @@ export function createOperationCommand(
     : undefined;
   class OperationCommand extends Command {
     static description = fullDescription;
+
+    static helpInputs = operationHelpInputs(
+      operation,
+      bodyFieldFlagToProperty,
+      positionalFlag,
+    );
 
     static flags = flags as never;
 
