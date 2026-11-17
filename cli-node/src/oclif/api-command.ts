@@ -95,6 +95,11 @@ import {
   replyStateSurfaceForOperation,
 } from "./reply-state.js";
 import { assertRequiredBodyFields } from "./required-body-fields.js";
+import {
+  prepareRetryIds,
+  rememberRetryIds,
+  writeRetryIdNotice,
+} from "./retry-ids.js";
 import { RULE_NOTES_TAGS, ruleNotesReport } from "./rule-notes.js";
 import {
   ALL_SENDERS_FLAG,
@@ -1961,6 +1966,12 @@ export function createOperationCommand(
           `--${flag}`,
         ]),
       );
+      const retry = prepareRetryIds(
+        operation.requestSchema,
+        body,
+        bodyFieldFlagToProperty,
+      );
+      body = retry.body;
       assertRequiredBodyFields(
         operation.requestSchema,
         body,
@@ -1969,6 +1980,8 @@ export function createOperationCommand(
       );
       const tooLong = overLongBodyField(operation.requestSchema, body);
       if (tooLong) throw cliError(tooLong);
+      if (parsedFlags.json === true) rememberRetryIds(this, retry.ids);
+      else writeRetryIdNotice(retry.ids);
 
       await runWithTiming(parsedFlags.time === true, async () => {
         const { apiClient, auth, baseUrlOverridden } =
