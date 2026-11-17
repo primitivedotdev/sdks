@@ -358,7 +358,7 @@ func TestEmailDetailAttachmentsRoundTrip(t *testing.T) {
 	if !strings.Contains(emailDetailSampleJSON, anchor) {
 		t.Fatalf("sample JSON no longer contains %q", anchor)
 	}
-	withPart := strings.Replace(emailDetailSampleJSON, anchor, `"attachments": [{"filename": "invoice.pdf", "content_type": "application/pdf", "size_bytes": 2048, "sha256": null, "part_index": 0}],`, 1)
+	withPart := strings.Replace(emailDetailSampleJSON, anchor, `"attachments": [{"filename": "invoice.pdf", "content_type": "application/pdf", "size_bytes": 2048, "sha256": null, "part_index": 0, "description": "A one-page invoice."}],`, 1)
 
 	var none primitiveapi.EmailDetail
 	if err := json.Unmarshal([]byte(emailDetailSampleJSON), &none); err != nil {
@@ -390,6 +390,9 @@ func TestEmailDetailAttachmentsRoundTrip(t *testing.T) {
 		index, _ := part.PartIndex.Get()
 		if name != "invoice.pdf" || kind != "application/pdf" || part.SizeBytes != 2048 || index != 0 || !part.SHA256.Null {
 			t.Errorf("attachment: got %+v", part)
+		}
+		if description, set := part.Description.Get(); !set || description != "A one-page invoice." {
+			t.Errorf("attachment description: got %+v", part.Description)
 		}
 	}
 }
