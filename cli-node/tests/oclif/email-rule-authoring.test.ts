@@ -9,6 +9,7 @@ import {
 } from "../../src/oclif/api-command.js";
 import {
   answerConfidence,
+  changesLines,
   expectationsOutcome,
   formatFact,
   NOT_MATCHED_LIST_LIMIT,
@@ -2675,5 +2676,133 @@ describe("update-email-rule numbers", () => {
       restore_version: 3,
       if_revision: 12,
     });
+  });
+});
+
+describe("the test report: changes against the current version and close calls", () => {
+  const changed = (count: number, ids: string[]) => ({
+    count,
+    emails: ids.map((id) => ({
+      email_id: id,
+      subject: `Subject ${id}`,
+      from: `${id}@sender.example`,
+      received_at: "2026-11-16T00:00:00Z",
+    })),
+  });
+
+  it("counts what the tree would change and names a few emails each way", () => {
+    expect(
+      changesLines({
+        compared_to_version: 3,
+        newly_matched: changed(5, ["a", "b", "c", "d", "e"]),
+        stops_matching: changed(1, ["f"]),
+        undecided: 2,
+      }),
+    ).toEqual([
+      "Against version 3: 5 newly matched, 1 stops matching, 2 undecided by either.",
+      "  Newly matched (3 of 5 shown; the JSON lists up to 50):",
+      '    "Subject a" from a@sender.example (a)',
+      '    "Subject b" from b@sender.example (b)',
+      '    "Subject c" from c@sender.example (c)',
+      "  Stops matching:",
+      '    "Subject f" from f@sender.example (f)',
+    ]);
+    expect(
+      changesLines(
+        {
+          compared_to_version: 1,
+          newly_matched: changed(0, []),
+          stops_matching: changed(2, []),
+          undecided: 0,
+        },
+        "do_not_share",
+      ),
+    ).toEqual(["Against version 1: 0 newly withheld, 2 no longer withheld."]);
+    expect(changesLines(undefined)).toEqual([]);
+  });
+
+  it("prints changes before the expectations, and lists close calls even when all passed", () => {
+    const report = testEmailRuleReport({
+      ...testResult({
+        passed: true,
+        counts: { passed: 2, failed: 0, undecided: 0, close_calls: 1 },
+        results: [
+          {
+            email_id: A,
+            expected: "match",
+            outcome: "matched",
+            status: "passed",
+            close_call: true,
+          },
+          {
+            email_id: B,
+            expected: "no_match",
+            outcome: "no_match",
+            status: "passed",
+            close_call: false,
+          },
+        ],
+      }),
+      changes: {
+        compared_to_version: 3,
+        newly_matched: changed(0, []),
+        stops_matching: changed(0, []),
+        undecided: 0,
+      },
+    });
+    const at = report.lines.indexOf(
+      "Against version 3: 0 newly matched, 0 stop matching.",
+    );
+    expect(at).toBeGreaterThanOrEqual(0);
+    const expectations = report.lines.indexOf(
+      "Expectations: all 2 passed; 1 was a close call.",
+    );
+    expect(expectations).toBeGreaterThan(at);
+    expect(report.lines[expectations + 1]).toBe(
+      `  passed: ${A} expected match, got matched (a close call: decided by an answer below 0.75 confidence, so it may come out the other way when judged again)`,
+    );
+    expect(report.lines.join("\n")).not.toContain(`passed: ${B}`);
+    expect(report.exitCode).toBeUndefined();
+  });
+
+  it("marks a failed close call and prints the counts by group", () => {
+    const report = testEmailRuleReport(
+      testResult({
+        passed: false,
+        counts: {
+          passed: 0,
+          failed: 1,
+          undecided: 0,
+          close_calls: 1,
+          by_group: {
+            private: { passed: 0, failed: 1, undecided: 0 },
+            near_miss: { passed: 0, failed: 0, undecided: 0 },
+            must_match: { passed: 0, failed: 0, undecided: 0 },
+          },
+        },
+        results: [],
+        samples: [
+          {
+            index: 0,
+            sample_id: null,
+            label: "a dental bill",
+            expected: "no_match",
+            group: "private",
+            outcome: "matched",
+            status: "failed",
+            close_call: true,
+            question_answers: [],
+          },
+        ],
+      }),
+    );
+    expect(report.lines).toContain(
+      "Expectations: 1 failed, 0 passed; 1 was a close call.",
+    );
+    expect(report.lines).toContain("By group: private 1 failed.");
+    expect(report.lines).toContain(
+      '  failed: sample 1 ("a dental bill") expected no_match, got matched (a close call: decided by an answer below 0.75 confidence, so it may come out the other way when judged again)',
+    );
+    expect(report.exitCode).toBe(1);
   });
 });

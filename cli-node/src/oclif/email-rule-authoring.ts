@@ -19,8 +19,10 @@ import { Errors, Flags } from "@oclif/core";
 import type { TestEmailRuleResult } from "@primitivedotdev/api-core";
 import {
   ADD_SAMPLES_FILE_FLAG,
+  CLOSE_CALL_NOTE,
   EXPECT_SAMPLES_FILE_FLAG,
   expectSamples,
+  groupCountsLines,
   lookAlikesReport,
   PICK_FLAG,
   pickFlagHelp,
@@ -361,11 +363,18 @@ function questionLines(
   ];
 }
 
+/** Whether an expectation entry is marked a close call. */
+function isCloseCall(entry: unknown): boolean {
+  return isRecord(entry) && entry.close_call === true;
+}
+
 function expectationLine(result: ExpectationResult): string {
   const note =
     result.status === "undecided"
       ? undecidedNote(undecidedOf(result))
-      : undefined;
+      : isCloseCall(result)
+        ? CLOSE_CALL_NOTE
+        : undefined;
   return `  ${result.status}: ${result.email_id} expected ${result.expected}, got ${result.outcome}${note ? ` (${note})` : ""}`;
 }
 
@@ -418,7 +427,9 @@ function sampleLines(sample: SampleJudgment, name: SampleNamer): string[] {
   const note =
     sample.status === "undecided"
       ? ` (${undecidedNote(undecidedOf(sample.entry))})`
-      : "";
+      : isCloseCall(sample.entry)
+        ? ` (${CLOSE_CALL_NOTE})`
+        : "";
   const lines = [
     `  ${sample.status}: ${name(sample)} expected ${sample.expected}, got ${sample.outcome}${note}`,
   ];
@@ -440,22 +451,90 @@ function expectationsLines(
   const passed = expectations.counts?.passed ?? 0;
   const failed = expectations.counts?.failed ?? 0;
   const undecided = expectations.counts?.undecided ?? 0;
+  const closeCalls = expectations.counts?.close_calls ?? 0;
+  const closeCallsPart =
+    closeCalls > 0
+      ? `; ${plural(closeCalls, "was a close call", "were close calls")}`
+      : "";
+  const byGroup = groupCountsLines(expectations.counts?.by_group);
+  // Passed ones are listed only when they were close calls.
+  const listed = (entry: { status: string; entry?: unknown }) =>
+    entry.status !== "passed" || isCloseCall(entry.entry ?? entry);
+  const rows = [
+    ...results.filter((result) => listed(result)).map(expectationLine),
+    ...sampleJudgments(expectations)
+      .filter((sample) => listed(sample))
+      .flatMap((sample) => sampleLines(sample, name)),
+  ];
   if (expectations.passed && failed === 0 && undecided === 0)
-    return [`Expectations: all ${passed} passed.`];
+    return [
+      `Expectations: all ${passed} passed${closeCallsPart}.`,
+      ...byGroup,
+      ...rows,
+    ];
   const parts = [
     failed > 0 ? `${failed} failed` : "",
     undecided > 0 ? `${undecided} undecided` : "",
     `${passed} passed`,
   ].filter((part) => part !== "");
   return [
-    `Expectations: ${parts.join(", ")}.`,
-    ...results
-      .filter((result) => result.status !== "passed")
-      .map(expectationLine),
-    ...sampleJudgments(expectations)
-      .filter((sample) => sample.status !== "passed")
-      .flatMap((sample) => sampleLines(sample, name)),
+    `Expectations: ${parts.join(", ")}${closeCallsPart}.`,
+    ...byGroup,
+    ...rows,
   ];
+}
+
+/** The most emails each list of a test's changes names. */
+export const CHANGES_LIST_LIMIT = 3;
+
+/**
+ * What the tested tree would change against the rule's live version
+ * (changes): the counts, then a few of the emails each way, newest first.
+ * For a do_not_share rule they are the emails newly withheld and no longer
+ * withheld.
+ */
+export function changesLines(changes: unknown, kind?: unknown): string[] {
+  if (!isRecord(changes)) return [];
+  const list = (value: unknown) => {
+    const given = isRecord(value) ? value : {};
+    const emails = Array.isArray(given.emails)
+      ? given.emails.filter(isRecord)
+      : [];
+    const count = typeof given.count === "number" ? given.count : emails.length;
+    return { count, emails };
+  };
+  const newly = list(changes.newly_matched);
+  const stops = list(changes.stops_matching);
+  const undecided =
+    typeof changes.undecided === "number" ? changes.undecided : 0;
+  const version =
+    typeof changes.compared_to_version === "number"
+      ? `version ${changes.compared_to_version}`
+      : "the current version";
+  const withheld = kind === "do_not_share";
+  const words = withheld
+    ? (["newly withheld", "no longer withheld"] as const)
+    : (["newly matched", "stops matching"] as const);
+  const lines = [
+    `Against ${version}: ${newly.count} ${words[0]}, ${stops.count} ${withheld ? words[1] : stops.count === 1 ? "stops matching" : "stop matching"}${undecided > 0 ? `, ${undecided} undecided by either` : ""}.`,
+  ];
+  const emailLine = (email: Record<string, unknown>) => {
+    const subject = shownText(email.subject);
+    const from = shownText(email.from);
+    return `    ${subject ? `"${subject}"` : "(no subject)"}${from ? ` from ${from}` : ""} (${shownLine(email.email_id)})`;
+  };
+  for (const [label, entry] of [
+    [words[0], newly],
+    [words[1], stops],
+  ] as const) {
+    if (entry.emails.length === 0) continue;
+    const shown = entry.emails.slice(0, CHANGES_LIST_LIMIT);
+    lines.push(
+      `  ${label[0]?.toUpperCase()}${label.slice(1)}${entry.count > shown.length ? ` (${shown.length} of ${entry.count} shown; the JSON lists up to 50)` : ""}:`,
+      ...shown.map(emailLine),
+    );
+  }
+  return lines;
 }
 
 const NOT_MATCHED_ORDER: Record<string, number> = {
@@ -699,6 +778,10 @@ export function testEmailRuleReport(data: unknown): OperationReport {
     ...ruleNotesLines(data),
     ...conditionLines(summary),
     ...questionLines(summary, results),
+    ...changesLines(
+      data.changes,
+      isRecord(data.rule) ? data.rule.kind : undefined,
+    ),
     ...expectationsLines(result.expectations, name),
     ...matchedLines(results, result.expectations),
     ...notMatchedLines(results, result.expectations),
