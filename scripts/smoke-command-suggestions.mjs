@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { createServer } from "node:http";
 import { pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
@@ -76,7 +76,7 @@ try {
   }
   // Load the same published map the built binary uses. Every retired spelling
   // must fail before authentication or a request, including collapsed aliases.
-  const { COMMAND_RENAMES, COMMANDS } = await import(pathToFileURL(resolve(dirname(binary), "../dist/oclif/index.js")).href);
+  const { COMMAND_RENAMES, COMMANDS } = await import(pathToFileURL(resolve(dirname(await realpath(binary)), "../dist/oclif/index.js")).href);
   const retired = Object.entries(COMMAND_RENAMES);
   let next = 0;
   await Promise.all(Array.from({ length: 2 }, async () => {
