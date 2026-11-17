@@ -123,10 +123,10 @@ own agent composite and cannot change organization or agent approval rules.
 The generated commands expose the same typed public operations as the SDKs:
 
 ```sh
-primitive contacts get-contact-policy
-primitive contacts put-contact-policy --body-file organization-policy.json
-primitive contacts get-agent-contact-policy --agent-address agent@example.com
-primitive contacts put-agent-contact-policy --agent-address agent@example.com --body-file agent-policy.json
+primitive contacts get-policy
+primitive contacts set-policy --body-file organization-policy.json
+primitive contacts get-agent-policy --agent-address agent@example.com
+primitive contacts set-agent-policy --agent-address agent@example.com --body-file agent-policy.json
 ```
 
 A new organization document, for example:

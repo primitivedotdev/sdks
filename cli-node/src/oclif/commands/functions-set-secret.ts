@@ -27,7 +27,7 @@ import {
 // `primitive functions:set-secret` is the agent-grade shortcut for
 // writing a function secret and (optionally) pushing it live in the
 // same call. The underlying `functions:set-function-secret` /
-// `functions:create-function-secret` operations only do the secret
+// `functions:create-secret` operations only do the secret
 // upsert; making the new value visible to the running handler
 // requires a separate `functions:redeploy` (or `functions:update-
 // function`) call with the existing bundle. AGX walkthrough flagged

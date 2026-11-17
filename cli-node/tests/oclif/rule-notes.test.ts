@@ -66,7 +66,7 @@ describe("ruleNotesLines", () => {
       note: "See\nGET /v1/email-rule-scope-options \u001b[31mnow\u001b[0m ‮ok",
     });
     expect(line).toBe(
-      "See GET /v1/email-rule-scope-options (primitive email-rules list-email-rule-scope-options) now ok",
+      "See GET /v1/email-rule-scope-options (primitive email-rules list-scope-options) now ok",
     );
   });
 

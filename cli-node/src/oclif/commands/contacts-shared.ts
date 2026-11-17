@@ -129,7 +129,7 @@ export async function runContactsCommand(
       if (!(error instanceof ContactsApiError)) throw error;
       if (error.directoryAvailable)
         process.stderr.write(
-          "The directory contact is available, but the agent membership was not saved. Retry agent contacts add after resolving the error.\n",
+          "The directory contact is available, but the agent membership was not saved. Retry agent contacts create after resolving the error.\n",
         );
       const payload = extractErrorPayload(error.payload);
       writeErrorWithHints(payload);

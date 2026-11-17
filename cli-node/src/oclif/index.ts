@@ -2,7 +2,16 @@ import { Args, Command, Errors } from "@oclif/core";
 import type { PrimitiveOperationManifest } from "@primitivedotdev/api-core";
 import { createOperationCommand } from "./api-command.js";
 import { setKnownCommands } from "./api-path-commands.js";
-import { cliOperationManifest } from "./cli-operations.js";
+import {
+  canonicalCommandId,
+  canonicalCommands,
+  canonicalOperation,
+  operationCommandId,
+} from "./cli-command-names.js";
+import {
+  cliOperationManifest,
+  rawCliOperationManifest,
+} from "./cli-operations.js";
 import {
   ActivityAskedCommand,
   ActivityConcerningCommand,
@@ -202,6 +211,8 @@ import { renderFishCompletion } from "./fish-completion.js";
 import { guardJsonOutputCommands, JSON_OUTPUT_FLAG } from "./json-output.js";
 import { readCompletionFunction } from "./shell-completion-script.js";
 
+export { COMMAND_RENAMES, retiredCommandTarget } from "./cli-command-names.js";
+
 class ListOperationsCommand extends Command {
   static description =
     "List all generated API operations as JSON. Useful for piping to `jq` to discover available commands, their request/response schemas, and per-field descriptions. For inspecting a single operation in detail, prefer `primitive describe <command-or-operation-name>`.";
@@ -217,7 +228,7 @@ class ListOperationsCommand extends Command {
 }
 
 function operationId(operation: PrimitiveOperationManifest): string {
-  return `${operation.tagCommand}:${operation.command}`;
+  return operationCommandId(operation);
 }
 
 function normalizeLookupToken(value: string): string {
@@ -291,7 +302,7 @@ function scoreOperation(
 }
 
 // Looks up an operation manifest entry by CLI command id
-// (`emails:get-email`), canonical alias (`emails:get`), generated
+// (`emails:get`), generated
 // SDK operation name (`getEmail`), or tagged operation name
 // (`emails:getEmail`). On miss, returns up to 5 closest command ids
 // so the caller can render a useful "did you mean" hint. Pure
@@ -300,7 +311,7 @@ export function lookupOperation(id: string): {
   match: PrimitiveOperationManifest | null;
   candidates: string[];
 } {
-  const trimmed = resolveOperationAlias(id.trim());
+  const trimmed = canonicalCommandId(resolveOperationAlias(id.trim()));
 
   const match =
     cliOperationManifest.find((op) =>
@@ -429,7 +440,9 @@ class CompletionCommand extends Command {
     const shell = args.shell;
 
     if (shell === "fish") {
-      this.log(renderFishCompletion(this.config.bin));
+      this.log(
+        renderFishCompletion(this.config.bin, COMMANDS, this.config.topics),
+      );
       return;
     }
 
@@ -454,7 +467,7 @@ class CompletionCommand extends Command {
   }
 }
 
-export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
+const RAW_OPERATION_ALIASES: Record<string, string> = {
   // leaveOrganization moved from the Account tag to Roles and members; the
   // old generated id keeps working.
   "account:leave-organization": "roles-and-members:leave-organization",
@@ -511,6 +524,16 @@ export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
   "webhook-deliveries:replay": "webhook-deliveries:replay-delivery",
 };
 
+export const CANONICAL_OPERATION_ALIASES: Record<string, string> =
+  Object.fromEntries(
+    Object.entries(RAW_OPERATION_ALIASES)
+      .map(([alias, target]) => [
+        canonicalCommandId(alias),
+        canonicalCommandId(target),
+      ])
+      .filter(([alias, target]) => alias !== target),
+  );
+
 const DESCRIBE_OPERATION_ALIASES: Record<string, string> = {
   ...CANONICAL_OPERATION_ALIASES,
   "credits:balance": "credits:get-credit-balance",
@@ -526,7 +549,9 @@ const DESCRIBE_OPERATION_ALIASES: Record<string, string> = {
 };
 
 function resolveOperationAlias(id: string): string {
-  return DESCRIBE_OPERATION_ALIASES[id] ?? id;
+  return Object.hasOwn(DESCRIBE_OPERATION_ALIASES, id)
+    ? (DESCRIBE_OPERATION_ALIASES[id] ?? id)
+    : id;
 }
 
 // Operation ids whose surface is owned by a hand-rolled command in
@@ -560,13 +585,13 @@ const OVERRIDDEN_OPERATION_IDS = new Set<string>([
 ]);
 
 const generatedCommands = Object.fromEntries(
-  cliOperationManifest
+  rawCliOperationManifest
     .filter(
       (operation) => !OVERRIDDEN_OPERATION_IDS.has(operationId(operation)),
     )
     .map((operation) => [
       operationId(operation),
-      createOperationCommand(operation),
+      createOperationCommand(canonicalOperation(operation)),
     ]),
 );
 
@@ -578,7 +603,7 @@ const emailsGetCommand = createEmailsGetCommand(
 generatedCommands["emails:get-email"] = emailsGetCommand;
 
 const generatedCommandAliases = Object.fromEntries(
-  Object.entries(CANONICAL_OPERATION_ALIASES).map(([alias, target]) => {
+  Object.entries(RAW_OPERATION_ALIASES).map(([alias, target]) => {
     const command = generatedCommands[target];
     if (!command) {
       throw new Error(`Missing generated command target for alias ${alias}`);
@@ -587,7 +612,7 @@ const generatedCommandAliases = Object.fromEntries(
   }),
 );
 
-export const COMMANDS: Record<string, typeof Command> = {
+const rawCommands: Record<string, typeof Command> = {
   completion: CompletionCommand,
   // Interactive one-command upgrade (start claim -> prompt for code -> verify),
   // on top of the generated agent:claim / agent:claim-verify operations.
@@ -927,6 +952,8 @@ export const COMMANDS: Record<string, typeof Command> = {
   "wake:authorizations:delete": WakeAuthorizationsDeleteCommand,
   "wake:dispatches:list": WakeDispatchesListCommand,
 };
+
+export const COMMANDS = canonicalCommands(rawCommands);
 
 // Server messages that name an API route get the command that calls it.
 setKnownCommands(Object.keys(COMMANDS), CANONICAL_OPERATION_ALIASES);

@@ -42,27 +42,26 @@ async function run(args) {
   });
 }
 try {
-  for (const args of [["sent"], ["sending"], ["agent-connections"], ["sent", "delete", "--help"], ["sending", "delete-sent-email", "--help"], ["agent-connections", "remove-agent-connection", "--help"]]) {
+  for (const args of [["sent"], ["sending"], ["agent-connections"], ["sent", "delete", "--help"], ["agent-connections", "delete", "--help"]]) {
     const result = await run(args);
     assert.equal(result.code, 0, result.output);
-    assert.match(result.output, /delete|remove-agent-connection/);
+    assert.match(result.output, args[0] === "sending" ? /sending send/ : /delete/);
   }
-  for (const args of [["sent", "delete", "--id", id], ["sending", "delete-sent-email", "--id", id], ["agent-connections", "remove-agent-connection", "--address", address]]) {
+  for (const args of [["sent", "delete", "--id", id], ["agent-connections", "delete", "--address", address]]) {
     const result = await run([...args, "--api-base-url", base]);
     assert.equal(result.code, 0, result.output);
     assert.match(result.output, /"deleted": true/);
   }
   assert.deepEqual(requests, [
     { method: "DELETE", path: `/v1/sent-emails/${id}`, body: "" },
-    { method: "DELETE", path: `/v1/sent-emails/${id}`, body: "" },
     { method: "POST", path: `/v1/agent-connections/${encodeURIComponent(address)}/remove`, body: "" },
   ]);
   for (const [status, code, args] of [
     [409, "sent_email_not_settled", ["sent", "delete", "--id", id]],
     [503, "sent_email_cleanup_failed", ["sent", "delete", "--id", id]],
-    [403, "forbidden", ["agent-connections", "remove-agent-connection", "--address", address]],
-    [409, "connection_not_revoked", ["agent-connections", "remove-agent-connection", "--address", address]],
-    [410, "sent_email_deleted", ["sending", "send-email", "--from", "sender@example.com", "--to", "receiver@example.com", "--subject", "Example", "--body-text", "Hello"]],
+    [403, "forbidden", ["agent-connections", "delete", "--address", address]],
+    [409, "connection_not_revoked", ["agent-connections", "delete", "--address", address]],
+    [410, "sent_email_deleted", ["sending", "send", "--from", "sender@example.com", "--to", "receiver@example.com", "--subject", "Example", "--body-text", "Hello"]],
   ]) {
     responseStatus = status;
     responseCode = code;
@@ -72,7 +71,7 @@ try {
     assert.match(result.output, new RegExp(code));
     assert.equal(requests.length, before + 1, "Refusals must not retry or change the key");
   }
-  console.log("Mailbox deletion commands: parent/help, sent alias, revoked connection, errors and no-retry checks passed.");
+  console.log("Mailbox deletion commands: parent/help, sent deletion, revoked connection, errors and no-retry checks passed.");
 } finally {
   await new Promise((resolve) => server.close(resolve));
   await rm(config, { recursive: true, force: true });

@@ -22,7 +22,7 @@ import {
 } from "../api-command.js";
 import { DEFAULT_EMAIL_POLL_INTERVAL_SECONDS, sleep } from "./emails-poll.js";
 
-// `primitive functions:test-function` is the agent-grade shortcut for
+// `primitive functions:test` is the agent-grade shortcut for
 // triggering a real round-trip and (optionally) waiting for the
 // function to actually run before exiting. The underlying
 // `POST /functions/{id}/test` operation only kicks off a synthetic
@@ -31,23 +31,23 @@ import { DEFAULT_EMAIL_POLL_INTERVAL_SECONDS, sleep } from "./emails-poll.js";
 // time-sink in the verification loop.
 //
 // Shapes:
-//   primitive functions:test-function --id <fn-id>
+//   primitive functions:test --id <fn-id>
 //       Fire-and-forget. Returns the TestInvocationResult JSON
 //       (recipient, poll_since, watch_url, trace_url). Same behavior as the
-//       auto-generated functions:test-function it replaces.
+//       auto-generated functions:test it replaces.
 //
-//   primitive functions:test-function --id <fn-id> --wait
+//   primitive functions:test --id <fn-id> --wait
 //       Blocks until the server-owned test-run trace reaches completed,
 //       failed, or send_failed (or --timeout elapses). Exits non-zero on
 //       timeout or terminal failure.
 //
-//   primitive functions:test-function --id <fn-id> --wait --show-sends
+//   primitive functions:test --id <fn-id> --wait --show-sends
 //       Same as --wait, plus prints the inbound's `replies` array
 //       (every outbound the function emitted while processing the
 //       test inbound), with each send's id, status, recipient,
 //       subject, and queue id.
 //
-// The auto-generated functions:test-function entry is filtered out
+// The auto-generated functions:test entry is filtered out
 // of the generated-command set in oclif/index.ts so this hand-rolled
 // version owns the id.
 
@@ -263,7 +263,7 @@ async function maybeWriteEndpointNoiseWarning(params: {
 
 class FunctionsTestFunctionCommand extends Command {
   static description =
-    "Send a real test email through MX to trigger this function. The function must have an active route bound (see `functions route-set`); without one the API returns a 422 immediately so no doomed test send is queued. With --wait, blocks until the function has processed the inbound; with --show-sends, also prints any outbound sends the function emitted in response.";
+    "Send a real test email through MX to trigger this function. The function must have an active route bound (see `functions set-route`); without one the API returns a 422 immediately so no doomed test send is queued. With --wait, blocks until the function has processed the inbound; with --show-sends, also prints any outbound sends the function emitted in response.";
 
   static summary = "Trigger a test invocation; with --wait, watch it land";
 
@@ -425,7 +425,7 @@ class FunctionsTestFunctionCommand extends Command {
           Date.now() - startedAt > inboundLandedNoDeliveriesMs
         ) {
           writeFunctionTestProgress(
-            `Inbound email arrived but no route matched. Bind one with: primitive functions route-set --id ${flags.id} --domain <domain-id> (or --fallback), then retry.`,
+            `Inbound email arrived but no route matched. Bind one with: primitive functions set-route --id ${flags.id} --domain <domain-id> (or --fallback), then retry.`,
           );
           process.exitCode = 1;
           return;

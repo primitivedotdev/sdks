@@ -23,7 +23,7 @@ export type ContactPage = {
 
 /**
  * The `checkDefaultNetworkContactAdmission` result for one email
- * (`primitive agent-networks check-default-network-contact-admission`).
+ * (`primitive agent-networks check-contact-admission`).
  */
 export type NetworkAdmission = {
   readonly allowed: boolean;

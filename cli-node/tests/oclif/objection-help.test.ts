@@ -31,40 +31,20 @@ describe("the length limits in text flag help", () => {
   it("gives every rule request and objection text flag's limit, once", () => {
     for (const [id, sdkName, field] of [
       [
-        "email-rule-oversight:decline-email-rule-objection",
+        "email-rule-oversight:decline-objection",
         "declineEmailRuleObjection",
         "reason",
       ],
       [
-        "email-rule-oversight:create-email-rule-objection",
+        "email-rule-oversight:create-objection",
         "createEmailRuleObjection",
         "message",
       ],
-      [
-        "email-rules:decline-email-rule-request",
-        "declineEmailRuleRequest",
-        "reason",
-      ],
-      [
-        "email-rules:create-email-rule-request",
-        "createEmailRuleRequest",
-        "message",
-      ],
-      [
-        "email-rules:create-email-rule-request",
-        "createEmailRuleRequest",
-        "name",
-      ],
-      [
-        "email-rules:create-email-rule-request",
-        "createEmailRuleRequest",
-        "english",
-      ],
-      [
-        "email-rules:accept-email-rule-request",
-        "acceptEmailRuleRequest",
-        "name",
-      ],
+      ["email-rules:decline-request", "declineEmailRuleRequest", "reason"],
+      ["email-rules:create-request", "createEmailRuleRequest", "message"],
+      ["email-rules:create-request", "createEmailRuleRequest", "name"],
+      ["email-rules:create-request", "createEmailRuleRequest", "english"],
+      ["email-rules:accept-request", "acceptEmailRuleRequest", "name"],
     ] as const) {
       const max = maxLength(sdkName, field);
       expect(max, `${sdkName}.${field}`).toBeTypeOf("number");

@@ -99,8 +99,8 @@ try {
   assert.match(setHelp, /network-driven wake from viewing senders/);
   assert.match(setHelp, /currently owned personal agents/);
   assert.match((await invoke(["network", "members", "--help-full"])).replace(/\s+/g, " "), /currently owned personal agents/);
-  assert.match(await invoke(["agent-networks"]), /check-default-network-contact-admission/);
-  assert.match(await invoke(["agent-networks", "check-default-network-contact-admission", "--help"]), /--email-id/);
+  assert.match(await invoke(["agent-networks"]), /check-contact-admission/);
+  assert.match(await invoke(["agent-networks", "check-contact-admission", "--help"]), /--email-id/);
   assert.match(await invoke(["network", "--help"]), /agent network/i);
   const operations = JSON.parse(await invoke(["list-operations"]));
   assert.ok(operations.some((operation) => operation.operationId === "listDefaultNetworkAgents"));
@@ -122,7 +122,7 @@ try {
   assert.deepEqual(JSON.parse(await api(["network", "remove", agent])), { excluded: true });
   assert.equal(JSON.parse(await api(["network", "add", agent])).excluded, false);
   assert.deepEqual(
-    JSON.parse(await api(["agent-networks", "check-default-network-contact-admission", "--email-id", inboundId, "--sender-address", agent])),
+    JSON.parse(await api(["agent-networks", "check-contact-admission", "--email-id", inboundId, "--sender-address", agent])),
     { allowed: false, allowed_since: null, pending: false, member_policy_required: false },
   );
   assert.deepEqual(calls.map(({ method }) => method), ["GET", "GET", "GET", "GET", "GET", "PATCH", "DELETE", "POST", "POST"]);

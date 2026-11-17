@@ -14,8 +14,8 @@ import { JSON_OUTPUT_FLAG } from "../json-output.js";
 // `primitive functions:routing-topology` returns the org-wide view of
 // function routing: which active domain has which function bound, the
 // org fallback (if any), and every deployed function with no route
-// currently bound. Pair with `functions:route-get` for the per-function
-// view and `functions:route-set` / `functions:route-unset` to mutate
+// currently bound. Pair with `functions:get-route` for the per-function
+// view and `functions:set-route` / `functions:unset-route` to mutate
 // bindings.
 
 class FunctionsRoutingTopologyCommand extends Command {

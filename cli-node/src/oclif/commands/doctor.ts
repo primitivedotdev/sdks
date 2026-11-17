@@ -22,7 +22,7 @@ import { notificationScope } from "../notify-session.js";
 
 // `primitive doctor` is a one-command health check the AGX walkthrough
 // kept asking for. Before this command, a user with a misconfigured
-// environment had to triangulate across whoami, list-domains, and raw
+// environment had to triangulate across whoami, list, and raw
 // network probes to figure out which piece was off. The checklist
 // below covers the four things that fail in practice: stale Node, a
 // proxy env we don't pick up, a missing/wrong API key, and an org

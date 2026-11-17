@@ -31,6 +31,10 @@ import {
   isAutomatedRejectedError,
 } from "./automated-filter.js";
 import { withBooleanFlagValues } from "./boolean-flag-values.js";
+import {
+  canonicalBodyFlagName,
+  canonicalCliText,
+} from "./cli-command-names.js";
 import { requireDefaultLoginProfile } from "./connected-agent-profile.js";
 import { EMAIL_RULE_OPERATION_EXTENSIONS } from "./email-rule-authoring.js";
 import {
@@ -1163,7 +1167,7 @@ function bodyFieldFlag(
   const common = {
     description: generatedRetryId
       ? `Retry ID, generated when omitted. ${field.description || field.name}`
-      : field.description || field.name,
+      : canonicalCliText(field.description || field.name),
     ...(aliases && aliases.length > 0 ? { aliases } : {}),
   };
   // withBooleanFlagValues reads `--flag true|false` for it in run().
@@ -1186,7 +1190,9 @@ function bodyFieldFlag(
     ...common,
     description:
       withLengthLimit(
-        generatedRetryId ? common.description : field.description,
+        generatedRetryId
+          ? common.description
+          : canonicalCliText(field.description),
         field.maxLength,
       ) || field.name,
   });
@@ -1277,7 +1283,7 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     });
 
     // Expand top-level scalar body fields into individual flags so
-    // `primitive sending:send-email --to alice@x --from support@x
+    // `primitive sending send --to alice@x --from support@x
     // --body-text "hi"` works without constructing JSON. Driven by
     // the requestSchema embedded on the manifest. Skip flags that
     // collide with reserved names or with path/query params already
@@ -1293,7 +1299,7 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     const aliasesForOperation = OPERATION_FLAG_ALIASES[operation.sdkName];
     for (const field of bodyFields) {
       if (field.kind === "complex") continue;
-      const name = flagName(field.name);
+      const name = canonicalBodyFlagName(operation.sdkName, field.name);
       if (RESERVED_FLAG_NAMES.has(name)) continue;
       if (flags[name] !== undefined) continue;
       flags[name] = bodyFieldFlag(
@@ -1633,7 +1639,7 @@ export const OPERATION_HINTS: Record<string, string> = {
   listEndpoints:
     "Tip: without --json, a table on stderr after the JSON shows each endpoint's ENABLED and DELIVERING. DELIVERING is read from delivery.delivering, whether a webhook is being sent mail at all, not from enabled: an endpoint can be enabled and still not be delivering (its owner's key revoked, say), shown as no with the reason codes in parentheses. A webhook whose delivery could not be checked shows unknown, and a Function or pull endpoint shows -.",
   startAgentSignup:
-    "Tip: pass --terms-accepted. Capture the signup_token from the response and feed it to `primitive agent verify-agent-signup --signup-token <token> --verification-code <6-digit-code>` (the verify flag accepts --code as an alias). The high-level `primitive signup <email>` command walks an interactive user through both steps with friendlier prompts.",
+    "Tip: pass --terms-accepted. Capture the signup_token from the response and feed it to `primitive agent verify-signup --signup-token <token> --verification-code <6-digit-code>` (the verify flag accepts --code as an alias). The high-level `primitive signup <email>` command walks an interactive user through both steps with friendlier prompts.",
   testEmailRule:
     "Tip: --expect-match and --expect-no-match (or --expect-file) set expect; without it, a saved rule's own expectations are judged. Exit 0 when every expectation passed, 1 when one failed or is undecided for good (or the request failed), and 3 when the only ones not passed can be decided by testing again later; with --json, error.code is expectations_failed or expectations_undecided, and exit_code and error, not the API's success, say whether the expectations passed.",
   verifyAgentSignup:
@@ -1670,12 +1676,12 @@ export function overLongBodyField(
 
 /** What a write that takes a compile answer reads from --body-file, said beside the generic help. */
 const COMPILE_RULE =
-  "the `rule` of a saved compile answer: `compile-email-rule ... --json | jq .data.rule > rule.json`";
+  "the `rule` of a saved compile answer: `compile ... --json | jq .data.rule > rule.json`";
 export const BODY_FILE_HELP: Record<string, string> = {
   createEmailRule: `For this command, ${COMPILE_RULE}, with --name.`,
   updateEmailRule: `For a new version, ${COMPILE_RULE}; --name only to rename it.`,
-  createEmailRuleRequest: `For this command, ${COMPILE_RULE}, compiled without a scope (--evaluation-scope, --scope-address or --scope-domain), with --name and --target-email.`,
-  acceptEmailRuleRequest: `To change the rule as you accept it, ${COMPILE_RULE}, compiled without a scope (--evaluation-scope, --scope-address or --scope-domain).`,
+  createEmailRuleRequest: `For this command, ${COMPILE_RULE}, compiled without a scope (--scope, --scope-address or --scope-domain), with --name and --target-email.`,
+  acceptEmailRuleRequest: `To change the rule as you accept it, ${COMPILE_RULE}, compiled without a scope (--scope, --scope-address or --scope-domain).`,
 };
 
 // Per-operation flag aliases keyed by operation.sdkName and body
@@ -1769,7 +1775,7 @@ export const OPERATION_ERROR_HINTS: Record<
 // hint for the error code: inviting with Member (where members read all
 // mail) or a role above it is refused with grant_forbidden, whose generic
 // advice (widen the credential's grant) no CLI request can follow. So is
-// list-email-rules --all from a member, or from an API key, which no grant
+// list --all from a member, or from an API key, which no grant
 // change lets list every rule.
 export const OPERATION_ERROR_HINTS_REPLACING_CODE_HINT: ReadonlySet<string> =
   new Set(["inviteOrganizationMember", "listEmailRules"]);
@@ -1896,7 +1902,7 @@ export function createOperationCommand(
     ? parameterFlagName(operation.sdkName, positional.name)
     : undefined;
   class OperationCommand extends Command {
-    static description = fullDescription;
+    static description = canonicalCliText(fullDescription);
 
     static helpInputs = operationHelpInputs(
       operation,
@@ -2009,7 +2015,11 @@ export function createOperationCommand(
                   ? "array"
                   : typeof explicit;
             const overrideFlags = Object.keys(overrides)
-              .map((p) => extensionFlagFor.get(p) ?? `--${flagName(p)}`)
+              .map(
+                (p) =>
+                  extensionFlagFor.get(p) ??
+                  `--${canonicalBodyFlagName(operation.sdkName, p)}`,
+              )
               .join(", ");
             throw cliError(
               `--raw-body must be a JSON object when also passing per-field flags (got ${explicitKind}); supplied per-field flags: ${overrideFlags}. Either drop --raw-body and rely on the per-field flags, or move every field into the JSON --raw-body and drop the flags.`,
@@ -2695,7 +2705,7 @@ export const EMPTY_RESULT_HINTS: Record<string, string> = {
   listEndpoints:
     "(no results) No webhook endpoints configured. Add one with `primitive endpoints create --url <your-url>`.",
   listDomains:
-    "(no results) No domains on this account. Add one with `primitive domains add --domain <yourdomain.example>`.",
+    "(no results) No domains on this account. Add one with `primitive domains create --domain <yourdomain.example>`.",
   listFilters: "(no results) No filter rules configured.",
   listEmailRuleRequests:
     "(no results) No rule requests match. Without --box and --status only pending requests made to you are listed; `--box all --status any` lists every one you can see.",
@@ -2735,7 +2745,7 @@ export function emptyDeliveriesHint(
 }
 
 function canonicalizeCliReferences(description: string): string {
-  return description
+  return canonicalCliText(description)
     .replaceAll("`primitive emails:latest`", "`primitive emails latest`")
     .replaceAll(
       "`primitive describe emails:get-email | jq '.responseSchema.properties'`",

@@ -114,7 +114,7 @@ beforeEach(() => {
 describe("credits command registration", () => {
   it("registers friendly and operation-shaped ids", () => {
     expect(COMMANDS["credits:redeem"]).toBe(CreditsRedeemCommand);
-    expect(COMMANDS["credits:redeem-credit-code"]).toBe(CreditsRedeemCommand);
+    expect(COMMANDS["credits:redeem"]).toBe(CreditsRedeemCommand);
     expect(COMMANDS["credits:balance"]).toBe(CreditsBalanceCommand);
     expect(COMMANDS["credits:get-credit-balance"]).toBeDefined();
     expect(COMMANDS["credits:get-credit-balance"]).not.toBe(

@@ -16,6 +16,16 @@ const FREE_TEXT_ALIASES = new Set([
   "filter",
 ]);
 
+// Exact repair hints bridge renamed flags and the intentionally distinct
+// saved-rule and one-off test sample flags. They never make an alias valid.
+const FLAG_REPAIRS: ReadonlyMap<string, readonly string[]> = new Map([
+  ["evaluation-scope", ["scope"]],
+  ["expectation-samples-file", ["samples-file"]],
+  ["add-expectation-samples-file", ["add-samples-file"]],
+  ["samples-file", ["expect-samples-file"]],
+  ["expect-samples-file", ["samples-file"]],
+]);
+
 function editDistance(left: string, right: string): number {
   let previous = Array.from({ length: right.length + 1 }, (_, i) => i);
   for (let i = 0; i < left.length; i += 1) {
@@ -41,6 +51,9 @@ export function suggestFlag(
 ): string | null {
   const name = unknown.replace(/^-+/, "").split("=")[0]?.toLowerCase() ?? "";
   if (!name) return null;
+  if (valid.includes(name)) return name;
+  const repair = FLAG_REPAIRS.get(name)?.find((flag) => valid.includes(flag));
+  if (repair) return repair;
   if (FREE_TEXT_ALIASES.has(name) && valid.includes("q")) return "q";
   let best: string | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
@@ -80,7 +93,7 @@ export function withFlagSuggestion(
       const match = suggestFlag(flag, valid);
       return match
         ? [
-            `${flag.split("=")[0]} is not a flag here; did you mean --${match}${match === "q" ? " (the free-text query)" : ""}?`,
+            `${flag.split("=")[0]} is not a flag here; did you mean --${match}${match === "q" ? " (the free-text query)" : match === "expect-samples-file" ? " (one-off test samples)" : match === "samples-file" ? " (samples saved on the rule)" : ""}?`,
           ]
         : [];
     });

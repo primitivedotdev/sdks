@@ -45,7 +45,7 @@ import {
 } from "../secret-flags.js";
 
 // `primitive functions:deploy` is the agent-grade shortcut for
-// `functions:create-function`. The underlying operation takes `code`
+// `functions:create`. The underlying operation takes `code`
 // as a string in the JSON body, which is awkward at the CLI for
 // multi-line bundles: agents would otherwise have to shell-escape an
 // entire ESM file or write a temp body.json. This command reads the
@@ -59,7 +59,7 @@ import {
 // diagnostics can map stack traces back to original source files.
 //
 // For full control (raw body, --raw-body JSON, etc.) the underlying
-// `functions:create-function` operation stays available.
+// `functions:create` operation stays available.
 //
 // Secret source flags are the one-call shortcut for "deploy a new
 // function AND seed its secret bindings in the same command." After
@@ -93,7 +93,7 @@ async function writeRouteStatusHint(
       );
     } else {
       process.stderr.write(
-        `Deployed but no route is bound. Inbound mail will not reach this function until you bind one: primitive functions route-set --id ${functionId} --domain <domain-id>  (or --fallback)\n`,
+        `Deployed but no route is bound. Inbound mail will not reach this function until you bind one: primitive functions set-route --id ${functionId} --domain <domain-id>  (or --fallback)\n`,
       );
     }
   } catch {
@@ -301,11 +301,11 @@ export async function runDeployWithSecrets(
 
 class FunctionsDeployCommand extends Command {
   static description =
-    `Deploy a new function from a bundled handler file. Agent-grade shortcut for functions:create-function.
+    `Deploy a new function from a bundled handler file. Agent-grade shortcut for functions:create.
 
   Reads the bundle off disk (--file) instead of forcing the caller to
   serialize the source into a JSON body. Use the underlying operation
-  \`functions:create-function\` if you need the full flag surface
+  \`functions:create\` if you need the full flag surface
   (raw-body JSON, etc.).
 
   Pass secret source flags to seed bindings in the same command. Keys
@@ -314,11 +314,11 @@ class FunctionsDeployCommand extends Command {
 
   With one or more secrets the deploy fans out to multiple API calls.
   For --file (and for --source when no function with the given name
-  exists yet): create-function, set-secret per pair, then a final
-  update-function so the running handler picks up the bindings. For
-  --source against an existing function name: the create-function step
+  exists yet): create, set-secret per pair, then a final
+  update so the running handler picks up the bindings. For
+  --source against an existing function name: the create step
   is replaced by an id lookup, then set-secret per pair, then a single
-  update-function that binds the new code and the new secret env in
+  update that binds the new code and the new secret env in
   one step (avoiding an intermediate redeploy that would briefly run
   the new code with the previous secret bindings).
 
@@ -372,7 +372,7 @@ class FunctionsDeployCommand extends Command {
         "Optional path to a source map for the bundle. Stored with the deployment attempt and used to symbolicate stack traces in function logs.",
     }),
     secret: Flags.string({
-      description: `Secret KEY=VALUE to seed on the deployed function. Repeatable. KEY must match \`^[A-Z_][A-Z0-9_]*$\`; VALUE may contain \`=\` (only the first \`=\` is treated as a delimiter). Each KEY may only appear once per command. Passing one or more --secret flags fans out the deploy to create-function, set-secret per pair, then a final redeploy so the running handler picks up the bindings. ${SECRET_FLAG_SECURITY_NOTE}`,
+      description: `Secret KEY=VALUE to seed on the deployed function. Repeatable. KEY must match \`^[A-Z_][A-Z0-9_]*$\`; VALUE may contain \`=\` (only the first \`=\` is treated as a delimiter). Each KEY may only appear once per command. Passing one or more --secret flags fans out the deploy to create, set-secret per pair, then a final redeploy so the running handler picks up the bindings. ${SECRET_FLAG_SECURITY_NOTE}`,
       multiple: true,
     }),
     "secret-from-env": Flags.string({

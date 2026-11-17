@@ -762,14 +762,14 @@ describe("brief attachments", () => {
           content_type: "image/png",
           size_bytes: 48213,
           part_index: 1,
-          download_command: `primitive emails download-email-attachment-part --id ${emailId} --part-index 1 --output attachment-1.png`,
+          download_command: `primitive emails download-attachment-part --id ${emailId} --part-index 1 --output attachment-1.png`,
         },
         {
           filename: "notes",
           content_type: "text/plain",
           size_bytes: 12,
           part_index: 2,
-          download_command: `primitive emails download-email-attachment-part --id ${emailId} --part-index 2 --output attachment-2`,
+          download_command: `primitive emails download-attachment-part --id ${emailId} --part-index 2 --output attachment-2`,
         },
       ],
       download_all_command: `primitive emails download-attachments --id ${emailId} --output attachments.tar.gz`,
@@ -798,7 +798,7 @@ describe("brief attachments", () => {
       expect(item.download_command).not.toContain("rm");
       expect(item.download_command).not.toContain("$");
       expect(item.download_command).toMatch(
-        /^primitive emails download-email-attachment-part --id [0-9a-f-]+ --part-index \d+ --output attachment-\d+$/,
+        /^primitive emails download-attachment-part --id [0-9a-f-]+ --part-index \d+ --output attachment-\d+$/,
       );
     }
     expect(rows.items[0]?.filename).toBe(hostile);
@@ -885,7 +885,7 @@ describe("brief attachments", () => {
     const envelope = text.slice(0, text.indexOf("Untrusted content below"));
     expect(envelope).toContain("  attachments: yes (1)\n");
     expect(envelope).toContain(
-      `    - part 1: 10 bytes; type and filename (written by the sender): "image/png" "shot.png"\n      download: primitive emails download-email-attachment-part --id ${emailId} --part-index 1 --output attachment-1.png\n`,
+      `    - part 1: 10 bytes; type and filename (written by the sender): "image/png" "shot.png"\n      download: primitive emails download-attachment-part --id ${emailId} --part-index 1 --output attachment-1.png\n`,
     );
     expect(envelope).toContain(
       `    download all: primitive emails download-attachments --id ${emailId} --output attachments.tar.gz`,

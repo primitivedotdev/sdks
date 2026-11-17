@@ -182,7 +182,7 @@ export function briefAttachments(
       download_command:
         index === null || index < 0 || index > MAX_PART_INDEX
           ? null
-          : `primitive emails download-email-attachment-part --id ${id} --part-index ${index} --output attachment-${index}${safeExtension(part.filename)}`,
+          : `primitive emails download-attachment-part --id ${id} --part-index ${index} --output attachment-${index}${safeExtension(part.filename)}`,
     };
   });
   return {

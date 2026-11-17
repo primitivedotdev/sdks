@@ -109,7 +109,7 @@ export class EmailsAttachmentCommand extends Command {
   attachments share the name, nothing is downloaded and the command
   exits 1 with error code attachment_name_ambiguous; error.details
   lists every matching part_index, and
-  \`primitive emails download-email-attachment-part --id <id> --part-index <n>\`
+  \`primitive emails download-attachment-part --id <id> --part-index <n>\`
   fetches one of them.
 
   stdout carries only the attachment bytes, unless --output names a file.

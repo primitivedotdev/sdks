@@ -2,10 +2,10 @@
 // commands that set a test's `expect` and a rule's saved `expectations`, and
 // the readable reports those commands print on stderr after their JSON.
 //
-//   primitive email-rules test-email-rule --rule-id <id> \
+//   primitive email-rules test --rule-id <id> \
 //     --expect-match <email-id>,<email-id> --expect-no-match <email-id>
 //
-// test-email-rule's exit code follows the expectations the answer judged
+// test's exit code follows the expectations the answer judged
 // (expect, or a saved rule's own): 1 when one failed, or is undecided and
 // testing again cannot decide it; 3 when the only ones not passed are
 // undecided and a later test can decide them; else 0. Under --json the
@@ -109,13 +109,13 @@ export function checkExpectations(
     );
   if ("samples" in value)
     throw usageError(
-      `${label} takes emails by id only; give made-up emails with ${label.startsWith("--expectations-file") ? "--expectation-samples-file" : "--expect-samples-file"}.`,
+      `${label} takes emails by id only; give made-up emails with ${label.startsWith("--expectations-file") ? "--samples-file" : "--expect-samples-file"}.`,
     );
   return value;
 }
 
 /**
- * `expect` for test-email-rule, from --expect-file or the id flags, with the
+ * `expect` for test, from --expect-file or the id flags, with the
  * made-up emails --expect-samples-file holds in expect.samples.
  */
 export function expectBodyFields(
@@ -156,11 +156,11 @@ export function expectBodyFields(
   return [{ flag: given.join(", "), property: "expect", value: expect }];
 }
 
-/** test-email-rule's flag that tests the emails an earlier answer tested. */
+/** test's flag that tests the emails an earlier answer tested. */
 export const SAME_EMAILS_FLAG = "same-emails-as";
 
 /**
- * `email_ids` for test-email-rule, from --same-emails-as: every email an
+ * `email_ids` for test, from --same-emails-as: every email an
  * earlier test's answer, saved as it printed it, tested (its results'
  * email_id), so a second tree is tested over the same mail rather than over
  * whatever is newest by then.
@@ -177,7 +177,7 @@ export function sameEmailsBodyFields(
     isRecord(answer) && Array.isArray(answer.results) ? answer.results : null;
   if (!results)
     throw usageError(
-      `--${SAME_EMAILS_FLAG} ${file} is not a saved test-email-rule answer: it has no results. Save one with test-email-rule --json > answer.json.`,
+      `--${SAME_EMAILS_FLAG} ${file} is not a saved test answer: it has no results. Save one with primitive email-rules test --json > answer.json.`,
     );
   const ids = [
     ...new Set(
@@ -196,7 +196,7 @@ export function sameEmailsBodyFields(
 }
 
 /**
- * `expectations` for create-email-rule and update-email-rule, from
+ * `expectations` for create and update, from
  * --expectations-file. A file holding `null` removes the saved expectations
  * (the API takes that on update only).
  */
@@ -271,7 +271,7 @@ export function formatFact(
   return `${shownLine(name)}: ${formatFactValue(fact)}`;
 }
 
-// test-email-rule
+// test
 
 type TestResult = TestEmailRuleResult["results"][number];
 type ExpectationResult = NonNullable<
@@ -768,7 +768,7 @@ function windowLine(data: Record<string, unknown>, tested: number): string[] {
   ];
 }
 
-/** The stderr report and exit code of a test-email-rule answer. */
+/** The stderr report and exit code of a test answer. */
 export function testEmailRuleReport(data: unknown): OperationReport {
   if (!isRecord(data)) return { lines: [] };
   const name = sampleNamer();
@@ -837,7 +837,7 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
       }),
       [SAME_EMAILS_FLAG]: Flags.string({
         description:
-          "Test the same emails as an earlier test: a file holding what test-email-rule --json printed. Sets email_ids to its results' email_id, so two trees are tested over the same mail.",
+          "Test the same emails as an earlier test: a file holding what primitive email-rules test --json printed. Sets email_ids to its results' email_id, so two trees are tested over the same mail.",
       }),
       ...scopeSelectionFlags(),
     },
@@ -863,10 +863,10 @@ export const EMAIL_RULE_OPERATION_EXTENSIONS: Record<
     flags: {
       "expectations-file": Flags.string({
         description:
-          'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}. Sets expectations, over any in --body-file or --raw-body. A create judges them before saving only for a do_not_share rule created active, in expectations_check (passed, failed, undecided); test-email-rule --rule-id judges them otherwise.',
+          'A JSON file holding the emails the rule must match and must not, such as {"match": ["<email-id>"], "no_match": ["<email-id>"]}. Sets expectations, over any in --body-file or --raw-body. A create judges them before saving only for a do_not_share rule created active, in expectations_check (passed, failed, undecided); test --rule-id judges them otherwise.',
       }),
       [SAMPLES_FILE_FLAG]: Flags.string({
-        description: `${SAMPLES_FILE_SHAPE} Sets expectation_samples, over any in --body-file or --raw-body. A create judges them only for a do_not_share rule created active; test-email-rule --rule-id does otherwise.`,
+        description: `${SAMPLES_FILE_SHAPE} Sets expectation_samples, over any in --body-file or --raw-body. A create judges them only for a do_not_share rule created active; test --rule-id does otherwise.`,
       }),
       [PICK_FLAG]: Flags.string({
         description: pickFlagHelp([SAMPLES_FILE_FLAG]),

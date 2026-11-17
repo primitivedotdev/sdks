@@ -1,62 +1,15 @@
-import {
-  openapiDocument,
-  type PrimitiveOperationManifest,
-} from "@primitivedotdev/api-core";
-import {
-  headerFlagName,
-  OPERATION_PATH_FLAGS,
-  parameterFlagName,
-  takesStepUp,
-} from "./api-command.js";
-import { cliOperationManifest } from "./cli-operations.js";
-import {
-  BROWSER_FLAG_DESCRIPTION,
-  STEP_UP_HEADER,
-  STEP_UP_TOKEN_FLAG_DESCRIPTION,
-} from "./step-up-approval.js";
-
-type OpenApiTag = {
-  description?: string;
-  name?: string;
-};
+import type { Command } from "@oclif/core";
 
 function fishEscape(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 }
 
-function toKebabCase(value: string): string {
-  return value
-    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-    .replace(/[^a-zA-Z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .toLowerCase();
-}
-
-function tagDescriptions(): Map<string, string> {
-  const descriptions = new Map<string, string>();
-  const tags = ((openapiDocument as { tags?: OpenApiTag[] }).tags ??
-    []) as OpenApiTag[];
-
-  for (const tag of tags) {
-    if (tag.name) {
-      descriptions.set(toKebabCase(tag.name), tag.description ?? tag.name);
-    }
-  }
-
-  return descriptions;
-}
-
-function operationCondition(operation: PrimitiveOperationManifest): string {
-  return `__fish_${fishEscape(BIN_PLACEHOLDER)}_using_operation ${fishEscape(operation.tagCommand)} ${fishEscape(operation.command)}`;
-}
-
-const BIN_PLACEHOLDER = "__BIN__";
-
-export function renderFishCompletion(binName: string): string {
-  const tagDescriptionByCommand = tagDescriptions();
-  const topLevelTopics = [
-    ...new Set(cliOperationManifest.map((operation) => operation.tagCommand)),
-  ];
+/** Complete executable names and flags from the same registry that routes them. */
+export function renderFishCompletion(
+  binName: string,
+  commands: Readonly<Record<string, typeof Command>>,
+  topics: readonly { name: string; hidden?: boolean }[] = [],
+): string {
   const lines = [
     `function __fish_${binName}_needs_command`,
     "  set -l cmd (commandline -opc)",
@@ -65,108 +18,93 @@ export function renderFishCompletion(binName: string): string {
     "",
     `function __fish_${binName}_topic_needs_subcommand`,
     "  set -l cmd (commandline -opc)",
-    "  test (count $cmd) -eq 2",
-    '  and test "$cmd[2]" = "$argv[1]"',
+    "  test (count $cmd) -eq (math (count $argv) + 1); or return 1",
+    "  for i in (seq (count $argv))",
+    '    test "$cmd[(math $i + 1)]" = "$argv[$i]"; or return 1',
+    "  end",
     "end",
     "",
     `function __fish_${binName}_using_operation`,
     "  set -l cmd (commandline -opc)",
-    "  test (count $cmd) -ge 3",
-    '  and test "$cmd[2]" = "$argv[1]"',
-    '  and test "$cmd[3]" = "$argv[2]"',
+    "  test (count $cmd) -ge (math (count $argv) + 1); or return 1",
+    "  for i in (seq (count $argv))",
+    '    test "$cmd[(math $i + 1)]" = "$argv[$i]"; or return 1',
+    "  end",
     "end",
     "",
-    `function __fish_${binName}_using_root_command`,
-    "  set -l cmd (commandline -opc)",
-    "  test (count $cmd) -eq 2",
-    '  and test "$cmd[2]" = "$argv[1]"',
-    "end",
-    "",
-    `complete -c ${binName} -f -n '__fish_${binName}_needs_command' -a 'list-operations' -d 'List all generated API operations'`,
-    `complete -c ${binName} -f -n '__fish_${binName}_needs_command' -a 'completion' -d 'Show shell completion output or installation instructions'`,
-    `complete -c ${binName} -f -n '__fish_${binName}_needs_command' -a 'autocomplete' -d 'Install or display shell autocomplete for bash, zsh, and powershell'`,
-    `complete -c ${binName} -f -n '__fish_${binName}_needs_command' -a 'help' -d 'Display help for ${binName}'`,
   ];
-
-  for (const topic of topLevelTopics) {
-    lines.push(
-      `complete -c ${binName} -f -n '__fish_${binName}_needs_command' -a '${fishEscape(topic)}' -d '${fishEscape(tagDescriptionByCommand.get(topic) ?? topic)}'`,
-    );
-  }
-
-  lines.push(
-    `complete -c ${binName} -f -n '__fish_${binName}_using_root_command completion' -a 'bash zsh powershell fish' -d 'Shell type'`,
+  const hiddenTopics = new Set(
+    topics.filter((topic) => topic.hidden).map((topic) => topic.name),
   );
-
-  for (const topic of topLevelTopics) {
-    const topicOperations = cliOperationManifest.filter(
-      (operation) => operation.tagCommand === topic,
+  const commandIds = Object.keys(commands);
+  const seen = new Set<string>();
+  for (const [id, command] of Object.entries(commands)) {
+    if (command.hidden) continue;
+    const words = id.split(":");
+    for (let end = 1; end <= words.length; end += 1) {
+      const prefix = words.slice(0, end - 1).join(" ");
+      const key = words.slice(0, end).join(":");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      // A visible descendant does not advertise a hidden parent at the root.
+      // An actual command owns its own visibility, even on a hidden topic.
+      if (commands[key] ? commands[key].hidden : hiddenTopics.has(key))
+        continue;
+      const condition = prefix
+        ? `__fish_${binName}_topic_needs_subcommand ${prefix}`
+        : `__fish_${binName}_needs_command`;
+      const description =
+        end === words.length
+          ? (command.summary ?? command.description?.split("\n")[0] ?? id)
+          : (words[end - 1] ?? id);
+      lines.push(
+        `complete -c ${binName} -f -n '${fishEscape(condition)}' -a '${fishEscape(words[end - 1] ?? "")}' -d '${fishEscape(description)}'`,
+      );
+    }
+    const descendants = commandIds.filter((other) =>
+      other.startsWith(`${id}:`),
     );
-    for (const operation of topicOperations) {
+    const children = descendants.filter(
+      (other) =>
+        !descendants.some(
+          (parent) => parent !== other && other.startsWith(`${parent}:`),
+        ),
+    );
+    // Only the longest registered path contributes flags. A parent may also
+    // take arguments, so unknown words must continue to use the parent.
+    const condition = [
+      `__fish_${binName}_using_operation ${words.join(" ")}`,
+      ...children.map(
+        (child) =>
+          `not __fish_${binName}_using_operation ${child.replaceAll(":", " ")}`,
+      ),
+    ].join("; and ");
+    for (const [name, flag] of Object.entries(command.flags ?? {})) {
+      if (flag.hidden) continue;
+      const description =
+        typeof flag.description === "string" ? flag.description : name;
+      const value = flag.type === "boolean" ? "" : " -r";
       lines.push(
-        `complete -c ${binName} -f -n '__fish_${binName}_topic_needs_subcommand ${fishEscape(topic)}' -a '${fishEscape(operation.command)}' -d '${fishEscape(operation.summary ?? `${operation.method} ${operation.path}`)}'`,
+        `complete -c ${binName} -n '${fishEscape(condition)}' -l '${fishEscape(name)}'${value} -d '${fishEscape(description)}'`,
       );
-
-      for (const parameter of [
-        ...operation.pathParams,
-        ...operation.queryParams,
-      ]) {
+      if (flag.type === "boolean" && flag.allowNo)
         lines.push(
-          `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l '${fishEscape(parameterFlagName(operation.sdkName, parameter.name))}' -r -d '${fishEscape(OPERATION_PATH_FLAGS[operation.sdkName]?.[parameter.name]?.description ?? parameter.description ?? parameter.name)}'`,
+          `complete -c ${binName} -n '${fishEscape(condition)}' -l 'no-${fishEscape(name)}' -d '${fishEscape(description)}'`,
         );
-      }
-      for (const parameter of operation.headerParams) {
-        if (parameter.name === STEP_UP_HEADER) continue;
-        lines.push(
-          `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l '${fishEscape(headerFlagName(parameter.name))}' -r -d '${fishEscape(parameter.description ?? parameter.name)}'`,
-        );
-      }
-      if (takesStepUp(operation)) {
-        const condition = operationCondition(operation).replace(
-          BIN_PLACEHOLDER,
-          binName,
-        );
-        lines.push(
-          `complete -c ${binName} -n '${condition}' -l 'step-up-token' -r -d '${fishEscape(STEP_UP_TOKEN_FLAG_DESCRIPTION)}'`,
-          `complete -c ${binName} -n '${condition}' -l 'browser' -d '${fishEscape(BROWSER_FLAG_DESCRIPTION)}'`,
-          `complete -c ${binName} -n '${condition}' -l 'no-browser' -d '${fishEscape(BROWSER_FLAG_DESCRIPTION)}'`,
-        );
-      }
-
-      lines.push(
-        `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l 'api-key' -r -d 'Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)'`,
-        // --api-base-url is hidden from fish
-        // completion because they are internal-testing overrides;
-        // exposing them in autocomplete would surface them to every
-        // customer running the CLI. Hidden oclif flags still work
-        // when typed explicitly.
-      );
-
-      if (!operation.binaryResponse) {
-        lines.push(
-          `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l 'envelope' -d 'Print the full response envelope, including pagination metadata'`,
-        );
-      }
-
-      if (operation.hasJsonBody) {
-        lines.push(
-          `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l 'body' -r -d 'JSON request body'`,
-          `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l 'body-file' -r -d 'Path to a JSON file used as the request body'`,
-        );
-      }
-
-      if (operation.binaryResponse) {
-        lines.push(
-          `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l 'output' -r -d 'Write binary response bytes to a file'`,
-        );
-      }
     }
   }
-
+  for (const [id, description] of [
+    ["help", "Display command help"],
+    ["autocomplete", "Install or display shell autocomplete"],
+  ]) {
+    lines.push(
+      `complete -c ${binName} -f -n '__fish_${binName}_needs_command' -a '${id}' -d '${description}'`,
+    );
+  }
   lines.push(
+    `complete -c ${binName} -n '__fish_${binName}_using_operation completion' -a 'bash zsh powershell fish' -d 'Shell type'`,
     `complete -c ${binName} -l help -d 'Show help for ${binName}'`,
     `complete -c ${binName} -l version -d 'Show version for ${binName}'`,
   );
-
   return `${lines.join("\n")}\n`;
 }

@@ -1,15 +1,15 @@
-// `endpoints:test-endpoint` calls POST /endpoints/{id}/test. The server
+// `endpoints:test` calls POST /endpoints/{id}/test. The server
 // implementation only resolves http-kind endpoints by url and returns
 // `not_found` for function-kind endpoints (where url is null). The same
-// function-endpoint id IS returned by `endpoints:list-endpoints`, so a
-// caller naturally tries it against test-endpoint and is greeted with
+// function-endpoint id IS returned by `endpoints:list`, so a
+// caller naturally tries it against test and is greeted with
 // "Endpoint not found." Confusing.
 //
-// This helper closes the loop on the CLI side. After test-endpoint
+// This helper closes the loop on the CLI side. After test
 // returns `not_found`, the dispatcher in `api-command.ts` calls
 // `detectFunctionEndpoint` to see whether the id actually belongs to a
 // function-kind endpoint owned by the caller. If yes, we replace the
-// generic envelope with a redirect to `functions:test-function`,
+// generic envelope with a redirect to `functions:test`,
 // surfacing both the endpoint id and the function id so the caller
 // does not have to look the function id up themselves.
 //
@@ -87,9 +87,9 @@ export async function detectFunctionEndpoint(
 }
 
 // Stderr copy printed when the dispatcher detects the
-// `endpoints:test-endpoint` `not_found` was really a function-kind
+// `endpoints:test` `not_found` was really a function-kind
 // endpoint. Surfaces both ids so the caller does not have to run
-// `endpoints:list-endpoints` again to find the function_id. Returned
+// `endpoints:list` again to find the function_id. Returned
 // as a string rather than written here so the call site controls the
 // stream (stderr, in practice) and the tests can assert on the value.
 export function formatFunctionEndpointRedirect(
@@ -131,9 +131,9 @@ export interface MaybeRedirectInputs {
 }
 
 // Post-error hook: if the operation that just failed is
-// `endpoints:test-endpoint`, the failure is a `not_found`, and the
+// `endpoints:test`, the failure is a `not_found`, and the
 // caller's id matches a function-kind endpoint they own, print a
-// redirect to `functions:test-function`. Returns the resolved match
+// redirect to `functions:test`. Returns the resolved match
 // so the caller (and the test) can assert the branch taken without
 // scraping stderr.
 export async function maybeWriteFunctionEndpointRedirect(

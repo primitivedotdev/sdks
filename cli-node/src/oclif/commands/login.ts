@@ -626,7 +626,7 @@ class LoginCommand extends Command {
       );
     } else if (login.org_refusal) {
       process.stderr.write(
-        `The organization chosen in the browser (${login.org_refusal.org_id}) cannot be used from the CLI: ${login.org_refusal.message} [${login.org_refusal.reason}]\nRun \`primitive orgs\` to see where you can, then \`primitive org use <org>\`.\n`,
+        `The organization chosen in the browser (${login.org_refusal.org_id}) cannot be used from the CLI: ${login.org_refusal.message} [${login.org_refusal.reason}]\nRun \`primitive org list\` to see where you can, then \`primitive org use <org>\`.\n`,
       );
     }
 

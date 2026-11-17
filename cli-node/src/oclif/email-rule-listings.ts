@@ -1,7 +1,7 @@
 // Readable stderr tables for the email rule listings: the rules a caller can
-// see (list-email-rules, with --all every rule in the organization) and a
-// rule's decisions (list-email-rule-decisions, and the decisions about your
-// own mail, list-email-rule-decisions-on-my-mail). stdout keeps the JSON.
+// see (list, with --all every rule in the organization) and a
+// rule's decisions (list-decisions, and the decisions about your
+// own mail, list-decisions-on-my-mail). stdout keeps the JSON.
 //
 // This module does not import api-command.ts, which imports it.
 
@@ -178,7 +178,7 @@ export function ruleListLines(data: unknown, all: boolean): string[] {
 }
 
 /**
- * Why a list-email-rules request was refused, in the words a person can act
+ * Why a list request was refused, in the words a person can act
  * on, or undefined to keep the generic hint for the error code.
  */
 export function listEmailRulesErrorHint(
@@ -210,14 +210,14 @@ export function listEmailRulesErrorHint(
   }
 }
 
-/** The empty-list note of list-email-rules, by whether --all was given. */
+/** The empty-list note of list, by whether --all was given. */
 export function emptyRuleListHint(all: boolean): string {
   return all
     ? "(no results) No rules in the organization match these filters."
     : "(no results) No rules you can see match. Owners and admins can list every rule in the organization with --all.";
 }
 
-/** The API's page cap and default page size on list-email-rules. */
+/** The API's page cap and default page size on list. */
 const RULE_LIST_PAGE_MAX = 100;
 const RULE_LIST_DEFAULT_LIMIT = 50;
 

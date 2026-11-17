@@ -38,7 +38,7 @@ async function run(args) {
     child.on("close", (code) => { clearTimeout(timer); resolve({ code, stdout, stderr }); });
   });
 }
-const invite = ["organizations", "invite-organization-member"];
+const invite = ["organizations", "invite-member"];
 try {
   const described = await run(["describe", "inviteOrganizationMember"]);
   assert.equal(described.code, 0, described.stderr);
@@ -46,7 +46,7 @@ try {
   for (const args of [["organizations"], [...invite, "--help"]]) {
     const result = await run(args);
     assert.equal(result.code, 0, result.stderr);
-    assert.match(result.stdout, /invite-organization-member/);
+    assert.match(result.stdout, /invite-member/);
   }
   for (const args of [[], ["--request-id", id]]) {
     const result = await run([...invite, ...args, "--json"]);

@@ -247,10 +247,10 @@ describe("org leave command", () => {
 });
 
 describe("generated leave command", () => {
-  it("keeps account:leave-organization as an alias of the new id", () => {
-    const command = COMMANDS["roles-and-members:leave-organization"];
+  it("keeps roles-and-members:leave as an alias of the new id", () => {
+    const command = COMMANDS["roles-and-members:leave"];
     expect(command).toBeDefined();
-    expect(COMMANDS["account:leave-organization"]).toBe(command);
+    expect(COMMANDS["roles-and-members:leave"]).toBe(command);
   });
 });
 

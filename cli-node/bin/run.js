@@ -86,5 +86,24 @@ await writeRootAuthContextIfNeeded();
   }
 }
 
-const { execute } = await import("@oclif/core");
-await execute({ dir: import.meta.url });
+// A removed child can otherwise become a parent's positional argument (for
+// example search semantic-search). Reject retired paths before any command runs.
+const { COMMANDS, retiredCommandTarget } = await import("../dist/oclif/index.js");
+const retired = retiredCommandTarget(process.argv.slice(2));
+if (retired) {
+  const target = COMMANDS[retired.newId];
+  const suggestions = target && !target.hidden
+    ? [`primitive ${retired.newId.replaceAll(":", " ")}`]
+    : [];
+  const message = `Unknown command "primitive ${retired.oldId.replaceAll(":", " ")}".${suggestions.length ? ` Did you mean "${suggestions[0]}"?` : ""} Run "primitive --help" to see the commands.`;
+  const error = { code: "command_not_found", message,
+    ...(suggestions.length ? { details: { suggestions } } : {}),
+  };
+  if ((separator === -1 ? cliArgs : cliArgs.slice(0, separator)).includes("--json"))
+    process.stdout.write(`${JSON.stringify({ error, exit_code: 2 }, null, 2)}\n`);
+  else process.stderr.write(`${message}\n`);
+  process.exitCode = 2;
+} else {
+  const { execute } = await import("@oclif/core");
+  await execute({ dir: import.meta.url });
+}

@@ -40,7 +40,7 @@ function run(args) {
   });
 }
 try {
-  for (const [parent, command, resource] of [["emails", "download-email-attachment-part", "emails"], ["sending", "download-sent-attachment-part", "sent-emails"]]) {
+  for (const [parent, command, resource] of [["emails", "download-attachment-part", "emails"], ["sending", "download-attachment-part", "sent-emails"]]) {
     const bare = await run([parent]);
     assert.equal(bare.code, 0, bare.stderr);
     assert.match(bare.stdout.toString() + bare.stderr, new RegExp(command));

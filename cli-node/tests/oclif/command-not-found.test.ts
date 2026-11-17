@@ -56,8 +56,8 @@ describe("command not found", () => {
 
   it("asks whether a command under another group was meant, when one has the word typed", () => {
     const grouped: Record<string, { takesArguments: boolean }> = {
-      "email-rules:list-email-rules": { takesArguments: false },
-      "email-rule-oversight:list-email-rule-objections": {
+      "email-rules:list": { takesArguments: false },
+      "email-rule-oversight:list-objections": {
         takesArguments: false,
       },
       "a:dup": { takesArguments: false },
@@ -78,31 +78,25 @@ describe("command not found", () => {
       visible: Object.keys(grouped),
     };
     expect(
-      commandNotFoundMessage(
-        "email-rules:list-email-rule-objections",
-        siblings,
-      ),
+      commandNotFoundMessage("email-rules:list-objections", siblings),
     ).toEqual({
       code: "command_not_found",
       details: {
-        suggestions: [
-          "primitive email-rule-oversight list-email-rule-objections",
-        ],
+        suggestions: ["primitive email-rule-oversight list-objections"],
       },
       message:
-        'Unknown command "primitive email-rules list-email-rule-objections". Did you mean "primitive email-rule-oversight list-email-rule-objections"? Run "primitive email-rules --help" to see the commands under it.',
+        'Unknown command "primitive email-rules list-objections". Did you mean "primitive email-rule-oversight list-objections"? Run "primitive email-rules --help" to see the commands under it.',
     });
     // A mistyped group, or none at all, still finds it.
     expect(
-      commandNotFoundMessage("email-rule:list-email-rule-objections", siblings)
-        .message,
+      commandNotFoundMessage("email-rule:list-objections", siblings).message,
     ).toBe(
-      'Unknown command "primitive email-rule list-email-rule-objections". Did you mean "primitive email-rule-oversight list-email-rule-objections"? Run "primitive --help" to see the commands.',
+      'Unknown command "primitive email-rule list-objections". Did you mean "primitive email-rule-oversight list-objections"? Run "primitive --help" to see the commands.',
     );
     expect(
-      commandNotFoundMessage("list-email-rule-objections", siblings).message,
+      commandNotFoundMessage("list-objections", siblings).message,
     ).toContain(
-      'Did you mean "primitive email-rule-oversight list-email-rule-objections"?',
+      'Did you mean "primitive email-rule-oversight list-objections"?',
     );
     // Two are both named; more than three are no likely meaning.
     expect(commandNotFoundMessage("email-rules:two", siblings).message).toBe(
@@ -137,9 +131,9 @@ describe("command not found", () => {
           .sort(),
     };
     for (const name of [
-      "list-email-rule-objections",
-      "decline-email-rule-objection",
-      "list-email-rules-covering-me",
+      "list-objections",
+      "decline-objection",
+      "list-covering-me",
     ]) {
       expect(commandNotFoundMessage(`email-rules:${name}`, real).message).toBe(
         `Unknown command "primitive email-rules ${name}". Did you mean "primitive email-rule-oversight ${name}"? Run "primitive email-rules --help" to see the commands under it.`,
@@ -194,11 +188,11 @@ describe("command not found", () => {
           (id) => !registered[id]?.hidden && id.split(":").at(-1) === word,
         ),
       visible: ids.filter((id) => !registered[id]?.hidden),
-      roots: ["webhook-deliveries", "org", "orgs", "emails"],
+      roots: ["webhook-deliveries", "org", "emails"],
     };
     for (const [typed, expected] of [
-      ["webhook-deliveries:get", "primitive webhook-deliveries get-delivery"],
-      ["org:list", "primitive orgs"],
+      ["webhook-deliveries:get-delivery", "primitive webhook-deliveries get"],
+      ["orgs", "primitive org list"],
       ["mail", "primitive emails --help"],
     ]) {
       const choices =
@@ -218,8 +212,8 @@ describe("command not found", () => {
       }
     }
     // These remain mistakes, with no compatibility aliases installed.
-    expect(registered["webhook-deliveries:get"]).toBeUndefined();
-    expect(registered["org:list"]).toBeUndefined();
+    expect(registered["webhook-deliveries:get-delivery"]).toBeUndefined();
+    expect(registered.orgs).toBeUndefined();
     expect(registered.mail).toBeUndefined();
   });
 
@@ -240,17 +234,15 @@ describe("command not found", () => {
   });
 
   it("prefers a same-topic verb match over an exact verb from another topic", () => {
-    const ids = ["webhook-deliveries:get-delivery", "other:get"];
+    const ids = ["jobs:get-record", "other:get"];
     const local: CommandLookup = {
       find: (id) => (ids.includes(id) ? { takesArguments: false } : undefined),
       hasSubcommands: (id) => ids.some((other) => other.startsWith(`${id}:`)),
       named: (word) => ids.filter((id) => id.split(":").at(-1) === word),
       visible: ids,
     };
-    expect(
-      commandNotFoundMessage("webhook-deliveries:get", local).details,
-    ).toEqual({
-      suggestions: ["primitive webhook-deliveries get-delivery"],
+    expect(commandNotFoundMessage("jobs:get", local).details).toEqual({
+      suggestions: ["primitive jobs get-record"],
     });
   });
 

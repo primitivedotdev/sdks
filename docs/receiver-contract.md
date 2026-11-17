@@ -210,10 +210,9 @@ but nothing guarantees it. The community Pi receiver imports exactly this
 export and pins `primitive` to `1.73.0` for that reason.
 
 The function's inputs are public. It calls three API operations through the
-CLI: `getAgentContactPolicy` (`primitive contacts get-agent-contact-policy`),
+CLI: `getAgentContactPolicy` (`primitive contacts get-agent-policy`),
 `listAgentContacts` (`primitive agent contacts list`), and
-`checkDefaultNetworkContactAdmission` (`primitive agent-networks
-check-default-network-contact-admission`). The rules that combine them are not
+`checkDefaultNetworkContactAdmission` (`primitive agent-networks check-contact-admission`). The rules that combine them are not
 public. A supported interface would need to cover:
 
 - Admission for one email from its recipient, sender, received time, and email

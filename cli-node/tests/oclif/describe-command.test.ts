@@ -30,8 +30,8 @@ describe("describe command", () => {
 
 describe("lookupOperation", () => {
   it("finds a known operation by colon id", () => {
-    const { match, candidates } = lookupOperation("emails:get-email");
-    expect(match?.command).toBe("get-email");
+    const { match, candidates } = lookupOperation("emails:get");
+    expect(match?.command).toBe("get");
     expect(match?.tagCommand).toBe("emails");
     expect(match?.path).toBe("/emails/{id}");
     expect(candidates).toEqual([]);
@@ -54,46 +54,46 @@ describe("lookupOperation", () => {
   });
 
   it("trims whitespace around the input", () => {
-    const { match } = lookupOperation("  emails:get-email  ");
-    expect(match?.command).toBe("get-email");
+    const { match } = lookupOperation("  emails:get  ");
+    expect(match?.command).toBe("get");
   });
 
   it("resolves canonical operation aliases", () => {
     const { match, candidates } = lookupOperation("emails:list");
-    expect(match?.command).toBe("list-emails");
+    expect(match?.command).toBe("list");
     expect(match?.tagCommand).toBe("emails");
     expect(candidates).toEqual([]);
   });
 
   it("resolves API operation-style names", () => {
     const add = lookupOperation("addDomain");
-    expect(add.match?.command).toBe("add-domain");
+    expect(add.match?.command).toBe("create");
     expect(add.match?.tagCommand).toBe("domains");
     expect(add.candidates).toEqual([]);
 
     const verify = lookupOperation("verifyDomain");
-    expect(verify.match?.command).toBe("verify-domain");
+    expect(verify.match?.command).toBe("verify");
     expect(verify.match?.tagCommand).toBe("domains");
     expect(verify.candidates).toEqual([]);
   });
 
   it("resolves tagged API operation-style names", () => {
     const { match, candidates } = lookupOperation("domains:addDomain");
-    expect(match?.command).toBe("add-domain");
+    expect(match?.command).toBe("create");
     expect(match?.tagCommand).toBe("domains");
     expect(candidates).toEqual([]);
   });
 
   it("resolves the zone-file shortcut to the download operation", () => {
     const { match, candidates } = lookupOperation("domains:zone-file");
-    expect(match?.command).toBe("download-domain-zone-file");
+    expect(match?.command).toBe("zone-file");
     expect(match?.operationId).toBe("downloadDomainZoneFile");
     expect(candidates).toEqual([]);
   });
 
   it("resolves the top-level reply shortcut to the reply operation", () => {
     const { match } = lookupOperation("reply");
-    expect(match?.command).toBe("reply-to-email");
+    expect(match?.command).toBe("reply");
     expect(match?.tagCommand).toBe("sending");
   });
 
@@ -102,13 +102,13 @@ describe("lookupOperation", () => {
     expect(match).toBeNull();
     expect(candidates.length).toBeGreaterThan(0);
     // The closest real command should be one of the suggestions.
-    expect(candidates).toContain("emails:get-email");
+    expect(candidates).toContain("emails:get");
   });
 
   it("returns useful did-you-mean candidates for nearby domain operations", () => {
     const { match, candidates } = lookupOperation("domains:verifyDomian");
     expect(match).toBeNull();
-    expect(candidates).toContain("domains:verify-domain");
+    expect(candidates).toContain("domains:verify");
   });
 
   it("returns at most 5 candidates", () => {
@@ -122,9 +122,9 @@ describe("lookupOperation", () => {
     expect(candidates).toEqual([]);
   });
 
-  it("finds a unique bare generated command name", () => {
-    const { match, candidates } = lookupOperation("get-email");
-    expect(match?.command).toBe("get-email");
+  it("finds an unchanged API operation name", () => {
+    const { match, candidates } = lookupOperation("getEmail");
+    expect(match?.command).toBe("get");
     expect(match?.tagCommand).toBe("emails");
     expect(candidates).toEqual([]);
   });

@@ -58,7 +58,7 @@ export default class SentGetCommand extends Command {
     `Get one sent email by id, or find it by the idempotency key the send used.
 
   --id <sent-email-id> prints the sent email record, with bodies, exactly
-  like \`primitive sending get-sent-email\`.
+  like \`primitive sending get\`.
 
   --idempotency-key <key> reconciles a send whose outcome is uncertain.
   \`primitive send\`, \`reply\` and \`chat\` report the key in their --json

@@ -11,12 +11,12 @@ import {
 } from "../api-command.js";
 import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
-// `primitive functions:route-set` binds inbound mail to a function. The
+// `primitive functions:set-route` binds inbound mail to a function. The
 // route target is either a specific verified domain (scoped) or the
 // org-wide fallback. Without this command, the customer-onboarding loop
 // goes deploy -> test -> "why is my function never invoked?" because
 // deploy does not auto-create a route binding; one must be set
-// explicitly. See `functions:route-get` to inspect the current binding
+// explicitly. See `functions:get-route` to inspect the current binding
 // and `functions:routing-topology` for the org-wide view.
 //
 // Conflict handling: if another function is already bound at the target,
@@ -39,9 +39,9 @@ class FunctionsRouteSetCommand extends Command {
   static summary = "Bind inbound mail to a function";
 
   static examples = [
-    "<%= config.bin %> functions route-set --id <fn-id> --domain <domain-id>",
-    "<%= config.bin %> functions route-set --id <fn-id> --fallback",
-    "<%= config.bin %> functions route-set --id <fn-id> --domain <domain-id> --takeover",
+    "<%= config.bin %> functions set-route --id <fn-id> --domain <domain-id>",
+    "<%= config.bin %> functions set-route --id <fn-id> --fallback",
+    "<%= config.bin %> functions set-route --id <fn-id> --domain <domain-id> --takeover",
   ];
 
   static flags = {

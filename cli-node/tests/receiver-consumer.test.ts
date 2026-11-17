@@ -45,7 +45,7 @@ describe("primitive/receiver for a harness receiver", () => {
       recipient: address,
       contactRequests: false,
       readContactPolicy: () =>
-        json(["contacts", "get-agent-contact-policy", "--agent-address"]),
+        json(["contacts", "get-agent-policy", "--agent-address"]),
       async readContactPage(cursor) {
         const page = (await json([
           "agent",
@@ -58,7 +58,7 @@ describe("primitive/receiver for a harness receiver", () => {
       readNetworkAdmission: async (id, from) =>
         (await json([
           "agent-networks",
-          "check-default-network-contact-admission",
+          "check-contact-admission",
           id,
           from,
         ])) as NetworkAdmission,
@@ -78,8 +78,6 @@ describe("primitive/receiver for a harness receiver", () => {
       request: false,
       emailId,
     });
-    expect(reads).toContain(
-      "agent-networks check-default-network-contact-admission",
-    );
+    expect(reads).toContain("agent-networks check-contact-admission");
   });
 });

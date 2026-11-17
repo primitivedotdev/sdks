@@ -35,7 +35,7 @@ export const ROLE_INVITE_NEEDS_DASHBOARD =
   "Inviting someone with a role other than Member or none is assigning that role, and only an invitation sent from the dashboard itself, by someone who can assign roles, can do it; a CLI request cannot, even with a step-up token. From the CLI you can invite them with --role none, where the organization can give limited roles, and once they have joined give them the role with `primitive roles-and-members set-member-role`, which needs roles:assign and an approval in the browser. Or invite them from the dashboard's Roles settings.";
 
 /**
- * The hint for a refused invite-organization-member, or undefined when it is
+ * The hint for a refused invite-member, or undefined when it is
  * not that refusal. That one carries no details; a refusal for a grant that
  * lacks a permission names it in its details, and is left to its own hint.
  */

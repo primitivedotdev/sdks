@@ -120,9 +120,9 @@ Remove a destination using
 .SH LOCAL WEBHOOK API
 .PP
 The generated commands
-.B endpoints pull-webhook-event
+.B endpoints pull-event
 and
-.B endpoints complete-webhook-event
+.B endpoints complete-event
 expose local webhook delivery on API hosts where it is enabled. Each command
 makes one API request. Use their --help-full output for the input fields. Consumers
 deduplicate event IDs and report the outcome with the returned attempt and lease.
@@ -195,7 +195,7 @@ Run
 to remove local credentials, pending email-code auth state, and stale credential locks without contacting Primitive.
 .PP
 Where the server supports it, browser login logs you in as yourself. Run
-.B primitive orgs
+.B primitive org list
 to list your organizations and whether the CLI may be used in each, and
 .B primitive org use ORG
 to switch by name or id. Pass
@@ -266,7 +266,7 @@ server decides which header names are allowed.
 Schedule the send for TIME (ISO 8601 with Z or a UTC offset). Cancel it before
 then with primitive sent cancel --id ID or --idempotency-key KEY.
 .TP
-.B primitive domains add DOMAIN
+.B primitive domains create DOMAIN
 Start a custom-domain claim.
 .TP
 .B primitive domains verify --id DOMAIN_ID

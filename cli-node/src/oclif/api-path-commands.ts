@@ -2,6 +2,7 @@ import {
   operationManifest,
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
+import { canonicalCommandId } from "./cli-command-names.js";
 
 // Server messages sometimes point at an API route ("see GET
 // /v1/email-rule-scope-options"). A CLI user cannot run an HTTP verb, so the
@@ -80,9 +81,14 @@ function routeTable(): Route[] {
 function commandId(operation: PrimitiveOperationManifest): string | undefined {
   // The API refuses the CLI on a dashboard-only operation, so no command calls it.
   if (operation.access === "session") return undefined;
-  const preferred = PREFERRED_COMMANDS[operation.sdkName];
+  const preferredName = PREFERRED_COMMANDS[operation.sdkName];
+  const preferred = preferredName
+    ? canonicalCommandId(preferredName)
+    : undefined;
   if (preferred && knownCommands.has(preferred)) return preferred;
-  const generated = `${operation.tagCommand}:${operation.command}`;
+  const generated = canonicalCommandId(
+    `${operation.tagCommand}:${operation.command}`,
+  );
   const id = shortNames.get(generated) ?? generated;
   return knownCommands.has(id) ? id : undefined;
 }

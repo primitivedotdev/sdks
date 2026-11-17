@@ -114,12 +114,12 @@ cli-smoke-only:
 	"$$bin" reply --help | grep -q -- "--wait" && \
 	"$$bin" reply --help | grep -q -- "--attachment" && \
 	if "$$bin" reply --help-full | grep -q -- "--wait-timeout-ms"; then echo "reply help must not advertise unsupported --wait-timeout-ms"; exit 1; fi && \
-	"$$bin" sending reply-to-email --help-full | grep -q -- "attachments" && \
-	"$$bin" sending send-email --help-full | grep -q -- "attachments" && \
+	"$$bin" sending reply --help-full | grep -q -- "attachments" && \
+	"$$bin" sending send --help-full | grep -q -- "attachments" && \
 	"$$bin" domains list --json --help | grep -q -- "--json" && \
 	"$$bin" domains list --help | grep -q -- "--json" && \
 	"$$bin" sending permissions --help-full | grep -q -- "where you may send mail to" && \
-	"$$bin" domains add --help | grep -q -- "--confirmed" && \
+	"$$bin" domains create --help | grep -q -- "--confirmed" && \
 	"$$bin" describe addDomain >/dev/null && \
 	"$$bin" describe verifyDomain >/dev/null && \
 	"$$bin" describe downloadDomainZoneFile >/dev/null && \
@@ -184,7 +184,7 @@ cli-smoke-only:
 	grep -q -- "No local chat 0" "$$smoke_dir/chat-reply-flag-id.err" && \
 	"$$bin" threads --help | grep -q -- "primitive threads get --id <thread-id>" && \
 	"$$bin" threads get --help | grep -q -- "Get a conversation thread by id" && \
-	"$$bin" threads get-thread --help | grep -q -- "Get a conversation thread by id" && \
+	"$$bin" threads get --help | grep -q -- "Get a conversation thread by id" && \
 	function_dir="$$smoke_dir/template-check" && \
 	"$$bin" functions test --help | grep -q -- "completed" && \
 	"$$bin" functions init template-check --out-dir "$$function_dir" >"$$smoke_dir/functions-init.txt" && \
@@ -239,7 +239,7 @@ cli-smoke-only:
 	for i in 1 2 3 4 5 6 7 8 9 10; do test -s "$$filter_port_file" && break; sleep 0.1; done && \
 	test -s "$$filter_port_file" || { cat "$$filter_server_log"; exit 1; } && \
 	filter_port=$$(cat "$$filter_port_file") && \
-	"$$bin" filters update-filter --id "$$filter_id" --no-enabled --api-key prim_test --api-base-url "http://127.0.0.1:$$filter_port/v1" > "$$smoke_dir/filter.json" && \
+	"$$bin" filters update --id "$$filter_id" --no-enabled --api-key prim_test --api-base-url "http://127.0.0.1:$$filter_port/v1" > "$$smoke_dir/filter.json" && \
 	node -e 'const fs = require("node:fs"); const data = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); if (data.enabled !== false) throw new Error("expected enabled=false");' "$$smoke_dir/filter.json" \
 	) && \
 	zone_id="33333333-3333-4333-8333-333333333333" && \

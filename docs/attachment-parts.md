@@ -102,8 +102,8 @@ The existing generated command router exposes both operations. There are no
 additional shortcut commands:
 
 ```sh
-primitive emails download-email-attachment-part --id <email-id> --part-index 7 --output attachment.bin
-primitive sending download-sent-attachment-part --id <sent-email-id> --part-index 7 --output attachment.bin
+primitive emails download-attachment-part --id <email-id> --part-index 7 --output attachment.bin
+primitive sending download-attachment-part --id <sent-email-id> --part-index 7 --output attachment.bin
 ```
 
 Without `--output`, stdout contains only the original bytes. Errors go to stderr

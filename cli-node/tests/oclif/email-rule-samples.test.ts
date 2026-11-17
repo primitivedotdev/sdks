@@ -218,10 +218,10 @@ describe("samplesBodyFields and expectSamples", () => {
   it("sets expectation_samples on create, the picked ones only", () => {
     const path = file("s.json", lookAlikeSamples(THREE));
     expect(
-      samplesBodyFields(false)({ "expectation-samples-file": path, pick: "2" }),
+      samplesBodyFields(false)({ "samples-file": path, pick: "2" }),
     ).toEqual([
       {
-        flag: "--expectation-samples-file",
+        flag: "--samples-file",
         property: "expectation_samples",
         value: [lookAlikeSamples(THREE)[1]],
       },
@@ -230,36 +230,32 @@ describe("samplesBodyFields and expectSamples", () => {
 
   it("adds with add_expectation_samples on update, and replaces with []", () => {
     const path = file("s.json", lookAlikeSamples(THREE));
-    expect(
-      samplesBodyFields(true)({ "add-expectation-samples-file": path }),
-    ).toEqual([
+    expect(samplesBodyFields(true)({ "add-samples-file": path })).toEqual([
       {
-        flag: "--add-expectation-samples-file",
+        flag: "--add-samples-file",
         property: "add_expectation_samples",
         value: lookAlikeSamples(THREE),
       },
     ]);
     const empty = file("empty.json", "[]");
-    expect(
-      samplesBodyFields(true)({ "expectation-samples-file": empty }),
-    ).toEqual([
+    expect(samplesBodyFields(true)({ "samples-file": empty })).toEqual([
       {
-        flag: "--expectation-samples-file",
+        flag: "--samples-file",
         property: "expectation_samples",
         value: [],
       },
     ]);
+    expect(() => samplesBodyFields(false)({ "samples-file": empty })).toThrow(
+      "holds no samples",
+    );
     expect(() =>
-      samplesBodyFields(false)({ "expectation-samples-file": empty }),
-    ).toThrow("holds no samples");
-    expect(() =>
-      samplesBodyFields(true)({ "add-expectation-samples-file": empty }),
+      samplesBodyFields(true)({ "add-samples-file": empty }),
     ).toThrow("holds no samples");
   });
 
   it("refuses --pick without a samples file", () => {
     expect(() => samplesBodyFields(true)({ pick: "1" })).toThrow(
-      "--pick chooses from a samples file: pass it with --expectation-samples-file or --add-expectation-samples-file.",
+      "--pick chooses from a samples file: pass it with --samples-file or --add-samples-file.",
     );
     expect(() => expectSamples({ pick: "1" })).toThrow(
       "pass it with --expect-samples-file.",
@@ -303,7 +299,7 @@ describe("samplesBodyFields and expectSamples", () => {
       undefined,
     ]);
     const saved = samplesBodyFields(false)({
-      "expectation-samples-file": path,
+      "samples-file": path,
       pick: "1,2",
     })[0]?.value as Record<string, unknown>[];
     expect(saved).toHaveLength(2);
@@ -324,8 +320,7 @@ describe("samplesBodyFields and expectSamples", () => {
       },
     ]);
     expect(
-      samplesBodyFields(true)({ "add-expectation-samples-file": raw })[0]
-        ?.value,
+      samplesBodyFields(true)({ "add-samples-file": raw })[0]?.value,
     ).toEqual([{ expected: "no_match", label: null, email: email("x") }]);
     expect(savedSample({ expected: "match", email: {} })).toEqual({
       expected: "match",

@@ -1,4 +1,5 @@
 import type { Hook } from "@oclif/core";
+import { COMMAND_RENAMES } from "./cli-command-names.js";
 import { jsonOutputRequested } from "./json-output.js";
 
 /** What the hook needs to know about a command id. */
@@ -20,8 +21,8 @@ const MOST_SUGGESTED = 3;
 
 /**
  * The commands in another group named by the word typed where a subcommand
- * was expected, said as a question (`email-rules list-email-rule-objections`
- * is `email-rule-oversight list-email-rule-objections`), or none when there are
+ * was expected, said as a question (`email-rules list-objections`
+ * is `email-rule-oversight list-objections`), or none when there are
  * none or too many to be a likely meaning. Only those words are looked up,
  * never a value typed after them, which can be any word at all.
  */
@@ -164,6 +165,19 @@ export function commandNotFoundMessage(
 ): CommandNotFound {
   const parts = id.split(":");
   const typed = `primitive ${parts.join(" ")}`;
+  // A retired spelling is a repair hint, never an executable alias. Visibility
+  // still applies, so migration hints cannot reveal hidden commands.
+  const replacement = Object.hasOwn(COMMAND_RENAMES, id)
+    ? COMMAND_RENAMES[id]
+    : undefined;
+  if (replacement && lookup.visible?.includes(replacement))
+    return unknown(
+      typed,
+      [replacement],
+      'Run "primitive --help" to see the commands.',
+      lookup,
+    );
+
   for (let end = parts.length - 1; end > 0; end -= 1) {
     const known = parts.slice(0, end).join(":");
     const command = lookup.find(known);

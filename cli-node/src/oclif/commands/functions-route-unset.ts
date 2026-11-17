@@ -11,7 +11,7 @@ import {
 } from "../api-command.js";
 import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
-// `primitive functions:route-unset` deactivates every active endpoint
+// `primitive functions:unset-route` deactivates every active endpoint
 // bound to this function. The function stays deployed but stops
 // receiving inbound mail. Safe to call when no route is currently
 // bound (no-op).
@@ -22,7 +22,7 @@ class FunctionsRouteUnsetCommand extends Command {
 
   static summary = "Unbind any route from a function";
 
-  static examples = ["<%= config.bin %> functions route-unset --id <fn-id>"];
+  static examples = ["<%= config.bin %> functions unset-route --id <fn-id>"];
 
   static flags = {
     json: JSON_OUTPUT_FLAG,

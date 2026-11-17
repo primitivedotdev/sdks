@@ -86,10 +86,7 @@ describe("short command help", () => {
   it.each(["--help", "--help-full"])(
     "groups generated fields before common flags with %s",
     async (mode) => {
-      const help = await commandHelp(
-        "organizations:invite-organization-member",
-        mode,
-      );
+      const help = await commandHelp("organizations:invite-member", mode);
       const required = help.indexOf("REQUIRED INPUTS\n");
       const options = help.indexOf("COMMAND OPTIONS\n");
       const common = help.indexOf("COMMON FLAGS\n");
@@ -125,7 +122,7 @@ describe("short command help", () => {
   it.each(["--help", "--help-full"])(
     "shows JSON-only requirements and handwritten body files accurately with %s",
     async (mode) => {
-      const note = await commandHelp("address-notes:put-address-note", mode);
+      const note = await commandHelp("address-notes:set", mode);
       expect(
         note.slice(
           note.indexOf("REQUIRED INPUTS"),
@@ -142,28 +139,21 @@ describe("short command help", () => {
   );
 
   it("groups body inputs without making individual flags parser-required or changing cached definitions", async () => {
-    const command = COMMANDS[
-      "organizations:invite-organization-member"
-    ] as unknown as {
+    const command = COMMANDS["organizations:invite-member"] as unknown as {
       flags: Record<string, { required?: boolean; helpGroup?: string }>;
     };
     expect(command.flags.email.required).not.toBe(true);
     expect(command.flags.email.helpGroup).toBeUndefined();
-    await commandHelp("organizations:invite-organization-member");
-    await commandHelp(
-      "organizations:invite-organization-member",
-      "--help-full",
-    );
+    await commandHelp("organizations:invite-member");
+    await commandHelp("organizations:invite-member", "--help-full");
     expect(command.flags.email.required).not.toBe(true);
     expect(command.flags.email.helpGroup).toBeUndefined();
   });
 
   it("keeps optional bodies optional and parent help discoverable", async () => {
-    const help = await commandHelp("email-rules:accept-email-rule-request");
+    const help = await commandHelp("email-rules:accept-request");
     expect(help).not.toContain("Request body: use command fields or JSON.");
-    expect(await renderHelp(["organizations"])).toContain(
-      "invite-organization-member",
-    );
+    expect(await renderHelp(["organizations"])).toContain("invite-member");
   });
 
   it("prints one line per flag, clipped to 100 columns off a terminal", async () => {
@@ -196,7 +186,7 @@ describe("short command help", () => {
   });
 
   it("says on the first screen when the API answers a command only in a dashboard session", async () => {
-    const help = oneLine(await commandHelp("credentials:list-credentials"));
+    const help = oneLine(await commandHelp("credentials:list"));
     expect(help).toContain(
       "(dashboard only: the API refuses the CLI here; use the dashboard)",
     );

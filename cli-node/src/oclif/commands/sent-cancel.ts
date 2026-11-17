@@ -18,8 +18,8 @@ import { isIsoInstantWithZone } from "../send-options.js";
 
 // `sent cancel`: cancel a scheduled send by its id or by the
 // Idempotency-Key it was created with. The generated
-// `sending:cancel-sent-email` and
-// `sending:cancel-sent-email-by-idempotency-key` commands stay available
+// `sending:cancel` and
+// `sending:cancel-by-key` commands stay available
 // for full API parity.
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

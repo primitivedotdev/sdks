@@ -96,7 +96,7 @@ describe("route warnings", () => {
     expect(routeWarningLines({ id: ROUTE })).toEqual([]);
   });
 
-  it("prints them on stderr after the route from routes add, and leaves --json to the document", async () => {
+  it("prints them on stderr after the route from routes create, and leaves --json to the document", async () => {
     const data = route([WARNING]);
     useServer(() => Response.json({ success: true, data }, { status: 201 }));
     const plain = await run(RoutesAddCommand, [
@@ -202,7 +202,7 @@ describe("delivery attempts", () => {
     expect(deliveryAttemptLines({ id: DELIVERY })).toEqual([]);
   });
 
-  it("prints them after the delivery from get-delivery, and nothing extra under --json", async () => {
+  it("prints them after the delivery from get, and nothing extra under --json", async () => {
     const data = {
       id: DELIVERY,
       status: "delivered",
@@ -224,7 +224,7 @@ describe("delivery attempts", () => {
       ],
     };
     useServer(() => Response.json({ success: true, data }));
-    const command = COMMANDS["webhook-deliveries:get-delivery"] as never;
+    const command = COMMANDS["webhook-deliveries:get"] as never;
     const plain = await run(command, [DELIVERY]);
     expect(plain.exitCode).toBeUndefined();
     expect(plain.stderr).toBe(
@@ -381,14 +381,12 @@ describe("endpoints list DELIVERING", () => {
         meta: { cursor: null },
       });
     useServer(page);
-    const listed = await run(COMMANDS["endpoints:list-endpoints"] as never, []);
+    const listed = await run(COMMANDS["endpoints:list"] as never, []);
     expect(listed.exitCode).toBeUndefined();
     expect(listed.stderr).toMatch(/ENABLED\s+DELIVERING/);
     expect(listed.stderr).toContain("no (acting_owner_revoked)");
     useServer(page);
-    const json = await run(COMMANDS["endpoints:list-endpoints"] as never, [
-      "--json",
-    ]);
+    const json = await run(COMMANDS["endpoints:list"] as never, ["--json"]);
     expect(json.stderr).toBe("");
     expect(JSON.parse(json.stdout).data).toEqual([
       endpoint({ delivery: revoked }),

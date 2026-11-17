@@ -30,6 +30,7 @@ try {
   const parent = await invoke(["agent"]);
   assert.equal(parent.exit, 0);
   assert.match(parent.stdout, /agent enroll/);
+  assert.match(parent.stdout, /agent connect/);
 
   const help = await invoke(["agent", "enroll", "--help"]);
   assert.equal(help.exit, 0);
@@ -93,10 +94,10 @@ try {
   assert.ok(authRequests.every(request=>request.authorization===undefined));
   assert.deepEqual(authRequests[1].body, {address:"person_123456789@example.test",confirm_existing_mail:true});
   } finally { await new Promise(resolve => authServer.close(resolve)); }
-  const createHelp = await invoke(["agent-connections", "create-agent-connection", "--help"]);
+  const createHelp = await invoke(["agent-connections", "create", "--help"]);
   assert.equal(createHelp.exit, 0);
   assert.match(createHelp.stdout, /--create-request-id/);
-  const inviteHelp = await invoke(["agent-connections", "invite-agent-connection", "--help"]);
+  const inviteHelp = await invoke(["agent-connections", "invite", "--help"]);
   assert.equal(inviteHelp.exit, 0);
   assert.match(inviteHelp.stdout, /--pending-only/);
 
@@ -114,13 +115,12 @@ try {
   const connectionParent = await invoke(["agent-connections"]);
   assert.equal(connectionParent.exit, 0);
   for (const command of [
-    "create-agent-connection",
-    "list-agent-connections",
-    "invite-agent-connection",
-    "revoke-agent-connection",
-    "remove-agent-connection",
-    "claim-agent-connection",
-    "agent-connection-setup",
+    "create",
+    "list",
+    "invite",
+    "revoke",
+    "delete",
+    "setup",
   ]) {
     assert.match(connectionParent.stdout, new RegExp(`agent-connections ${command}`));
     const operationHelp = await invoke(["agent-connections", command, "--help"]);

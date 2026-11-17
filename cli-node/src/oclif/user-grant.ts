@@ -43,7 +43,7 @@ export const USER_LOGIN_EXPIRED_MESSAGE =
   "Saved Primitive CLI login expired or was revoked. Run `primitive login` to sign in again.";
 
 export const NO_CURRENT_ORG_MESSAGE =
-  "No organization is selected for this login. Run `primitive orgs` to see where you can use the CLI, then `primitive org use <org>`.";
+  "No organization is selected for this login. Run `primitive org list` to see where you can use the CLI, then `primitive org use <org>`.";
 
 /**
  * The CLI login and the organization list report a person's stored role:
@@ -668,7 +668,7 @@ export function matchOrg(
     );
   }
   throw new Errors.CLIError(
-    `No organization matches ${JSON.stringify(wanted)}. Run \`primitive orgs\` to list yours.`,
+    `No organization matches ${JSON.stringify(wanted)}. Run \`primitive org list\` to list yours.`,
     { exit: 1 },
   );
 }

@@ -122,7 +122,7 @@ describe("detectFunctionEndpoint", () => {
 });
 
 describe("formatFunctionEndpointRedirect", () => {
-  it("includes the suggested functions:test-function command with the function id", async () => {
+  it("includes the suggested functions:test command with the function id", async () => {
     const output = formatFunctionEndpointRedirect({
       endpointId: ENDPOINT_ID,
       functionId: FUNCTION_ID,
@@ -154,7 +154,7 @@ describe("maybeWriteFunctionEndpointRedirect", () => {
     ]);
   }
 
-  it("prints the redirect and returns the match when test-endpoint hits not_found on a function endpoint", async () => {
+  it("prints the redirect and returns the match when test hits not_found on a function endpoint", async () => {
     const writes: string[] = [];
 
     const match = await maybeWriteFunctionEndpointRedirect({
@@ -225,7 +225,7 @@ describe("maybeWriteFunctionEndpointRedirect", () => {
   });
 
   it("does not call listEndpoints when no --id was provided", async () => {
-    // Defensive: if the caller somehow reached test-endpoint without
+    // Defensive: if the caller somehow reached test without
     // an id (oclif would have rejected this earlier, but the hook
     // should still be safe), we should not blast through to
     // listEndpoints with no id to match on.

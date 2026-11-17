@@ -356,7 +356,7 @@ describe("runSetSecret (--redeploy)", () => {
     expect(calls.getFunction).toEqual([{ id: FN_ID }]);
   });
 
-  it("reports a get-function error after the secret has already been written", async () => {
+  it("reports a get error after the secret has already been written", async () => {
     const { api, calls } = makeApi({
       getFunction: async () => ({
         error: { code: "not_found", message: "function not found" },
@@ -378,7 +378,7 @@ describe("runSetSecret (--redeploy)", () => {
         message: "function not found",
       });
     }
-    // Secret was still upserted before the get-function attempt.
+    // Secret was still upserted before the get attempt.
     expect(calls.setSecret).toHaveLength(1);
     expect(calls.updateFunction).toEqual([]);
   });

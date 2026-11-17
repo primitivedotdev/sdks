@@ -23,10 +23,8 @@ function makeLog(overrides: Partial<FunctionLogRow> = {}): FunctionLogRow {
 describe("functions logs command", () => {
   it("owns the canonical logs alias while keeping the raw generated command", () => {
     expect(COMMANDS["functions:logs"]).toBe(FunctionsLogsCommand);
-    expect(COMMANDS["functions:list-function-logs"]).toBeDefined();
-    expect(COMMANDS["functions:list-function-logs"]).not.toBe(
-      FunctionsLogsCommand,
-    );
+    expect(COMMANDS["functions:list-logs"]).toBeDefined();
+    expect(COMMANDS["functions:list-logs"]).not.toBe(FunctionsLogsCommand);
   });
 
   it("exposes pagination, follow, and JSONL flags", () => {
