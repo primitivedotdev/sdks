@@ -45,6 +45,9 @@ function run(args) {
 }
 const group = (text, heading) => text.split(`${heading}\n`)[1]?.split(/\n[A-Z][A-Z ]+\n/, 1)[0] ?? "";
 try {
+  const described = await run(["describe", "inviteOrganizationMember"]);
+  assert.equal(described.code, 0, described.stderr);
+  const generatedRetryId = JSON.parse(described.stdout).requestSchema.properties.request_id["x-primitive-retry-id"] === true;
   const parent = await run(["organizations"]);
   assert.equal(parent.code, 0, parent.stderr);
   assert.match(parent.stdout, /invite-organization-member/);
@@ -54,7 +57,7 @@ try {
     assert(invite.stdout.indexOf("REQUIRED INPUTS") < invite.stdout.indexOf("COMMAND OPTIONS"));
     assert(invite.stdout.indexOf("COMMAND OPTIONS") < invite.stdout.indexOf("COMMON FLAGS"));
     assert.match(group(invite.stdout, "REQUIRED INPUTS"), /--email/);
-    assert.match(group(invite.stdout, "REQUIRED INPUTS"), /--request-id/);
+    assert.match(group(invite.stdout, generatedRetryId ? "COMMAND OPTIONS" : "REQUIRED INPUTS"), /--request-id/);
     assert.match(group(invite.stdout, "COMMAND OPTIONS"), /--role/);
     for (const flag of ["--raw-body", "--idempotency-key", "--step-up-token"])
       assert(group(invite.stdout, "COMMON FLAGS").includes(flag));

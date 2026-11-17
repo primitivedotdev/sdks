@@ -40,12 +40,15 @@ async function run(args) {
 }
 const invite = ["organizations", "invite-organization-member"];
 try {
+  const described = await run(["describe", "inviteOrganizationMember"]);
+  assert.equal(described.code, 0, described.stderr);
+  const generatedRetryId = JSON.parse(described.stdout).requestSchema.properties.request_id["x-primitive-retry-id"] === true;
   for (const args of [["organizations"], [...invite, "--help"]]) {
     const result = await run(args);
     assert.equal(result.code, 0, result.stderr);
     assert.match(result.stdout, /invite-organization-member/);
   }
-  for (const args of [[], ["--email", "member@example.com"]]) {
+  for (const args of [[], ["--request-id", id]]) {
     const result = await run([...invite, ...args, "--json"]);
     assert.equal(result.code, 2, result.stdout + result.stderr);
     assert.equal(result.stderr, "");
@@ -53,13 +56,13 @@ try {
     assert.equal(document.error.code, "usage_error");
     assert.equal(document.exit_code, 2);
     assert.deepEqual(document.error.details.missing, [
-      { field: "request_id", flag: "--request-id", json_path: "$.request_id" },
-      ...(args.length ? [] : [{ field: "email", flag: "--email", json_path: "$.email" }]),
+      ...(!generatedRetryId && !args.length ? [{ field: "request_id", flag: "--request-id", json_path: "$.request_id" }] : []),
+      { field: "email", flag: "--email", json_path: "$.email" },
     ]);
   }
   const human = await run(invite);
   assert.equal(human.code, 2, human.stdout + human.stderr);
-  assert.match(human.stderr, /--request-id/);
+  if (!generatedRetryId) assert.match(human.stderr, /--request-id/);
   assert.match(human.stderr, /--email/);
   assert.equal(requests.length, 0, "invalid input must not send a request");
   const file = join(config, "invitation.json");
