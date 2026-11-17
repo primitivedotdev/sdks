@@ -122,11 +122,13 @@ def sync_detailed(
     body: ProjectsUpdateProjectInput,
 
 ) -> Response[ErrorResponse | UpdateProjectResponse200]:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Update a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
         body (ProjectsUpdateProjectInput):
 
     Raises:
@@ -157,11 +159,13 @@ def sync(
     body: ProjectsUpdateProjectInput,
 
 ) -> ErrorResponse | UpdateProjectResponse200 | None:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Update a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
         body (ProjectsUpdateProjectInput):
 
     Raises:
@@ -187,11 +191,13 @@ async def asyncio_detailed(
     body: ProjectsUpdateProjectInput,
 
 ) -> Response[ErrorResponse | UpdateProjectResponse200]:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Update a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
         body (ProjectsUpdateProjectInput):
 
     Raises:
@@ -222,11 +228,13 @@ async def asyncio(
     body: ProjectsUpdateProjectInput,
 
 ) -> ErrorResponse | UpdateProjectResponse200 | None:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Update a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
         body (ProjectsUpdateProjectInput):
 
     Raises:

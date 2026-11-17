@@ -122,14 +122,17 @@ def sync_detailed(
     limit: int | Unset = 50,
 
 ) -> Response[ErrorResponse | ListOrganizationInvitationsResponse200]:
-    """  Requires a current human organization owner or administrator. Machine credentials are refused.
+    """ List organization invitations
+
+     Requires a current human organization owner or administrator. Machine credentials are refused.
     Invitations grant the chosen role, Member by default, only after verified acceptance through the
     sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
     accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
 
     Args:
-        cursor (UUID | Unset):
-        limit (int | Unset):  Default: 50.
+        cursor (UUID | Unset): Continuation cursor from the previous page; omit for the first
+            page.
+        limit (int | Unset): Maximum number of results to return; defaults to 50. Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -159,14 +162,17 @@ def sync(
     limit: int | Unset = 50,
 
 ) -> ErrorResponse | ListOrganizationInvitationsResponse200 | None:
-    """  Requires a current human organization owner or administrator. Machine credentials are refused.
+    """ List organization invitations
+
+     Requires a current human organization owner or administrator. Machine credentials are refused.
     Invitations grant the chosen role, Member by default, only after verified acceptance through the
     sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
     accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
 
     Args:
-        cursor (UUID | Unset):
-        limit (int | Unset):  Default: 50.
+        cursor (UUID | Unset): Continuation cursor from the previous page; omit for the first
+            page.
+        limit (int | Unset): Maximum number of results to return; defaults to 50. Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -191,14 +197,17 @@ async def asyncio_detailed(
     limit: int | Unset = 50,
 
 ) -> Response[ErrorResponse | ListOrganizationInvitationsResponse200]:
-    """  Requires a current human organization owner or administrator. Machine credentials are refused.
+    """ List organization invitations
+
+     Requires a current human organization owner or administrator. Machine credentials are refused.
     Invitations grant the chosen role, Member by default, only after verified acceptance through the
     sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
     accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
 
     Args:
-        cursor (UUID | Unset):
-        limit (int | Unset):  Default: 50.
+        cursor (UUID | Unset): Continuation cursor from the previous page; omit for the first
+            page.
+        limit (int | Unset): Maximum number of results to return; defaults to 50. Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -228,14 +237,17 @@ async def asyncio(
     limit: int | Unset = 50,
 
 ) -> ErrorResponse | ListOrganizationInvitationsResponse200 | None:
-    """  Requires a current human organization owner or administrator. Machine credentials are refused.
+    """ List organization invitations
+
+     Requires a current human organization owner or administrator. Machine credentials are refused.
     Invitations grant the chosen role, Member by default, only after verified acceptance through the
     sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
     accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
 
     Args:
-        cursor (UUID | Unset):
-        limit (int | Unset):  Default: 50.
+        cursor (UUID | Unset): Continuation cursor from the previous page; omit for the first
+            page.
+        limit (int | Unset): Maximum number of results to return; defaults to 50. Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

@@ -28504,6 +28504,13 @@ type DeliverySummary struct {
 	// deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate
 	// its URL's credential.
 	ResponseBody NilString `json:"response_body"`
+	// The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as
+	// sent, listing only rules you can read now; empty when it named none of those. Recorded for
+	// deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries,
+	//  records of no attempt, attempts before this field), for a caller that cannot read email rules or
+	// whose organization does not have them, below content depth, and once the message's content is
+	// discarded.
+	Rules []DeliverySummaryRulesItem `json:"rules"`
 	// Whether this is the latest attempt of its delivery: the one recorded last, where a record of no
 	// attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A
 	// retry is recorded as a new attempt with its own id and attempt_count (not always higher than the
@@ -28626,6 +28633,11 @@ func (s *DeliverySummary) GetResponseBody() NilString {
 	return s.ResponseBody
 }
 
+// GetRules returns the value of Rules.
+func (s *DeliverySummary) GetRules() []DeliverySummaryRulesItem {
+	return s.Rules
+}
+
 // GetLatestAttempt returns the value of LatestAttempt.
 func (s *DeliverySummary) GetLatestAttempt() bool {
 	return s.LatestAttempt
@@ -28726,6 +28738,11 @@ func (s *DeliverySummary) SetResponseBody(val NilString) {
 	s.ResponseBody = val
 }
 
+// SetRules sets the value of Rules.
+func (s *DeliverySummary) SetRules(val []DeliverySummaryRulesItem) {
+	s.Rules = val
+}
+
 // SetLatestAttempt sets the value of LatestAttempt.
 func (s *DeliverySummary) SetLatestAttempt(val bool) {
 	s.LatestAttempt = val
@@ -28775,6 +28792,31 @@ func (s *DeliverySummaryEmail) SetRecipient(val string) {
 // SetSubject sets the value of Subject.
 func (s *DeliverySummaryEmail) SetSubject(val OptNilString) {
 	s.Subject = val
+}
+
+type DeliverySummaryRulesItem struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// GetID returns the value of ID.
+func (s *DeliverySummaryRulesItem) GetID() string {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *DeliverySummaryRulesItem) GetName() string {
+	return s.Name
+}
+
+// SetID sets the value of ID.
+func (s *DeliverySummaryRulesItem) SetID(val string) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *DeliverySummaryRulesItem) SetName(val string) {
+	s.Name = val
 }
 
 // Delivery status. skipped_by_rules: the endpoint's rules filtered the event out. held: kept back,
@@ -42149,19 +42191,26 @@ func (s *EmailRuleVersion) SetSQL(val OptEmailRuleVersionSQL) {
 
 // Ref: #/components/schemas/EmailRuleVersionChanges
 type EmailRuleVersionChanges struct {
-	// The rule's current version, compared against.
-	ComparedToVersion int `json:"compared_to_version"`
-	// Emails this tree matches that the live version does not.
+	// Version: the rule's current version (rule_id). requested: the request's rule as asked (request_id).
+	ComparedTo EmailRuleVersionChangesComparedTo `json:"compared_to"`
+	// Present exactly when compared_to is version: its number.
+	ComparedToVersion OptInt `json:"compared_to_version"`
+	// Emails this tree matches that the one compared against does not.
 	NewlyMatched EmailRuleChangedEmails `json:"newly_matched"`
-	// Emails the live version matches that this tree does not.
+	// Emails the one compared against matches that this tree does not.
 	StopsMatching EmailRuleChangedEmails `json:"stops_matching"`
-	// Emails listed in results that either version could not decide (unclassified, skipped and not found
+	// Emails listed in results that either could not decide (unclassified, skipped and not found
 	// included), in neither list.
 	Undecided int `json:"undecided"`
 }
 
+// GetComparedTo returns the value of ComparedTo.
+func (s *EmailRuleVersionChanges) GetComparedTo() EmailRuleVersionChangesComparedTo {
+	return s.ComparedTo
+}
+
 // GetComparedToVersion returns the value of ComparedToVersion.
-func (s *EmailRuleVersionChanges) GetComparedToVersion() int {
+func (s *EmailRuleVersionChanges) GetComparedToVersion() OptInt {
 	return s.ComparedToVersion
 }
 
@@ -42180,8 +42229,13 @@ func (s *EmailRuleVersionChanges) GetUndecided() int {
 	return s.Undecided
 }
 
+// SetComparedTo sets the value of ComparedTo.
+func (s *EmailRuleVersionChanges) SetComparedTo(val EmailRuleVersionChangesComparedTo) {
+	s.ComparedTo = val
+}
+
 // SetComparedToVersion sets the value of ComparedToVersion.
-func (s *EmailRuleVersionChanges) SetComparedToVersion(val int) {
+func (s *EmailRuleVersionChanges) SetComparedToVersion(val OptInt) {
 	s.ComparedToVersion = val
 }
 
@@ -42198,6 +42252,48 @@ func (s *EmailRuleVersionChanges) SetStopsMatching(val EmailRuleChangedEmails) {
 // SetUndecided sets the value of Undecided.
 func (s *EmailRuleVersionChanges) SetUndecided(val int) {
 	s.Undecided = val
+}
+
+// Version: the rule's current version (rule_id). requested: the request's rule as asked (request_id).
+type EmailRuleVersionChangesComparedTo string
+
+const (
+	EmailRuleVersionChangesComparedToVersion   EmailRuleVersionChangesComparedTo = "version"
+	EmailRuleVersionChangesComparedToRequested EmailRuleVersionChangesComparedTo = "requested"
+)
+
+// AllValues returns all EmailRuleVersionChangesComparedTo values.
+func (EmailRuleVersionChangesComparedTo) AllValues() []EmailRuleVersionChangesComparedTo {
+	return []EmailRuleVersionChangesComparedTo{
+		EmailRuleVersionChangesComparedToVersion,
+		EmailRuleVersionChangesComparedToRequested,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleVersionChangesComparedTo) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleVersionChangesComparedToVersion:
+		return []byte(s), nil
+	case EmailRuleVersionChangesComparedToRequested:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleVersionChangesComparedTo) UnmarshalText(data []byte) error {
+	switch EmailRuleVersionChangesComparedTo(data) {
+	case EmailRuleVersionChangesComparedToVersion:
+		*s = EmailRuleVersionChangesComparedToVersion
+		return nil
+	case EmailRuleVersionChangesComparedToRequested:
+		*s = EmailRuleVersionChangesComparedToRequested
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Present only when include_sql was true.
@@ -54272,7 +54368,7 @@ func (*GenerateLookAlikesOK) generateLookAlikesRes() {}
 // Ref: #/components/schemas/GenerateLookAlikesRequest
 type GenerateLookAlikesRequest struct {
 	// An unsaved rule tree, as the compile answer's rule gives it or written by hand. With rule_id: that
-	// tree as the rule's next version.
+	// tree as the rule's next version. With request_id: that tree as an edit of the request's rule.
 	Tree OptEmailRuleTreeInput `json:"tree"`
 	// What the tree is meant to match; without it, the tree is described in words.
 	English OptString `json:"english"`
@@ -56539,10 +56635,17 @@ type GetDeliveryResult struct {
 	// the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a
 	// deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate
 	// its URL's credential.
-	ResponseBody NilString                 `json:"response_body"`
-	CreatedAt    string                    `json:"created_at"`
-	UpdatedAt    string                    `json:"updated_at"`
-	Email        NilGetDeliveryResultEmail `json:"email"`
+	ResponseBody NilString `json:"response_body"`
+	// The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as
+	// sent, listing only rules you can read now; empty when it named none of those. Recorded for
+	// deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries,
+	//  records of no attempt, attempts before this field), for a caller that cannot read email rules or
+	// whose organization does not have them, below content depth, and once the message's content is
+	// discarded.
+	Rules     []GetDeliveryResultRulesItem `json:"rules"`
+	CreatedAt string                       `json:"created_at"`
+	UpdatedAt string                       `json:"updated_at"`
+	Email     NilGetDeliveryResultEmail    `json:"email"`
 	// Whether this is the latest attempt of its delivery: the one recorded last, where a record of no
 	// attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A
 	// retry is recorded as a new attempt with its own id and attempt_count (not always higher than the
@@ -56656,6 +56759,11 @@ func (s *GetDeliveryResult) GetResponseBody() NilString {
 	return s.ResponseBody
 }
 
+// GetRules returns the value of Rules.
+func (s *GetDeliveryResult) GetRules() []GetDeliveryResultRulesItem {
+	return s.Rules
+}
+
 // GetCreatedAt returns the value of CreatedAt.
 func (s *GetDeliveryResult) GetCreatedAt() string {
 	return s.CreatedAt
@@ -56759,6 +56867,11 @@ func (s *GetDeliveryResult) SetResponseStatus(val NilInt) {
 // SetResponseBody sets the value of ResponseBody.
 func (s *GetDeliveryResult) SetResponseBody(val NilString) {
 	s.ResponseBody = val
+}
+
+// SetRules sets the value of Rules.
+func (s *GetDeliveryResult) SetRules(val []GetDeliveryResultRulesItem) {
+	s.Rules = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -56970,6 +57083,31 @@ func (s *GetDeliveryResultEmail) SetRecipient(val NilString) {
 // SetSubject sets the value of Subject.
 func (s *GetDeliveryResultEmail) SetSubject(val NilString) {
 	s.Subject = val
+}
+
+type GetDeliveryResultRulesItem struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// GetID returns the value of ID.
+func (s *GetDeliveryResultRulesItem) GetID() string {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *GetDeliveryResultRulesItem) GetName() string {
+	return s.Name
+}
+
+// SetID sets the value of ID.
+func (s *GetDeliveryResultRulesItem) SetID(val string) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *GetDeliveryResultRulesItem) SetName(val string) {
+	s.Name = val
 }
 
 type GetDeliveryTooManyRequests ErrorResponseHeaders
@@ -111723,13 +111861,23 @@ func (s *PresenceControlStatus) UnmarshalText(data []byte) error {
 
 // Ref: #/components/schemas/Projects_createProject_Input
 type ProjectsCreateProjectInput struct {
-	RequestID      uuid.UUID                               `json:"request_id"`
-	Name           string                                  `json:"name"`
-	Description    OptString                               `json:"description"`
-	Repository     OptNilString                            `json:"repository"`
-	Color          string                                  `json:"color"`
-	Members        []ProjectsCreateProjectInputMembersItem `json:"members"`
-	AgentAddresses []string                                `json:"agent_addresses"`
+	// Client-generated UUID for this operation. Reuse it with the same choices after an uncertain
+	// response; use a new UUID for a new operation.
+	RequestID uuid.UUID `json:"request_id"`
+	// Shared project name.
+	Name string `json:"name"`
+	// Shared project description; defaults to an empty string.
+	Description OptString `json:"description"`
+	// Repository identity as owner/repo or an HTTPS URL without credentials, query parameters or
+	// fragments. Omit or use null for none; local checkout paths are not shared.
+	Repository OptNilString `json:"repository"`
+	// Project display color as a six-digit hexadecimal value, including #.
+	Color string `json:"color"`
+	// Complete list of organization teammates and their project email destinations. Use [] for none.
+	Members []ProjectsCreateProjectInputMembersItem `json:"members"`
+	// Available agent addresses to link to the project. On update, replaces only links the caller can
+	// see; unseen live links are preserved. Use [] for no visible links.
+	AgentAddresses []string `json:"agent_addresses"`
 }
 
 // GetRequestID returns the value of RequestID.
@@ -111803,7 +111951,10 @@ func (s *ProjectsCreateProjectInput) SetAgentAddresses(val []string) {
 }
 
 type ProjectsCreateProjectInputMembersItem struct {
-	UserID    uuid.UUID                                      `json:"user_id"`
+	// Organization member to include in the project.
+	UserID uuid.UUID `json:"user_id"`
+	// Where this teammate receives project mail: work_email, or agent with one of their own addresses.
+	// Preserve private_agent to keep an existing private choice without exposing its address.
 	Recipient ProjectsCreateProjectInputMembersItemRecipient `json:"recipient"`
 }
 
@@ -111827,6 +111978,8 @@ func (s *ProjectsCreateProjectInputMembersItem) SetRecipient(val ProjectsCreateP
 	s.Recipient = val
 }
 
+// Where this teammate receives project mail: work_email, or agent with one of their own addresses.
+// Preserve private_agent to keep an existing private choice without exposing its address.
 type ProjectsCreateProjectInputMembersItemRecipient struct {
 	Kind    ProjectsCreateProjectInputMembersItemRecipientKind `json:"kind"`
 	Address OptString                                          `json:"address"`
@@ -112361,8 +112514,11 @@ func (s *ProjectsDeleteProjectResult) SetDeleted(val bool) {
 
 // Ref: #/components/schemas/Projects_inviteOrganizationMember_Input
 type ProjectsInviteOrganizationMemberInput struct {
+	// Client-generated UUID for this operation. Reuse it with the same choices after an uncertain
+	// response; use a new UUID for a new operation.
 	RequestID uuid.UUID `json:"request_id"`
-	Email     string    `json:"email"`
+	// Email address of the person to invite.
+	Email string `json:"email"`
 	// The role the person joins with: member (the default), none for no access, admin, a role template
 	// key or a custom role id. Anything above member, and member where every member reads all of the
 	// organization's mail, needs a signed-in dashboard session holding roles:assign. owner and
@@ -112826,8 +112982,11 @@ func (s *ProjectsInviteOrganizationMemberResultStatus) UnmarshalText(data []byte
 
 // Ref: #/components/schemas/Projects_inviteProjectMember_Input
 type ProjectsInviteProjectMemberInput struct {
+	// Client-generated UUID for this operation. Reuse it with the same choices after an uncertain
+	// response; use a new UUID for a new operation.
 	RequestID uuid.UUID `json:"request_id"`
-	Email     string    `json:"email"`
+	// Email address of the person to invite.
+	Email string `json:"email"`
 }
 
 // GetRequestID returns the value of RequestID.
@@ -114705,13 +114864,22 @@ func (s *ProjectsListProjectsResultItemsItemMembersItemRole) UnmarshalText(data 
 
 // Ref: #/components/schemas/Projects_updateProject_Input
 type ProjectsUpdateProjectInput struct {
-	Version        int                                     `json:"version"`
-	Name           string                                  `json:"name"`
-	Description    OptString                               `json:"description"`
-	Repository     OptNilString                            `json:"repository"`
-	Color          string                                  `json:"color"`
-	Members        []ProjectsUpdateProjectInputMembersItem `json:"members"`
-	AgentAddresses []string                                `json:"agent_addresses"`
+	// Current project version. Refresh the project before retrying a version conflict.
+	Version int `json:"version"`
+	// Shared project name.
+	Name string `json:"name"`
+	// Shared project description; defaults to an empty string.
+	Description OptString `json:"description"`
+	// Repository identity as owner/repo or an HTTPS URL without credentials, query parameters or
+	// fragments. Omit or use null for none; local checkout paths are not shared.
+	Repository OptNilString `json:"repository"`
+	// Project display color as a six-digit hexadecimal value, including #.
+	Color string `json:"color"`
+	// Complete list of organization teammates and their project email destinations. Use [] for none.
+	Members []ProjectsUpdateProjectInputMembersItem `json:"members"`
+	// Available agent addresses to link to the project. On update, replaces only links the caller can
+	// see; unseen live links are preserved. Use [] for no visible links.
+	AgentAddresses []string `json:"agent_addresses"`
 }
 
 // GetVersion returns the value of Version.
@@ -114785,7 +114953,10 @@ func (s *ProjectsUpdateProjectInput) SetAgentAddresses(val []string) {
 }
 
 type ProjectsUpdateProjectInputMembersItem struct {
-	UserID    uuid.UUID                                      `json:"user_id"`
+	// Organization member to include in the project.
+	UserID uuid.UUID `json:"user_id"`
+	// Where this teammate receives project mail: work_email, or agent with one of their own addresses.
+	// Preserve private_agent to keep an existing private choice without exposing its address.
 	Recipient ProjectsUpdateProjectInputMembersItemRecipient `json:"recipient"`
 }
 
@@ -114809,6 +114980,8 @@ func (s *ProjectsUpdateProjectInputMembersItem) SetRecipient(val ProjectsUpdateP
 	s.Recipient = val
 }
 
+// Where this teammate receives project mail: work_email, or agent with one of their own addresses.
+// Preserve private_agent to keep an existing private choice without exposing its address.
 type ProjectsUpdateProjectInputMembersItemRecipient struct {
 	Kind    ProjectsUpdateProjectInputMembersItemRecipientKind `json:"kind"`
 	Address OptString                                          `json:"address"`
@@ -136424,7 +136597,7 @@ func (*TestEmailRuleOnSampleOK) testEmailRuleOnSampleRes() {}
 // Ref: #/components/schemas/TestEmailRuleOnSampleRequest
 type TestEmailRuleOnSampleRequest struct {
 	// An unsaved rule tree, as the compile answer's rule gives it or written by hand. With rule_id: that
-	// tree as the rule's next version.
+	// tree as the rule's next version. With request_id: that tree as an edit of the request's rule.
 	Tree OptEmailRuleTreeInput `json:"tree"`
 	// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
 	// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
@@ -137368,7 +137541,7 @@ func (*TestEmailRuleOnSampleUnauthorized) testEmailRuleOnSampleRes() {}
 // Ref: #/components/schemas/TestEmailRuleRequest
 type TestEmailRuleRequest struct {
 	// An unsaved rule tree, as the compile answer's rule gives it or written by hand. With rule_id: that
-	// tree as the rule's next version.
+	// tree as the rule's next version. With request_id: that tree as an edit of the request's rule.
 	Tree OptEmailRuleTreeInput `json:"tree"`
 	// With tree: its description, which the answer's rule.warnings read.
 	English OptString `json:"english"`
@@ -137386,7 +137559,8 @@ type TestEmailRuleRequest struct {
 	// accepting would share, for the member asked).
 	RequestID OptUUID `json:"request_id"`
 	// Required with tree alone: do_not_share tests it as a rule that blocks sharing, so an email it
-	// cannot decide counts as matched. With rule_id and tree, must be the rule's own.
+	// cannot decide counts as matched. With rule_id and tree, must be the rule's own; with request_id
+	// and tree, grant.
 	Kind OptTestEmailRuleRequestKind `json:"kind"`
 	// Test exactly these emails, and any expected ones. Without it, the newest emails the rule can read
 	// are tested, at most 200 and none older than 30 days.
@@ -137590,7 +137764,8 @@ func (s *TestEmailRuleRequestExpect) SetSamples(val []EmailRuleTestSampleInput) 
 }
 
 // Required with tree alone: do_not_share tests it as a rule that blocks sharing, so an email it
-// cannot decide counts as matched. With rule_id and tree, must be the rule's own.
+// cannot decide counts as matched. With rule_id and tree, must be the rule's own; with request_id
+// and tree, grant.
 type TestEmailRuleRequestKind string
 
 const (
@@ -137647,8 +137822,9 @@ type TestEmailRuleResult struct {
 	ScopeWarnings []EmailRuleScopeWarning `json:"scope_warnings"`
 	// Present when expect was given, or for a saved rule with saved expectations or made-up emails.
 	Expectations OptTestEmailRuleResultExpectations `json:"expectations"`
-	// With rule_id and tree, when the rule has a current version: what this tree would change against it.
-	//  For a do_not_share rule, newly withheld and no longer withheld.
+	// With rule_id and tree, when the rule has a current version: what this tree would change against it
+	// (for a do_not_share rule, newly withheld and no longer withheld). With request_id and a tree other
+	// than the one asked: what it would change against the rule as asked.
 	Changes OptEmailRuleVersionChanges `json:"changes"`
 }
 

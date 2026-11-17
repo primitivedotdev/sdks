@@ -4925,6 +4925,13 @@ export type DeliverySummary = {
      */
     response_body: string | null;
     /**
+     * The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded.
+     */
+    rules: Array<{
+        id: string;
+        name: string;
+    }> | null;
+    /**
      * Whether this is the latest attempt of its delivery: the one recorded last, where a record of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an earlier attempt never changes: follow the latest one, or read attempts on any of them.
      */
     latest_attempt: boolean;
@@ -6639,13 +6646,17 @@ export type EmailRuleSampleJudgment = {
 
 export type EmailRuleVersionChanges = {
     /**
-     * The rule's current version, compared against.
+     * version: the rule's current version (rule_id). requested: the request's rule as asked (request_id).
      */
-    compared_to_version: number;
+    compared_to: 'version' | 'requested';
+    /**
+     * Present exactly when compared_to is version: its number.
+     */
+    compared_to_version?: number;
     newly_matched: EmailRuleChangedEmails;
     stops_matching: EmailRuleChangedEmails;
     /**
-     * Emails listed in results that either version could not decide (unclassified, skipped and not found included), in neither list.
+     * Emails listed in results that either could not decide (unclassified, skipped and not found included), in neither list.
      */
     undecided: number;
 };
@@ -6735,7 +6746,7 @@ export type TestEmailRuleRequest = {
      */
     request_id?: string;
     /**
-     * Required with tree alone: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. With rule_id and tree, must be the rule's own.
+     * Required with tree alone: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. With rule_id and tree, must be the rule's own; with request_id and tree, grant.
      */
     kind?: 'grant' | 'do_not_share';
     /**
@@ -9431,6 +9442,13 @@ export type GetDeliveryResult = {
      * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise, in answers recorded since November 2026, the webhook URL's query string, its parameters, values long enough to be a credential and any userinfo are hidden wherever it repeats them, and the rest is as the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate its URL's credential.
      */
     response_body: string | null;
+    /**
+     * The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded.
+     */
+    rules: Array<{
+        id: string;
+        name: string;
+    }> | null;
     created_at: string;
     updated_at: string;
     email: {
@@ -9551,7 +9569,13 @@ export type ProjectsListOrganizationInvitationsResult = {
 };
 
 export type ProjectsInviteOrganizationMemberInput = {
+    /**
+     * Client-generated UUID for this operation. Reuse it with the same choices after an uncertain response; use a new UUID for a new operation.
+     */
     request_id: string;
+    /**
+     * Email address of the person to invite.
+     */
     email: string;
     /**
      * The role the person joins with: member (the default), none for no access, admin, a role template key or a custom role id. Anything above member, and member where every member reads all of the organization's mail, needs a signed-in dashboard session holding roles:assign. owner and restricted are refused.
@@ -9652,18 +9676,45 @@ export type ProjectsListProjectsResult = {
 };
 
 export type ProjectsCreateProjectInput = {
+    /**
+     * Client-generated UUID for this operation. Reuse it with the same choices after an uncertain response; use a new UUID for a new operation.
+     */
     request_id: string;
+    /**
+     * Shared project name.
+     */
     name: string;
+    /**
+     * Shared project description; defaults to an empty string.
+     */
     description?: string;
+    /**
+     * Repository identity as owner/repo or an HTTPS URL without credentials, query parameters or fragments. Omit or use null for none; local checkout paths are not shared.
+     */
     repository?: string | null;
+    /**
+     * Project display color as a six-digit hexadecimal value, including #.
+     */
     color: string;
+    /**
+     * Complete list of organization teammates and their project email destinations. Use [] for none.
+     */
     members: Array<{
+        /**
+         * Organization member to include in the project.
+         */
         user_id: string;
+        /**
+         * Where this teammate receives project mail: work_email, or agent with one of their own addresses. Preserve private_agent to keep an existing private choice without exposing its address.
+         */
         recipient: {
             kind: 'work_email' | 'agent' | 'private_agent';
             address?: string;
         };
     }>;
+    /**
+     * Available agent addresses to link to the project. On update, replaces only links the caller can see; unseen live links are preserved. Use [] for no visible links.
+     */
     agent_addresses: Array<string>;
 };
 
@@ -9708,18 +9759,45 @@ export type ProjectsCreateProjectResult = {
 };
 
 export type ProjectsUpdateProjectInput = {
+    /**
+     * Current project version. Refresh the project before retrying a version conflict.
+     */
     version: number;
+    /**
+     * Shared project name.
+     */
     name: string;
+    /**
+     * Shared project description; defaults to an empty string.
+     */
     description?: string;
+    /**
+     * Repository identity as owner/repo or an HTTPS URL without credentials, query parameters or fragments. Omit or use null for none; local checkout paths are not shared.
+     */
     repository?: string | null;
+    /**
+     * Project display color as a six-digit hexadecimal value, including #.
+     */
     color: string;
+    /**
+     * Complete list of organization teammates and their project email destinations. Use [] for none.
+     */
     members: Array<{
+        /**
+         * Organization member to include in the project.
+         */
         user_id: string;
+        /**
+         * Where this teammate receives project mail: work_email, or agent with one of their own addresses. Preserve private_agent to keep an existing private choice without exposing its address.
+         */
         recipient: {
             kind: 'work_email' | 'agent' | 'private_agent';
             address?: string;
         };
     }>;
+    /**
+     * Available agent addresses to link to the project. On update, replaces only links the caller can see; unseen live links are preserved. Use [] for no visible links.
+     */
     agent_addresses: Array<string>;
 };
 
@@ -9741,7 +9819,13 @@ export type ProjectsListProjectInvitationsResult = {
 };
 
 export type ProjectsInviteProjectMemberInput = {
+    /**
+     * Client-generated UUID for this operation. Reuse it with the same choices after an uncertain response; use a new UUID for a new operation.
+     */
     request_id: string;
+    /**
+     * Email address of the person to invite.
+     */
     email: string;
 };
 
@@ -21478,7 +21562,7 @@ export type TestEmailRuleData = {
 
 export type TestEmailRuleErrors = {
     /**
-     * validation_error: give one of tree (with kind), rule_id and request_id, or rule_id with tree; at most 200 email_ids (with the expected emails), 1 to 100 expected emails none in both lists (or only expect.samples, up to 20), and a tree that is valid for the column contract. english, evaluation_scope, scope_selection and kind go only with tree; with rule_id, a kind other than the rule's answers details.reason kind_mismatch. A saved rule's current version or a request's rule that no longer renders answers details.reason version_not_renderable; email_ids that with its saved expectations name over 200 emails, too_many_emails.
+     * validation_error: give one of tree (with kind), rule_id and request_id, or tree with rule_id or request_id; at most 200 email_ids (with the expected emails), 1 to 100 expected emails none in both lists (or only expect.samples, up to 20), and a tree that is valid for the column contract. english, evaluation_scope, scope_selection and kind go only with tree, and with request_id only english and kind grant; with rule_id, a kind other than the rule's answers details.reason kind_mismatch. A saved rule's current version or a request's rule that no longer renders answers details.reason version_not_renderable; email_ids that with its saved expectations name over 200 emails, too_many_emails.
      */
     400: ErrorResponse;
     /**
@@ -25717,11 +25801,11 @@ export type ListOrganizationInvitationsData = {
     path?: never;
     query?: {
         /**
-         * cursor for project collaboration.
+         * Continuation cursor from the previous page; omit for the first page.
          */
         cursor?: string;
         /**
-         * limit for project collaboration.
+         * Maximum number of results to return; defaults to 50.
          */
         limit?: number;
     };
@@ -25835,7 +25919,7 @@ export type RevokeOrganizationInvitationData = {
     body?: never;
     path: {
         /**
-         * invitation_id for project collaboration.
+         * Invitation ID returned by an invitation list or creation.
          */
         invitation_id: string;
     };
@@ -25893,15 +25977,15 @@ export type ListOrganizationPeopleData = {
     path?: never;
     query?: {
         /**
-         * cursor for project collaboration.
+         * Continuation cursor from the previous page; omit for the first page.
          */
         cursor?: string;
         /**
-         * limit for project collaboration.
+         * Maximum number of results to return; defaults to 50.
          */
         limit?: number;
         /**
-         * query for project collaboration.
+         * Filter members by name or a work email the caller may see.
          */
         query?: string;
     };
@@ -25958,11 +26042,11 @@ export type ListProjectsData = {
     path?: never;
     query?: {
         /**
-         * cursor for project collaboration.
+         * Continuation cursor from the previous page; omit for the first page.
          */
         cursor?: string;
         /**
-         * limit for project collaboration.
+         * Maximum number of results to return; defaults to 50.
          */
         limit?: number;
     };
@@ -26076,13 +26160,13 @@ export type DeleteProjectData = {
     body?: never;
     path: {
         /**
-         * project_id for project collaboration.
+         * Project ID returned by listProjects or createProject.
          */
         project_id: string;
     };
     query: {
         /**
-         * version for project collaboration.
+         * Current project version. Refresh the project before retrying a version conflict.
          */
         version: number;
     };
@@ -26138,7 +26222,7 @@ export type GetProjectData = {
     body?: never;
     path: {
         /**
-         * project_id for project collaboration.
+         * Project ID returned by listProjects or createProject.
          */
         project_id: string;
     };
@@ -26195,7 +26279,7 @@ export type UpdateProjectData = {
     body: ProjectsUpdateProjectInput;
     path: {
         /**
-         * project_id for project collaboration.
+         * Project ID returned by listProjects or createProject.
          */
         project_id: string;
     };
@@ -26252,7 +26336,7 @@ export type ListProjectInvitationsData = {
     body?: never;
     path: {
         /**
-         * project_id for project collaboration.
+         * Project ID returned by listProjects or createProject.
          */
         project_id: string;
     };
@@ -26319,7 +26403,7 @@ export type InviteProjectMemberData = {
     };
     path: {
         /**
-         * project_id for project collaboration.
+         * Project ID returned by listProjects or createProject.
          */
         project_id: string;
     };
@@ -26380,11 +26464,11 @@ export type RevokeProjectInvitationData = {
     body?: never;
     path: {
         /**
-         * project_id for project collaboration.
+         * Project ID returned by listProjects or createProject.
          */
         project_id: string;
         /**
-         * invitation_id for project collaboration.
+         * Invitation ID returned by an invitation list or creation.
          */
         invitation_id: string;
     };

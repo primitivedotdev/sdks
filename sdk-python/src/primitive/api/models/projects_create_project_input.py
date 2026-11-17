@@ -26,13 +26,17 @@ T = TypeVar("T", bound="ProjectsCreateProjectInput")
 class ProjectsCreateProjectInput:
     """ 
         Attributes:
-            request_id (UUID):
-            name (str):
-            color (str):
-            members (list[ProjectsCreateProjectInputMembersItem]):
-            agent_addresses (list[str]):
-            description (str | Unset):  Default: ''.
-            repository (None | str | Unset):
+            request_id (UUID): Client-generated UUID for this operation. Reuse it with the same choices after an uncertain
+                response; use a new UUID for a new operation.
+            name (str): Shared project name.
+            color (str): Project display color as a six-digit hexadecimal value, including #.
+            members (list[ProjectsCreateProjectInputMembersItem]): Complete list of organization teammates and their project
+                email destinations. Use [] for none.
+            agent_addresses (list[str]): Available agent addresses to link to the project. On update, replaces only links
+                the caller can see; unseen live links are preserved. Use [] for no visible links.
+            description (str | Unset): Shared project description; defaults to an empty string. Default: ''.
+            repository (None | str | Unset): Repository identity as owner/repo or an HTTPS URL without credentials, query
+                parameters or fragments. Omit or use null for none; local checkout paths are not shared.
      """
 
     request_id: UUID

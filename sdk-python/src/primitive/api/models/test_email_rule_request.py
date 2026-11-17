@@ -44,7 +44,8 @@ class TestEmailRuleRequest:
             request_id (UUID | Unset): A pending rule request you can see: its rule as asked, tested as you over your own
                 mailboxes (what accepting would share, for the member asked).
             kind (TestEmailRuleRequestKind | Unset): Required with tree alone: do_not_share tests it as a rule that blocks
-                sharing, so an email it cannot decide counts as matched. With rule_id and tree, must be the rule's own.
+                sharing, so an email it cannot decide counts as matched. With rule_id and tree, must be the rule's own; with
+                request_id and tree, grant.
             email_ids (list[UUID] | Unset): Test exactly these emails, and any expected ones. Without it, the newest emails
                 the rule can read are tested, at most 200 and none older than 30 days.
             classify_missing (bool | Unset): Classify emails in the set that have not been classified yet and arrived more

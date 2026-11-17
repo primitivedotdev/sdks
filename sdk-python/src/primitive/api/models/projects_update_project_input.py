@@ -25,13 +25,16 @@ T = TypeVar("T", bound="ProjectsUpdateProjectInput")
 class ProjectsUpdateProjectInput:
     """ 
         Attributes:
-            version (int):
-            name (str):
-            color (str):
-            members (list[ProjectsUpdateProjectInputMembersItem]):
-            agent_addresses (list[str]):
-            description (str | Unset):  Default: ''.
-            repository (None | str | Unset):
+            version (int): Current project version. Refresh the project before retrying a version conflict.
+            name (str): Shared project name.
+            color (str): Project display color as a six-digit hexadecimal value, including #.
+            members (list[ProjectsUpdateProjectInputMembersItem]): Complete list of organization teammates and their project
+                email destinations. Use [] for none.
+            agent_addresses (list[str]): Available agent addresses to link to the project. On update, replaces only links
+                the caller can see; unseen live links are preserved. Use [] for no visible links.
+            description (str | Unset): Shared project description; defaults to an empty string. Default: ''.
+            repository (None | str | Unset): Repository identity as owner/repo or an HTTPS URL without credentials, query
+                parameters or fragments. Omit or use null for none; local checkout paths are not shared.
      """
 
     version: int

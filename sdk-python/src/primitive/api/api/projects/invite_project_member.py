@@ -140,11 +140,13 @@ def sync_detailed(
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | InviteProjectMemberResponse200]:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Invite a person to a project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
         primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (ProjectsInviteProjectMemberInput):
@@ -181,11 +183,13 @@ def sync(
     idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | InviteProjectMemberResponse200 | None:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Invite a person to a project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
         primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (ProjectsInviteProjectMemberInput):
@@ -217,11 +221,13 @@ async def asyncio_detailed(
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | InviteProjectMemberResponse200]:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Invite a person to a project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
         primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (ProjectsInviteProjectMemberInput):
@@ -258,11 +264,13 @@ async def asyncio(
     idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | InviteProjectMemberResponse200 | None:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Invite a person to a project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
         primitive_step_up (str | Unset):
         idempotency_key (str | Unset):
         body (ProjectsInviteProjectMemberInput):

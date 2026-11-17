@@ -23,8 +23,9 @@ T = TypeVar("T", bound="ProjectsInviteOrganizationMemberInput")
 class ProjectsInviteOrganizationMemberInput:
     """ 
         Attributes:
-            request_id (UUID):
-            email (str):
+            request_id (UUID): Client-generated UUID for this operation. Reuse it with the same choices after an uncertain
+                response; use a new UUID for a new operation.
+            email (str): Email address of the person to invite.
             role (str | Unset): The role the person joins with: member (the default), none for no access, admin, a role
                 template key or a custom role id. Anything above member, and member where every member reads all of the
                 organization's mail, needs a signed-in dashboard session holding roles:assign. owner and restricted are refused.

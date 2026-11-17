@@ -130,7 +130,9 @@ def sync_detailed(
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | InviteOrganizationMemberResponse200]:
-    """  Requires a current human organization owner or administrator. Machine credentials are refused.
+    """ Invite a person to the organization
+
+     Requires a current human organization owner or administrator. Machine credentials are refused.
     Invitations grant the chosen role, Member by default, only after verified acceptance through the
     sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
     accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
@@ -170,7 +172,9 @@ def sync(
     idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | InviteOrganizationMemberResponse200 | None:
-    """  Requires a current human organization owner or administrator. Machine credentials are refused.
+    """ Invite a person to the organization
+
+     Requires a current human organization owner or administrator. Machine credentials are refused.
     Invitations grant the chosen role, Member by default, only after verified acceptance through the
     sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
     accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
@@ -205,7 +209,9 @@ async def asyncio_detailed(
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | InviteOrganizationMemberResponse200]:
-    """  Requires a current human organization owner or administrator. Machine credentials are refused.
+    """ Invite a person to the organization
+
+     Requires a current human organization owner or administrator. Machine credentials are refused.
     Invitations grant the chosen role, Member by default, only after verified acceptance through the
     sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
     accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
@@ -245,7 +251,9 @@ async def asyncio(
     idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | InviteOrganizationMemberResponse200 | None:
-    """  Requires a current human organization owner or administrator. Machine credentials are refused.
+    """ Invite a person to the organization
+
+     Requires a current human organization owner or administrator. Machine credentials are refused.
     Invitations grant the chosen role, Member by default, only after verified acceptance through the
     sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
     accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.

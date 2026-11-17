@@ -443,6 +443,7 @@ from .delete_wake_schedule_response_200_data import DeleteWakeScheduleResponse20
 from .delivery_status import DeliveryStatus
 from .delivery_summary import DeliverySummary
 from .delivery_summary_email_type_0 import DeliverySummaryEmailType0
+from .delivery_summary_rules_type_0_item import DeliverySummaryRulesType0Item
 from .delivery_summary_status import DeliverySummaryStatus
 from .discard_content_result import DiscardContentResult
 from .discard_email_content_response_200 import DiscardEmailContentResponse200
@@ -635,6 +636,7 @@ from .email_rule_tree_version import EmailRuleTreeVersion
 from .email_rule_tree_when import EmailRuleTreeWhen
 from .email_rule_version import EmailRuleVersion
 from .email_rule_version_changes import EmailRuleVersionChanges
+from .email_rule_version_changes_compared_to import EmailRuleVersionChangesComparedTo
 from .email_rule_version_sql import EmailRuleVersionSql
 from .email_rule_with_version import EmailRuleWithVersion
 from .email_rule_with_version_evaluation_scope import EmailRuleWithVersionEvaluationScope
@@ -792,6 +794,7 @@ from .get_delivery_response_200 import GetDeliveryResponse200
 from .get_delivery_result import GetDeliveryResult
 from .get_delivery_result_attempts_item import GetDeliveryResultAttemptsItem
 from .get_delivery_result_email_type_0 import GetDeliveryResultEmailType0
+from .get_delivery_result_rules_type_0_item import GetDeliveryResultRulesType0Item
 from .get_domain_agent_authorization_response_200 import GetDomainAgentAuthorizationResponse200
 from .get_domain_agent_authorization_result import GetDomainAgentAuthorizationResult
 from .get_domain_agent_authorization_result_state import GetDomainAgentAuthorizationResultState
@@ -2397,6 +2400,7 @@ __all__ = (
     "DeliveryStatus",
     "DeliverySummary",
     "DeliverySummaryEmailType0",
+    "DeliverySummaryRulesType0Item",
     "DeliverySummaryStatus",
     "DiscardContentResult",
     "DiscardEmailContentResponse200",
@@ -2589,6 +2593,7 @@ __all__ = (
     "EmailRuleTreeWhen",
     "EmailRuleVersion",
     "EmailRuleVersionChanges",
+    "EmailRuleVersionChangesComparedTo",
     "EmailRuleVersionSql",
     "EmailRuleWithheldBy",
     "EmailRuleWithheldByReason",
@@ -2746,6 +2751,7 @@ __all__ = (
     "GetDeliveryResult",
     "GetDeliveryResultAttemptsItem",
     "GetDeliveryResultEmailType0",
+    "GetDeliveryResultRulesType0Item",
     "GetDomainAgentAuthorizationResponse200",
     "GetDomainAgentAuthorizationResult",
     "GetDomainAgentAuthorizationResultState",

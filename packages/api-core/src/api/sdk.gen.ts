@@ -2968,7 +2968,7 @@ export const compileEmailRule = <ThrowOnError extends boolean = false>(options: 
 /**
  * Test a rule against received mail
  *
- * Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version, as its author), rule_id with tree (that tree as the rule's next version, as its author, against its saved expectations; its author only), or a pending rule request by request_id (its rule as asked, as you, over your own mailboxes). It reads only mail its author can read and its scope covers. A rule you see only because it covers your own mailboxes runs as you, over only those. Without email_ids it tests the newest emails on the mail relay domains, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+ * Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version, as its author), rule_id with tree (that tree as the rule's next version, as its author, against its saved expectations; its author only), or a pending rule request by request_id (its rule as asked, as you, over your own mailboxes; with tree, that tree as your edit of it, and changes against the rule as asked). It reads only mail its author can read and its scope covers. A rule you see only because it covers your own mailboxes runs as you, over only those. Without email_ids it tests the newest emails on the mail relay domains, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
  */
 export const testEmailRule = <ThrowOnError extends boolean = false>(options: Options<TestEmailRuleData, ThrowOnError>): RequestResult<TestEmailRuleResponses, TestEmailRuleErrors, ThrowOnError> => (options.client ?? client).post<TestEmailRuleResponses, TestEmailRuleErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -3951,6 +3951,8 @@ export const getDelivery = <ThrowOnError extends boolean = false>(options: Optio
 });
 
 /**
+ * List organization invitations
+ *
  * Requires a current human organization owner or administrator. Machine credentials are refused. Invitations grant the chosen role, Member by default, only after verified acceptance through the sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
  */
 export const listOrganizationInvitations = <ThrowOnError extends boolean = false>(options?: Options<ListOrganizationInvitationsData, ThrowOnError>): RequestResult<ListOrganizationInvitationsResponses, ListOrganizationInvitationsErrors, ThrowOnError> => (options?.client ?? client).get<ListOrganizationInvitationsResponses, ListOrganizationInvitationsErrors, ThrowOnError>({
@@ -3960,6 +3962,8 @@ export const listOrganizationInvitations = <ThrowOnError extends boolean = false
 });
 
 /**
+ * Invite a person to the organization
+ *
  * Requires a current human organization owner or administrator. Machine credentials are refused. Invitations grant the chosen role, Member by default, only after verified acceptance through the sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
  */
 export const inviteOrganizationMember = <ThrowOnError extends boolean = false>(options: Options<InviteOrganizationMemberData, ThrowOnError>): RequestResult<InviteOrganizationMemberResponses, InviteOrganizationMemberErrors, ThrowOnError> => (options.client ?? client).post<InviteOrganizationMemberResponses, InviteOrganizationMemberErrors, ThrowOnError>({
@@ -3973,6 +3977,8 @@ export const inviteOrganizationMember = <ThrowOnError extends boolean = false>(o
 });
 
 /**
+ * Revoke an organization invitation
+ *
  * Requires a current human organization owner or administrator. Machine credentials are refused. Invitations grant the chosen role, Member by default, only after verified acceptance through the sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
  */
 export const revokeOrganizationInvitation = <ThrowOnError extends boolean = false>(options: Options<RevokeOrganizationInvitationData, ThrowOnError>): RequestResult<RevokeOrganizationInvitationResponses, RevokeOrganizationInvitationErrors, ThrowOnError> => (options.client ?? client).delete<RevokeOrganizationInvitationResponses, RevokeOrganizationInvitationErrors, ThrowOnError>({
@@ -3982,6 +3988,8 @@ export const revokeOrganizationInvitation = <ThrowOnError extends boolean = fals
 });
 
 /**
+ * List organization members
+ *
  * Requires a current human organization membership, or an org-wide API key: a super admin key, or a custom key with no addresses or domains whose grant holds members:read. A key lists members as the person it belongs to, at that person's live grant, and only while that person still holds members:read. Narrowed, Function and connected keys are refused. A caller holding members:read also gets each person's mail_access. No local paths or existing conversation history are shared.
  */
 export const listOrganizationPeople = <ThrowOnError extends boolean = false>(options?: Options<ListOrganizationPeopleData, ThrowOnError>): RequestResult<ListOrganizationPeopleResponses, ListOrganizationPeopleErrors, ThrowOnError> => (options?.client ?? client).get<ListOrganizationPeopleResponses, ListOrganizationPeopleErrors, ThrowOnError>({
@@ -3991,6 +3999,8 @@ export const listOrganizationPeople = <ThrowOnError extends boolean = false>(opt
 });
 
 /**
+ * List accessible projects
+ *
  * Requires a current human organization membership. Machine credentials are refused. Results are scoped to current project access. No local paths or existing conversation history are shared.
  */
 export const listProjects = <ThrowOnError extends boolean = false>(options?: Options<ListProjectsData, ThrowOnError>): RequestResult<ListProjectsResponses, ListProjectsErrors, ThrowOnError> => (options?.client ?? client).get<ListProjectsResponses, ListProjectsErrors, ThrowOnError>({
@@ -4000,6 +4010,8 @@ export const listProjects = <ThrowOnError extends boolean = false>(options?: Opt
 });
 
 /**
+ * Create a shared project
+ *
  * Requires a current human organization membership. Machine credentials are refused. Results are scoped to current project access. No local paths or existing conversation history are shared.
  */
 export const createProject = <ThrowOnError extends boolean = false>(options: Options<CreateProjectData, ThrowOnError>): RequestResult<CreateProjectResponses, CreateProjectErrors, ThrowOnError> => (options.client ?? client).post<CreateProjectResponses, CreateProjectErrors, ThrowOnError>({
@@ -4013,6 +4025,8 @@ export const createProject = <ThrowOnError extends boolean = false>(options: Opt
 });
 
 /**
+ * Delete a shared project
+ *
  * Requires a current human organization membership. Machine credentials are refused. Results are scoped to current project access. No local paths or existing conversation history are shared.
  */
 export const deleteProject = <ThrowOnError extends boolean = false>(options: Options<DeleteProjectData, ThrowOnError>): RequestResult<DeleteProjectResponses, DeleteProjectErrors, ThrowOnError> => (options.client ?? client).delete<DeleteProjectResponses, DeleteProjectErrors, ThrowOnError>({
@@ -4022,6 +4036,8 @@ export const deleteProject = <ThrowOnError extends boolean = false>(options: Opt
 });
 
 /**
+ * Get a shared project
+ *
  * Requires a current human organization membership. Machine credentials are refused. Results are scoped to current project access. No local paths or existing conversation history are shared.
  */
 export const getProject = <ThrowOnError extends boolean = false>(options: Options<GetProjectData, ThrowOnError>): RequestResult<GetProjectResponses, GetProjectErrors, ThrowOnError> => (options.client ?? client).get<GetProjectResponses, GetProjectErrors, ThrowOnError>({
@@ -4031,6 +4047,8 @@ export const getProject = <ThrowOnError extends boolean = false>(options: Option
 });
 
 /**
+ * Update a shared project
+ *
  * Requires a current human organization membership. Machine credentials are refused. Results are scoped to current project access. No local paths or existing conversation history are shared.
  */
 export const updateProject = <ThrowOnError extends boolean = false>(options: Options<UpdateProjectData, ThrowOnError>): RequestResult<UpdateProjectResponses, UpdateProjectErrors, ThrowOnError> => (options.client ?? client).put<UpdateProjectResponses, UpdateProjectErrors, ThrowOnError>({
@@ -4044,6 +4062,8 @@ export const updateProject = <ThrowOnError extends boolean = false>(options: Opt
 });
 
 /**
+ * List project invitations
+ *
  * Requires a current human organization membership. Machine credentials are refused. Results are scoped to current project access. No local paths or existing conversation history are shared.
  */
 export const listProjectInvitations = <ThrowOnError extends boolean = false>(options: Options<ListProjectInvitationsData, ThrowOnError>): RequestResult<ListProjectInvitationsResponses, ListProjectInvitationsErrors, ThrowOnError> => (options.client ?? client).get<ListProjectInvitationsResponses, ListProjectInvitationsErrors, ThrowOnError>({
@@ -4053,6 +4073,8 @@ export const listProjectInvitations = <ThrowOnError extends boolean = false>(opt
 });
 
 /**
+ * Invite a person to a project
+ *
  * Requires a current human organization membership. Machine credentials are refused. Results are scoped to current project access. No local paths or existing conversation history are shared.
  */
 export const inviteProjectMember = <ThrowOnError extends boolean = false>(options: Options<InviteProjectMemberData, ThrowOnError>): RequestResult<InviteProjectMemberResponses, InviteProjectMemberErrors, ThrowOnError> => (options.client ?? client).post<InviteProjectMemberResponses, InviteProjectMemberErrors, ThrowOnError>({
@@ -4066,6 +4088,8 @@ export const inviteProjectMember = <ThrowOnError extends boolean = false>(option
 });
 
 /**
+ * Revoke a project invitation
+ *
  * Requires a current human organization membership. Machine credentials are refused. Results are scoped to current project access. No local paths or existing conversation history are shared.
  */
 export const revokeProjectInvitation = <ThrowOnError extends boolean = false>(options: Options<RevokeProjectInvitationData, ThrowOnError>): RequestResult<RevokeProjectInvitationResponses, RevokeProjectInvitationErrors, ThrowOnError> => (options.client ?? client).delete<RevokeProjectInvitationResponses, RevokeProjectInvitationErrors, ThrowOnError>({

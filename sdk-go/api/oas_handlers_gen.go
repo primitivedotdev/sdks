@@ -8507,7 +8507,7 @@ func (s *Server) handleCreateProjectRequest(args [0]string, argsEscaped bool, w 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    CreateProjectOperation,
-			OperationSummary: "",
+			OperationSummary: "Create a shared project",
 			OperationID:      "createProject",
 			Body:             request,
 			RawBody:          rawBody,
@@ -13117,7 +13117,7 @@ func (s *Server) handleDeleteProjectRequest(args [1]string, argsEscaped bool, w 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    DeleteProjectOperation,
-			OperationSummary: "",
+			OperationSummary: "Delete a shared project",
 			OperationID:      "deleteProject",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -26957,7 +26957,7 @@ func (s *Server) handleGetProjectRequest(args [1]string, argsEscaped bool, w htt
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    GetProjectOperation,
-			OperationSummary: "",
+			OperationSummary: "Get a shared project",
 			OperationID:      "getProject",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -30526,7 +30526,7 @@ func (s *Server) handleInviteOrganizationMemberRequest(args [0]string, argsEscap
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    InviteOrganizationMemberOperation,
-			OperationSummary: "",
+			OperationSummary: "Invite a person to the organization",
 			OperationID:      "inviteOrganizationMember",
 			Body:             request,
 			RawBody:          rawBody,
@@ -30733,7 +30733,7 @@ func (s *Server) handleInviteProjectMemberRequest(args [1]string, argsEscaped bo
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    InviteProjectMemberOperation,
-			OperationSummary: "",
+			OperationSummary: "Invite a person to a project",
 			OperationID:      "inviteProjectMember",
 			Body:             request,
 			RawBody:          rawBody,
@@ -41328,7 +41328,7 @@ func (s *Server) handleListOrganizationInvitationsRequest(args [0]string, argsEs
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListOrganizationInvitationsOperation,
-			OperationSummary: "",
+			OperationSummary: "List organization invitations",
 			OperationID:      "listOrganizationInvitations",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -41523,7 +41523,7 @@ func (s *Server) handleListOrganizationPeopleRequest(args [0]string, argsEscaped
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListOrganizationPeopleOperation,
-			OperationSummary: "",
+			OperationSummary: "List organization members",
 			OperationID:      "listOrganizationPeople",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -41920,7 +41920,7 @@ func (s *Server) handleListProjectInvitationsRequest(args [1]string, argsEscaped
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListProjectInvitationsOperation,
-			OperationSummary: "",
+			OperationSummary: "List project invitations",
 			OperationID:      "listProjectInvitations",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -42108,7 +42108,7 @@ func (s *Server) handleListProjectsRequest(args [0]string, argsEscaped bool, w h
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListProjectsOperation,
-			OperationSummary: "",
+			OperationSummary: "List accessible projects",
 			OperationID:      "listProjects",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -52051,7 +52051,7 @@ func (s *Server) handleRevokeOrganizationInvitationRequest(args [1]string, argsE
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    RevokeOrganizationInvitationOperation,
-			OperationSummary: "",
+			OperationSummary: "Revoke an organization invitation",
 			OperationID:      "revokeOrganizationInvitation",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -52239,7 +52239,7 @@ func (s *Server) handleRevokeProjectInvitationRequest(args [2]string, argsEscape
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    RevokeProjectInvitationOperation,
-			OperationSummary: "",
+			OperationSummary: "Revoke a project invitation",
 			OperationID:      "revokeProjectInvitation",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -58735,11 +58735,12 @@ func (s *Server) handleSuspendFunctionRuntimeKeyRequest(args [1]string, argsEsca
 //	as its author), rule_id with tree (that tree as the rule's next version, as its author, against
 //
 // its saved expectations; its author only), or a pending rule request by request_id (its rule as
-// asked, as you, over your own mailboxes). It reads only mail its author can read and its scope
-// covers. A rule you see only because it covers your own mailboxes runs as you, over only those.
-// Without email_ids it tests the newest emails on the mail relay domains, at most 200 and none older
-// than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first
-// unless classify_missing is false. It records no decision and grants nothing, and stops at about 90
+// asked, as you, over your own mailboxes; with tree, that tree as your edit of it, and changes
+// against the rule as asked). It reads only mail its author can read and its scope covers. A rule
+// you see only because it covers your own mailboxes runs as you, over only those. Without email_ids
+// it tests the newest emails on the mail relay domains, at most 200 and none older than 30 days,
+// plus any expected ones. Unclassified emails over 2 hours old are classified first unless
+// classify_missing is false. It records no decision and grants nothing, and stops at about 90
 // seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no
 // API key, agent key or narrowed token).
 //
@@ -64834,7 +64835,7 @@ func (s *Server) handleUpdateProjectRequest(args [1]string, argsEscaped bool, w 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    UpdateProjectOperation,
-			OperationSummary: "",
+			OperationSummary: "Update a shared project",
 			OperationID:      "updateProject",
 			Body:             request,
 			RawBody:          rawBody,

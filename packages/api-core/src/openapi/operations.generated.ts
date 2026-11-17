@@ -27748,7 +27748,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "test-email-rule",
-    "description": "Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version, as its author), rule_id with tree (that tree as the rule's next version, as its author, against its saved expectations; its author only), or a pending rule request by request_id (its rule as asked, as you, over your own mailboxes). It reads only mail its author can read and its scope covers. A rule you see only because it covers your own mailboxes runs as you, over only those. Without email_ids it tests the newest emails on the mail relay domains, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+    "description": "Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version, as its author), rule_id with tree (that tree as the rule's next version, as its author, against its saved expectations; its author only), or a pending rule request by request_id (its rule as asked, as you, over your own mailboxes; with tree, that tree as your edit of it, and changes against the rule as asked). It reads only mail its author can read and its scope covers. A rule you see only because it covers your own mailboxes runs as you, over only those. Without email_ids it tests the newest emails on the mail relay domains, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "testEmailRule",
@@ -27857,7 +27857,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "format": "uuid"
         },
         "kind": {
-          "description": "Required with tree alone: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. With rule_id and tree, must be the rule's own.",
+          "description": "Required with tree alone: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. With rule_id and tree, must be the rule's own; with request_id and tree, grant.",
           "type": "string",
           "enum": [
             "grant",
@@ -28925,10 +28925,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "changes": {
           "type": "object",
           "properties": {
+            "compared_to": {
+              "type": "string",
+              "enum": [
+                "version",
+                "requested"
+              ],
+              "description": "version: the rule's current version (rule_id). requested: the request's rule as asked (request_id)."
+            },
             "compared_to_version": {
+              "description": "Present exactly when compared_to is version: its number.",
               "type": "integer",
-              "exclusiveMinimum": 0,
-              "description": "The rule's current version, compared against."
+              "exclusiveMinimum": 0
             },
             "newly_matched": {
               "type": "object",
@@ -29035,11 +29043,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "undecided": {
               "type": "integer",
               "minimum": 0,
-              "description": "Emails listed in results that either version could not decide (unclassified, skipped and not found included), in neither list."
+              "description": "Emails listed in results that either could not decide (unclassified, skipped and not found included), in neither list."
             }
           },
           "required": [
-            "compared_to_version",
+            "compared_to",
             "newly_matched",
             "stops_matching",
             "undecided"
@@ -49157,13 +49165,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "request_id": {
           "type": "string",
           "format": "uuid",
-          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "x-primitive-retry-id": true,
+          "description": "Client-generated UUID for this operation. Reuse it with the same choices after an uncertain response; use a new UUID for a new operation."
         },
         "email": {
           "type": "string",
           "maxLength": 254,
           "format": "email",
-          "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+          "description": "Email address of the person to invite."
         },
         "role": {
           "description": "The role the person joins with: member (the default), none for no access, admin, a role template key or a custom role id. Anything above member, and member where every member reads all of the organization's mail, needs a signed-in dashboard session holding roles:assign. owner and restricted are refused.",
@@ -49343,7 +49354,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ]
     },
     "sdkName": "inviteOrganizationMember",
-    "summary": null,
+    "summary": "Invite a person to the organization",
     "tag": "Organizations",
     "tagCommand": "organizations"
   },
@@ -49359,7 +49370,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [
       {
-        "description": "cursor for project collaboration.",
+        "description": "Continuation cursor from the previous page; omit for the first page.",
         "enum": null,
         "name": "cursor",
         "required": false,
@@ -49367,7 +49378,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       },
       {
         "default": 50,
-        "description": "limit for project collaboration.",
+        "description": "Maximum number of results to return; defaults to 50.",
         "enum": null,
         "maximum": 100,
         "minimum": 1,
@@ -49567,7 +49578,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ]
     },
     "sdkName": "listOrganizationInvitations",
-    "summary": null,
+    "summary": "List organization invitations",
     "tag": "Organizations",
     "tagCommand": "organizations"
   },
@@ -49582,7 +49593,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/organization/invitations/{invitation_id}",
     "pathParams": [
       {
-        "description": "invitation_id for project collaboration.",
+        "description": "Invitation ID returned by an invitation list or creation.",
         "enum": null,
         "name": "invitation_id",
         "required": true,
@@ -49761,7 +49772,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ]
     },
     "sdkName": "revokeOrganizationInvitation",
-    "summary": null,
+    "summary": "Revoke an organization invitation",
     "tag": "Organizations",
     "tagCommand": "organizations"
   },
@@ -49795,15 +49806,19 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "request_id": {
           "type": "string",
           "format": "uuid",
-          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "x-primitive-retry-id": true,
+          "description": "Client-generated UUID for this operation. Reuse it with the same choices after an uncertain response; use a new UUID for a new operation."
         },
         "name": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 60
+          "maxLength": 60,
+          "description": "Shared project name."
         },
         "description": {
           "default": "",
+          "description": "Shared project description; defaults to an empty string.",
           "type": "string",
           "maxLength": 4096
         },
@@ -49813,11 +49828,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ],
           "maxLength": 2048,
-          "default": null
+          "default": null,
+          "description": "Repository identity as owner/repo or an HTTPS URL without credentials, query parameters or fragments. Omit or use null for none; local checkout paths are not shared."
         },
         "color": {
           "type": "string",
-          "pattern": "^#[0-9a-fA-F]{6}$"
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "description": "Project display color as a six-digit hexadecimal value, including #."
         },
         "members": {
           "maxItems": 100,
@@ -49828,7 +49845,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "user_id": {
                 "type": "string",
                 "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "description": "Organization member to include in the project."
               },
               "recipient": {
                 "oneOf": [
@@ -49878,7 +49896,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                     ],
                     "additionalProperties": false
                   }
-                ]
+                ],
+                "description": "Where this teammate receives project mail: work_email, or agent with one of their own addresses. Preserve private_agent to keep an existing private choice without exposing its address."
               }
             },
             "required": [
@@ -49886,7 +49905,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "recipient"
             ],
             "additionalProperties": false
-          }
+          },
+          "description": "Complete list of organization teammates and their project email destinations. Use [] for none."
         },
         "agent_addresses": {
           "maxItems": 100,
@@ -49896,7 +49916,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "maxLength": 254,
             "format": "email",
             "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-          }
+          },
+          "description": "Available agent addresses to link to the project. On update, replaces only links the caller can see; unseen live links are preserved. Use [] for no visible links."
         }
       },
       "required": [
@@ -50136,7 +50157,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ]
     },
     "sdkName": "createProject",
-    "summary": null,
+    "summary": "Create a shared project",
     "tag": "Projects",
     "tagCommand": "projects"
   },
@@ -50151,7 +50172,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/projects/{project_id}",
     "pathParams": [
       {
-        "description": "project_id for project collaboration.",
+        "description": "Project ID returned by listProjects or createProject.",
         "enum": null,
         "name": "project_id",
         "required": true,
@@ -50160,7 +50181,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [
       {
-        "description": "version for project collaboration.",
+        "description": "Current project version. Refresh the project before retrying a version conflict.",
         "enum": null,
         "maximum": 9007199254740991,
         "name": "version",
@@ -50187,7 +50208,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ]
     },
     "sdkName": "deleteProject",
-    "summary": null,
+    "summary": "Delete a shared project",
     "tag": "Projects",
     "tagCommand": "projects"
   },
@@ -50202,7 +50223,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/projects/{project_id}",
     "pathParams": [
       {
-        "description": "project_id for project collaboration.",
+        "description": "Project ID returned by listProjects or createProject.",
         "enum": null,
         "name": "project_id",
         "required": true,
@@ -50444,7 +50465,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ]
     },
     "sdkName": "getProject",
-    "summary": null,
+    "summary": "Get a shared project",
     "tag": "Projects",
     "tagCommand": "projects"
   },
@@ -50459,7 +50480,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/projects/{project_id}/invitations",
     "pathParams": [
       {
-        "description": "project_id for project collaboration.",
+        "description": "Project ID returned by listProjects or createProject.",
         "enum": null,
         "name": "project_id",
         "required": true,
@@ -50493,13 +50514,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "request_id": {
           "type": "string",
           "format": "uuid",
-          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "x-primitive-retry-id": true,
+          "description": "Client-generated UUID for this operation. Reuse it with the same choices after an uncertain response; use a new UUID for a new operation."
         },
         "email": {
           "type": "string",
           "maxLength": 254,
           "format": "email",
-          "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+          "description": "Email address of the person to invite."
         }
       },
       "required": [
@@ -50587,7 +50611,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ]
     },
     "sdkName": "inviteProjectMember",
-    "summary": null,
+    "summary": "Invite a person to a project",
     "tag": "Projects",
     "tagCommand": "projects"
   },
@@ -50603,7 +50627,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [
       {
-        "description": "cursor for project collaboration.",
+        "description": "Continuation cursor from the previous page; omit for the first page.",
         "enum": null,
         "name": "cursor",
         "required": false,
@@ -50611,7 +50635,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       },
       {
         "default": 50,
-        "description": "limit for project collaboration.",
+        "description": "Maximum number of results to return; defaults to 50.",
         "enum": null,
         "maximum": 100,
         "minimum": 1,
@@ -50620,7 +50644,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "integer"
       },
       {
-        "description": "query for project collaboration.",
+        "description": "Filter members by name or a work email the caller may see.",
         "enum": null,
         "name": "query",
         "required": false,
@@ -50755,7 +50779,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ]
     },
     "sdkName": "listOrganizationPeople",
-    "summary": null,
+    "summary": "List organization members",
     "tag": "Projects",
     "tagCommand": "projects"
   },
@@ -50770,7 +50794,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/projects/{project_id}/invitations",
     "pathParams": [
       {
-        "description": "project_id for project collaboration.",
+        "description": "Project ID returned by listProjects or createProject.",
         "enum": null,
         "name": "project_id",
         "required": true,
@@ -50874,7 +50898,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ]
     },
     "sdkName": "listProjectInvitations",
-    "summary": null,
+    "summary": "List project invitations",
     "tag": "Projects",
     "tagCommand": "projects"
   },
@@ -50890,7 +50914,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [
       {
-        "description": "cursor for project collaboration.",
+        "description": "Continuation cursor from the previous page; omit for the first page.",
         "enum": null,
         "name": "cursor",
         "required": false,
@@ -50898,7 +50922,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       },
       {
         "default": 50,
-        "description": "limit for project collaboration.",
+        "description": "Maximum number of results to return; defaults to 50.",
         "enum": null,
         "maximum": 100,
         "minimum": 1,
@@ -51161,7 +51185,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ]
     },
     "sdkName": "listProjects",
-    "summary": null,
+    "summary": "List accessible projects",
     "tag": "Projects",
     "tagCommand": "projects"
   },
@@ -51176,14 +51200,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/projects/{project_id}/invitations/{invitation_id}",
     "pathParams": [
       {
-        "description": "project_id for project collaboration.",
+        "description": "Project ID returned by listProjects or createProject.",
         "enum": null,
         "name": "project_id",
         "required": true,
         "type": "string"
       },
       {
-        "description": "invitation_id for project collaboration.",
+        "description": "Invitation ID returned by an invitation list or creation.",
         "enum": null,
         "name": "invitation_id",
         "required": true,
@@ -51276,7 +51300,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ]
     },
     "sdkName": "revokeProjectInvitation",
-    "summary": null,
+    "summary": "Revoke a project invitation",
     "tag": "Projects",
     "tagCommand": "projects"
   },
@@ -51291,7 +51315,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/projects/{project_id}",
     "pathParams": [
       {
-        "description": "project_id for project collaboration.",
+        "description": "Project ID returned by listProjects or createProject.",
         "enum": null,
         "name": "project_id",
         "required": true,
@@ -51310,15 +51334,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "version": {
           "type": "integer",
           "exclusiveMinimum": 0,
-          "maximum": 9007199254740991
+          "maximum": 9007199254740991,
+          "description": "Current project version. Refresh the project before retrying a version conflict."
         },
         "name": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 60
+          "maxLength": 60,
+          "description": "Shared project name."
         },
         "description": {
           "default": "",
+          "description": "Shared project description; defaults to an empty string.",
           "type": "string",
           "maxLength": 4096
         },
@@ -51328,11 +51355,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ],
           "maxLength": 2048,
-          "default": null
+          "default": null,
+          "description": "Repository identity as owner/repo or an HTTPS URL without credentials, query parameters or fragments. Omit or use null for none; local checkout paths are not shared."
         },
         "color": {
           "type": "string",
-          "pattern": "^#[0-9a-fA-F]{6}$"
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "description": "Project display color as a six-digit hexadecimal value, including #."
         },
         "members": {
           "maxItems": 100,
@@ -51343,7 +51372,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "user_id": {
                 "type": "string",
                 "format": "uuid",
-                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "description": "Organization member to include in the project."
               },
               "recipient": {
                 "oneOf": [
@@ -51393,7 +51423,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                     ],
                     "additionalProperties": false
                   }
-                ]
+                ],
+                "description": "Where this teammate receives project mail: work_email, or agent with one of their own addresses. Preserve private_agent to keep an existing private choice without exposing its address."
               }
             },
             "required": [
@@ -51401,7 +51432,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "recipient"
             ],
             "additionalProperties": false
-          }
+          },
+          "description": "Complete list of organization teammates and their project email destinations. Use [] for none."
         },
         "agent_addresses": {
           "maxItems": 100,
@@ -51411,7 +51443,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "maxLength": 254,
             "format": "email",
             "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-          }
+          },
+          "description": "Available agent addresses to link to the project. On update, replaces only links the caller can see; unseen live links are preserved. Use [] for no visible links."
         }
       },
       "required": [
@@ -51651,7 +51684,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ]
     },
     "sdkName": "updateProject",
-    "summary": null,
+    "summary": "Update a shared project",
     "tag": "Projects",
     "tagCommand": "projects"
   },
@@ -68629,6 +68662,28 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ]
         },
+        "rules": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "description": "The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded."
+        },
         "created_at": {
           "type": "string"
         },
@@ -68773,6 +68828,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "last_error_code",
         "response_status",
         "response_body",
+        "rules",
         "created_at",
         "updated_at",
         "email",
@@ -69005,6 +69061,28 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ],
             "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise, in answers recorded since November 2026, the webhook URL's query string, its parameters, values long enough to be a credential and any userinfo are hidden wherever it repeats them, and the rest is as the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate its URL's credential."
           },
+          "rules": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "description": "The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded.",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "latest_attempt": {
             "type": "boolean",
             "description": "Whether this is the latest attempt of its delivery: the one recorded last, where a record of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an earlier attempt never changes: follow the latest one, or read attempts on any of them."
@@ -69040,6 +69118,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "last_error_code",
           "response_status",
           "response_body",
+          "rules",
           "latest_attempt",
           "retry_scheduled",
           "next_attempt_at"

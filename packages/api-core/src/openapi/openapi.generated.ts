@@ -35050,7 +35050,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "testEmailRule",
         "summary": "Test a rule against received mail",
-        "description": "Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version, as its author), rule_id with tree (that tree as the rule's next version, as its author, against its saved expectations; its author only), or a pending rule request by request_id (its rule as asked, as you, over your own mailboxes). It reads only mail its author can read and its scope covers. A rule you see only because it covers your own mailboxes runs as you, over only those. Without email_ids it tests the newest emails on the mail relay domains, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+        "description": "Runs a rule over received mail and reports what it would decide for each email (matched, near_miss, no_match, unclassified, skipped or not_found), with a summary of how each top-level condition and question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version, as its author), rule_id with tree (that tree as the rule's next version, as its author, against its saved expectations; its author only), or a pending rule request by request_id (its rule as asked, as you, over your own mailboxes; with tree, that tree as your edit of it, and changes against the rule as asked). It reads only mail its author can read and its scope covers. A rule you see only because it covers your own mailboxes runs as you, over only those. Without email_ids it tests the newest emails on the mail relay domains, at most 200 and none older than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
         "tags": [
           "Email Rules"
         ],
@@ -35110,7 +35110,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "400": {
-            "description": "validation_error: give one of tree (with kind), rule_id and request_id, or rule_id with tree; at most 200 email_ids (with the expected emails), 1 to 100 expected emails none in both lists (or only expect.samples, up to 20), and a tree that is valid for the column contract. english, evaluation_scope, scope_selection and kind go only with tree; with rule_id, a kind other than the rule's answers details.reason kind_mismatch. A saved rule's current version or a request's rule that no longer renders answers details.reason version_not_renderable; email_ids that with its saved expectations name over 200 emails, too_many_emails.",
+            "description": "validation_error: give one of tree (with kind), rule_id and request_id, or tree with rule_id or request_id; at most 200 email_ids (with the expected emails), 1 to 100 expected emails none in both lists (or only expect.samples, up to 20), and a tree that is valid for the column contract. english, evaluation_scope, scope_selection and kind go only with tree, and with request_id only english and kind grant; with rule_id, a kind other than the rule's answers details.reason kind_mismatch. A saved rule's current version or a request's rule that no longer renders answers details.reason version_not_renderable; email_ids that with its saved expectations name over 200 emails, too_many_emails.",
             "content": {
               "application/json": {
                 "schema": {
@@ -50599,6 +50599,7 @@ export const openapiDocument: Record<string, unknown> = {
     "/organization/invitations": {
       "get": {
         "operationId": "listOrganizationInvitations",
+        "summary": "List organization invitations",
         "tags": [
           "Organizations"
         ],
@@ -50610,10 +50611,11 @@ export const openapiDocument: Record<string, unknown> = {
         "parameters": [
           {
             "name": "cursor",
-            "description": "cursor for project collaboration.",
+            "description": "Continuation cursor from the previous page; omit for the first page.",
             "in": "query",
             "required": false,
             "schema": {
+              "description": "Continuation cursor from the previous page; omit for the first page.",
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
@@ -50621,11 +50623,12 @@ export const openapiDocument: Record<string, unknown> = {
           },
           {
             "name": "limit",
-            "description": "limit for project collaboration.",
+            "description": "Maximum number of results to return; defaults to 50.",
             "in": "query",
             "required": false,
             "schema": {
               "default": 50,
+              "description": "Maximum number of results to return; defaults to 50.",
               "type": "integer",
               "minimum": 1,
               "maximum": 100
@@ -50814,6 +50817,7 @@ export const openapiDocument: Record<string, unknown> = {
       },
       "post": {
         "operationId": "inviteOrganizationMember",
+        "summary": "Invite a person to the organization",
         "tags": [
           "Organizations"
         ],
@@ -51049,6 +51053,7 @@ export const openapiDocument: Record<string, unknown> = {
     "/organization/invitations/{invitation_id}": {
       "delete": {
         "operationId": "revokeOrganizationInvitation",
+        "summary": "Revoke an organization invitation",
         "tags": [
           "Organizations"
         ],
@@ -51060,13 +51065,14 @@ export const openapiDocument: Record<string, unknown> = {
         "parameters": [
           {
             "name": "invitation_id",
-            "description": "invitation_id for project collaboration.",
+            "description": "Invitation ID returned by an invitation list or creation.",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Invitation ID returned by an invitation list or creation."
             }
           }
         ],
@@ -51264,6 +51270,7 @@ export const openapiDocument: Record<string, unknown> = {
     "/organization/members": {
       "get": {
         "operationId": "listOrganizationPeople",
+        "summary": "List organization members",
         "tags": [
           "Projects"
         ],
@@ -51275,10 +51282,11 @@ export const openapiDocument: Record<string, unknown> = {
         "parameters": [
           {
             "name": "cursor",
-            "description": "cursor for project collaboration.",
+            "description": "Continuation cursor from the previous page; omit for the first page.",
             "in": "query",
             "required": false,
             "schema": {
+              "description": "Continuation cursor from the previous page; omit for the first page.",
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
@@ -51286,11 +51294,12 @@ export const openapiDocument: Record<string, unknown> = {
           },
           {
             "name": "limit",
-            "description": "limit for project collaboration.",
+            "description": "Maximum number of results to return; defaults to 50.",
             "in": "query",
             "required": false,
             "schema": {
               "default": 50,
+              "description": "Maximum number of results to return; defaults to 50.",
               "type": "integer",
               "minimum": 1,
               "maximum": 100
@@ -51298,10 +51307,11 @@ export const openapiDocument: Record<string, unknown> = {
           },
           {
             "name": "query",
-            "description": "query for project collaboration.",
+            "description": "Filter members by name or a work email the caller may see.",
             "in": "query",
             "required": false,
             "schema": {
+              "description": "Filter members by name or a work email the caller may see.",
               "type": "string",
               "maxLength": 100
             }
@@ -51494,6 +51504,7 @@ export const openapiDocument: Record<string, unknown> = {
     "/projects": {
       "get": {
         "operationId": "listProjects",
+        "summary": "List accessible projects",
         "tags": [
           "Projects"
         ],
@@ -51505,10 +51516,11 @@ export const openapiDocument: Record<string, unknown> = {
         "parameters": [
           {
             "name": "cursor",
-            "description": "cursor for project collaboration.",
+            "description": "Continuation cursor from the previous page; omit for the first page.",
             "in": "query",
             "required": false,
             "schema": {
+              "description": "Continuation cursor from the previous page; omit for the first page.",
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
@@ -51516,11 +51528,12 @@ export const openapiDocument: Record<string, unknown> = {
           },
           {
             "name": "limit",
-            "description": "limit for project collaboration.",
+            "description": "Maximum number of results to return; defaults to 50.",
             "in": "query",
             "required": false,
             "schema": {
               "default": 50,
+              "description": "Maximum number of results to return; defaults to 50.",
               "type": "integer",
               "minimum": 1,
               "maximum": 100
@@ -51719,6 +51732,7 @@ export const openapiDocument: Record<string, unknown> = {
       },
       "post": {
         "operationId": "createProject",
+        "summary": "Create a shared project",
         "tags": [
           "Projects"
         ],
@@ -51944,6 +51958,7 @@ export const openapiDocument: Record<string, unknown> = {
     "/projects/{project_id}": {
       "get": {
         "operationId": "getProject",
+        "summary": "Get a shared project",
         "tags": [
           "Projects"
         ],
@@ -51955,13 +51970,14 @@ export const openapiDocument: Record<string, unknown> = {
         "parameters": [
           {
             "name": "project_id",
-            "description": "project_id for project collaboration.",
+            "description": "Project ID returned by listProjects or createProject.",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Project ID returned by listProjects or createProject."
             }
           }
         ],
@@ -52157,6 +52173,7 @@ export const openapiDocument: Record<string, unknown> = {
       },
       "put": {
         "operationId": "updateProject",
+        "summary": "Update a shared project",
         "tags": [
           "Projects"
         ],
@@ -52168,13 +52185,14 @@ export const openapiDocument: Record<string, unknown> = {
         "parameters": [
           {
             "name": "project_id",
-            "description": "project_id for project collaboration.",
+            "description": "Project ID returned by listProjects or createProject.",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Project ID returned by listProjects or createProject."
             }
           }
         ],
@@ -52380,6 +52398,7 @@ export const openapiDocument: Record<string, unknown> = {
       },
       "delete": {
         "operationId": "deleteProject",
+        "summary": "Delete a shared project",
         "tags": [
           "Projects"
         ],
@@ -52391,24 +52410,26 @@ export const openapiDocument: Record<string, unknown> = {
         "parameters": [
           {
             "name": "project_id",
-            "description": "project_id for project collaboration.",
+            "description": "Project ID returned by listProjects or createProject.",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Project ID returned by listProjects or createProject."
             }
           },
           {
             "name": "version",
-            "description": "version for project collaboration.",
+            "description": "Current project version. Refresh the project before retrying a version conflict.",
             "in": "query",
             "required": true,
             "schema": {
               "type": "integer",
               "exclusiveMinimum": 0,
-              "maximum": 9007199254740991
+              "maximum": 9007199254740991,
+              "description": "Current project version. Refresh the project before retrying a version conflict."
             }
           }
         ],
@@ -52606,6 +52627,7 @@ export const openapiDocument: Record<string, unknown> = {
     "/projects/{project_id}/invitations": {
       "get": {
         "operationId": "listProjectInvitations",
+        "summary": "List project invitations",
         "tags": [
           "Projects"
         ],
@@ -52617,13 +52639,14 @@ export const openapiDocument: Record<string, unknown> = {
         "parameters": [
           {
             "name": "project_id",
-            "description": "project_id for project collaboration.",
+            "description": "Project ID returned by listProjects or createProject.",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Project ID returned by listProjects or createProject."
             }
           }
         ],
@@ -52819,6 +52842,7 @@ export const openapiDocument: Record<string, unknown> = {
       },
       "post": {
         "operationId": "inviteProjectMember",
+        "summary": "Invite a person to a project",
         "tags": [
           "Projects"
         ],
@@ -52830,13 +52854,14 @@ export const openapiDocument: Record<string, unknown> = {
         "parameters": [
           {
             "name": "project_id",
-            "description": "project_id for project collaboration.",
+            "description": "Project ID returned by listProjects or createProject.",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Project ID returned by listProjects or createProject."
             }
           },
           {
@@ -53075,6 +53100,7 @@ export const openapiDocument: Record<string, unknown> = {
     "/projects/{project_id}/invitations/{invitation_id}": {
       "delete": {
         "operationId": "revokeProjectInvitation",
+        "summary": "Revoke a project invitation",
         "tags": [
           "Projects"
         ],
@@ -53086,24 +53112,26 @@ export const openapiDocument: Record<string, unknown> = {
         "parameters": [
           {
             "name": "project_id",
-            "description": "project_id for project collaboration.",
+            "description": "Project ID returned by listProjects or createProject.",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Project ID returned by listProjects or createProject."
             }
           },
           {
             "name": "invitation_id",
-            "description": "invitation_id for project collaboration.",
+            "description": "Invitation ID returned by an invitation list or creation.",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Invitation ID returned by an invitation list or creation."
             }
           }
         ],
@@ -76873,6 +76901,28 @@ export const openapiDocument: Record<string, unknown> = {
             ],
             "description": "The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise, in answers recorded since November 2026, the webhook URL's query string, its parameters, values long enough to be a credential and any userinfo are hidden wherever it repeats them, and the rest is as the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate its URL's credential."
           },
+          "rules": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "description": "The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded.",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "latest_attempt": {
             "type": "boolean",
             "description": "Whether this is the latest attempt of its delivery: the one recorded last, where a record of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an earlier attempt never changes: follow the latest one, or read attempts on any of them."
@@ -76908,6 +76958,7 @@ export const openapiDocument: Record<string, unknown> = {
           "last_error_code",
           "response_status",
           "response_body",
+          "rules",
           "latest_attempt",
           "retry_scheduled",
           "next_attempt_at"
@@ -81681,27 +81732,35 @@ export const openapiDocument: Record<string, unknown> = {
       "EmailRuleVersionChanges": {
         "type": "object",
         "properties": {
+          "compared_to": {
+            "type": "string",
+            "enum": [
+              "version",
+              "requested"
+            ],
+            "description": "version: the rule's current version (rule_id). requested: the request's rule as asked (request_id)."
+          },
           "compared_to_version": {
+            "description": "Present exactly when compared_to is version: its number.",
             "type": "integer",
-            "exclusiveMinimum": 0,
-            "description": "The rule's current version, compared against."
+            "exclusiveMinimum": 0
           },
           "newly_matched": {
-            "description": "Emails this tree matches that the live version does not.",
+            "description": "Emails this tree matches that the one compared against does not.",
             "$ref": "#/components/schemas/EmailRuleChangedEmails"
           },
           "stops_matching": {
-            "description": "Emails the live version matches that this tree does not.",
+            "description": "Emails the one compared against matches that this tree does not.",
             "$ref": "#/components/schemas/EmailRuleChangedEmails"
           },
           "undecided": {
             "type": "integer",
             "minimum": 0,
-            "description": "Emails listed in results that either version could not decide (unclassified, skipped and not found included), in neither list."
+            "description": "Emails listed in results that either could not decide (unclassified, skipped and not found included), in neither list."
           }
         },
         "required": [
-          "compared_to_version",
+          "compared_to",
           "newly_matched",
           "stops_matching",
           "undecided"
@@ -81935,7 +81994,7 @@ export const openapiDocument: Record<string, unknown> = {
         "type": "object",
         "properties": {
           "tree": {
-            "description": "An unsaved rule tree, as the compile answer's rule gives it or written by hand. With rule_id: that tree as the rule's next version.",
+            "description": "An unsaved rule tree, as the compile answer's rule gives it or written by hand. With rule_id: that tree as the rule's next version. With request_id: that tree as an edit of the request's rule.",
             "$ref": "#/components/schemas/EmailRuleTreeInput"
           },
           "english": {
@@ -81967,7 +82026,7 @@ export const openapiDocument: Record<string, unknown> = {
             "format": "uuid"
           },
           "kind": {
-            "description": "Required with tree alone: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. With rule_id and tree, must be the rule's own.",
+            "description": "Required with tree alone: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. With rule_id and tree, must be the rule's own; with request_id and tree, grant.",
             "type": "string",
             "enum": [
               "grant",
@@ -82599,7 +82658,7 @@ export const openapiDocument: Record<string, unknown> = {
             ]
           },
           "changes": {
-            "description": "With rule_id and tree, when the rule has a current version: what this tree would change against it. For a do_not_share rule, newly withheld and no longer withheld.",
+            "description": "With rule_id and tree, when the rule has a current version: what this tree would change against it (for a do_not_share rule, newly withheld and no longer withheld). With request_id and a tree other than the one asked: what it would change against the rule as asked.",
             "$ref": "#/components/schemas/EmailRuleVersionChanges"
           }
         },
@@ -82785,7 +82844,7 @@ export const openapiDocument: Record<string, unknown> = {
         "type": "object",
         "properties": {
           "tree": {
-            "description": "An unsaved rule tree, as the compile answer's rule gives it or written by hand. With rule_id: that tree as the rule's next version.",
+            "description": "An unsaved rule tree, as the compile answer's rule gives it or written by hand. With rule_id: that tree as the rule's next version. With request_id: that tree as an edit of the request's rule.",
             "$ref": "#/components/schemas/EmailRuleTreeInput"
           },
           "english": {
@@ -82918,7 +82977,7 @@ export const openapiDocument: Record<string, unknown> = {
         "type": "object",
         "properties": {
           "tree": {
-            "description": "An unsaved rule tree, as the compile answer's rule gives it or written by hand. With rule_id: that tree as the rule's next version.",
+            "description": "An unsaved rule tree, as the compile answer's rule gives it or written by hand. With rule_id: that tree as the rule's next version. With request_id: that tree as an edit of the request's rule.",
             "$ref": "#/components/schemas/EmailRuleTreeInput"
           },
           "evaluation_scope": {
@@ -90074,6 +90133,28 @@ export const openapiDocument: Record<string, unknown> = {
               "null"
             ]
           },
+          "rules": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ]
+            },
+            "description": "The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded."
+          },
           "created_at": {
             "type": "string"
           },
@@ -90218,6 +90299,7 @@ export const openapiDocument: Record<string, unknown> = {
           "last_error_code",
           "response_status",
           "response_body",
+          "rules",
           "created_at",
           "updated_at",
           "email",
@@ -90599,13 +90681,16 @@ export const openapiDocument: Record<string, unknown> = {
           "request_id": {
             "type": "string",
             "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "x-primitive-retry-id": true,
+            "description": "Client-generated UUID for this operation. Reuse it with the same choices after an uncertain response; use a new UUID for a new operation."
           },
           "email": {
             "type": "string",
             "maxLength": 254,
             "format": "email",
-            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+            "description": "Email address of the person to invite."
           },
           "role": {
             "description": "The role the person joins with: member (the default), none for no access, admin, a role template key or a custom role id. Anything above member, and member where every member reads all of the organization's mail, needs a signed-in dashboard session holding roles:assign. owner and restricted are refused.",
@@ -91158,15 +91243,19 @@ export const openapiDocument: Record<string, unknown> = {
           "request_id": {
             "type": "string",
             "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "x-primitive-retry-id": true,
+            "description": "Client-generated UUID for this operation. Reuse it with the same choices after an uncertain response; use a new UUID for a new operation."
           },
           "name": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 60
+            "maxLength": 60,
+            "description": "Shared project name."
           },
           "description": {
             "default": "",
+            "description": "Shared project description; defaults to an empty string.",
             "type": "string",
             "maxLength": 4096
           },
@@ -91176,11 +91265,13 @@ export const openapiDocument: Record<string, unknown> = {
               "null"
             ],
             "maxLength": 2048,
-            "default": null
+            "default": null,
+            "description": "Repository identity as owner/repo or an HTTPS URL without credentials, query parameters or fragments. Omit or use null for none; local checkout paths are not shared."
           },
           "color": {
             "type": "string",
-            "pattern": "^#[0-9a-fA-F]{6}$"
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "description": "Project display color as a six-digit hexadecimal value, including #."
           },
           "members": {
             "maxItems": 100,
@@ -91191,7 +91282,8 @@ export const openapiDocument: Record<string, unknown> = {
                 "user_id": {
                   "type": "string",
                   "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "description": "Organization member to include in the project."
                 },
                 "recipient": {
                   "oneOf": [
@@ -91241,7 +91333,8 @@ export const openapiDocument: Record<string, unknown> = {
                       ],
                       "additionalProperties": false
                     }
-                  ]
+                  ],
+                  "description": "Where this teammate receives project mail: work_email, or agent with one of their own addresses. Preserve private_agent to keep an existing private choice without exposing its address."
                 }
               },
               "required": [
@@ -91249,7 +91342,8 @@ export const openapiDocument: Record<string, unknown> = {
                 "recipient"
               ],
               "additionalProperties": false
-            }
+            },
+            "description": "Complete list of organization teammates and their project email destinations. Use [] for none."
           },
           "agent_addresses": {
             "maxItems": 100,
@@ -91259,7 +91353,8 @@ export const openapiDocument: Record<string, unknown> = {
               "maxLength": 254,
               "format": "email",
               "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-            }
+            },
+            "description": "Available agent addresses to link to the project. On update, replaces only links the caller can see; unseen live links are preserved. Use [] for no visible links."
           }
         },
         "required": [
@@ -91504,15 +91599,18 @@ export const openapiDocument: Record<string, unknown> = {
           "version": {
             "type": "integer",
             "exclusiveMinimum": 0,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Current project version. Refresh the project before retrying a version conflict."
           },
           "name": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 60
+            "maxLength": 60,
+            "description": "Shared project name."
           },
           "description": {
             "default": "",
+            "description": "Shared project description; defaults to an empty string.",
             "type": "string",
             "maxLength": 4096
           },
@@ -91522,11 +91620,13 @@ export const openapiDocument: Record<string, unknown> = {
               "null"
             ],
             "maxLength": 2048,
-            "default": null
+            "default": null,
+            "description": "Repository identity as owner/repo or an HTTPS URL without credentials, query parameters or fragments. Omit or use null for none; local checkout paths are not shared."
           },
           "color": {
             "type": "string",
-            "pattern": "^#[0-9a-fA-F]{6}$"
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "description": "Project display color as a six-digit hexadecimal value, including #."
           },
           "members": {
             "maxItems": 100,
@@ -91537,7 +91637,8 @@ export const openapiDocument: Record<string, unknown> = {
                 "user_id": {
                   "type": "string",
                   "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "description": "Organization member to include in the project."
                 },
                 "recipient": {
                   "oneOf": [
@@ -91587,7 +91688,8 @@ export const openapiDocument: Record<string, unknown> = {
                       ],
                       "additionalProperties": false
                     }
-                  ]
+                  ],
+                  "description": "Where this teammate receives project mail: work_email, or agent with one of their own addresses. Preserve private_agent to keep an existing private choice without exposing its address."
                 }
               },
               "required": [
@@ -91595,7 +91697,8 @@ export const openapiDocument: Record<string, unknown> = {
                 "recipient"
               ],
               "additionalProperties": false
-            }
+            },
+            "description": "Complete list of organization teammates and their project email destinations. Use [] for none."
           },
           "agent_addresses": {
             "maxItems": 100,
@@ -91605,7 +91708,8 @@ export const openapiDocument: Record<string, unknown> = {
               "maxLength": 254,
               "format": "email",
               "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-            }
+            },
+            "description": "Available agent addresses to link to the project. On update, replaces only links the caller can see; unseen live links are preserved. Use [] for no visible links."
           }
         },
         "required": [
@@ -91724,13 +91828,16 @@ export const openapiDocument: Record<string, unknown> = {
           "request_id": {
             "type": "string",
             "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "x-primitive-retry-id": true,
+            "description": "Client-generated UUID for this operation. Reuse it with the same choices after an uncertain response; use a new UUID for a new operation."
           },
           "email": {
             "type": "string",
             "maxLength": 254,
             "format": "email",
-            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+            "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+            "description": "Email address of the person to invite."
           }
         },
         "required": [

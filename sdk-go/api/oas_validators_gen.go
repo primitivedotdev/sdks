@@ -26673,18 +26673,36 @@ func (s *EmailRuleVersionChanges) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
-		if err := (validate.Int{
-			MinSet:        true,
-			Min:           0,
-			MaxSet:        false,
-			Max:           0,
-			MinExclusive:  true,
-			MaxExclusive:  false,
-			MultipleOfSet: false,
-			MultipleOf:    0,
-			Pattern:       nil,
-		}).Validate(int64(s.ComparedToVersion)); err != nil {
-			return errors.Wrap(err, "int")
+		if err := s.ComparedTo.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "compared_to",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.ComparedToVersion.Get(); ok {
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           0,
+					MaxSet:        false,
+					Max:           0,
+					MinExclusive:  true,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -26740,6 +26758,18 @@ func (s *EmailRuleVersionChanges) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s EmailRuleVersionChangesComparedTo) Validate() error {
+	switch s {
+	case "version":
+		return nil
+	case "requested":
+		return nil
+	default:
+		// Added to the API after this client was generated.
+		return nil
+	}
 }
 
 func (s *EmailRuleVersionSQL) Validate() error {
@@ -86078,6 +86108,17 @@ func (s EmailRuleTreeInputVersion) validateKnown() error {
 func (s EmailRuleTreeVersion) validateKnown() error {
 	switch s {
 	case 1:
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s EmailRuleVersionChangesComparedTo) validateKnown() error {
+	switch s {
+	case "version":
+		return nil
+	case "requested":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)

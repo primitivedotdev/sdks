@@ -17393,7 +17393,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									switch method {
 									case "GET":
 										r.name = ListOrganizationInvitationsOperation
-										r.summary = ""
+										r.summary = "List organization invitations"
 										r.operationID = "listOrganizationInvitations"
 										r.operationGroup = ""
 										r.pathPattern = "/organization/invitations"
@@ -17402,7 +17402,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										return r, true
 									case "POST":
 										r.name = InviteOrganizationMemberOperation
-										r.summary = ""
+										r.summary = "Invite a person to the organization"
 										r.operationID = "inviteOrganizationMember"
 										r.operationGroup = ""
 										r.pathPattern = "/organization/invitations"
@@ -17436,7 +17436,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										switch method {
 										case "DELETE":
 											r.name = RevokeOrganizationInvitationOperation
-											r.summary = ""
+											r.summary = "Revoke an organization invitation"
 											r.operationID = "revokeOrganizationInvitation"
 											r.operationGroup = ""
 											r.pathPattern = "/organization/invitations/{invitation_id}"
@@ -17536,7 +17536,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									switch method {
 									case "GET":
 										r.name = ListOrganizationPeopleOperation
-										r.summary = ""
+										r.summary = "List organization members"
 										r.operationID = "listOrganizationPeople"
 										r.operationGroup = ""
 										r.pathPattern = "/organization/members"
@@ -17605,7 +17605,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						switch method {
 						case "GET":
 							r.name = ListProjectsOperation
-							r.summary = ""
+							r.summary = "List accessible projects"
 							r.operationID = "listProjects"
 							r.operationGroup = ""
 							r.pathPattern = "/projects"
@@ -17614,7 +17614,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							return r, true
 						case "POST":
 							r.name = CreateProjectOperation
-							r.summary = ""
+							r.summary = "Create a shared project"
 							r.operationID = "createProject"
 							r.operationGroup = ""
 							r.pathPattern = "/projects"
@@ -17647,7 +17647,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							switch method {
 							case "DELETE":
 								r.name = DeleteProjectOperation
-								r.summary = ""
+								r.summary = "Delete a shared project"
 								r.operationID = "deleteProject"
 								r.operationGroup = ""
 								r.pathPattern = "/projects/{project_id}"
@@ -17656,7 +17656,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								return r, true
 							case "GET":
 								r.name = GetProjectOperation
-								r.summary = ""
+								r.summary = "Get a shared project"
 								r.operationID = "getProject"
 								r.operationGroup = ""
 								r.pathPattern = "/projects/{project_id}"
@@ -17665,7 +17665,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								return r, true
 							case "PUT":
 								r.name = UpdateProjectOperation
-								r.summary = ""
+								r.summary = "Update a shared project"
 								r.operationID = "updateProject"
 								r.operationGroup = ""
 								r.pathPattern = "/projects/{project_id}"
@@ -17689,7 +17689,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								switch method {
 								case "GET":
 									r.name = ListProjectInvitationsOperation
-									r.summary = ""
+									r.summary = "List project invitations"
 									r.operationID = "listProjectInvitations"
 									r.operationGroup = ""
 									r.pathPattern = "/projects/{project_id}/invitations"
@@ -17698,7 +17698,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									return r, true
 								case "POST":
 									r.name = InviteProjectMemberOperation
-									r.summary = ""
+									r.summary = "Invite a person to a project"
 									r.operationID = "inviteProjectMember"
 									r.operationGroup = ""
 									r.pathPattern = "/projects/{project_id}/invitations"
@@ -17732,7 +17732,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									switch method {
 									case "DELETE":
 										r.name = RevokeProjectInvitationOperation
-										r.summary = ""
+										r.summary = "Revoke a project invitation"
 										r.operationID = "revokeProjectInvitation"
 										r.operationGroup = ""
 										r.pathPattern = "/projects/{project_id}/invitations/{invitation_id}"

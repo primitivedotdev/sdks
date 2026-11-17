@@ -113,11 +113,13 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetProjectResponse200]:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Get a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -145,11 +147,13 @@ def sync(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetProjectResponse200 | None:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Get a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -172,11 +176,13 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetProjectResponse200]:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Get a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -204,11 +210,13 @@ async def asyncio(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetProjectResponse200 | None:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Get a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

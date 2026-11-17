@@ -67687,6 +67687,18 @@ func (s *DeliverySummary) encodeFields(e *jx.Encoder) {
 		s.ResponseBody.Encode(e)
 	}
 	{
+		e.FieldStart("rules")
+		if s.Rules == nil {
+			e.Null()
+		} else {
+			e.ArrStart()
+			for _, elem := range s.Rules {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
 		e.FieldStart("latest_attempt")
 		e.Bool(s.LatestAttempt)
 	}
@@ -67700,7 +67712,7 @@ func (s *DeliverySummary) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfDeliverySummary = [20]string{
+var jsonFieldsNameOfDeliverySummary = [21]string{
 	0:  "id",
 	1:  "email_id",
 	2:  "org_id",
@@ -67718,9 +67730,10 @@ var jsonFieldsNameOfDeliverySummary = [20]string{
 	14: "last_error_code",
 	15: "response_status",
 	16: "response_body",
-	17: "latest_attempt",
-	18: "retry_scheduled",
-	19: "next_attempt_at",
+	17: "rules",
+	18: "latest_attempt",
+	19: "retry_scheduled",
+	20: "next_attempt_at",
 }
 
 // Decode decodes DeliverySummary from json.
@@ -67916,8 +67929,33 @@ func (s *DeliverySummary) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"response_body\"")
 			}
-		case "latest_attempt":
+		case "rules":
 			requiredBitSet[2] |= 1 << 1
+			if err := func() error {
+				switch tt := d.Next(); tt {
+				case jx.Null:
+					if err := d.Skip(); err != nil {
+						return err
+					}
+				default:
+					s.Rules = make([]DeliverySummaryRulesItem, 0)
+					if err := d.Arr(func(d *jx.Decoder) error {
+						var elem DeliverySummaryRulesItem
+						if err := elem.Decode(d); err != nil {
+							return err
+						}
+						s.Rules = append(s.Rules, elem)
+						return nil
+					}); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rules\"")
+			}
+		case "latest_attempt":
+			requiredBitSet[2] |= 1 << 2
 			if err := func() error {
 				v, err := d.Bool()
 				s.LatestAttempt = bool(v)
@@ -67929,7 +67967,7 @@ func (s *DeliverySummary) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"latest_attempt\"")
 			}
 		case "retry_scheduled":
-			requiredBitSet[2] |= 1 << 2
+			requiredBitSet[2] |= 1 << 3
 			if err := func() error {
 				if err := s.RetryScheduled.Decode(d); err != nil {
 					return err
@@ -67939,7 +67977,7 @@ func (s *DeliverySummary) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"retry_scheduled\"")
 			}
 		case "next_attempt_at":
-			requiredBitSet[2] |= 1 << 3
+			requiredBitSet[2] |= 1 << 4
 			if err := func() error {
 				if err := s.NextAttemptAt.Decode(d, json.DecodeDateTime); err != nil {
 					return err
@@ -67960,7 +67998,7 @@ func (s *DeliverySummary) Decode(d *jx.Decoder) error {
 	for i, mask := range [3]uint8{
 		0b01111111,
 		0b11110110,
-		0b00001111,
+		0b00011111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -68132,6 +68170,119 @@ func (s *DeliverySummaryEmail) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *DeliverySummaryEmail) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *DeliverySummaryRulesItem) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *DeliverySummaryRulesItem) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("id")
+		e.Str(s.ID)
+	}
+	{
+		e.FieldStart("name")
+		e.Str(s.Name)
+	}
+}
+
+var jsonFieldsNameOfDeliverySummaryRulesItem = [2]string{
+	0: "id",
+	1: "name",
+}
+
+// Decode decodes DeliverySummaryRulesItem from json.
+func (s *DeliverySummaryRulesItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DeliverySummaryRulesItem to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.ID = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "name":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Name = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"name\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode DeliverySummaryRulesItem")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfDeliverySummaryRulesItem) {
+					name = jsonFieldsNameOfDeliverySummaryRulesItem[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DeliverySummaryRulesItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DeliverySummaryRulesItem) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -92627,8 +92778,14 @@ func (s *EmailRuleVersionChanges) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *EmailRuleVersionChanges) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("compared_to_version")
-		e.Int(s.ComparedToVersion)
+		e.FieldStart("compared_to")
+		s.ComparedTo.Encode(e)
+	}
+	{
+		if s.ComparedToVersion.Set {
+			e.FieldStart("compared_to_version")
+			s.ComparedToVersion.Encode(e)
+		}
 	}
 	{
 		e.FieldStart("newly_matched")
@@ -92644,11 +92801,12 @@ func (s *EmailRuleVersionChanges) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailRuleVersionChanges = [4]string{
-	0: "compared_to_version",
-	1: "newly_matched",
-	2: "stops_matching",
-	3: "undecided",
+var jsonFieldsNameOfEmailRuleVersionChanges = [5]string{
+	0: "compared_to",
+	1: "compared_to_version",
+	2: "newly_matched",
+	3: "stops_matching",
+	4: "undecided",
 }
 
 // Decode decodes EmailRuleVersionChanges from json.
@@ -92660,12 +92818,20 @@ func (s *EmailRuleVersionChanges) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "compared_to_version":
+		case "compared_to":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				v, err := d.Int()
-				s.ComparedToVersion = int(v)
-				if err != nil {
+				if err := s.ComparedTo.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"compared_to\"")
+			}
+		case "compared_to_version":
+			if err := func() error {
+				s.ComparedToVersion.Reset()
+				if err := s.ComparedToVersion.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -92673,7 +92839,7 @@ func (s *EmailRuleVersionChanges) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"compared_to_version\"")
 			}
 		case "newly_matched":
-			requiredBitSet[0] |= 1 << 1
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				if err := s.NewlyMatched.Decode(d); err != nil {
 					return err
@@ -92683,7 +92849,7 @@ func (s *EmailRuleVersionChanges) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"newly_matched\"")
 			}
 		case "stops_matching":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				if err := s.StopsMatching.Decode(d); err != nil {
 					return err
@@ -92693,7 +92859,7 @@ func (s *EmailRuleVersionChanges) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"stops_matching\"")
 			}
 		case "undecided":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				v, err := d.Int()
 				s.Undecided = int(v)
@@ -92714,7 +92880,7 @@ func (s *EmailRuleVersionChanges) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00001111,
+		0b00011101,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -92756,6 +92922,46 @@ func (s *EmailRuleVersionChanges) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *EmailRuleVersionChanges) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailRuleVersionChangesComparedTo as json.
+func (s EmailRuleVersionChangesComparedTo) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailRuleVersionChangesComparedTo from json.
+func (s *EmailRuleVersionChangesComparedTo) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailRuleVersionChangesComparedTo to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailRuleVersionChangesComparedTo(v) {
+	case EmailRuleVersionChangesComparedToVersion:
+		*s = EmailRuleVersionChangesComparedToVersion
+	case EmailRuleVersionChangesComparedToRequested:
+		*s = EmailRuleVersionChangesComparedToRequested
+	default:
+		*s = EmailRuleVersionChangesComparedTo(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailRuleVersionChangesComparedTo) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailRuleVersionChangesComparedTo) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -117027,6 +117233,18 @@ func (s *GetDeliveryResult) encodeFields(e *jx.Encoder) {
 		s.ResponseBody.Encode(e)
 	}
 	{
+		e.FieldStart("rules")
+		if s.Rules == nil {
+			e.Null()
+		} else {
+			e.ArrStart()
+			for _, elem := range s.Rules {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
 		e.FieldStart("created_at")
 		e.Str(s.CreatedAt)
 	}
@@ -117060,7 +117278,7 @@ func (s *GetDeliveryResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfGetDeliveryResult = [21]string{
+var jsonFieldsNameOfGetDeliveryResult = [22]string{
 	0:  "id",
 	1:  "email_id",
 	2:  "event_type",
@@ -117075,13 +117293,14 @@ var jsonFieldsNameOfGetDeliveryResult = [21]string{
 	11: "last_error_code",
 	12: "response_status",
 	13: "response_body",
-	14: "created_at",
-	15: "updated_at",
-	16: "email",
-	17: "latest_attempt",
-	18: "retry_scheduled",
-	19: "next_attempt_at",
-	20: "attempts",
+	14: "rules",
+	15: "created_at",
+	16: "updated_at",
+	17: "email",
+	18: "latest_attempt",
+	19: "retry_scheduled",
+	20: "next_attempt_at",
+	21: "attempts",
 }
 
 // Decode decodes GetDeliveryResult from json.
@@ -117245,8 +117464,33 @@ func (s *GetDeliveryResult) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"response_body\"")
 			}
-		case "created_at":
+		case "rules":
 			requiredBitSet[1] |= 1 << 6
+			if err := func() error {
+				switch tt := d.Next(); tt {
+				case jx.Null:
+					if err := d.Skip(); err != nil {
+						return err
+					}
+				default:
+					s.Rules = make([]GetDeliveryResultRulesItem, 0)
+					if err := d.Arr(func(d *jx.Decoder) error {
+						var elem GetDeliveryResultRulesItem
+						if err := elem.Decode(d); err != nil {
+							return err
+						}
+						s.Rules = append(s.Rules, elem)
+						return nil
+					}); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rules\"")
+			}
+		case "created_at":
+			requiredBitSet[1] |= 1 << 7
 			if err := func() error {
 				v, err := d.Str()
 				s.CreatedAt = string(v)
@@ -117258,7 +117502,7 @@ func (s *GetDeliveryResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"created_at\"")
 			}
 		case "updated_at":
-			requiredBitSet[1] |= 1 << 7
+			requiredBitSet[2] |= 1 << 0
 			if err := func() error {
 				v, err := d.Str()
 				s.UpdatedAt = string(v)
@@ -117270,7 +117514,7 @@ func (s *GetDeliveryResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"updated_at\"")
 			}
 		case "email":
-			requiredBitSet[2] |= 1 << 0
+			requiredBitSet[2] |= 1 << 1
 			if err := func() error {
 				if err := s.Email.Decode(d); err != nil {
 					return err
@@ -117280,7 +117524,7 @@ func (s *GetDeliveryResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"email\"")
 			}
 		case "latest_attempt":
-			requiredBitSet[2] |= 1 << 1
+			requiredBitSet[2] |= 1 << 2
 			if err := func() error {
 				v, err := d.Bool()
 				s.LatestAttempt = bool(v)
@@ -117292,7 +117536,7 @@ func (s *GetDeliveryResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"latest_attempt\"")
 			}
 		case "retry_scheduled":
-			requiredBitSet[2] |= 1 << 2
+			requiredBitSet[2] |= 1 << 3
 			if err := func() error {
 				if err := s.RetryScheduled.Decode(d); err != nil {
 					return err
@@ -117302,7 +117546,7 @@ func (s *GetDeliveryResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"retry_scheduled\"")
 			}
 		case "next_attempt_at":
-			requiredBitSet[2] |= 1 << 3
+			requiredBitSet[2] |= 1 << 4
 			if err := func() error {
 				if err := s.NextAttemptAt.Decode(d); err != nil {
 					return err
@@ -117312,7 +117556,7 @@ func (s *GetDeliveryResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"next_attempt_at\"")
 			}
 		case "attempts":
-			requiredBitSet[2] |= 1 << 4
+			requiredBitSet[2] |= 1 << 5
 			if err := func() error {
 				s.Attempts = make([]GetDeliveryResultAttemptsItem, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -117341,7 +117585,7 @@ func (s *GetDeliveryResult) Decode(d *jx.Decoder) error {
 	for i, mask := range [3]uint8{
 		0b11111111,
 		0b11111111,
-		0b00011111,
+		0b00111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -117732,6 +117976,119 @@ func (s *GetDeliveryResultEmail) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *GetDeliveryResultEmail) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *GetDeliveryResultRulesItem) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *GetDeliveryResultRulesItem) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("id")
+		e.Str(s.ID)
+	}
+	{
+		e.FieldStart("name")
+		e.Str(s.Name)
+	}
+}
+
+var jsonFieldsNameOfGetDeliveryResultRulesItem = [2]string{
+	0: "id",
+	1: "name",
+}
+
+// Decode decodes GetDeliveryResultRulesItem from json.
+func (s *GetDeliveryResultRulesItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetDeliveryResultRulesItem to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.ID = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "name":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Name = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"name\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode GetDeliveryResultRulesItem")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfGetDeliveryResultRulesItem) {
+					name = jsonFieldsNameOfGetDeliveryResultRulesItem[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetDeliveryResultRulesItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetDeliveryResultRulesItem) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

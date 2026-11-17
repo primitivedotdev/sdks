@@ -7778,9 +7778,9 @@ func decodeDeleteOrgSecretParams(args [1]string, argsEscaped bool, r *http.Reque
 
 // DeleteProjectParams is parameters of deleteProject operation.
 type DeleteProjectParams struct {
-	// Project_id for project collaboration.
+	// Project ID returned by listProjects or createProject.
 	ProjectID uuid.UUID
-	// Version for project collaboration.
+	// Current project version. Refresh the project before retrying a version conflict.
 	Version int
 }
 
@@ -13875,7 +13875,7 @@ func decodeGetOrgFunctionInvocationSeriesParams(args [0]string, argsEscaped bool
 
 // GetProjectParams is parameters of getProject operation.
 type GetProjectParams struct {
-	// Project_id for project collaboration.
+	// Project ID returned by listProjects or createProject.
 	ProjectID uuid.UUID
 }
 
@@ -15483,7 +15483,7 @@ func decodeInviteOrganizationMemberParams(args [0]string, argsEscaped bool, r *h
 
 // InviteProjectMemberParams is parameters of inviteProjectMember operation.
 type InviteProjectMemberParams struct {
-	// Project_id for project collaboration.
+	// Project ID returned by listProjects or createProject.
 	ProjectID uuid.UUID
 	// A single-use step-up token of purpose `invitations.create` (Invite a person to the organization or
 	// a project), valid 5 minutes. When this operation answers 403 `step_up_required`, the person
@@ -28318,9 +28318,9 @@ func decodeListOAuthGrantsParams(args [0]string, argsEscaped bool, r *http.Reque
 
 // ListOrganizationInvitationsParams is parameters of listOrganizationInvitations operation.
 type ListOrganizationInvitationsParams struct {
-	// Cursor for project collaboration.
+	// Continuation cursor from the previous page; omit for the first page.
 	Cursor OptUUID `json:",omitempty,omitzero"`
-	// Limit for project collaboration.
+	// Maximum number of results to return; defaults to 50.
 	Limit OptInt `json:",omitempty,omitzero"`
 }
 
@@ -28465,11 +28465,11 @@ func decodeListOrganizationInvitationsParams(args [0]string, argsEscaped bool, r
 
 // ListOrganizationPeopleParams is parameters of listOrganizationPeople operation.
 type ListOrganizationPeopleParams struct {
-	// Cursor for project collaboration.
+	// Continuation cursor from the previous page; omit for the first page.
 	Cursor OptUUID `json:",omitempty,omitzero"`
-	// Limit for project collaboration.
+	// Maximum number of results to return; defaults to 50.
 	Limit OptInt `json:",omitempty,omitzero"`
-	// Query for project collaboration.
+	// Filter members by name or a work email the caller may see.
 	Query OptString `json:",omitempty,omitzero"`
 }
 
@@ -28893,7 +28893,7 @@ func decodeListOwnedItemsParams(args [1]string, argsEscaped bool, r *http.Reques
 
 // ListProjectInvitationsParams is parameters of listProjectInvitations operation.
 type ListProjectInvitationsParams struct {
-	// Project_id for project collaboration.
+	// Project ID returned by listProjects or createProject.
 	ProjectID uuid.UUID
 }
 
@@ -28959,9 +28959,9 @@ func decodeListProjectInvitationsParams(args [1]string, argsEscaped bool, r *htt
 
 // ListProjectsParams is parameters of listProjects operation.
 type ListProjectsParams struct {
-	// Cursor for project collaboration.
+	// Continuation cursor from the previous page; omit for the first page.
 	Cursor OptUUID `json:",omitempty,omitzero"`
-	// Limit for project collaboration.
+	// Maximum number of results to return; defaults to 50.
 	Limit OptInt `json:",omitempty,omitzero"`
 }
 
@@ -35847,7 +35847,7 @@ func decodeRevokeOAuthGrantParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // RevokeOrganizationInvitationParams is parameters of revokeOrganizationInvitation operation.
 type RevokeOrganizationInvitationParams struct {
-	// Invitation_id for project collaboration.
+	// Invitation ID returned by an invitation list or creation.
 	InvitationID uuid.UUID
 }
 
@@ -35913,9 +35913,9 @@ func decodeRevokeOrganizationInvitationParams(args [1]string, argsEscaped bool, 
 
 // RevokeProjectInvitationParams is parameters of revokeProjectInvitation operation.
 type RevokeProjectInvitationParams struct {
-	// Project_id for project collaboration.
+	// Project ID returned by listProjects or createProject.
 	ProjectID uuid.UUID
-	// Invitation_id for project collaboration.
+	// Invitation ID returned by an invitation list or creation.
 	InvitationID uuid.UUID
 }
 
@@ -44465,7 +44465,7 @@ func decodeUpdateOrganizationLogoParams(args [0]string, argsEscaped bool, r *htt
 
 // UpdateProjectParams is parameters of updateProject operation.
 type UpdateProjectParams struct {
-	// Project_id for project collaboration.
+	// Project ID returned by listProjects or createProject.
 	ProjectID uuid.UUID
 }
 

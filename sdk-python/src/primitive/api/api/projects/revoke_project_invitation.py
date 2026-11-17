@@ -122,12 +122,14 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | RevokeProjectInvitationResponse200]:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Revoke a project invitation
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
-        invitation_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
+        invitation_id (UUID): Invitation ID returned by an invitation list or creation.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -157,12 +159,14 @@ def sync(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | RevokeProjectInvitationResponse200 | None:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Revoke a project invitation
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
-        invitation_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
+        invitation_id (UUID): Invitation ID returned by an invitation list or creation.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -187,12 +191,14 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | RevokeProjectInvitationResponse200]:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Revoke a project invitation
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
-        invitation_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
+        invitation_id (UUID): Invitation ID returned by an invitation list or creation.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -222,12 +228,14 @@ async def asyncio(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | RevokeProjectInvitationResponse200 | None:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Revoke a project invitation
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
-        invitation_id (UUID):
+        project_id (UUID): Project ID returned by listProjects or createProject.
+        invitation_id (UUID): Invitation ID returned by an invitation list or creation.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

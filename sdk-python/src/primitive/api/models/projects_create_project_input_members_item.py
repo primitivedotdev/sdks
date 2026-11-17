@@ -26,8 +26,10 @@ T = TypeVar("T", bound="ProjectsCreateProjectInputMembersItem")
 class ProjectsCreateProjectInputMembersItem:
     """ 
         Attributes:
-            user_id (UUID):
-            recipient (ProjectsCreateProjectInputMembersItemRecipient):
+            user_id (UUID): Organization member to include in the project.
+            recipient (ProjectsCreateProjectInputMembersItemRecipient): Where this teammate receives project mail:
+                work_email, or agent with one of their own addresses. Preserve private_agent to keep an existing private choice
+                without exposing its address.
      """
 
     user_id: UUID

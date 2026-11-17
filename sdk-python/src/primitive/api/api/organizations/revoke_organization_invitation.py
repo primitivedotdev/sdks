@@ -113,13 +113,15 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | RevokeOrganizationInvitationResponse200]:
-    """  Requires a current human organization owner or administrator. Machine credentials are refused.
+    """ Revoke an organization invitation
+
+     Requires a current human organization owner or administrator. Machine credentials are refused.
     Invitations grant the chosen role, Member by default, only after verified acceptance through the
     sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
     accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
 
     Args:
-        invitation_id (UUID):
+        invitation_id (UUID): Invitation ID returned by an invitation list or creation.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -147,13 +149,15 @@ def sync(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | RevokeOrganizationInvitationResponse200 | None:
-    """  Requires a current human organization owner or administrator. Machine credentials are refused.
+    """ Revoke an organization invitation
+
+     Requires a current human organization owner or administrator. Machine credentials are refused.
     Invitations grant the chosen role, Member by default, only after verified acceptance through the
     sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
     accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
 
     Args:
-        invitation_id (UUID):
+        invitation_id (UUID): Invitation ID returned by an invitation list or creation.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -176,13 +180,15 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | RevokeOrganizationInvitationResponse200]:
-    """  Requires a current human organization owner or administrator. Machine credentials are refused.
+    """ Revoke an organization invitation
+
+     Requires a current human organization owner or administrator. Machine credentials are refused.
     Invitations grant the chosen role, Member by default, only after verified acceptance through the
     sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
     accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
 
     Args:
-        invitation_id (UUID):
+        invitation_id (UUID): Invitation ID returned by an invitation list or creation.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -210,13 +216,15 @@ async def asyncio(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | RevokeOrganizationInvitationResponse200 | None:
-    """  Requires a current human organization owner or administrator. Machine credentials are refused.
+    """ Revoke an organization invitation
+
+     Requires a current human organization owner or administrator. Machine credentials are refused.
     Invitations grant the chosen role, Member by default, only after verified acceptance through the
     sign-in or sign-up flow. Other organization memberships and project access are unchanged. Delivery
     accepted means submitted, not inbox delivery. Reuse request_id after an uncertain response.
 
     Args:
-        invitation_id (UUID):
+        invitation_id (UUID): Invitation ID returned by an invitation list or creation.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
