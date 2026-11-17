@@ -217,6 +217,10 @@ export function emptyRuleListHint(all: boolean): string {
     : "(no results) No rules you can see match. Owners and admins can list every rule in the organization with --all.";
 }
 
+/** The API's page cap and default page size on list-email-rules. */
+const RULE_LIST_PAGE_MAX = 100;
+const RULE_LIST_DEFAULT_LIMIT = 50;
+
 export const EMAIL_RULE_LISTING_EXTENSIONS: Record<string, OperationExtension> =
   {
     listEmailRules: {
@@ -226,7 +230,14 @@ export const EMAIL_RULE_LISTING_EXTENSIONS: Record<string, OperationExtension> =
         const lines = ruleListLines(data, flags.all === true);
         // A page filtered by mailbox may hold fewer rules than --limit while
         // more remain; say so rather than let it read as the end.
-        const limit = typeof flags.limit === "number" ? flags.limit : undefined;
+        // Only for one page: a --limit fetched in several pages has its own
+        // note when it stops short.
+        const limit =
+          typeof flags.limit === "number" && flags.limit <= RULE_LIST_PAGE_MAX
+            ? flags.limit
+            : typeof flags.limit === "number"
+              ? undefined
+              : RULE_LIST_DEFAULT_LIMIT;
         const cursor = isRecord(meta) ? meta.cursor : undefined;
         if (
           typeof flags.mailbox === "string" &&

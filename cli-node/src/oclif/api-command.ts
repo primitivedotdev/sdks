@@ -1460,14 +1460,15 @@ async function applyEventTypesFlag(params: {
 }
 
 /**
- * A webhook's stored URL, read so an update that sets request headers can
- * send it unchanged. Refused (exit 2) when it cannot be read, or the endpoint
- * is not a webhook, so headers are never sent without the URL they are for.
+ * A webhook's stored URL and whether it is on, read so an update that sets
+ * request headers can send the URL unchanged. Refused when it cannot be read,
+ * or the endpoint is not a webhook, so headers are never sent without the
+ * URL they are for.
  */
-async function currentWebhookUrl(
+async function currentWebhook(
   client: Parameters<typeof operations.getEndpoint>[0]["client"],
   id: string | undefined,
-): Promise<string> {
+): Promise<{ url: string; enabled: unknown }> {
   const refused = (why: string) =>
     cliError(
       `${why} Setting request headers needs the webhook's URL in the same request: pass it with --url.`,
@@ -1478,16 +1479,25 @@ async function currentWebhookUrl(
     path: { id },
     responseStyle: "fields",
   });
-  if (read.error) throw refused("Could not read the endpoint's current URL.");
-  const endpoint = (read.data as { data?: { kind?: unknown; url?: unknown } })
-    ?.data;
+  if (read.error) {
+    const code = extractErrorCode(extractErrorPayload(read.error));
+    if (code === "not_found" || read.response?.status === 404)
+      throw new Errors.CLIError(
+        `No endpoint ${id} was found, so nothing was changed. List endpoints with \`primitive endpoints list\`.`,
+        { exit: 1 },
+      );
+    throw refused("Could not read the endpoint's current URL.");
+  }
+  const endpoint = (
+    read.data as { data?: { kind?: unknown; url?: unknown; enabled?: unknown } }
+  )?.data;
   if (endpoint?.kind !== undefined && endpoint.kind !== "http")
     throw cliError(
       "Request headers are only for webhooks; this endpoint is not one.",
     );
   if (typeof endpoint?.url !== "string" || endpoint.url === "")
     throw refused("The endpoint has no URL to send.");
-  return endpoint.url;
+  return { url: endpoint.url, enabled: endpoint.enabled };
 }
 
 function collectValues(
@@ -2087,13 +2097,20 @@ export function createOperationCommand(
 
         // The API takes request headers on an update only with the URL in
         // the same request: without --url, send the webhook's current one.
+        // Giving a URL turns back on a webhook that was turned off, so a
+        // turned-off one is kept off unless the request says otherwise.
         if (operation.sdkName === "updateEndpoint" && headersNeedUrl(body)) {
+          const current = await currentWebhook(
+            apiClient.client,
+            typeof parsedFlags.id === "string" ? parsedFlags.id : undefined,
+          );
+          const given = body as Record<string, unknown>;
           body = {
-            ...(body as Record<string, unknown>),
-            url: await currentWebhookUrl(
-              apiClient.client,
-              typeof parsedFlags.id === "string" ? parsedFlags.id : undefined,
-            ),
+            ...given,
+            url: current.url,
+            ...(current.enabled === false && given.enabled === undefined
+              ? { enabled: false }
+              : {}),
           };
         }
 
@@ -2494,7 +2511,10 @@ export function createOperationCommand(
                       : await readCallerMailFor(auth, apiClient.client),
                 })
               : operation.sdkName === "listEmailRules"
-                ? emptyRuleListHint(query.all === true)
+                ? // A page filtered by mailbox can be empty with more to read.
+                  more
+                  ? undefined
+                  : emptyRuleListHint(query.all === true)
                 : (emptyDeliveriesHint(operation.sdkName, query) ??
                   EMPTY_RESULT_HINTS[operation.sdkName]);
           if (hint && jsonOutput) summary.push(hint);

@@ -317,4 +317,22 @@ describe("email-rules list-email-rules", () => {
     const printed = stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
     expect(printed).toContain("Only owners and admins can list every rule.");
   });
+
+  it("prints no empty-list note for an empty page with more to read", async () => {
+    fixture({
+      body: {
+        success: true,
+        data: [],
+        meta: { limit: 50, cursor: "next-page" },
+      },
+    });
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const stderr = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+    await command("listEmailRules").run(["--mailbox", "ops@x.test"], { root });
+    const printed = stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
+    expect(printed).not.toContain("(no results)");
+    expect(printed).toContain("Scanned part of the rules");
+  });
 });

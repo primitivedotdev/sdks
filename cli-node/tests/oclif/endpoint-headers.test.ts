@@ -266,8 +266,8 @@ describe("endpoints create/update --header", () => {
 
   it("refuses with exit 2 when the URL cannot be read, and sends nothing", async () => {
     const calls = fixture({
-      body: { success: false, error: { code: "not_found", message: "x" } },
-      status: 404,
+      body: { success: false, error: { code: "internal_error", message: "x" } },
+      status: 500,
     });
     await expect(
       command("updateEndpoint").run(
@@ -291,5 +291,65 @@ describe("endpoints create/update --header", () => {
       }),
     ).rejects.toThrow(/only for webhooks/);
     expect(calls).toHaveLength(1);
+  });
+
+  it("refuses --clear-headers with --header without printing the value", async () => {
+    const calls = fixture();
+    let thrown: unknown;
+    try {
+      await command("updateEndpoint").run(
+        [
+          "--id",
+          ENDPOINT_ID,
+          "--clear-headers",
+          "--header",
+          `Authorization: Bearer ${SECRET}`,
+        ],
+        { root },
+      );
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toMatchObject({ oclif: { exit: 2 } });
+    expect(String((thrown as Error).message)).toMatch(
+      /cannot go with --header/,
+    );
+    expect(String((thrown as Error).message)).not.toContain(SECRET);
+    expect(calls).toEqual([]);
+  });
+
+  it("keeps a turned-off webhook off when it sends the URL for headers", async () => {
+    const calls = fixture(
+      { body: { success: true, data: endpointRow({ enabled: false }) } },
+      { body: { success: true, data: endpointRow({ enabled: false }) } },
+    );
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    await command("updateEndpoint").run(
+      ["--id", ENDPOINT_ID, "--header", "A: 1"],
+      { root },
+    );
+    expect(calls[1]?.body).toEqual({
+      url: URL_STORED,
+      enabled: false,
+      headers: [{ name: "A", value: "1" }],
+    });
+  });
+
+  it("says the endpoint was not found, exit 1, on a 404 read", async () => {
+    const calls = fixture({
+      body: { success: false, error: { code: "not_found", message: "x" } },
+      status: 404,
+    });
+    await expect(
+      command("updateEndpoint").run(
+        ["--id", ENDPOINT_ID, "--header", `A: ${SECRET}`],
+        { root },
+      ),
+    ).rejects.toMatchObject({
+      oclif: { exit: 1 },
+      message: expect.stringMatching(/No endpoint .* was found/),
+    });
+    expect(calls.map((call) => call.method)).toEqual(["GET"]);
   });
 });

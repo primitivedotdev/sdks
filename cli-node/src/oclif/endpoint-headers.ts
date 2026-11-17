@@ -88,12 +88,17 @@ export function parseHeaderFlags(
 export function headersBodyFields(
   flags: Record<string, unknown>,
 ): ExtensionBodyField[] {
+  const given = flags[HEADER_FLAG];
+  const headersGiven = Array.isArray(given) && given.length > 0;
+  if (flags[CLEAR_HEADERS_FLAG] === true && headersGiven)
+    throw usageError(
+      `--${CLEAR_HEADERS_FLAG} removes every header, so it cannot go with --${HEADER_FLAG}: give one of the two.`,
+    );
   if (flags[CLEAR_HEADERS_FLAG] === true)
     return [
       { flag: `--${CLEAR_HEADERS_FLAG}`, property: "headers", value: [] },
     ];
-  const given = flags[HEADER_FLAG];
-  if (!Array.isArray(given) || given.length === 0) return [];
+  if (!headersGiven) return [];
   return [
     {
       flag: `--${HEADER_FLAG}`,
@@ -142,18 +147,18 @@ const UPDATE_HEADER_NOTE =
 
 function headerExtension(update: boolean): OperationExtension {
   return {
+    // Not oclif's exclusive: its refusal repeats the other flag's value,
+    // and a --header value is a secret. headersBodyFields refuses the pair.
     flags: {
       [HEADER_FLAG]: Flags.string({
         description: `${HEADER_FLAG_DESCRIPTION}${update ? UPDATE_HEADER_NOTE : ""}`,
         multiple: true,
-        ...(update ? { exclusive: [CLEAR_HEADERS_FLAG] } : {}),
       }),
       ...(update
         ? {
             [CLEAR_HEADERS_FLAG]: Flags.boolean({
               description:
                 "Remove every custom request header from this webhook. Needs no --url. Not with --header.",
-              exclusive: [HEADER_FLAG],
             }),
           }
         : {}),
