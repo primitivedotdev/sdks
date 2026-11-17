@@ -2718,6 +2718,18 @@ describe("the test report: changes against the current version and close calls",
         "do_not_share",
       ),
     ).toEqual(["Against version 1: 0 newly withheld, 2 no longer withheld."]);
+    expect(
+      changesLines({
+        compared_to: "requested",
+        newly_matched: changed(1, ["g"]),
+        stops_matching: changed(0, []),
+        undecided: 0,
+      }),
+    ).toEqual([
+      "Against the rule as asked: 1 newly matched, 0 stop matching.",
+      "  Newly matched:",
+      '    "Subject g" from g@sender.example (g)',
+    ]);
     expect(changesLines(undefined)).toEqual([]);
   });
 
@@ -2744,6 +2756,7 @@ describe("the test report: changes against the current version and close calls",
         ],
       }),
       changes: {
+        compared_to: "version",
         compared_to_version: 3,
         newly_matched: changed(0, []),
         stops_matching: changed(0, []),

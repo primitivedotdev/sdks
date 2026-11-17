@@ -488,8 +488,9 @@ function expectationsLines(
 export const CHANGES_LIST_LIMIT = 3;
 
 /**
- * What the tested tree would change against the rule's live version
- * (changes): the counts, then a few of the emails each way, newest first.
+ * What the tested tree would change (changes) against the rule's current
+ * version, or with request_id against the request's rule as asked: the
+ * counts, then a few of the emails each way, newest first.
  * For a do_not_share rule they are the emails newly withheld and no longer
  * withheld.
  */
@@ -507,10 +508,14 @@ export function changesLines(changes: unknown, kind?: unknown): string[] {
   const stops = list(changes.stops_matching);
   const undecided =
     typeof changes.undecided === "number" ? changes.undecided : 0;
+  // compared_to requested: a rule request's rule as asked, which a tree
+  // given with request_id edits.
   const version =
-    typeof changes.compared_to_version === "number"
-      ? `version ${changes.compared_to_version}`
-      : "the current version";
+    changes.compared_to === "requested"
+      ? "the rule as asked"
+      : typeof changes.compared_to_version === "number"
+        ? `version ${changes.compared_to_version}`
+        : "the current version";
   const withheld = kind === "do_not_share";
   const words = withheld
     ? (["newly withheld", "no longer withheld"] as const)
