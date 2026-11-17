@@ -27,15 +27,18 @@ API and SDKs, breaking:
   `listEmailRuleDecisionsOnMyMail`. In Python the field is `decided_at` and
   in Go `DecidedAt`.
 - These fields are now required in the generated types: `close_call` on
-  each expectation result and judged made-up email of a rule test or a
-  write's `expectations_check`, and on each look-alike; `close_calls` in
-  the expectation counts and the look-alike counts; `group` on each
-  look-alike and `by_group` in the look-alike counts; `description` on
-  each of `getEmail`'s top-level `attachments`; `checked` on a rule share's
-  `activity`.
+  each expectation result and judged made-up email of a rule test, and on
+  each look-alike; `close_calls` in the test's expectation counts and the
+  look-alike counts; `close_calls` and `close_call_samples` on a write's
+  `expectations_check`; `group` on each look-alike and `by_group` in the
+  look-alike counts; `recipient` on both decision listings; `rules` on
+  `DeliverySummary` and `getDelivery`'s result; `description` on each of
+  `getEmail`'s top-level `attachments`; `checked` on a rule share's
+  `activity`. In Python, models built with positional arguments see the new
+  fields in their spec order.
 - `getEmail`'s top-level `attachments` are `EmailDetailAttachment`
-  (`EmailAttachment` with `description`). In Go `EmailDetail.Attachments` is
-  `[]EmailDetailAttachment`.
+  (`EmailAttachment` with `description`), in Python and Go. In Go
+  `EmailDetail.Attachments` is `[]EmailDetailAttachment`.
 - In Python and Go, the made-up emails `testEmailRule`'s `expect.samples`
   takes are `EmailRuleTestSampleInput` (was
   `EmailRuleExpectationSampleInput`), which takes an optional `group`.
@@ -49,9 +52,11 @@ API and SDKs, added:
   tree newly matches and stops matching against that version (newly
   withheld and no longer withheld for a do_not_share rule), each a `count`
   and up to 50 emails newest first, and how many were `undecided`.
-  `compared_to` is `version`, with `compared_to_version`. For a tree given
-  with `request_id` other than the one asked, `changes` compares it with
-  the request's rule as asked (`compared_to` `requested`).
+  `compared_to` is `version`, with `compared_to_version`.
+- `testEmailRule` takes `tree` with `request_id`: your edit of a pending
+  request's rule (with it, only `english` and `kind` `grant`). For a tree
+  other than the one asked, `changes` compares it with the request's rule
+  as asked (`compared_to` `requested`).
 - Close calls: an expectation, made-up email or look-alike passed or failed
   on an answer below 0.75 confidence carries `close_call`, since judged
   again it may come out the other way. The counts carry `close_calls`, and
@@ -68,7 +73,8 @@ API and SDKs, added:
 - `listEmailRules` takes `all` (`"true"`: every rule in the organization,
   any author, for owners and admins), `author` (a user id or member
   address), `mailbox` (rules whose scope reaches it now), `kind` and
-  `state`. With `all`, each rule carries `receivers`.
+  `state`. With `all`, each rule carries `receivers`. The list is ordered
+  most recently changed first.
 - `getEmail`'s top-level `attachments` carry `description`, a one-line
   description read from the file where the organization has attachment
   reading on, else null. `testEmailRule` results carry
@@ -77,13 +83,20 @@ API and SDKs, added:
   reading is active for the organization.
 - `getEmailRuleSettings` and `updateEmailRuleSettings` (`/email-rule-settings`)
   read and set `rules_read_attachments`, with `available`, `hipaa_mode` and
-  `active`. For a person only, not an API key or an agent.
+  `active`. For a person only, not an API key or an agent key. Changing it
+  needs `email_rule_settings:manage` and, with an OAuth token, a step-up
+  token of purpose `org_settings.write`; turning it on is refused with
+  `409` under HIPAA mode (`hipaa_mode`) or while email rules are not
+  available (`not_available`).
+- A rule share's `activity` carries `checked`: false when whether the share
+  is working could not be read just now, with `last_decided_at` null.
 - Webhooks take custom request `headers` on `createEndpoint` and
   `updateEndpoint` (name and value, values stored encrypted and never
   returned), and endpoint reads list them with each value redacted. On
   `updateEndpoint` the list replaces the stored one and `[]` removes them;
   a non-empty list needs `url` in the same request (`details.reason`
-  `headers_need_url`).
+  `headers_need_url`), and a webhook that has headers changes its URL only
+  with headers in the same request.
 - A created webhook, and an updated one given a new URL, is sent a test
   request, and the answer's `warnings` can carry `url_requires_login` and
   `url_redirects` (with the `status` the URL answered), `url_unreachable`
@@ -101,7 +114,7 @@ CLI, breaking:
   `error.details.missing` lists each field as `{ field, flag, json_path }`
   (`flag` is null for a field only JSON can give).
 - An `--event-types` value that cannot be used, on `endpoints create` or
-  `update`, exits 2.
+  `update`, is refused before authentication.
 
 CLI, added:
 
@@ -117,8 +130,9 @@ CLI, added:
 - `list-email-rules` takes `--all`, `--author`, `--mailbox`, `--kind` and
   `--state`, prints a table of the rules (with RECEIVERS for `--all`), and
   says what to do when `--all` or an address filter is refused. The
-  decision listings print a table with when each was decided, the email,
-  its mailbox, sender and subject.
+  decision listings print a table with when each was decided, the outcome,
+  the email, its mailbox, sender and subject. The tables go to stderr;
+  stdout keeps the JSON.
 - `endpoints create` and `endpoints update` take a repeatable `--header
   'Name: value'`, and `update` takes `--clear-headers`. An update that sets
   headers without `--url` reads the webhook's URL and sends it, keeping a
@@ -132,10 +146,10 @@ CLI, added:
   options and common flags, in that order, and name required fields that
   only JSON can give.
 - For a request field marked `x-primitive-retry-id`, a generated command
-  creates a retry ID when the flag is left out, reuses it through approval,
-  prints it before the request, and lists it in `cli_retry_ids` under
-  `--json`, on success or failure, so the same request can be retried with
-  it. `projects create-project`, `organizations invite-organization-member`
+  creates a retry ID when the flag is left out and reuses it through
+  approval. Human output prints it before the request; under `--json`,
+  `cli_retry_ids` lists it as `{ field, flag, json_path, value, source }`
+  on success or failure, so the same request can be retried with it. `projects create-project`, `organizations invite-organization-member`
   and `projects invite-project-member` do so for `--request-id`.
 
 What `3.0.0-preview.19` (`3.0.0rc19`) changes from `3.0.0-preview.18`:
@@ -601,13 +615,17 @@ no longer `UNSET` in Python, plain or `Nil*` fields rather than `Opt*` in Go):
 - `testEndpointRules`' answer: `delivery`.
 - `listEmails`: `data`. In Python it comes before `meta` in the arguments of
   `ListEmailsResponse200`.
-- Email rule tests, writes and look-alikes: `close_call` on each judged
-  expectation, made-up email and look-alike, `close_calls` in the
-  expectation and look-alike counts, and each look-alike's `group` and
-  the look-alike counts' `by_group`.
+- Email rule tests and look-alikes: `close_call` on each judged
+  expectation, made-up email and look-alike, `close_calls` in the test's
+  expectation counts and the look-alike counts, and each look-alike's
+  `group` and the look-alike counts' `by_group`. A write's
+  `expectations_check`: `close_calls` and `close_call_samples`.
+- `listEmailRuleDecisions` and `listEmailRuleDecisionsOnMyMail` items:
+  `recipient`.
+- `DeliverySummary` and `getDelivery`'s result: `rules`.
 - `getEmail`'s top-level `attachments`: `description`. They are
-  `EmailDetailAttachment`; in Go `EmailDetail.Attachments` is
-  `[]EmailDetailAttachment`.
+  `EmailDetailAttachment` in Python and Go; in Go `EmailDetail.Attachments`
+  is `[]EmailDetailAttachment`.
 - A rule share's `activity`: `checked`.
 
 #### Nullable values
@@ -909,7 +927,8 @@ Go (package `api`):
 - A generated command missing a required request body field stops before
   authentication or any request with exit 2 and error code `usage_error`,
   listing each field in `error.details.missing` (`field`, `flag`,
-  `json_path`). An `--event-types` value that cannot be used exits 2.
+  `json_path`). An `--event-types` value that cannot be used is refused
+  before authentication.
 
 #### CLI `--json` output
 
