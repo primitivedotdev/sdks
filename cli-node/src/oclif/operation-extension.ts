@@ -62,6 +62,8 @@ export type OperationExtension = {
       body: unknown;
       path: Record<string, unknown>;
       flags: Record<string, unknown>;
+      /** The answer's meta, such as meta.cursor on a list. */
+      meta?: unknown;
     },
   ) => OperationReport;
 };

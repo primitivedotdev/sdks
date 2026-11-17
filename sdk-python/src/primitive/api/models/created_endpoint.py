@@ -20,6 +20,7 @@ import datetime
 if TYPE_CHECKING:
   from ..models.endpoint_create_warning import EndpointCreateWarning
   from ..models.endpoint_delivery_type_0 import EndpointDeliveryType0
+  from ..models.endpoint_headers_item import EndpointHeadersItem
   from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities
   from ..models.endpoint_rules import EndpointRules
 
@@ -84,14 +85,25 @@ class CreatedEndpoint:
             signed_with (EndpointSignedWith | Unset): Which secret signs deliveries to this webhook: its own (read it from
                 GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a
                 webhook.
+            headers (list[EndpointHeadersItem] | Unset): For a webhook: the custom request headers it sends on every
+                delivery, by name, with each value redacted. Empty when it has none. Absent for an endpoint that is not a
+                webhook.
             signing_secret (str | Unset): Only in the response that creates a webhook made with a signing secret of its own
                 (one made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate
                 for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.
             warnings (list[EndpointCreateWarning] | Unset): For a webhook (kind http). same_path_as_another_endpoint:
                 another webhook you can see, on and not deleted, sends to the same scheme, host and path with any query string,
                 so each email both receive is delivered twice; endpoint_id names it (at most 5, newest first). The URL is never
-                echoed. Empty when none; absent when it could not be checked (a caller who may not read endpoints, or a failed
-                read). Other codes may be added.
+                echoed. A created webhook is also sent the test request POST /endpoints/{id}/test sends (within a budget of its
+                own, separate from the test budget); the webhook is saved whatever it answers: url_requires_login: it answered
+                302, 401 or 403 (status names which), so the host appears to require a login. url_redirects: another redirect,
+                which deliveries do not follow. url_unreachable: no answer within 5 seconds, or a connection error (deliveries
+                wait longer, so a slow receiver may still receive them). url_not_checked: the probe was not made or could not
+                finish (the organization made many such checks just now, the signing secret could not be read, the URL changed
+                again since this write, or the check failed). A caller who may not send the webhook a test request gets no probe
+                and none of these. Absent only when the same-path check could not be made and the probe found nothing to warn
+                about; when the same-path check could not be made, the list has no same_path_as_another_endpoint entries
+                whatever else it holds. Other codes may be added.
      """
 
     id: UUID
@@ -122,6 +134,7 @@ class CreatedEndpoint:
     disabled_reason: None | str | Unset = UNSET
     delivery: EndpointDeliveryType0 | None | Unset = UNSET
     signed_with: EndpointSignedWith | Unset = UNSET
+    headers: list[EndpointHeadersItem] | Unset = UNSET
     signing_secret: str | Unset = UNSET
     warnings: list[EndpointCreateWarning] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -133,6 +146,7 @@ class CreatedEndpoint:
     def to_dict(self) -> dict[str, Any]:
         from ..models.endpoint_create_warning import EndpointCreateWarning # noqa: PLC0415
         from ..models.endpoint_delivery_type_0 import EndpointDeliveryType0 # noqa: PLC0415
+        from ..models.endpoint_headers_item import EndpointHeadersItem # noqa: PLC0415
         from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities # noqa: PLC0415
         from ..models.endpoint_rules import EndpointRules # noqa: PLC0415
         id = str(self.id)
@@ -273,6 +287,15 @@ class CreatedEndpoint:
             signed_with = self.signed_with.value
 
 
+        headers: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.headers, Unset):
+            headers = []
+            for headers_item_data in self.headers:
+                headers_item = headers_item_data.to_dict()
+                headers.append(headers_item)
+
+
+
         signing_secret = self.signing_secret
 
         warnings: list[dict[str, Any]] | Unset = UNSET
@@ -335,6 +358,8 @@ class CreatedEndpoint:
             field_dict["delivery"] = delivery
         if signed_with is not UNSET:
             field_dict["signed_with"] = signed_with
+        if headers is not UNSET:
+            field_dict["headers"] = headers
         if signing_secret is not UNSET:
             field_dict["signing_secret"] = signing_secret
         if warnings is not UNSET:
@@ -348,6 +373,7 @@ class CreatedEndpoint:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.endpoint_create_warning import EndpointCreateWarning # noqa: PLC0415
         from ..models.endpoint_delivery_type_0 import EndpointDeliveryType0 # noqa: PLC0415
+        from ..models.endpoint_headers_item import EndpointHeadersItem # noqa: PLC0415
         from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities # noqa: PLC0415
         from ..models.endpoint_rules import EndpointRules # noqa: PLC0415
         d = dict(src_dict)
@@ -660,6 +686,18 @@ class CreatedEndpoint:
 
 
 
+        _headers = d.pop("headers", UNSET)
+        headers: list[EndpointHeadersItem] | Unset = UNSET
+        if _headers is not UNSET:
+            headers = []
+            for headers_item_data in _headers:
+                headers_item = EndpointHeadersItem.from_dict(headers_item_data)
+
+
+
+                headers.append(headers_item)
+
+
         signing_secret = d.pop("signing_secret", UNSET)
 
         _warnings = d.pop("warnings", UNSET)
@@ -703,6 +741,7 @@ class CreatedEndpoint:
             disabled_reason=disabled_reason,
             delivery=delivery,
             signed_with=signed_with,
+            headers=headers,
             signing_secret=signing_secret,
             warnings=warnings,
         )

@@ -125,13 +125,13 @@ def sync_detailed(
     question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version,
     as its author), rule_id with tree (that tree as the rule's next version, as its author, against its
     saved expectations; its author only), or a pending rule request by request_id (its rule as asked, as
-    you, over your own mailboxes). It reads only mail its author can read and its scope covers. A rule
-    you see only because it covers your own mailboxes runs as you, over only those. Without email_ids it
-    tests the newest emails on the mail relay domains, at most 200 and none older than 30 days, plus any
-    expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is
-    false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read,
-    the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token).
+    you, over your own mailboxes; with tree, that tree as your edit of it, and changes against the rule
+    as asked). It reads only mail its author can read and its scope covers. A rule you see only because
+    it covers your own mailboxes runs as you, over only those. Without email_ids it tests the newest
+    emails on the mail relay domains, at most 200 and none older than 30 days, plus any expected ones.
+    Unclassified emails over 2 hours old are classified first unless classify_missing is false. It
+    records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email
+    rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -172,13 +172,13 @@ def sync(
     question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version,
     as its author), rule_id with tree (that tree as the rule's next version, as its author, against its
     saved expectations; its author only), or a pending rule request by request_id (its rule as asked, as
-    you, over your own mailboxes). It reads only mail its author can read and its scope covers. A rule
-    you see only because it covers your own mailboxes runs as you, over only those. Without email_ids it
-    tests the newest emails on the mail relay domains, at most 200 and none older than 30 days, plus any
-    expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is
-    false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read,
-    the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token).
+    you, over your own mailboxes; with tree, that tree as your edit of it, and changes against the rule
+    as asked). It reads only mail its author can read and its scope covers. A rule you see only because
+    it covers your own mailboxes runs as you, over only those. Without email_ids it tests the newest
+    emails on the mail relay domains, at most 200 and none older than 30 days, plus any expected ones.
+    Unclassified emails over 2 hours old are classified first unless classify_missing is false. It
+    records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email
+    rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -214,13 +214,13 @@ async def asyncio_detailed(
     question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version,
     as its author), rule_id with tree (that tree as the rule's next version, as its author, against its
     saved expectations; its author only), or a pending rule request by request_id (its rule as asked, as
-    you, over your own mailboxes). It reads only mail its author can read and its scope covers. A rule
-    you see only because it covers your own mailboxes runs as you, over only those. Without email_ids it
-    tests the newest emails on the mail relay domains, at most 200 and none older than 30 days, plus any
-    expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is
-    false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read,
-    the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token).
+    you, over your own mailboxes; with tree, that tree as your edit of it, and changes against the rule
+    as asked). It reads only mail its author can read and its scope covers. A rule you see only because
+    it covers your own mailboxes runs as you, over only those. Without email_ids it tests the newest
+    emails on the mail relay domains, at most 200 and none older than 30 days, plus any expected ones.
+    Unclassified emails over 2 hours old are classified first unless classify_missing is false. It
+    records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email
+    rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -261,13 +261,13 @@ async def asyncio(
     question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version,
     as its author), rule_id with tree (that tree as the rule's next version, as its author, against its
     saved expectations; its author only), or a pending rule request by request_id (its rule as asked, as
-    you, over your own mailboxes). It reads only mail its author can read and its scope covers. A rule
-    you see only because it covers your own mailboxes runs as you, over only those. Without email_ids it
-    tests the newest emails on the mail relay domains, at most 200 and none older than 30 days, plus any
-    expected ones. Unclassified emails over 2 hours old are classified first unless classify_missing is
-    false. It records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read,
-    the email rules feature, and a member's own full-access credential (no API key, agent key or
-    narrowed token).
+    you, over your own mailboxes; with tree, that tree as your edit of it, and changes against the rule
+    as asked). It reads only mail its author can read and its scope covers. A rule you see only because
+    it covers your own mailboxes runs as you, over only those. Without email_ids it tests the newest
+    emails on the mail relay domains, at most 200 and none older than 30 days, plus any expected ones.
+    Unclassified emails over 2 hours old are classified first unless classify_missing is false. It
+    records no decision and grants nothing, and stops at about 90 seconds. Needs mail:read, the email
+    rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
         idempotency_key (str | Unset):

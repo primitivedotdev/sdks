@@ -133,16 +133,19 @@ def sync_detailed(
     query: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListOrganizationPeopleResponse200]:
-    """  Requires a current human organization membership, or an org-wide API key: a super admin key, or a
+    """ List organization members
+
+     Requires a current human organization membership, or an org-wide API key: a super admin key, or a
     custom key with no addresses or domains whose grant holds members:read. A key lists members as the
     person it belongs to, at that person's live grant, and only while that person still holds
     members:read. Narrowed, Function and connected keys are refused. A caller holding members:read also
     gets each person's mail_access. No local paths or existing conversation history are shared.
 
     Args:
-        cursor (UUID | Unset):
-        limit (int | Unset):  Default: 50.
-        query (str | Unset):
+        cursor (UUID | Unset): Continuation cursor from the previous page; omit for the first
+            page.
+        limit (int | Unset): Maximum number of results to return; defaults to 50. Default: 50.
+        query (str | Unset): Filter members by name or a work email the caller may see.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -174,16 +177,19 @@ def sync(
     query: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListOrganizationPeopleResponse200 | None:
-    """  Requires a current human organization membership, or an org-wide API key: a super admin key, or a
+    """ List organization members
+
+     Requires a current human organization membership, or an org-wide API key: a super admin key, or a
     custom key with no addresses or domains whose grant holds members:read. A key lists members as the
     person it belongs to, at that person's live grant, and only while that person still holds
     members:read. Narrowed, Function and connected keys are refused. A caller holding members:read also
     gets each person's mail_access. No local paths or existing conversation history are shared.
 
     Args:
-        cursor (UUID | Unset):
-        limit (int | Unset):  Default: 50.
-        query (str | Unset):
+        cursor (UUID | Unset): Continuation cursor from the previous page; omit for the first
+            page.
+        limit (int | Unset): Maximum number of results to return; defaults to 50. Default: 50.
+        query (str | Unset): Filter members by name or a work email the caller may see.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -210,16 +216,19 @@ async def asyncio_detailed(
     query: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListOrganizationPeopleResponse200]:
-    """  Requires a current human organization membership, or an org-wide API key: a super admin key, or a
+    """ List organization members
+
+     Requires a current human organization membership, or an org-wide API key: a super admin key, or a
     custom key with no addresses or domains whose grant holds members:read. A key lists members as the
     person it belongs to, at that person's live grant, and only while that person still holds
     members:read. Narrowed, Function and connected keys are refused. A caller holding members:read also
     gets each person's mail_access. No local paths or existing conversation history are shared.
 
     Args:
-        cursor (UUID | Unset):
-        limit (int | Unset):  Default: 50.
-        query (str | Unset):
+        cursor (UUID | Unset): Continuation cursor from the previous page; omit for the first
+            page.
+        limit (int | Unset): Maximum number of results to return; defaults to 50. Default: 50.
+        query (str | Unset): Filter members by name or a work email the caller may see.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -251,16 +260,19 @@ async def asyncio(
     query: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListOrganizationPeopleResponse200 | None:
-    """  Requires a current human organization membership, or an org-wide API key: a super admin key, or a
+    """ List organization members
+
+     Requires a current human organization membership, or an org-wide API key: a super admin key, or a
     custom key with no addresses or domains whose grant holds members:read. A key lists members as the
     person it belongs to, at that person's live grant, and only while that person still holds
     members:read. Narrowed, Function and connected keys are refused. A caller holding members:read also
     gets each person's mail_access. No local paths or existing conversation history are shared.
 
     Args:
-        cursor (UUID | Unset):
-        limit (int | Unset):  Default: 50.
-        query (str | Unset):
+        cursor (UUID | Unset): Continuation cursor from the previous page; omit for the first
+            page.
+        limit (int | Unset): Maximum number of results to return; defaults to 50. Default: 50.
+        query (str | Unset): Filter members by name or a work email the caller may see.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

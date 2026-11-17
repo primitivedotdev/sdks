@@ -15,6 +15,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.delivery_summary_email_type_0 import DeliverySummaryEmailType0
+  from ..models.delivery_summary_rules_type_0_item import DeliverySummaryRulesType0Item
 
 
 
@@ -59,6 +60,12 @@ class DeliverySummary:
                 wherever it repeats them, and the rest is as the endpoint wrote it. Null for a caller who cannot read the
                 webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's
                 answer can restate its URL's credential.
+            rules (list[DeliverySummaryRulesType0Item] | None): The rules this attempt's payload named in
+                email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it
+                named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not
+                recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read
+                email rules or whose organization does not have them, below content depth, and once the message's content is
+                discarded.
             latest_attempt (bool): Whether this is the latest attempt of its delivery: the one recorded last, where a record
                 of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is
                 recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an
@@ -110,6 +117,7 @@ class DeliverySummary:
     last_error_code: None | str
     response_status: int | None
     response_body: None | str
+    rules: list[DeliverySummaryRulesType0Item] | None
     latest_attempt: bool
     retry_scheduled: bool | None
     next_attempt_at: datetime.datetime | None
@@ -124,6 +132,7 @@ class DeliverySummary:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.delivery_summary_email_type_0 import DeliverySummaryEmailType0 # noqa: PLC0415
+        from ..models.delivery_summary_rules_type_0_item import DeliverySummaryRulesType0Item # noqa: PLC0415
         id = self.id
 
         email_id: None | str
@@ -163,6 +172,17 @@ class DeliverySummary:
 
         response_body: None | str
         response_body = self.response_body
+
+        rules: list[dict[str, Any]] | None
+        if isinstance(self.rules, list):
+            rules = []
+            for rules_type_0_item_data in self.rules:
+                rules_type_0_item = rules_type_0_item_data.to_dict()
+                rules.append(rules_type_0_item)
+
+
+        else:
+            rules = self.rules
 
         latest_attempt = self.latest_attempt
 
@@ -213,6 +233,7 @@ class DeliverySummary:
             "last_error_code": last_error_code,
             "response_status": response_status,
             "response_body": response_body,
+            "rules": rules,
             "latest_attempt": latest_attempt,
             "retry_scheduled": retry_scheduled,
             "next_attempt_at": next_attempt_at,
@@ -231,6 +252,7 @@ class DeliverySummary:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.delivery_summary_email_type_0 import DeliverySummaryEmailType0 # noqa: PLC0415
+        from ..models.delivery_summary_rules_type_0_item import DeliverySummaryRulesType0Item # noqa: PLC0415
         d = dict(src_dict)
         id = d.pop("id")
 
@@ -331,6 +353,29 @@ class DeliverySummary:
         response_body = _parse_response_body(d.pop("response_body"))
 
 
+        def _parse_rules(data: object) -> list[DeliverySummaryRulesType0Item] | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                rules_type_0 = []
+                _rules_type_0 = data
+                for rules_type_0_item_data in (_rules_type_0):
+                    rules_type_0_item = DeliverySummaryRulesType0Item.from_dict(rules_type_0_item_data)
+
+
+
+                    rules_type_0.append(rules_type_0_item)
+
+                return rules_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[DeliverySummaryRulesType0Item] | None, data)
+
+        rules = _parse_rules(d.pop("rules"))
+
+
         latest_attempt = d.pop("latest_attempt")
 
         def _parse_retry_scheduled(data: object) -> bool | None:
@@ -414,6 +459,7 @@ class DeliverySummary:
             last_error_code=last_error_code,
             response_status=response_status,
             response_body=response_body,
+            rules=rules,
             latest_attempt=latest_attempt,
             retry_scheduled=retry_scheduled,
             next_attempt_at=next_attempt_at,

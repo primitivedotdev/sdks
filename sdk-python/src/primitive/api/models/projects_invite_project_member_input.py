@@ -23,8 +23,9 @@ T = TypeVar("T", bound="ProjectsInviteProjectMemberInput")
 class ProjectsInviteProjectMemberInput:
     """ 
         Attributes:
-            request_id (UUID):
-            email (str):
+            request_id (UUID): Client-generated UUID for this operation. Reuse it with the same choices after an uncertain
+                response; use a new UUID for a new operation.
+            email (str): Email address of the person to invite.
      """
 
     request_id: UUID

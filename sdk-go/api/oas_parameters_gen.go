@@ -7778,9 +7778,9 @@ func decodeDeleteOrgSecretParams(args [1]string, argsEscaped bool, r *http.Reque
 
 // DeleteProjectParams is parameters of deleteProject operation.
 type DeleteProjectParams struct {
-	// Project_id for project collaboration.
+	// Project ID returned by listProjects or createProject.
 	ProjectID uuid.UUID
-	// Version for project collaboration.
+	// Current project version. Refresh the project before retrying a version conflict.
 	Version int
 }
 
@@ -13875,7 +13875,7 @@ func decodeGetOrgFunctionInvocationSeriesParams(args [0]string, argsEscaped bool
 
 // GetProjectParams is parameters of getProject operation.
 type GetProjectParams struct {
-	// Project_id for project collaboration.
+	// Project ID returned by listProjects or createProject.
 	ProjectID uuid.UUID
 }
 
@@ -15483,7 +15483,7 @@ func decodeInviteOrganizationMemberParams(args [0]string, argsEscaped bool, r *h
 
 // InviteProjectMemberParams is parameters of inviteProjectMember operation.
 type InviteProjectMemberParams struct {
-	// Project_id for project collaboration.
+	// Project ID returned by listProjects or createProject.
 	ProjectID uuid.UUID
 	// A single-use step-up token of purpose `invitations.create` (Invite a person to the organization or
 	// a project), valid 5 minutes. When this operation answers 403 `step_up_required`, the person
@@ -22523,8 +22523,19 @@ type ListEmailRulesParams struct {
 	// Opaque cursor: the meta.cursor of the previous page. meta.cursor is null on the last page. Omit
 	// for the first page.
 	Cursor OptString `json:",omitempty,omitzero"`
-	// Only rules that matched this email.
+	// Only rules that matched this email. Not with all.
 	MatchedEmailID OptUUID `json:",omitempty,omitzero"`
+	// True: every rule in the organization, any author (owners and admins).
+	All OptListEmailRulesAll `json:",omitempty,omitzero"`
+	// Only rules written by this member: their user id, or their member address (members:read, your own
+	// address, or with all).
+	Author OptString `json:",omitempty,omitzero"`
+	// Only rules whose scope reaches this mailbox now (another member's: members:read, or with all).
+	Mailbox OptString `json:",omitempty,omitzero"`
+	// Only rules of this kind.
+	Kind OptListEmailRulesKind `json:",omitempty,omitzero"`
+	// Only rules in this state.
+	State OptListEmailRulesState `json:",omitempty,omitzero"`
 }
 
 func unpackListEmailRulesParams(packed middleware.Parameters) (params ListEmailRulesParams) {
@@ -22553,6 +22564,51 @@ func unpackListEmailRulesParams(packed middleware.Parameters) (params ListEmailR
 		}
 		if v, ok := packed[key]; ok {
 			params.MatchedEmailID = v.(OptUUID)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "all",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.All = v.(OptListEmailRulesAll)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "author",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Author = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "mailbox",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Mailbox = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "kind",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Kind = v.(OptListEmailRulesKind)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "state",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.State = v.(OptListEmailRulesState)
 		}
 	}
 	return params
@@ -22736,6 +22792,283 @@ func decodeListEmailRulesParams(args [0]string, argsEscaped bool, r *http.Reques
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "matched_email_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: all.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "all",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotAllVal ListEmailRulesAll
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotAllVal = ListEmailRulesAll(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.All.SetTo(paramsDotAllVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.All.Get(); ok {
+					if err := func() error {
+						if err := validateParameter(value); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "all",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: author.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "author",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotAuthorVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotAuthorVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Author.SetTo(paramsDotAuthorVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "author",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: mailbox.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "mailbox",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotMailboxVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotMailboxVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Mailbox.SetTo(paramsDotMailboxVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Mailbox.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     254,
+							MaxLengthSet:  true,
+							Email:         true,
+							Hostname:      false,
+							Regex:         regexMap["^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"],
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "mailbox",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: kind.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "kind",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotKindVal ListEmailRulesKind
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotKindVal = ListEmailRulesKind(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Kind.SetTo(paramsDotKindVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Kind.Get(); ok {
+					if err := func() error {
+						if err := validateParameter(value); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "kind",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: state.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "state",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotStateVal ListEmailRulesState
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotStateVal = ListEmailRulesState(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.State.SetTo(paramsDotStateVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.State.Get(); ok {
+					if err := func() error {
+						if err := validateParameter(value); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "state",
 			In:   "query",
 			Err:  err,
 		}
@@ -23051,8 +23384,8 @@ type ListEmailsParams struct {
 	ContentDiscarded OptListEmailsContentDiscarded `json:",omitempty,omitzero"`
 	// With `false`, a history page runs no total count: `meta.total` and `meta.total_capped` are absent,
 	// and `meta.has_more` still says whether another page follows. Unset or `true`, a history page
-	// reports its total as before. The forward tail (`since`) and `search` report the page itself as the
-	// total and run no count either way.
+	// reports its total as before. The forward tail (`since`) and `search` run no count either way:
+	// `total` is the rows the page read, with `total_capped` `true` when a match lies past its last row.
 	Count OptListEmailsCount `json:",omitempty,omitzero"`
 	// With `message`, one row per message instead of one per mailbox copy (a message to several
 	// mailboxes of the org is stored once per mailbox). The row is the copy in your own mailbox (the
@@ -27985,9 +28318,9 @@ func decodeListOAuthGrantsParams(args [0]string, argsEscaped bool, r *http.Reque
 
 // ListOrganizationInvitationsParams is parameters of listOrganizationInvitations operation.
 type ListOrganizationInvitationsParams struct {
-	// Cursor for project collaboration.
+	// Continuation cursor from the previous page; omit for the first page.
 	Cursor OptUUID `json:",omitempty,omitzero"`
-	// Limit for project collaboration.
+	// Maximum number of results to return; defaults to 50.
 	Limit OptInt `json:",omitempty,omitzero"`
 }
 
@@ -28132,11 +28465,11 @@ func decodeListOrganizationInvitationsParams(args [0]string, argsEscaped bool, r
 
 // ListOrganizationPeopleParams is parameters of listOrganizationPeople operation.
 type ListOrganizationPeopleParams struct {
-	// Cursor for project collaboration.
+	// Continuation cursor from the previous page; omit for the first page.
 	Cursor OptUUID `json:",omitempty,omitzero"`
-	// Limit for project collaboration.
+	// Maximum number of results to return; defaults to 50.
 	Limit OptInt `json:",omitempty,omitzero"`
-	// Query for project collaboration.
+	// Filter members by name or a work email the caller may see.
 	Query OptString `json:",omitempty,omitzero"`
 }
 
@@ -28560,7 +28893,7 @@ func decodeListOwnedItemsParams(args [1]string, argsEscaped bool, r *http.Reques
 
 // ListProjectInvitationsParams is parameters of listProjectInvitations operation.
 type ListProjectInvitationsParams struct {
-	// Project_id for project collaboration.
+	// Project ID returned by listProjects or createProject.
 	ProjectID uuid.UUID
 }
 
@@ -28626,9 +28959,9 @@ func decodeListProjectInvitationsParams(args [1]string, argsEscaped bool, r *htt
 
 // ListProjectsParams is parameters of listProjects operation.
 type ListProjectsParams struct {
-	// Cursor for project collaboration.
+	// Continuation cursor from the previous page; omit for the first page.
 	Cursor OptUUID `json:",omitempty,omitzero"`
-	// Limit for project collaboration.
+	// Maximum number of results to return; defaults to 50.
 	Limit OptInt `json:",omitempty,omitzero"`
 }
 
@@ -33559,11 +33892,12 @@ func decodeRemoveMemberParams(args [1]string, argsEscaped bool, r *http.Request)
 // RemoveOrganizationLogoParams is parameters of removeOrganizationLogo operation.
 type RemoveOrganizationLogoParams struct {
 	// A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo,
-	// semantic search setting or email notification settings), valid 5 minutes. When this operation
-	// answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the
-	// request is retried with the token that page shows, in this header. Accepted only with the person's
-	// own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any
-	// API key or agent connection key, and with a dashboard session.
+	// semantic search setting, email notification settings or whether email rules read attachments),
+	// valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the
+	// link in `details.step_up_url` and the request is retried with the token that page shows, in this
+	// header. Accepted only with the person's own OAuth token of the client it was confirmed for;
+	// refused with a token issued for MCP, with any API key or agent connection key, and with a
+	// dashboard session.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 }
 
@@ -35513,7 +35847,7 @@ func decodeRevokeOAuthGrantParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // RevokeOrganizationInvitationParams is parameters of revokeOrganizationInvitation operation.
 type RevokeOrganizationInvitationParams struct {
-	// Invitation_id for project collaboration.
+	// Invitation ID returned by an invitation list or creation.
 	InvitationID uuid.UUID
 }
 
@@ -35579,9 +35913,9 @@ func decodeRevokeOrganizationInvitationParams(args [1]string, argsEscaped bool, 
 
 // RevokeProjectInvitationParams is parameters of revokeProjectInvitation operation.
 type RevokeProjectInvitationParams struct {
-	// Project_id for project collaboration.
+	// Project ID returned by listProjects or createProject.
 	ProjectID uuid.UUID
-	// Invitation_id for project collaboration.
+	// Invitation ID returned by an invitation list or creation.
 	InvitationID uuid.UUID
 }
 
@@ -42884,11 +43218,12 @@ func decodeUpdateDomainParams(args [1]string, argsEscaped bool, r *http.Request)
 // UpdateEmailNotificationSettingsParams is parameters of updateEmailNotificationSettings operation.
 type UpdateEmailNotificationSettingsParams struct {
 	// A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo,
-	// semantic search setting or email notification settings), valid 5 minutes. When this operation
-	// answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the
-	// request is retried with the token that page shows, in this header. Accepted only with the person's
-	// own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any
-	// API key or agent connection key, and with a dashboard session.
+	// semantic search setting, email notification settings or whether email rules read attachments),
+	// valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the
+	// link in `details.step_up_url` and the request is retried with the token that page shows, in this
+	// header. Accepted only with the person's own OAuth token of the client it was confirmed for;
+	// refused with a token issued for MCP, with any API key or agent connection key, and with a
+	// dashboard session.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 }
 
@@ -43036,6 +43371,102 @@ func decodeUpdateEmailRuleParams(args [1]string, argsEscaped bool, r *http.Reque
 		return params, &ogenerrors.DecodeParamError{
 			Name: "id",
 			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// UpdateEmailRuleSettingsParams is parameters of updateEmailRuleSettings operation.
+type UpdateEmailRuleSettingsParams struct {
+	// A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo,
+	// semantic search setting, email notification settings or whether email rules read attachments),
+	// valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the
+	// link in `details.step_up_url` and the request is retried with the token that page shows, in this
+	// header. Accepted only with the person's own OAuth token of the client it was confirmed for;
+	// refused with a token issued for MCP, with any API key or agent connection key, and with a
+	// dashboard session.
+	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
+}
+
+func unpackUpdateEmailRuleSettingsParams(packed middleware.Parameters) (params UpdateEmailRuleSettingsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "Primitive-Step-Up",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.PrimitiveStepUp = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeUpdateEmailRuleSettingsParams(args [0]string, argsEscaped bool, r *http.Request) (params UpdateEmailRuleSettingsParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: Primitive-Step-Up.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Primitive-Step-Up",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotPrimitiveStepUpVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPrimitiveStepUpVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.PrimitiveStepUp.SetTo(paramsDotPrimitiveStepUpVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.PrimitiveStepUp.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     0,
+							MaxLengthSet:  false,
+							Email:         false,
+							Hostname:      false,
+							Regex:         regexMap["^pstep_[0-9a-f]{64}$"],
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Primitive-Step-Up",
+			In:   "header",
 			Err:  err,
 		}
 	}
@@ -43843,11 +44274,12 @@ func decodeUpdateKeyParams(args [1]string, argsEscaped bool, r *http.Request) (p
 // UpdateOrganizationParams is parameters of updateOrganization operation.
 type UpdateOrganizationParams struct {
 	// A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo,
-	// semantic search setting or email notification settings), valid 5 minutes. When this operation
-	// answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the
-	// request is retried with the token that page shows, in this header. Accepted only with the person's
-	// own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any
-	// API key or agent connection key, and with a dashboard session.
+	// semantic search setting, email notification settings or whether email rules read attachments),
+	// valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the
+	// link in `details.step_up_url` and the request is retried with the token that page shows, in this
+	// header. Accepted only with the person's own OAuth token of the client it was confirmed for;
+	// refused with a token issued for MCP, with any API key or agent connection key, and with a
+	// dashboard session.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 }
 
@@ -43938,11 +44370,12 @@ func decodeUpdateOrganizationParams(args [0]string, argsEscaped bool, r *http.Re
 // UpdateOrganizationLogoParams is parameters of updateOrganizationLogo operation.
 type UpdateOrganizationLogoParams struct {
 	// A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo,
-	// semantic search setting or email notification settings), valid 5 minutes. When this operation
-	// answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the
-	// request is retried with the token that page shows, in this header. Accepted only with the person's
-	// own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any
-	// API key or agent connection key, and with a dashboard session.
+	// semantic search setting, email notification settings or whether email rules read attachments),
+	// valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the
+	// link in `details.step_up_url` and the request is retried with the token that page shows, in this
+	// header. Accepted only with the person's own OAuth token of the client it was confirmed for;
+	// refused with a token issued for MCP, with any API key or agent connection key, and with a
+	// dashboard session.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 }
 
@@ -44032,7 +44465,7 @@ func decodeUpdateOrganizationLogoParams(args [0]string, argsEscaped bool, r *htt
 
 // UpdateProjectParams is parameters of updateProject operation.
 type UpdateProjectParams struct {
-	// Project_id for project collaboration.
+	// Project ID returned by listProjects or createProject.
 	ProjectID uuid.UUID
 }
 
@@ -44379,11 +44812,12 @@ func decodeUpdateRouteParams(args [1]string, argsEscaped bool, r *http.Request) 
 // UpdateSearchSettingsParams is parameters of updateSearchSettings operation.
 type UpdateSearchSettingsParams struct {
 	// A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo,
-	// semantic search setting or email notification settings), valid 5 minutes. When this operation
-	// answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the
-	// request is retried with the token that page shows, in this header. Accepted only with the person's
-	// own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any
-	// API key or agent connection key, and with a dashboard session.
+	// semantic search setting, email notification settings or whether email rules read attachments),
+	// valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the
+	// link in `details.step_up_url` and the request is retried with the token that page shows, in this
+	// header. Accepted only with the person's own OAuth token of the client it was confirmed for;
+	// refused with a token issued for MCP, with any API key or agent connection key, and with a
+	// dashboard session.
 	PrimitiveStepUp OptString `json:",omitempty,omitzero"`
 }
 

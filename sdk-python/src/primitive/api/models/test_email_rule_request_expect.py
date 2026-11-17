@@ -12,7 +12,7 @@ from typing import cast
 from uuid import UUID
 
 if TYPE_CHECKING:
-  from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput
+  from ..models.email_rule_test_sample_input import EmailRuleTestSampleInput
 
 
 
@@ -30,19 +30,19 @@ class TestEmailRuleRequestExpect:
         Attributes:
             match (list[UUID] | Unset):
             no_match (list[UUID] | Unset):
-            samples (list[EmailRuleExpectationSampleInput] | Unset):
+            samples (list[EmailRuleTestSampleInput] | Unset):
      """
 
     match: list[UUID] | Unset = UNSET
     no_match: list[UUID] | Unset = UNSET
-    samples: list[EmailRuleExpectationSampleInput] | Unset = UNSET
+    samples: list[EmailRuleTestSampleInput] | Unset = UNSET
 
 
 
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
+        from ..models.email_rule_test_sample_input import EmailRuleTestSampleInput # noqa: PLC0415
         match: list[str] | Unset = UNSET
         if not isinstance(self.match, Unset):
             match = []
@@ -88,7 +88,7 @@ class TestEmailRuleRequestExpect:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.email_rule_expectation_sample_input import EmailRuleExpectationSampleInput # noqa: PLC0415
+        from ..models.email_rule_test_sample_input import EmailRuleTestSampleInput # noqa: PLC0415
         d = dict(src_dict)
         _match = d.pop("match", UNSET)
         match: list[UUID] | Unset = UNSET
@@ -115,11 +115,11 @@ class TestEmailRuleRequestExpect:
 
 
         _samples = d.pop("samples", UNSET)
-        samples: list[EmailRuleExpectationSampleInput] | Unset = UNSET
+        samples: list[EmailRuleTestSampleInput] | Unset = UNSET
         if _samples is not UNSET:
             samples = []
             for samples_item_data in _samples:
-                samples_item = EmailRuleExpectationSampleInput.from_dict(samples_item_data)
+                samples_item = EmailRuleTestSampleInput.from_dict(samples_item_data)
 
 
 

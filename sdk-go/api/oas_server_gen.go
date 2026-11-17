@@ -299,11 +299,12 @@ type Handler interface {
 	// contract: rule, exactly the body create (with a name), update and the tests take, with an
 	// explanation of what it matches, the assumptions made, and warnings for what the columns cannot
 	// express. Where the columns fall short it adds up to five yes/no questions, asked only after the
-	// conditions match; they read the subject, the new text and attachment file names, never attachment
-	// contents. Nothing is read or saved: a scope given is carried into rule, and a test says how much
-	// mail the rule matches. include_sql returns the SQL it renders to. kind do_not_share compiles for
-	// recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no
-	// API key, agent key or narrowed token).
+	// conditions match; they read the subject, the new text and attachment file names, and text read
+	// from PDF and image attachments where attachment reading is active for the organization. Nothing is
+	// read or saved: a scope given is carried into rule, and a test says how much mail the rule matches.
+	// include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read,
+	// the email rules feature, and a member's own full-access credential (no API key, agent key or
+	// narrowed token).
 	//
 	// POST /email-rules/compile
 	CompileEmailRule(ctx context.Context, req *CompileEmailRuleRequest, params CompileEmailRuleParams) (CompileEmailRuleRes, error)
@@ -1405,6 +1406,16 @@ type Handler interface {
 	//
 	// GET /email-rules/{id}/scope
 	GetEmailRuleScope(ctx context.Context, params GetEmailRuleScopeParams) (GetEmailRuleScopeRes, error)
+	// GetEmailRuleSettings implements getEmailRuleSettings operation.
+	//
+	// Whether the organization lets email rules read PDF and image attachments, and whether that is
+	// active: it also needs email rules to be enabled for the organization (available) and HIPAA mode
+	// off. A missing setting reads as off.
+	// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+	// connected). API keys, agent connection keys and agents are refused.
+	//
+	// GET /email-rule-settings
+	GetEmailRuleSettings(ctx context.Context) (GetEmailRuleSettingsRes, error)
 	// GetEmailRuleShare implements getEmailRuleShare operation.
 	//
 	// One share. Needs mail:read, the email rules feature, and a member's own full-access credential (no
@@ -2271,12 +2282,13 @@ type Handler interface {
 	ListEmailRuleVersionsCoveringMe(ctx context.Context, params ListEmailRuleVersionsCoveringMeParams) (ListEmailRuleVersionsCoveringMeRes, error)
 	// ListEmailRules implements listEmailRules operation.
 	//
-	// The rules the caller can see, newest first: their own, or every member's rules for a caller who
-	// reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
-	// for a selected rule) and current_version, but not the version's text: read that under current from
-	// GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs
-	// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
-	// key or narrowed token).
+	// The rules the caller can see, most recently changed first: their own, or every member's rules for
+	// a caller who reads the whole organization's mail. With all=true, every rule in the organization
+	// whoever wrote it, each with receivers, for owners and admins signed in themselves. Each carries
+	// its scope and current_version, not the version's text (GET /email-rules/{id}). author, mailbox,
+	// kind and state filter either list; a page filtered by mailbox may hold fewer rules than limit
+	// while meta.cursor continues. Needs mail:read, the email rules feature, and a member's own
+	// full-access credential (no API key, agent key or narrowed token).
 	//
 	// GET /email-rules
 	ListEmailRules(ctx context.Context, params ListEmailRulesParams) (ListEmailRulesRes, error)
@@ -3579,11 +3591,12 @@ type Handler interface {
 	// question decided. Test an unsaved tree with its kind, a saved rule by rule_id (its current version,
 	//  as its author), rule_id with tree (that tree as the rule's next version, as its author, against
 	// its saved expectations; its author only), or a pending rule request by request_id (its rule as
-	// asked, as you, over your own mailboxes). It reads only mail its author can read and its scope
-	// covers. A rule you see only because it covers your own mailboxes runs as you, over only those.
-	// Without email_ids it tests the newest emails on the mail relay domains, at most 200 and none older
-	// than 30 days, plus any expected ones. Unclassified emails over 2 hours old are classified first
-	// unless classify_missing is false. It records no decision and grants nothing, and stops at about 90
+	// asked, as you, over your own mailboxes; with tree, that tree as your edit of it, and changes
+	// against the rule as asked). It reads only mail its author can read and its scope covers. A rule
+	// you see only because it covers your own mailboxes runs as you, over only those. Without email_ids
+	// it tests the newest emails on the mail relay domains, at most 200 and none older than 30 days,
+	// plus any expected ones. Unclassified emails over 2 hours old are classified first unless
+	// classify_missing is false. It records no decision and grants nothing, and stops at about 90
 	// seconds. Needs mail:read, the email rules feature, and a member's own full-access credential (no
 	// API key, agent key or narrowed token).
 	//
@@ -3790,6 +3803,22 @@ type Handler interface {
 	//
 	// PATCH /email-rules/{id}
 	UpdateEmailRule(ctx context.Context, req *UpdateEmailRuleRequest, params UpdateEmailRuleParams) (UpdateEmailRuleRes, error)
+	// UpdateEmailRuleSettings implements updateEmailRuleSettings operation.
+	//
+	// Turn on or off whether email rules read PDF and image attachments. When on, each such attachment
+	// is read once by a hosted model and its text is given to the email classifier and to the questions
+	// of the organization's email rules, so it is a person's decision. Turning it on is refused with 409
+	// under HIPAA mode (hipaa_mode) or while email rules are not enabled for the organization
+	// (not_available). Turning it off is always allowed.
+	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+	// `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+	// when the person's role could not do it anyway). The person's role must hold
+	// email_rule_settings:manage. API keys and agent connection keys are refused. An agent acting for
+	// the person is refused unless it carries a step-up token the person issued in the dashboard.
+	//
+	// PUT /email-rule-settings
+	UpdateEmailRuleSettings(ctx context.Context, req *OrgSettingsUpdateEmailRuleSettingsInput, params UpdateEmailRuleSettingsParams) (UpdateEmailRuleSettingsRes, error)
 	// UpdateEndpoint implements updateEndpoint operation.
 	//
 	// Updates an active webhook endpoint. Changing the URL keeps the endpoint: its id, recipient routes,

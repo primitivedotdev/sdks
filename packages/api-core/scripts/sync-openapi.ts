@@ -351,57 +351,8 @@ type Correction = {
   apply: (doc: JsonObject) => boolean;
 };
 
-/**
- * `GET /emails` with `count=false` leaves `meta.total` out, but `EmailListMeta`
- * inherits a required `total` from `PaginationMeta`, so the Python and Go
- * clients would fail to decode that page. `EmailListMeta` gets
- * `PaginationMeta`'s properties inline with `total` optional; the shared
- * `PaginationMeta` is unchanged.
- */
-export const optionalEmailListTotal: Correction = {
-  description: "EmailListMeta.total is optional (absent with count=false)",
-  apply(doc) {
-    const schemas = isObject(doc.components)
-      ? doc.components.schemas
-      : undefined;
-    const listMeta = isObject(schemas) ? schemas.EmailListMeta : undefined;
-    const pagination = isObject(schemas) ? schemas.PaginationMeta : undefined;
-    // No EmailListMeta at all: nothing to correct.
-    if (!isObject(listMeta)) return false;
-    const requiresTotal = (node: Json | undefined): boolean =>
-      isObject(node) &&
-      Array.isArray(node.required) &&
-      node.required.includes("total");
-    const members = Array.isArray(listMeta.allOf) ? listMeta.allOf : [];
-    const refIndex = members.findIndex(
-      (member) =>
-        isObject(member) &&
-        member.$ref === "#/components/schemas/PaginationMeta",
-    );
-    const inheritsTotal = refIndex !== -1 && requiresTotal(pagination);
-    const ownTotal =
-      requiresTotal(listMeta) ||
-      members.some((member, index) => index !== refIndex && requiresTotal(member));
-    if (!inheritsTotal && !ownTotal) return false;
-    if (ownTotal || !isObject(pagination)) {
-      throw new Error(
-        "optionalEmailListTotal: EmailListMeta requires total in a shape this correction does not handle; update it",
-      );
-    }
-    const inlined: JsonObject = {
-      ...structuredClone(pagination),
-      required: (pagination.required as Json[]).filter(
-        (name) => name !== "total",
-      ),
-    };
-    listMeta.allOf = members.map((member, index) =>
-      index === refIndex ? inlined : member,
-    );
-    return true;
-  },
-};
-
-const CORRECTIONS: Correction[] = [optionalEmailListTotal];
+// None is needed now; add one here when the served document has a known defect.
+const CORRECTIONS: Correction[] = [];
 
 export function syncOpenApi(served: JsonObject): JsonObject {
   if (typeof served.openapi !== "string" || !served.openapi.startsWith("3.1")) {

@@ -2080,9 +2080,9 @@ export type EmailDetail = {
         } | null;
     };
     /**
-     * Attachment metadata (file name, type, size), the same items in the same order as `parsed.attachments`. Kept for a credential that reads headers only, where `parsed` is null. Empty when the email has none, its content is withheld (read `status` and `rejection_reason`), or it is not parsed yet or its parse failed (read `parse_status`). No bytes; download a part with `/emails/{id}/attachments/{part_index}`.
+     * Attachment metadata (file name, type, size, and a description where one was read), the same parts in the same order as `parsed.attachments`. Only these items carry `description`; `parsed.attachments` keeps the shape the webhook payload has. Kept for a credential that reads headers only, where `parsed` is null. Empty when the email has none, its content is withheld (read `status` and `rejection_reason`), or it is not parsed yet or its parse failed (read `parse_status`). No bytes; download a part with `/emails/{id}/attachments/{part_index}`.
      */
-    attachments: Array<EmailAttachment>;
+    attachments: Array<EmailDetailAttachment>;
     /**
      * Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
      */
@@ -4312,6 +4312,17 @@ export type Endpoint = {
      */
     signed_with?: 'own_secret' | 'organization_secret';
     /**
+     * For a webhook: the custom request headers it sends on every delivery, by name, with each value redacted. Empty when it has none. Absent for an endpoint that is not a webhook.
+     */
+    headers?: Array<{
+        name: string;
+        /**
+         * Always [redacted]: a value is never returned.
+         */
+        value: string;
+        [key: string]: unknown;
+    }>;
+    /**
      * Only in the response that creates a webhook made with a signing secret of its own (one made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.
      */
     signing_secret?: string;
@@ -4387,6 +4398,13 @@ export type CreateEndpointInput = {
      * Make this webhook owned by an API key of the organization instead of by the organization. It receives the mail recipient routes send to it and interaction events for addresses the key reads, each checked against the key: only mail the key can read is sent, and nothing while the key is revoked or suspended. It is never a domain or organization default: it is created as a route target, and is_route_target false or takeover is refused. Not a connected agent key or a Function key.
      */
     owner_key_id?: string;
+    /**
+     * Custom request headers sent on every delivery to this webhook, for a receiver that needs a credential of its own (for example Authorization). At most 5 per webhook unless the organization's limit was raised. Values are secrets: stored encrypted and never returned. Names Primitive sets itself or reserves are refused (among them Content-Type, Content-Length, User-Agent, Host, Accept-Encoding, the signature headers, and names starting X-Primitive-, X-Webhook-, Primitive-, Proxy- or X-Forwarded-), as is a name given twice. Only for http webhooks.
+     */
+    headers?: Array<{
+        name: string;
+        value: string;
+    }>;
 };
 
 export type UpdateEndpointInput = {
@@ -4435,6 +4453,13 @@ export type UpdateEndpointInput = {
      * A webhook's label, up to 200 characters, shown with it in lists; null removes it. Only for http webhooks: a pull destination keeps the name it was created with.
      */
     name?: string | null;
+    /**
+     * Custom request headers sent on every delivery to this webhook, for a receiver that needs a credential of its own (for example Authorization). At most 5 per webhook unless the organization's limit was raised. Values are secrets: stored encrypted and never returned. Names Primitive sets itself or reserves are refused (among them Content-Type, Content-Length, User-Agent, Host, Accept-Encoding, the signature headers, and names starting X-Primitive-, X-Webhook-, Primitive-, Proxy- or X-Forwarded-), as is a name given twice. Only for http webhooks. The list given replaces the whole stored list, so send every header the webhook should keep, with its value; [] removes them all. A webhook that has headers changes its URL only with headers in the same request: the values were set for the receiver at the old URL. A non-empty list needs url in the same request, so the values go to the receiver named (refused otherwise, details.reason headers_need_url); [] needs no url.
+     */
+    headers?: Array<{
+        name: string;
+        value: string;
+    }>;
 };
 
 export type TestResult = {
@@ -4899,6 +4924,13 @@ export type DeliverySummary = {
      * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise, in answers recorded since November 2026, the webhook URL's query string, its parameters, values long enough to be a credential and any userinfo are hidden wherever it repeats them, and the rest is as the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate its URL's credential.
      */
     response_body: string | null;
+    /**
+     * The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded.
+     */
+    rules: Array<{
+        id: string;
+        name: string;
+    }> | null;
     /**
      * Whether this is the latest attempt of its delivery: the one recorded last, where a record of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an earlier attempt never changes: follow the latest one, or read attempts on any of them.
      */
@@ -6139,7 +6171,7 @@ export type ArchiveMembers = {
 
 export type EmailListMeta = {
     /**
-     * Total number of matching records
+     * Total number of matching records. Absent when a history page is read with `count=false` (no count runs), or when the count does not fit its time budget (`total_unavailable` is then true). `has_more` still says whether another page follows.
      */
     total?: number;
     /**
@@ -6430,6 +6462,23 @@ export type GetEmailRuleVocabularyResult = {
     };
 };
 
+export type EmailRuleBody = {
+    /**
+     * The description it was compiled from.
+     */
+    english: string;
+    /**
+     * grant or do_not_share.
+     */
+    kind: 'grant' | 'do_not_share';
+    tree: EmailRuleTree;
+    /**
+     * Present only when given at compile.
+     */
+    evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
+    scope_selection?: EmailRuleScopeSelection;
+};
+
 export type EmailRuleTree = {
     version: 1;
     /**
@@ -6443,33 +6492,9 @@ export type EmailRuleTree = {
         [key: string]: unknown;
     };
     /**
-     * Yes/no questions asked once the conditions match, over the email's text and attachment names, never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any yes.
+     * Yes/no questions asked once the conditions match, over the email's text and attachment names, and text read from PDF and image attachments where attachment reading is active for the organization. A grant rule needs every one yes; a do_not_share rule matches on any yes.
      */
     questions: Array<string>;
-};
-
-export type EmailRuleScopeUsed = {
-    /**
-     * author, own_mailboxes or selected, as a rule's evaluation_scope.
-     */
-    evaluation_scope: 'author' | 'own_mailboxes' | 'selected';
-    /**
-     * What a selected scope names; null for any other.
-     */
-    scope_selection: {
-        addresses: Array<string>;
-        domains: Array<string>;
-    } | null;
-};
-
-export type EmailRuleScopeWarning = {
-    name: string;
-    kind: 'address' | 'domain';
-    /**
-     * unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet.
-     */
-    reason: 'unknown_domain' | 'inactive_domain' | 'unknown_address';
-    message: string;
 };
 
 /**
@@ -6543,13 +6568,63 @@ export type EmailRuleTested = {
     warnings: Array<string>;
 };
 
+export type EmailRuleScopeUsed = {
+    /**
+     * author, own_mailboxes or selected, as a rule's evaluation_scope.
+     */
+    evaluation_scope: 'author' | 'own_mailboxes' | 'selected';
+    /**
+     * What a selected scope names; null for any other.
+     */
+    scope_selection: {
+        addresses: Array<string>;
+        domains: Array<string>;
+    } | null;
+};
+
+export type EmailRuleScopeWarning = {
+    name: string;
+    kind: 'address' | 'domain';
+    /**
+     * unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet.
+     */
+    reason: 'unknown_domain' | 'inactive_domain' | 'unknown_address';
+    message: string;
+};
+
+export type EmailRuleSampleGroupCounts = {
+    private: {
+        passed: number;
+        failed: number;
+        undecided: number;
+    };
+    near_miss: {
+        passed: number;
+        failed: number;
+        undecided: number;
+    };
+    must_match: {
+        passed: number;
+        failed: number;
+        undecided: number;
+    };
+};
+
 export type EmailRuleSampleJudgment = {
     index: number;
     sample_id: string | null;
     label: string | null;
     expected: 'match' | 'no_match';
+    /**
+     * Its group, when sent with one.
+     */
+    group?: 'private' | 'near_miss' | 'must_match';
     outcome: 'matched' | 'near_miss' | 'no_match' | 'not_decided';
     status: 'passed' | 'failed' | 'undecided';
+    /**
+     * Passed or failed on an answer below 0.75 confidence, so asking again (a new version, or any judgment of a made-up email) may decide it the other way. Never for one its conditions alone decided.
+     */
+    close_call: boolean;
     /**
      * On an undecided one only: why.
      */
@@ -6569,6 +6644,36 @@ export type EmailRuleSampleJudgment = {
     }>;
 };
 
+export type EmailRuleVersionChanges = {
+    /**
+     * version: the rule's current version (rule_id). requested: the request's rule as asked (request_id).
+     */
+    compared_to: 'version' | 'requested';
+    /**
+     * Present exactly when compared_to is version: its number.
+     */
+    compared_to_version?: number;
+    newly_matched: EmailRuleChangedEmails;
+    stops_matching: EmailRuleChangedEmails;
+    /**
+     * Emails listed in results that either could not decide (unclassified, skipped and not found included), in neither list.
+     */
+    undecided: number;
+};
+
+export type EmailRuleChangedEmails = {
+    count: number;
+    /**
+     * Newest first, at most 50; count is the full number.
+     */
+    emails: Array<{
+        email_id: string;
+        subject: string | null;
+        from: string | null;
+        received_at: string | null;
+    }>;
+};
+
 export type EmailRuleTreeInput = {
     version: 1;
     /**
@@ -6582,12 +6687,12 @@ export type EmailRuleTreeInput = {
         [key: string]: unknown;
     };
     /**
-     * Yes/no questions asked once the conditions match, over the email's text and attachment names, never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any yes. Left out, none.
+     * Yes/no questions asked once the conditions match, over the email's text and attachment names, and text read from PDF and image attachments where attachment reading is active for the organization. A grant rule needs every one yes; a do_not_share rule matches on any yes. Left out, none.
      */
     questions?: Array<string>;
 };
 
-export type EmailRuleExpectationSampleInput = {
+export type EmailRuleTestSampleInput = {
     expected: 'match' | 'no_match';
     /**
      * What the email stands for, such as a personal medical bill.
@@ -6596,6 +6701,10 @@ export type EmailRuleExpectationSampleInput = {
     email: EmailRuleSavedSampleEmail;
     id?: string;
     created_at?: string;
+    /**
+     * Its look-alike group: counted by group in the answer.
+     */
+    group?: 'private' | 'near_miss' | 'must_match';
 };
 
 /**
@@ -6637,7 +6746,7 @@ export type TestEmailRuleRequest = {
      */
     request_id?: string;
     /**
-     * Required with tree alone: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. With rule_id and tree, must be the rule's own.
+     * Required with tree alone: do_not_share tests it as a rule that blocks sharing, so an email it cannot decide counts as matched. With rule_id and tree, must be the rule's own; with request_id and tree, grant.
      */
     kind?: 'grant' | 'do_not_share';
     /**
@@ -6654,7 +6763,7 @@ export type TestEmailRuleRequest = {
     expect?: {
         match?: Array<string>;
         no_match?: Array<string>;
-        samples?: Array<EmailRuleExpectationSampleInput>;
+        samples?: Array<EmailRuleTestSampleInput>;
     };
 };
 
@@ -6730,9 +6839,13 @@ export type TestEmailRuleResult = {
         recipient?: string;
         subject?: string | null;
         /**
-         * On matched and near_miss: the file names the email lists, in order, at most 10 (the names its questions are given; never what is in the files). Parts with no name are left out; absent when there are none.
+         * On matched and near_miss: the file names the email lists, in order, at most 10 (the names its questions are given). Parts with no name are left out; absent when there are none. attachment_descriptions says what each file is, where one was read.
          */
         attachment_names?: Array<string>;
+        /**
+         * Given exactly when attachment_names is, aligned with it by position: the one-line description read from each file where the organization has attachment reading on, else null (not read, could not be read, reading off, or an email you cannot open yourself).
+         */
+        attachment_descriptions?: Array<string | null>;
         /**
          * How each top-level part of the rule decided. Present for matched, near_miss and no_match.
          */
@@ -6834,6 +6947,11 @@ export type TestEmailRuleResult = {
             passed: number;
             failed: number;
             undecided: number;
+            /**
+             * Of passed and failed, how many were close calls.
+             */
+            close_calls: number;
+            by_group?: EmailRuleSampleGroupCounts;
         };
         /**
          * match first, then no_match, each in the order given (saved expectations by email id).
@@ -6843,6 +6961,10 @@ export type TestEmailRuleResult = {
             expected: 'match' | 'no_match';
             outcome: 'matched' | 'near_miss' | 'no_match' | 'unclassified' | 'skipped' | 'not_found';
             status: 'passed' | 'failed' | 'undecided';
+            /**
+             * Passed or failed on an answer below 0.75 confidence, so asking again (a new version, or any judgment of a made-up email) may decide it the other way. Never for one its conditions alone decided.
+             */
+            close_call: boolean;
             /**
              * On an undecided one only: why.
              */
@@ -6857,14 +6979,16 @@ export type TestEmailRuleResult = {
          */
         samples?: Array<EmailRuleSampleJudgment>;
     };
+    changes?: EmailRuleVersionChanges;
 };
 
 export type EmailRuleLookAlike = {
-    kind: 'medical' | 'payroll' | 'personal_purchase' | 'bank_tax' | 'other';
+    kind: 'medical' | 'payroll' | 'personal_purchase' | 'bank_tax' | 'legal' | 'personal_correspondence' | 'other';
     /**
      * match: a near case the rule should match; no_match: one it should not.
      */
     expected: 'match' | 'no_match';
+    group: 'private' | 'near_miss' | 'must_match';
     /**
      * Why the rule should, or should not, match it.
      */
@@ -6891,6 +7015,10 @@ export type EmailRuleLookAlike = {
      * failed: the rule decided it against expected (shared one it should not, or missed one it should match). undecided: the rule reads a spam score, which it cannot carry, whatever it decided; or not matched on something it could not decide (not classified, a fact or answer missing, or not reached in time).
      */
     status: 'passed' | 'failed' | 'undecided';
+    /**
+     * Passed or failed on an answer below 0.75 confidence, so asking again (a new version, or any judgment of a made-up email) may decide it the other way. Never for one its conditions alone decided.
+     */
+    close_call: boolean;
     question_answers: Array<{
         question: string;
         answer: boolean | null;
@@ -6932,7 +7060,7 @@ export type GenerateLookAlikesRequest = {
     /**
      * Which kinds, taken in turn, all expected no_match; other is a business near miss. Left out, a default mix.
      */
-    kinds?: Array<'medical' | 'payroll' | 'personal_purchase' | 'bank_tax' | 'other'>;
+    kinds?: Array<'medical' | 'payroll' | 'personal_purchase' | 'bank_tax' | 'legal' | 'personal_correspondence' | 'other'>;
     /**
      * The mailbox they arrive in; by default the first address (alphabetically) a selected scope names that a made-up email can be sent to, preferring one the author still reads; else the rule author's (a request's target's) sign-in address when you may see it, else yours.
      */
@@ -6946,10 +7074,12 @@ export type GenerateLookAlikesResult = {
         passed: number;
         failed: number;
         undecided: number;
+        close_calls: number;
         /**
          * Asked for but not returned: not written, outside the sample bounds, or of a kind and expected not asked for.
          */
         dropped: number;
+        by_group: EmailRuleSampleGroupCounts;
     };
 };
 
@@ -7119,6 +7249,10 @@ export type EmailRuleWritten = {
      * To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to it waiting for their answer (GET /email-rule-objections).
      */
     pending_objections?: number;
+    /**
+     * On the list with all=true only: who receives what it matches now. Null when it could not be read in time.
+     */
+    receivers?: EmailRuleReceivers | null;
     created_at: string;
     updated_at: string;
     /**
@@ -7168,6 +7302,63 @@ export type EmailRuleAuthor = {
     email: string | null;
 };
 
+/**
+ * Who receives what the rule shares, by person and count. Empty unless it is an active grant rule.
+ */
+export type EmailRuleReceivers = {
+    /**
+     * API keys that work now (not revoked, expired or suspended) and hold mail:read, whose access lists the rule or its live share. Owner: who holds each, or the organization.
+     */
+    keys: Array<{
+        owner: {
+            kind: 'member' | 'organization';
+            /**
+             * The member's user id.
+             */
+            user_id?: string;
+            /**
+             * Their name; null when they have none set.
+             */
+            name?: string | null;
+        };
+        count: number;
+    }>;
+    /**
+     * Webhooks taking received mail, bounces or reports that are sent what it matches: those of the key delivery acts as, when it lists the rule or its live share (owner: its holder, or the organization), and those of the member it is shared with (owner: that member).
+     */
+    webhooks: Array<{
+        owner: {
+            kind: 'member' | 'organization';
+            /**
+             * The member's user id.
+             */
+            user_id?: string;
+            /**
+             * Their name; null when they have none set.
+             */
+            name?: string | null;
+        };
+        count: number;
+    }>;
+    /**
+     * The rule's live share (at most one), by its member, if they can read it and it is among their newest 20 shares.
+     */
+    shares: Array<{
+        beneficiary: {
+            kind: 'member';
+            /**
+             * The member's user id.
+             */
+            user_id: string;
+            /**
+             * Their name; null when they have none set.
+             */
+            name: string | null;
+        };
+        count: number;
+    }>;
+};
+
 export type EmailRuleVersion = {
     version: number;
     /**
@@ -7205,9 +7396,55 @@ export type EmailRuleExpectationSample = {
     created_at: string;
 };
 
+export type EmailRuleExpectationsCheck = {
+    /**
+     * The version judged, once saved; null in a refusal.
+     */
+    version: number | null;
+    /**
+     * Whether every expectation passed.
+     */
+    passed: boolean;
+    /**
+     * Emails by id that failed.
+     */
+    failed: Array<string>;
+    /**
+     * Emails by id not decided.
+     */
+    undecided: Array<string>;
+    /**
+     * Made-up emails that failed, by index in the set judged and label.
+     */
+    failed_samples: Array<EmailRuleSampleDetail>;
+    /**
+     * Made-up emails not decided.
+     */
+    undecided_samples: Array<EmailRuleSampleDetail>;
+    /**
+     * Emails by id, passed or failed, decided by an answer below 0.75 confidence: judged again they may come out the other way.
+     */
+    close_calls: Array<string>;
+    /**
+     * Made-up emails that were close calls.
+     */
+    close_call_samples: Array<EmailRuleSampleDetail>;
+};
+
 export type EmailRuleSampleDetail = {
     index: number;
     label: string | null;
+};
+
+export type EmailRuleExpectationSampleInput = {
+    expected: 'match' | 'no_match';
+    /**
+     * What the email stands for, such as a personal medical bill.
+     */
+    label?: string | null;
+    email: EmailRuleSavedSampleEmail;
+    id?: string;
+    created_at?: string;
 };
 
 export type CreateEmailRuleRequest = {
@@ -7282,6 +7519,10 @@ export type EmailRule = {
      * To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to it waiting for their answer (GET /email-rule-objections).
      */
     pending_objections?: number;
+    /**
+     * On the list with all=true only: who receives what it matches now. Null when it could not be read in time.
+     */
+    receivers?: EmailRuleReceivers | null;
     created_at: string;
     updated_at: string;
 };
@@ -7336,6 +7577,10 @@ export type EmailRuleRead = {
      * To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to it waiting for their answer (GET /email-rule-objections).
      */
     pending_objections?: number;
+    /**
+     * On the list with all=true only: who receives what it matches now. Null when it could not be read in time.
+     */
+    receivers?: EmailRuleReceivers | null;
     created_at: string;
     updated_at: string;
     /**
@@ -7466,7 +7711,10 @@ export type ListEmailRuleDecisionsResult = Array<{
      * With withheld_by: how many more kept it back that you cannot see, or that were deleted since. Those rules are not shown; an admin can see them.
      */
     withheld_by_hidden?: number;
-    created_at: string;
+    /**
+     * When the rule made this decision.
+     */
+    decided_at: string;
     /**
      * The decided email's sender address, as GET /v1/emails/{id} shows it.
      */
@@ -7476,7 +7724,11 @@ export type ListEmailRuleDecisionsResult = Array<{
      */
     subject: string | null;
     /**
-     * When the decided email arrived. Null, with the other two, when you are not shown the email (it awaits sender authentication).
+     * The mailbox the decided email was received in, as GET /v1/emails/{id} shows it (to_email).
+     */
+    recipient: string | null;
+    /**
+     * When the decided email arrived. Null, with from_address, subject and recipient, when you are not shown the email (it awaits sender authentication).
      */
     received_at: string | null;
 }>;
@@ -7491,63 +7743,6 @@ export type EmailRuleCoveringAuthor = {
      * Sign-in email; null unless you can list member emails or this is you.
      */
     email: string | null;
-};
-
-/**
- * Who receives what the rule shares, by person and count. Empty unless it is an active grant rule.
- */
-export type EmailRuleReceivers = {
-    /**
-     * API keys that work now (not revoked, expired or suspended) and hold mail:read, whose access lists the rule or its live share. Owner: who holds each, or the organization.
-     */
-    keys: Array<{
-        owner: {
-            kind: 'member' | 'organization';
-            /**
-             * The member's user id.
-             */
-            user_id?: string;
-            /**
-             * Their name; null when they have none set.
-             */
-            name?: string | null;
-        };
-        count: number;
-    }>;
-    /**
-     * Webhooks taking received mail, bounces or reports that are sent what it matches: those of the key delivery acts as, when it lists the rule or its live share (owner: its holder, or the organization), and those of the member it is shared with (owner: that member).
-     */
-    webhooks: Array<{
-        owner: {
-            kind: 'member' | 'organization';
-            /**
-             * The member's user id.
-             */
-            user_id?: string;
-            /**
-             * Their name; null when they have none set.
-             */
-            name?: string | null;
-        };
-        count: number;
-    }>;
-    /**
-     * The rule's live share (at most one), by its member, if they can read it and it is among their newest 20 shares.
-     */
-    shares: Array<{
-        beneficiary: {
-            kind: 'member';
-            /**
-             * The member's user id.
-             */
-            user_id: string;
-            /**
-             * Their name; null when they have none set.
-             */
-            name: string | null;
-        };
-        count: number;
-    }>;
 };
 
 export type ListEmailRuleResultsResult = {
@@ -7937,6 +8132,10 @@ export type EmailRuleWithVersion = {
      * To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to it waiting for their answer (GET /email-rule-objections).
      */
     pending_objections?: number;
+    /**
+     * On the list with all=true only: who receives what it matches now. Null when it could not be read in time.
+     */
+    receivers?: EmailRuleReceivers | null;
     created_at: string;
     updated_at: string;
     /**
@@ -7971,7 +8170,7 @@ export type EmailRuleShare = {
      */
     delivery_paused: boolean | null;
     /**
-     * For the member it is shared with, on the dashboard or the Primitive CLI, while it is live and their access reads content: whether it is working, so a quiet mailbox can be told from a stopped share. Null otherwise, and when it could not be read.
+     * For the member it is shared with, on the dashboard or the Primitive CLI, while it is live and their access reads content: whether it is working, so a quiet mailbox can be told from a stopped share (checked false when that could not be read just now). Null otherwise.
      */
     activity: EmailRuleShareActivity | null;
     /**
@@ -8002,9 +8201,13 @@ export type EmailRuleShare = {
 
 export type EmailRuleShareActivity = {
     /**
-     * The start of the hour in which the rule last decided on any email in the sharing member's mailboxes since the share began, counting only hours that have ended and the hour of the newest email shared; null if none.
+     * The start of the hour in which the rule last decided on any email in the sharing member's mailboxes since the share began, counting only hours that have ended and the hour of the newest email shared; null if none, or if it could not be checked.
      */
     last_decided_at: string | null;
+    /**
+     * False when whether the share is working could not be read just now (last_decided_at is then null): read it again.
+     */
+    checked: boolean;
 };
 
 export type EmailRuleShareGranter = {
@@ -8301,14 +8504,21 @@ export type EmailRuleDecisionOnMyMail = {
      * Present, as true, when the email's content cannot be read: matched still says what the rule decided, and parts and question_answers are empty.
      */
     detail_withheld?: boolean;
-    created_at: string;
+    /**
+     * When the rule made this decision.
+     */
+    decided_at: string;
     /**
      * The email's sender address, as GET /v1/emails/{id} shows it.
      */
     from_address: string | null;
     subject: string | null;
     /**
-     * When the email arrived. Null, with the other two, when you are not shown the email (it awaits sender authentication).
+     * Which of your mailboxes the email was received in.
+     */
+    recipient: string | null;
+    /**
+     * When the email arrived. Null, with from_address, subject and recipient, when you are not shown the email (it awaits sender authentication).
      */
     received_at: string | null;
 };
@@ -8567,6 +8777,16 @@ export type MarkThreadReadInput = {
      * Everything that arrived at or before this instant is read. A future instant is clamped to now.
      */
     up_to?: string;
+};
+
+/**
+ * Metadata for one attachment of a received email, as the top-level `attachments` of GET /emails/{id} list it: EmailAttachment with the part's `description` (`parsed.attachments` has none).
+ */
+export type EmailDetailAttachment = EmailAttachment & {
+    /**
+     * A one-line description of what the attachment is, read from the file when the organization has attachment reading on. Null when the part was not read, could not be read, or attachment reading is off.
+     */
+    description: string | null;
 };
 
 export type EmailReadableLink = {
@@ -9222,6 +9442,13 @@ export type GetDeliveryResult = {
      * The first 2 KB of the body the endpoint answered this attempt with, so a handler that answers 200 and ignores a delivery can be seen doing so. It is whatever came back, which may echo what was sent. Null when no answer came back, and cleared when the message's content is discarded or the sent email is deleted. Withheld from a caller who cannot read message content, since an answer can echo what was sent. Null for a redirect (3xx), whose body repeats its Location; otherwise, in answers recorded since November 2026, the webhook URL's query string, its parameters, values long enough to be a credential and any userinfo are hidden wherever it repeats them, and the rest is as the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate its URL's credential.
      */
     response_body: string | null;
+    /**
+     * The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded.
+     */
+    rules: Array<{
+        id: string;
+        name: string;
+    }> | null;
     created_at: string;
     updated_at: string;
     email: {
@@ -9342,7 +9569,13 @@ export type ProjectsListOrganizationInvitationsResult = {
 };
 
 export type ProjectsInviteOrganizationMemberInput = {
+    /**
+     * Client-generated UUID for this operation. Reuse it with the same choices after an uncertain response; use a new UUID for a new operation.
+     */
     request_id: string;
+    /**
+     * Email address of the person to invite.
+     */
     email: string;
     /**
      * The role the person joins with: member (the default), none for no access, admin, a role template key or a custom role id. Anything above member, and member where every member reads all of the organization's mail, needs a signed-in dashboard session holding roles:assign. owner and restricted are refused.
@@ -9443,18 +9676,45 @@ export type ProjectsListProjectsResult = {
 };
 
 export type ProjectsCreateProjectInput = {
+    /**
+     * Client-generated UUID for this operation. Reuse it with the same choices after an uncertain response; use a new UUID for a new operation.
+     */
     request_id: string;
+    /**
+     * Shared project name.
+     */
     name: string;
+    /**
+     * Shared project description; defaults to an empty string.
+     */
     description?: string;
+    /**
+     * Repository identity as owner/repo or an HTTPS URL without credentials, query parameters or fragments. Omit or use null for none; local checkout paths are not shared.
+     */
     repository?: string | null;
+    /**
+     * Project display color as a six-digit hexadecimal value, including #.
+     */
     color: string;
+    /**
+     * Complete list of organization teammates and their project email destinations. Use [] for none.
+     */
     members: Array<{
+        /**
+         * Organization member to include in the project.
+         */
         user_id: string;
+        /**
+         * Where this teammate receives project mail: work_email, or agent with one of their own addresses. Preserve private_agent to keep an existing private choice without exposing its address.
+         */
         recipient: {
             kind: 'work_email' | 'agent' | 'private_agent';
             address?: string;
         };
     }>;
+    /**
+     * Available agent addresses to link to the project. On update, replaces only links the caller can see; unseen live links are preserved. Use [] for no visible links.
+     */
     agent_addresses: Array<string>;
 };
 
@@ -9499,18 +9759,45 @@ export type ProjectsCreateProjectResult = {
 };
 
 export type ProjectsUpdateProjectInput = {
+    /**
+     * Current project version. Refresh the project before retrying a version conflict.
+     */
     version: number;
+    /**
+     * Shared project name.
+     */
     name: string;
+    /**
+     * Shared project description; defaults to an empty string.
+     */
     description?: string;
+    /**
+     * Repository identity as owner/repo or an HTTPS URL without credentials, query parameters or fragments. Omit or use null for none; local checkout paths are not shared.
+     */
     repository?: string | null;
+    /**
+     * Project display color as a six-digit hexadecimal value, including #.
+     */
     color: string;
+    /**
+     * Complete list of organization teammates and their project email destinations. Use [] for none.
+     */
     members: Array<{
+        /**
+         * Organization member to include in the project.
+         */
         user_id: string;
+        /**
+         * Where this teammate receives project mail: work_email, or agent with one of their own addresses. Preserve private_agent to keep an existing private choice without exposing its address.
+         */
         recipient: {
             kind: 'work_email' | 'agent' | 'private_agent';
             address?: string;
         };
     }>;
+    /**
+     * Available agent addresses to link to the project. On update, replaces only links the caller can see; unseen live links are preserved. Use [] for no visible links.
+     */
     agent_addresses: Array<string>;
 };
 
@@ -9532,7 +9819,13 @@ export type ProjectsListProjectInvitationsResult = {
 };
 
 export type ProjectsInviteProjectMemberInput = {
+    /**
+     * Client-generated UUID for this operation. Reuse it with the same choices after an uncertain response; use a new UUID for a new operation.
+     */
     request_id: string;
+    /**
+     * Email address of the person to invite.
+     */
     email: string;
 };
 
@@ -10425,6 +10718,26 @@ export type OrgSettingsUpdateSearchSettingsInput = {
     semantic_search_opt_in: boolean;
 };
 
+export type OrgSettingsGetEmailRuleSettingsResult = {
+    rules_read_attachments: boolean;
+    available: boolean;
+    hipaa_mode: boolean;
+    active: boolean;
+    [key: string]: unknown;
+};
+
+export type OrgSettingsUpdateEmailRuleSettingsResult = {
+    rules_read_attachments: boolean;
+    available: boolean;
+    hipaa_mode: boolean;
+    active: boolean;
+    [key: string]: unknown;
+};
+
+export type OrgSettingsUpdateEmailRuleSettingsInput = {
+    rules_read_attachments: boolean;
+};
+
 export type EmailNotificationsGetEmailNotificationSettingsResult = {
     entitled: boolean;
     kinds: Array<{
@@ -11154,6 +11467,10 @@ export type EndpointCreateWarning = {
     code: string;
     message: string;
     /**
+     * The HTTP status the URL answered, on url_requires_login and url_redirects.
+     */
+    status?: number;
+    /**
      * The other webhook a same_path_as_another_endpoint warning names.
      */
     endpoint_id?: string;
@@ -11162,7 +11479,7 @@ export type EndpointCreateWarning = {
 
 export type CreatedEndpoint = Endpoint & {
     /**
-     * For a webhook (kind http). same_path_as_another_endpoint: another webhook you can see, on and not deleted, sends to the same scheme, host and path with any query string, so each email both receive is delivered twice; endpoint_id names it (at most 5, newest first). The URL is never echoed. Empty when none; absent when it could not be checked (a caller who may not read endpoints, or a failed read). Other codes may be added.
+     * For a webhook (kind http). same_path_as_another_endpoint: another webhook you can see, on and not deleted, sends to the same scheme, host and path with any query string, so each email both receive is delivered twice; endpoint_id names it (at most 5, newest first). The URL is never echoed. A created webhook is also sent the test request POST /endpoints/{id}/test sends (within a budget of its own, separate from the test budget); the webhook is saved whatever it answers: url_requires_login: it answered 302, 401 or 403 (status names which), so the host appears to require a login. url_redirects: another redirect, which deliveries do not follow. url_unreachable: no answer within 5 seconds, or a connection error (deliveries wait longer, so a slow receiver may still receive them). url_not_checked: the probe was not made or could not finish (the organization made many such checks just now, the signing secret could not be read, the URL changed again since this write, or the check failed). A caller who may not send the webhook a test request gets no probe and none of these. Absent only when the same-path check could not be made and the probe found nothing to warn about; when the same-path check could not be made, the list has no same_path_as_another_endpoint entries whatever else it holds. Other codes may be added.
      */
     warnings?: Array<EndpointCreateWarning>;
 };
@@ -11170,12 +11487,16 @@ export type CreatedEndpoint = Endpoint & {
 export type EndpointUpdateWarning = {
     code: string;
     message: string;
+    /**
+     * The HTTP status the URL answered, on url_requires_login and url_redirects.
+     */
+    status?: number;
     [key: string]: unknown;
 };
 
 export type UpdatedEndpoint = Endpoint & {
     /**
-     * When this update turned the webhook off or on without the request setting enabled. turned_off_owner_changed: the webhook was given to a new owner, so it is now off (disabled_reason owner_changed) until it is turned on or given a new URL. turned_on_new_url: it was off because its owner changed, and the new URL turned it back on. Empty when the update did neither. Other codes may be added.
+     * When this update turned the webhook off or on without the request setting enabled. turned_off_owner_changed: the webhook was given to a new owner, so it is now off (disabled_reason owner_changed) until it is turned on or given a new URL. turned_on_new_url: it was off because its owner changed, and the new URL turned it back on. Empty when the update did neither. When the update gives a webhook a new URL, it is sent the test request POST /endpoints/{id}/test sends (within a budget of its own, separate from the test budget), and a warning says when its answer means deliveries will fail: url_requires_login: it answered 302, 401 or 403 (status names which), so the host appears to require a login. url_redirects: another redirect, which deliveries do not follow. url_unreachable: no answer within 5 seconds, or a connection error (deliveries wait longer, so a slow receiver may still receive them). url_not_checked: the probe was not made or could not finish (the organization made many such checks just now, the signing secret could not be read, the URL changed again since this write, or the check failed). A caller who may not send the webhook a test request gets no probe and none of these. Other codes may be added.
      */
     warnings: Array<EndpointUpdateWarning>;
 };
@@ -11312,50 +11633,6 @@ export type CliOrgList = {
  * The key of a built-in role. Every other role, including the `operator` template, is a template or custom role with a key of its own. A member's `role` (and the `stored_role` a role assignment returns) can also be `restricted`, which is not a built-in role and cannot be assigned: it stands for a template or custom role that does not fully include `member`, or for no role at all.
  */
 export type BuiltinRoleKey = 'owner' | 'admin' | 'member';
-
-export type EmailRuleExpectationsCheck = {
-    /**
-     * The version judged, once saved; null in a refusal.
-     */
-    version: number | null;
-    /**
-     * Whether every expectation passed.
-     */
-    passed: boolean;
-    /**
-     * Emails by id that failed.
-     */
-    failed: Array<string>;
-    /**
-     * Emails by id not decided.
-     */
-    undecided: Array<string>;
-    /**
-     * Made-up emails that failed, by index in the set judged and label.
-     */
-    failed_samples: Array<EmailRuleSampleDetail>;
-    /**
-     * Made-up emails not decided.
-     */
-    undecided_samples: Array<EmailRuleSampleDetail>;
-};
-
-export type EmailRuleBody = {
-    /**
-     * The description it was compiled from.
-     */
-    english: string;
-    /**
-     * grant or do_not_share.
-     */
-    kind: 'grant' | 'do_not_share';
-    tree: EmailRuleTree;
-    /**
-     * Present only when given at compile.
-     */
-    evaluation_scope?: 'author' | 'own_mailboxes' | 'selected';
-    scope_selection?: EmailRuleScopeSelection;
-};
 
 export type StartCliLoginData = {
     body?: StartCliLoginInput;
@@ -12689,7 +12966,7 @@ export type ListEmailsData = {
          */
         content_discarded?: 'true' | 'false';
         /**
-         * With `false`, a history page runs no total count: `meta.total` and `meta.total_capped` are absent, and `meta.has_more` still says whether another page follows. Unset or `true`, a history page reports its total as before. The forward tail (`since`) and `search` report the page itself as the total and run no count either way.
+         * With `false`, a history page runs no total count: `meta.total` and `meta.total_capped` are absent, and `meta.has_more` still says whether another page follows. Unset or `true`, a history page reports its total as before. The forward tail (`since`) and `search` run no count either way: `total` is the rows the page read, with `total_capped` `true` when a match lies past its last row.
          */
         count?: 'true' | 'false';
         /**
@@ -21285,7 +21562,7 @@ export type TestEmailRuleData = {
 
 export type TestEmailRuleErrors = {
     /**
-     * validation_error: give one of tree (with kind), rule_id and request_id, or rule_id with tree; at most 200 email_ids (with the expected emails), 1 to 100 expected emails none in both lists (or only expect.samples, up to 20), and a tree that is valid for the column contract. english, evaluation_scope, scope_selection and kind go only with tree; with rule_id, a kind other than the rule's answers details.reason kind_mismatch. A saved rule's current version or a request's rule that no longer renders answers details.reason version_not_renderable; email_ids that with its saved expectations name over 200 emails, too_many_emails.
+     * validation_error: give one of tree (with kind), rule_id and request_id, or tree with rule_id or request_id; at most 200 email_ids (with the expected emails), 1 to 100 expected emails none in both lists (or only expect.samples, up to 20), and a tree that is valid for the column contract. english, evaluation_scope, scope_selection and kind go only with tree, and with request_id only english and kind grant; with rule_id, a kind other than the rule's answers details.reason kind_mismatch. A saved rule's current version or a request's rule that no longer renders answers details.reason version_not_renderable; email_ids that with its saved expectations name over 200 emails, too_many_emails.
      */
     400: ErrorResponse;
     /**
@@ -21453,13 +21730,33 @@ export type ListEmailRulesData = {
          * Only rules that matched this email.
          */
         matched_email_id?: string;
+        /**
+         * true: every rule in the organization, any author (owners and admins).
+         */
+        all?: 'true' | 'false';
+        /**
+         * Only rules written by this member: their user id, or their member address (members:read, your own address, or with all).
+         */
+        author?: string;
+        /**
+         * Only rules whose scope reaches this mailbox now (another member's: members:read, or with all).
+         */
+        mailbox?: string;
+        /**
+         * Only rules of this kind.
+         */
+        kind?: 'grant' | 'do_not_share';
+        /**
+         * Only rules in this state.
+         */
+        state?: 'draft' | 'observe' | 'active';
     };
     url: '/email-rules';
 };
 
 export type ListEmailRulesErrors = {
     /**
-     * Invalid request parameters
+     * validation_error: matched_email_id with all=true, or a cursor this list did not give you.
      */
     400: ErrorResponse;
     /**
@@ -21467,7 +21764,7 @@ export type ListEmailRulesErrors = {
      */
     401: ErrorResponse;
     /**
-     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: matched_email_id with access to mail that shows headers only, since which rules matched an email is read from what it says.
+     * feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: matched_email_id with access to mail that shows headers only. grant_forbidden with details.reason owner_or_admin_only or person_credential: all=true from anyone but an owner or admin signed in themselves. grant_forbidden with details.reason permission_missing (members:read): author or mailbox naming an address other than your own without all=true, by a caller who reads every mailbox but cannot list members.
      */
     403: ErrorResponse;
     /**
@@ -25504,11 +25801,11 @@ export type ListOrganizationInvitationsData = {
     path?: never;
     query?: {
         /**
-         * cursor for project collaboration.
+         * Continuation cursor from the previous page; omit for the first page.
          */
         cursor?: string;
         /**
-         * limit for project collaboration.
+         * Maximum number of results to return; defaults to 50.
          */
         limit?: number;
     };
@@ -25622,7 +25919,7 @@ export type RevokeOrganizationInvitationData = {
     body?: never;
     path: {
         /**
-         * invitation_id for project collaboration.
+         * Invitation ID returned by an invitation list or creation.
          */
         invitation_id: string;
     };
@@ -25680,15 +25977,15 @@ export type ListOrganizationPeopleData = {
     path?: never;
     query?: {
         /**
-         * cursor for project collaboration.
+         * Continuation cursor from the previous page; omit for the first page.
          */
         cursor?: string;
         /**
-         * limit for project collaboration.
+         * Maximum number of results to return; defaults to 50.
          */
         limit?: number;
         /**
-         * query for project collaboration.
+         * Filter members by name or a work email the caller may see.
          */
         query?: string;
     };
@@ -25745,11 +26042,11 @@ export type ListProjectsData = {
     path?: never;
     query?: {
         /**
-         * cursor for project collaboration.
+         * Continuation cursor from the previous page; omit for the first page.
          */
         cursor?: string;
         /**
-         * limit for project collaboration.
+         * Maximum number of results to return; defaults to 50.
          */
         limit?: number;
     };
@@ -25863,13 +26160,13 @@ export type DeleteProjectData = {
     body?: never;
     path: {
         /**
-         * project_id for project collaboration.
+         * Project ID returned by listProjects or createProject.
          */
         project_id: string;
     };
     query: {
         /**
-         * version for project collaboration.
+         * Current project version. Refresh the project before retrying a version conflict.
          */
         version: number;
     };
@@ -25925,7 +26222,7 @@ export type GetProjectData = {
     body?: never;
     path: {
         /**
-         * project_id for project collaboration.
+         * Project ID returned by listProjects or createProject.
          */
         project_id: string;
     };
@@ -25982,7 +26279,7 @@ export type UpdateProjectData = {
     body: ProjectsUpdateProjectInput;
     path: {
         /**
-         * project_id for project collaboration.
+         * Project ID returned by listProjects or createProject.
          */
         project_id: string;
     };
@@ -26039,7 +26336,7 @@ export type ListProjectInvitationsData = {
     body?: never;
     path: {
         /**
-         * project_id for project collaboration.
+         * Project ID returned by listProjects or createProject.
          */
         project_id: string;
     };
@@ -26106,7 +26403,7 @@ export type InviteProjectMemberData = {
     };
     path: {
         /**
-         * project_id for project collaboration.
+         * Project ID returned by listProjects or createProject.
          */
         project_id: string;
     };
@@ -26167,11 +26464,11 @@ export type RevokeProjectInvitationData = {
     body?: never;
     path: {
         /**
-         * project_id for project collaboration.
+         * Project ID returned by listProjects or createProject.
          */
         project_id: string;
         /**
-         * invitation_id for project collaboration.
+         * Invitation ID returned by an invitation list or creation.
          */
         invitation_id: string;
     };
@@ -27518,7 +27815,7 @@ export type UpdateOrganizationData = {
     body: OrgSettingsUpdateOrganizationInput;
     headers?: {
         /**
-         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting, email notification settings or whether email rules read attachments), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
          */
         'Primitive-Step-Up'?: string;
     };
@@ -27580,7 +27877,7 @@ export type RemoveOrganizationLogoData = {
     body?: never;
     headers?: {
         /**
-         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting, email notification settings or whether email rules read attachments), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
          */
         'Primitive-Step-Up'?: string;
     };
@@ -27642,7 +27939,7 @@ export type UpdateOrganizationLogoData = {
     body: OrgSettingsUpdateOrganizationLogoInput;
     headers?: {
         /**
-         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting, email notification settings or whether email rules read attachments), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
          */
         'Primitive-Step-Up'?: string;
     };
@@ -27748,7 +28045,7 @@ export type UpdateSearchSettingsData = {
     body: OrgSettingsUpdateSearchSettingsInput;
     headers?: {
         /**
-         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting, email notification settings or whether email rules read attachments), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
          */
         'Primitive-Step-Up'?: string;
     };
@@ -27798,6 +28095,104 @@ export type UpdateSearchSettingsResponses = {
 
 export type UpdateSearchSettingsResponse = UpdateSearchSettingsResponses[keyof UpdateSearchSettingsResponses];
 
+export type GetEmailRuleSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/email-rule-settings';
+};
+
+export type GetEmailRuleSettingsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type GetEmailRuleSettingsError = GetEmailRuleSettingsErrors[keyof GetEmailRuleSettingsErrors];
+
+export type GetEmailRuleSettingsResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+        data: OrgSettingsGetEmailRuleSettingsResult;
+    };
+};
+
+export type GetEmailRuleSettingsResponse = GetEmailRuleSettingsResponses[keyof GetEmailRuleSettingsResponses];
+
+export type UpdateEmailRuleSettingsData = {
+    body: OrgSettingsUpdateEmailRuleSettingsInput;
+    headers?: {
+        /**
+         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting, email notification settings or whether email rules read attachments), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+         */
+        'Primitive-Step-Up'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/email-rule-settings';
+};
+
+export type UpdateEmailRuleSettingsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+     */
+    429: ErrorResponse;
+};
+
+export type UpdateEmailRuleSettingsError = UpdateEmailRuleSettingsErrors[keyof UpdateEmailRuleSettingsErrors];
+
+export type UpdateEmailRuleSettingsResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+        data: OrgSettingsUpdateEmailRuleSettingsResult;
+    };
+};
+
+export type UpdateEmailRuleSettingsResponse = UpdateEmailRuleSettingsResponses[keyof UpdateEmailRuleSettingsResponses];
+
 export type GetEmailNotificationSettingsData = {
     body?: never;
     path?: never;
@@ -27846,7 +28241,7 @@ export type UpdateEmailNotificationSettingsData = {
     body: EmailNotificationsUpdateEmailNotificationSettingsInput;
     headers?: {
         /**
-         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+         * A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting, email notification settings or whether email rules read attachments), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
          */
         'Primitive-Step-Up'?: string;
     };

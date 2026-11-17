@@ -12,6 +12,7 @@ from typing import cast
 from uuid import UUID
 
 if TYPE_CHECKING:
+  from ..models.update_endpoint_input_headers_item import UpdateEndpointInputHeadersItem
   from ..models.update_endpoint_input_rules import UpdateEndpointInputRules
 
 
@@ -55,6 +56,16 @@ class UpdateEndpointInput:
                 new one for any other owner's. The response's warnings say when an update turned the webhook off or on.
             name (None | str | Unset): A webhook's label, up to 200 characters, shown with it in lists; null removes it.
                 Only for http webhooks: a pull destination keeps the name it was created with.
+            headers (list[UpdateEndpointInputHeadersItem] | Unset): Custom request headers sent on every delivery to this
+                webhook, for a receiver that needs a credential of its own (for example Authorization). At most 5 per webhook
+                unless the organization's limit was raised. Values are secrets: stored encrypted and never returned. Names
+                Primitive sets itself or reserves are refused (among them Content-Type, Content-Length, User-Agent, Host,
+                Accept-Encoding, the signature headers, and names starting X-Primitive-, X-Webhook-, Primitive-, Proxy- or
+                X-Forwarded-), as is a name given twice. Only for http webhooks. The list given replaces the whole stored list,
+                so send every header the webhook should keep, with its value; [] removes them all. A webhook that has headers
+                changes its URL only with headers in the same request: the values were set for the receiver at the old URL. A
+                non-empty list needs url in the same request, so the values go to the receiver named (refused otherwise,
+                details.reason headers_need_url); [] needs no url.
      """
 
     url: str | Unset = UNSET
@@ -64,12 +75,14 @@ class UpdateEndpointInput:
     takeover: bool | Unset = UNSET
     owner_key_id: None | Unset | UUID = UNSET
     name: None | str | Unset = UNSET
+    headers: list[UpdateEndpointInputHeadersItem] | Unset = UNSET
 
 
 
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.update_endpoint_input_headers_item import UpdateEndpointInputHeadersItem # noqa: PLC0415
         from ..models.update_endpoint_input_rules import UpdateEndpointInputRules # noqa: PLC0415
         url = self.url
 
@@ -103,6 +116,15 @@ class UpdateEndpointInput:
         else:
             name = self.name
 
+        headers: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.headers, Unset):
+            headers = []
+            for headers_item_data in self.headers:
+                headers_item = headers_item_data.to_dict()
+                headers.append(headers_item)
+
+
+
 
         field_dict: dict[str, Any] = {}
 
@@ -122,6 +144,8 @@ class UpdateEndpointInput:
             field_dict["owner_key_id"] = owner_key_id
         if name is not UNSET:
             field_dict["name"] = name
+        if headers is not UNSET:
+            field_dict["headers"] = headers
 
         return field_dict
 
@@ -129,6 +153,7 @@ class UpdateEndpointInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.update_endpoint_input_headers_item import UpdateEndpointInputHeadersItem # noqa: PLC0415
         from ..models.update_endpoint_input_rules import UpdateEndpointInputRules # noqa: PLC0415
         d = dict(src_dict)
         url = d.pop("url", UNSET)
@@ -197,6 +222,18 @@ class UpdateEndpointInput:
         name = _parse_name(d.pop("name", UNSET))
 
 
+        _headers = d.pop("headers", UNSET)
+        headers: list[UpdateEndpointInputHeadersItem] | Unset = UNSET
+        if _headers is not UNSET:
+            headers = []
+            for headers_item_data in _headers:
+                headers_item = UpdateEndpointInputHeadersItem.from_dict(headers_item_data)
+
+
+
+                headers.append(headers_item)
+
+
         update_endpoint_input = cls(
             url=url,
             enabled=enabled,
@@ -205,6 +242,7 @@ class UpdateEndpointInput:
             takeover=takeover,
             owner_key_id=owner_key_id,
             name=name,
+            headers=headers,
         )
 
         return update_endpoint_input

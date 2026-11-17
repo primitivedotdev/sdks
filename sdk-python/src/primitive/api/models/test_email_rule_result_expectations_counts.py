@@ -8,7 +8,10 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from typing import cast
 
+if TYPE_CHECKING:
+  from ..models.email_rule_sample_group_counts import EmailRuleSampleGroupCounts
 
 
 
@@ -25,11 +28,15 @@ class TestEmailRuleResultExpectationsCounts:
             passed (int):
             failed (int):
             undecided (int):
+            close_calls (int): Of passed and failed, how many were close calls.
+            by_group (EmailRuleSampleGroupCounts | Unset):
      """
 
     passed: int
     failed: int
     undecided: int
+    close_calls: int
+    by_group: EmailRuleSampleGroupCounts | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -37,11 +44,18 @@ class TestEmailRuleResultExpectationsCounts:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_rule_sample_group_counts import EmailRuleSampleGroupCounts # noqa: PLC0415
         passed = self.passed
 
         failed = self.failed
 
         undecided = self.undecided
+
+        close_calls = self.close_calls
+
+        by_group: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.by_group, Unset):
+            by_group = self.by_group.to_dict()
 
 
         field_dict: dict[str, Any] = {}
@@ -50,7 +64,10 @@ class TestEmailRuleResultExpectationsCounts:
             "passed": passed,
             "failed": failed,
             "undecided": undecided,
+            "close_calls": close_calls,
         })
+        if by_group is not UNSET:
+            field_dict["by_group"] = by_group
 
         return field_dict
 
@@ -58,6 +75,7 @@ class TestEmailRuleResultExpectationsCounts:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_rule_sample_group_counts import EmailRuleSampleGroupCounts # noqa: PLC0415
         d = dict(src_dict)
         passed = d.pop("passed")
 
@@ -65,10 +83,24 @@ class TestEmailRuleResultExpectationsCounts:
 
         undecided = d.pop("undecided")
 
+        close_calls = d.pop("close_calls")
+
+        _by_group = d.pop("by_group", UNSET)
+        by_group: EmailRuleSampleGroupCounts | Unset
+        if isinstance(_by_group,  Unset):
+            by_group = UNSET
+        else:
+            by_group = EmailRuleSampleGroupCounts.from_dict(_by_group)
+
+
+
+
         test_email_rule_result_expectations_counts = cls(
             passed=passed,
             failed=failed,
             undecided=undecided,
+            close_calls=close_calls,
+            by_group=by_group,
         )
 
 

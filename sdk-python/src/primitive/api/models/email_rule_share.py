@@ -50,7 +50,7 @@ class EmailRuleShare:
                 live, rule not active, or you are not on the share) or could not be read.
             activity (EmailRuleShareActivity | None): For the member it is shared with, on the dashboard or the Primitive
                 CLI, while it is live and their access reads content: whether it is working, so a quiet mailbox can be told from
-                a stopped share. Null otherwise, and when it could not be read.
+                a stopped share (checked false when that could not be read just now). Null otherwise.
             is_granter (bool): Whether you are the member sharing their mail.
             is_beneficiary (bool): Whether you are the member it is shared with.
             granter (EmailRuleShareGranter):

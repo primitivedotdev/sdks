@@ -124,11 +124,12 @@ def sync_detailed(
     contract: rule, exactly the body create (with a name), update and the tests take, with an
     explanation of what it matches, the assumptions made, and warnings for what the columns cannot
     express. Where the columns fall short it adds up to five yes/no questions, asked only after the
-    conditions match; they read the subject, the new text and attachment file names, never attachment
-    contents. Nothing is read or saved: a scope given is carried into rule, and a test says how much
-    mail the rule matches. include_sql returns the SQL it renders to. kind do_not_share compiles for
-    recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
-    key, agent key or narrowed token).
+    conditions match; they read the subject, the new text and attachment file names, and text read from
+    PDF and image attachments where attachment reading is active for the organization. Nothing is read
+    or saved: a scope given is carried into rule, and a test says how much mail the rule matches.
+    include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -168,11 +169,12 @@ def sync(
     contract: rule, exactly the body create (with a name), update and the tests take, with an
     explanation of what it matches, the assumptions made, and warnings for what the columns cannot
     express. Where the columns fall short it adds up to five yes/no questions, asked only after the
-    conditions match; they read the subject, the new text and attachment file names, never attachment
-    contents. Nothing is read or saved: a scope given is carried into rule, and a test says how much
-    mail the rule matches. include_sql returns the SQL it renders to. kind do_not_share compiles for
-    recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
-    key, agent key or narrowed token).
+    conditions match; they read the subject, the new text and attachment file names, and text read from
+    PDF and image attachments where attachment reading is active for the organization. Nothing is read
+    or saved: a scope given is carried into rule, and a test says how much mail the rule matches.
+    include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -207,11 +209,12 @@ async def asyncio_detailed(
     contract: rule, exactly the body create (with a name), update and the tests take, with an
     explanation of what it matches, the assumptions made, and warnings for what the columns cannot
     express. Where the columns fall short it adds up to five yes/no questions, asked only after the
-    conditions match; they read the subject, the new text and attachment file names, never attachment
-    contents. Nothing is read or saved: a scope given is carried into rule, and a test says how much
-    mail the rule matches. include_sql returns the SQL it renders to. kind do_not_share compiles for
-    recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
-    key, agent key or narrowed token).
+    conditions match; they read the subject, the new text and attachment file names, and text read from
+    PDF and image attachments where attachment reading is active for the organization. Nothing is read
+    or saved: a scope given is carried into rule, and a test says how much mail the rule matches.
+    include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):
@@ -251,11 +254,12 @@ async def asyncio(
     contract: rule, exactly the body create (with a name), update and the tests take, with an
     explanation of what it matches, the assumptions made, and warnings for what the columns cannot
     express. Where the columns fall short it adds up to five yes/no questions, asked only after the
-    conditions match; they read the subject, the new text and attachment file names, never attachment
-    contents. Nothing is read or saved: a scope given is carried into rule, and a test says how much
-    mail the rule matches. include_sql returns the SQL it renders to. kind do_not_share compiles for
-    recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API
-    key, agent key or narrowed token).
+    conditions match; they read the subject, the new text and attachment file names, and text read from
+    PDF and image attachments where attachment reading is active for the organization. Nothing is read
+    or saved: a scope given is carried into rule, and a test says how much mail the rule matches.
+    include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read,
+    the email rules feature, and a member's own full-access credential (no API key, agent key or
+    narrowed token).
 
     Args:
         idempotency_key (str | Unset):

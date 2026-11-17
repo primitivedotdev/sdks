@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.email_rule_sample_judgment_expected import EmailRuleSampleJudgmentExpected
+from ..models.email_rule_sample_judgment_group import EmailRuleSampleJudgmentGroup
 from ..models.email_rule_sample_judgment_outcome import EmailRuleSampleJudgmentOutcome
 from ..models.email_rule_sample_judgment_reason import EmailRuleSampleJudgmentReason
 from ..models.email_rule_sample_judgment_status import EmailRuleSampleJudgmentStatus
@@ -36,7 +37,10 @@ class EmailRuleSampleJudgment:
             expected (EmailRuleSampleJudgmentExpected):
             outcome (EmailRuleSampleJudgmentOutcome):
             status (EmailRuleSampleJudgmentStatus):
+            close_call (bool): Passed or failed on an answer below 0.75 confidence, so asking again (a new version, or any
+                judgment of a made-up email) may decide it the other way. Never for one its conditions alone decided.
             question_answers (list[EmailRuleSampleJudgmentQuestionAnswersItem]):
+            group (EmailRuleSampleJudgmentGroup | Unset): Its group, when sent with one.
             reason (EmailRuleSampleJudgmentReason | Unset): On an undecided one only: why.
             retryable (bool | Unset): On an undecided one only: whether judging it again can decide it.
      """
@@ -47,7 +51,9 @@ class EmailRuleSampleJudgment:
     expected: EmailRuleSampleJudgmentExpected
     outcome: EmailRuleSampleJudgmentOutcome
     status: EmailRuleSampleJudgmentStatus
+    close_call: bool
     question_answers: list[EmailRuleSampleJudgmentQuestionAnswersItem]
+    group: EmailRuleSampleJudgmentGroup | Unset = UNSET
     reason: EmailRuleSampleJudgmentReason | Unset = UNSET
     retryable: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -75,11 +81,18 @@ class EmailRuleSampleJudgment:
 
         status = self.status.value
 
+        close_call = self.close_call
+
         question_answers = []
         for question_answers_item_data in self.question_answers:
             question_answers_item = question_answers_item_data.to_dict()
             question_answers.append(question_answers_item)
 
+
+
+        group: str | Unset = UNSET
+        if not isinstance(self.group, Unset):
+            group = self.group.value
 
 
         reason: str | Unset = UNSET
@@ -99,8 +112,11 @@ class EmailRuleSampleJudgment:
             "expected": expected,
             "outcome": outcome,
             "status": status,
+            "close_call": close_call,
             "question_answers": question_answers,
         })
+        if group is not UNSET:
+            field_dict["group"] = group
         if reason is not UNSET:
             field_dict["reason"] = reason
         if retryable is not UNSET:
@@ -157,6 +173,8 @@ class EmailRuleSampleJudgment:
 
 
 
+        close_call = d.pop("close_call")
+
         question_answers = []
         _question_answers = d.pop("question_answers")
         for question_answers_item_data in (_question_answers):
@@ -165,6 +183,16 @@ class EmailRuleSampleJudgment:
 
 
             question_answers.append(question_answers_item)
+
+
+        _group = d.pop("group", UNSET)
+        group: EmailRuleSampleJudgmentGroup | Unset
+        if isinstance(_group,  Unset):
+            group = UNSET
+        else:
+            group = EmailRuleSampleJudgmentGroup(_group)
+
+
 
 
         _reason = d.pop("reason", UNSET)
@@ -186,7 +214,9 @@ class EmailRuleSampleJudgment:
             expected=expected,
             outcome=outcome,
             status=status,
+            close_call=close_call,
             question_answers=question_answers,
+            group=group,
             reason=reason,
             retryable=retryable,
         )

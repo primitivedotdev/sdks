@@ -123,12 +123,15 @@ def sync_detailed(
     version: int,
 
 ) -> Response[DeleteProjectResponse200 | ErrorResponse]:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Delete a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
-        version (int):
+        project_id (UUID): Project ID returned by listProjects or createProject.
+        version (int): Current project version. Refresh the project before retrying a version
+            conflict.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -158,12 +161,15 @@ def sync(
     version: int,
 
 ) -> DeleteProjectResponse200 | ErrorResponse | None:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Delete a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
-        version (int):
+        project_id (UUID): Project ID returned by listProjects or createProject.
+        version (int): Current project version. Refresh the project before retrying a version
+            conflict.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -188,12 +194,15 @@ async def asyncio_detailed(
     version: int,
 
 ) -> Response[DeleteProjectResponse200 | ErrorResponse]:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Delete a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
-        version (int):
+        project_id (UUID): Project ID returned by listProjects or createProject.
+        version (int): Current project version. Refresh the project before retrying a version
+            conflict.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -223,12 +232,15 @@ async def asyncio(
     version: int,
 
 ) -> DeleteProjectResponse200 | ErrorResponse | None:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Delete a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
-        project_id (UUID):
-        version (int):
+        project_id (UUID): Project ID returned by listProjects or createProject.
+        version (int): Current project version. Refresh the project before retrying a version
+            conflict.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

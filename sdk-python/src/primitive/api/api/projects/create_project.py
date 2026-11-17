@@ -125,7 +125,9 @@ def sync_detailed(
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateProjectResponse200 | ErrorResponse]:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Create a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
@@ -160,7 +162,9 @@ def sync(
     idempotency_key: str | Unset = UNSET,
 
 ) -> CreateProjectResponse200 | ErrorResponse | None:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Create a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
@@ -190,7 +194,9 @@ async def asyncio_detailed(
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateProjectResponse200 | ErrorResponse]:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Create a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:
@@ -225,7 +231,9 @@ async def asyncio(
     idempotency_key: str | Unset = UNSET,
 
 ) -> CreateProjectResponse200 | ErrorResponse | None:
-    """  Requires a current human organization membership. Machine credentials are refused. Results are
+    """ Create a shared project
+
+     Requires a current human organization membership. Machine credentials are refused. Results are
     scoped to current project access. No local paths or existing conversation history are shared.
 
     Args:

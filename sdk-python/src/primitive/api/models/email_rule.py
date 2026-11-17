@@ -17,6 +17,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.email_rule_author import EmailRuleAuthor
+  from ..models.email_rule_receivers import EmailRuleReceivers
   from ..models.email_rule_scope_names import EmailRuleScopeNames
 
 
@@ -49,6 +50,8 @@ class EmailRule:
                 fact narrows it, or its several questions are alternatives.
             pending_objections (int | Unset): To its author, on the dashboard or the Primitive CLI, on GET, the list and a
                 create: objections to it waiting for their answer (GET /email-rule-objections).
+            receivers (EmailRuleReceivers | None | Unset): On the list with all=true only: who receives what it matches now.
+                Null when it could not be read in time.
      """
 
     id: UUID
@@ -65,6 +68,7 @@ class EmailRule:
     kind: EmailRuleKind | Unset = UNSET
     protection_note: str | Unset = UNSET
     pending_objections: int | Unset = UNSET
+    receivers: EmailRuleReceivers | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -73,6 +77,7 @@ class EmailRule:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
+        from ..models.email_rule_receivers import EmailRuleReceivers # noqa: PLC0415
         from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
         id = str(self.id)
 
@@ -110,6 +115,14 @@ class EmailRule:
 
         pending_objections = self.pending_objections
 
+        receivers: dict[str, Any] | None | Unset
+        if isinstance(self.receivers, Unset):
+            receivers = UNSET
+        elif isinstance(self.receivers, EmailRuleReceivers):
+            receivers = self.receivers.to_dict()
+        else:
+            receivers = self.receivers
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -132,6 +145,8 @@ class EmailRule:
             field_dict["protection_note"] = protection_note
         if pending_objections is not UNSET:
             field_dict["pending_objections"] = pending_objections
+        if receivers is not UNSET:
+            field_dict["receivers"] = receivers
 
         return field_dict
 
@@ -140,6 +155,7 @@ class EmailRule:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
+        from ..models.email_rule_receivers import EmailRuleReceivers # noqa: PLC0415
         from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
@@ -218,6 +234,26 @@ class EmailRule:
 
         pending_objections = d.pop("pending_objections", UNSET)
 
+        def _parse_receivers(data: object) -> EmailRuleReceivers | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                receivers_type_1 = EmailRuleReceivers.from_dict(data)
+
+
+
+                return receivers_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleReceivers | None | Unset, data)
+
+        receivers = _parse_receivers(d.pop("receivers", UNSET))
+
+
         email_rule = cls(
             id=id,
             name=name,
@@ -233,6 +269,7 @@ class EmailRule:
             kind=kind,
             protection_note=protection_note,
             pending_objections=pending_objections,
+            receivers=receivers,
         )
 
 

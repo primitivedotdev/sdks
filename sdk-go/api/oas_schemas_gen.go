@@ -14373,6 +14373,13 @@ type CreateEndpointInput struct {
 	// target, and is_route_target false or takeover is refused. Not a connected agent key or a Function
 	// key.
 	OwnerKeyID OptUUID `json:"owner_key_id"`
+	// Custom request headers sent on every delivery to this webhook, for a receiver that needs a
+	// credential of its own (for example Authorization). At most 5 per webhook unless the organization's
+	// limit was raised. Values are secrets: stored encrypted and never returned. Names Primitive sets
+	// itself or reserves are refused (among them Content-Type, Content-Length, User-Agent, Host,
+	// Accept-Encoding, the signature headers, and names starting X-Primitive-, X-Webhook-, Primitive-,
+	// Proxy- or X-Forwarded-), as is a name given twice. Only for http webhooks.
+	Headers []CreateEndpointInputHeadersItem `json:"headers"`
 }
 
 // GetKind returns the value of Kind.
@@ -14425,6 +14432,11 @@ func (s *CreateEndpointInput) GetOwnerKeyID() OptUUID {
 	return s.OwnerKeyID
 }
 
+// GetHeaders returns the value of Headers.
+func (s *CreateEndpointInput) GetHeaders() []CreateEndpointInputHeadersItem {
+	return s.Headers
+}
+
 // SetKind sets the value of Kind.
 func (s *CreateEndpointInput) SetKind(val OptCreateEndpointInputKind) {
 	s.Kind = val
@@ -14473,6 +14485,36 @@ func (s *CreateEndpointInput) SetTakeover(val OptBool) {
 // SetOwnerKeyID sets the value of OwnerKeyID.
 func (s *CreateEndpointInput) SetOwnerKeyID(val OptUUID) {
 	s.OwnerKeyID = val
+}
+
+// SetHeaders sets the value of Headers.
+func (s *CreateEndpointInput) SetHeaders(val []CreateEndpointInputHeadersItem) {
+	s.Headers = val
+}
+
+type CreateEndpointInputHeadersItem struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// GetName returns the value of Name.
+func (s *CreateEndpointInputHeadersItem) GetName() string {
+	return s.Name
+}
+
+// GetValue returns the value of Value.
+func (s *CreateEndpointInputHeadersItem) GetValue() string {
+	return s.Value
+}
+
+// SetName sets the value of Name.
+func (s *CreateEndpointInputHeadersItem) SetName(val string) {
+	s.Name = val
+}
+
+// SetValue sets the value of Value.
+func (s *CreateEndpointInputHeadersItem) SetValue(val string) {
+	s.Value = val
 }
 
 // Http: deliver to url. function: invoke function_id. pull: receive locally using a stable name,
@@ -16856,15 +16898,27 @@ type CreatedEndpoint struct {
 	// /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that
 	// is not a webhook.
 	SignedWith OptCreatedEndpointSignedWith `json:"signed_with"`
+	// For a webhook: the custom request headers it sends on every delivery, by name, with each value
+	// redacted. Empty when it has none. Absent for an endpoint that is not a webhook.
+	Headers []CreatedEndpointHeadersItem `json:"headers"`
 	// Only in the response that creates a webhook made with a signing secret of its own (one made as a
 	// person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate
 	// for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.
 	SigningSecret OptString `json:"signing_secret"`
 	// For a webhook (kind http). same_path_as_another_endpoint: another webhook you can see, on and not
 	// deleted, sends to the same scheme, host and path with any query string, so each email both receive
-	// is delivered twice; endpoint_id names it (at most 5, newest first). The URL is never echoed. Empty
-	// when none; absent when it could not be checked (a caller who may not read endpoints, or a failed
-	// read). Other codes may be added.
+	// is delivered twice; endpoint_id names it (at most 5, newest first). The URL is never echoed. A
+	// created webhook is also sent the test request POST /endpoints/{id}/test sends (within a budget of
+	// its own, separate from the test budget); the webhook is saved whatever it answers:
+	// url_requires_login: it answered 302, 401 or 403 (status names which), so the host appears to
+	// require a login. url_redirects: another redirect, which deliveries do not follow. url_unreachable:
+	// no answer within 5 seconds, or a connection error (deliveries wait longer, so a slow receiver may
+	// still receive them). url_not_checked: the probe was not made or could not finish (the organization
+	// made many such checks just now, the signing secret could not be read, the URL changed again since
+	// this write, or the check failed). A caller who may not send the webhook a test request gets no
+	// probe and none of these. Absent only when the same-path check could not be made and the probe
+	// found nothing to warn about; when the same-path check could not be made, the list has no
+	// same_path_as_another_endpoint entries whatever else it holds. Other codes may be added.
 	Warnings []EndpointCreateWarning `json:"warnings"`
 }
 
@@ -17006,6 +17060,11 @@ func (s *CreatedEndpoint) GetDelivery() OptNilCreatedEndpointDelivery {
 // GetSignedWith returns the value of SignedWith.
 func (s *CreatedEndpoint) GetSignedWith() OptCreatedEndpointSignedWith {
 	return s.SignedWith
+}
+
+// GetHeaders returns the value of Headers.
+func (s *CreatedEndpoint) GetHeaders() []CreatedEndpointHeadersItem {
+	return s.Headers
 }
 
 // GetSigningSecret returns the value of SigningSecret.
@@ -17156,6 +17215,11 @@ func (s *CreatedEndpoint) SetDelivery(val OptNilCreatedEndpointDelivery) {
 // SetSignedWith sets the value of SignedWith.
 func (s *CreatedEndpoint) SetSignedWith(val OptCreatedEndpointSignedWith) {
 	s.SignedWith = val
+}
+
+// SetHeaders sets the value of Headers.
+func (s *CreatedEndpoint) SetHeaders(val []CreatedEndpointHeadersItem) {
+	s.Headers = val
 }
 
 // SetSigningSecret sets the value of SigningSecret.
@@ -17349,6 +17413,54 @@ func (s *CreatedEndpointDeliveryReasonsItem) SetAdditionalProps(val CreatedEndpo
 type CreatedEndpointDeliveryReasonsItemAdditional map[string]jx.Raw
 
 func (s *CreatedEndpointDeliveryReasonsItemAdditional) init() CreatedEndpointDeliveryReasonsItemAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type CreatedEndpointHeadersItem struct {
+	Name string `json:"name"`
+	// Always [redacted]: a value is never returned.
+	Value           string `json:"value"`
+	AdditionalProps CreatedEndpointHeadersItemAdditional
+}
+
+// GetName returns the value of Name.
+func (s *CreatedEndpointHeadersItem) GetName() string {
+	return s.Name
+}
+
+// GetValue returns the value of Value.
+func (s *CreatedEndpointHeadersItem) GetValue() string {
+	return s.Value
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *CreatedEndpointHeadersItem) GetAdditionalProps() CreatedEndpointHeadersItemAdditional {
+	return s.AdditionalProps
+}
+
+// SetName sets the value of Name.
+func (s *CreatedEndpointHeadersItem) SetName(val string) {
+	s.Name = val
+}
+
+// SetValue sets the value of Value.
+func (s *CreatedEndpointHeadersItem) SetValue(val string) {
+	s.Value = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *CreatedEndpointHeadersItem) SetAdditionalProps(val CreatedEndpointHeadersItemAdditional) {
+	s.AdditionalProps = val
+}
+
+type CreatedEndpointHeadersItemAdditional map[string]jx.Raw
+
+func (s *CreatedEndpointHeadersItemAdditional) init() CreatedEndpointHeadersItemAdditional {
 	m := *s
 	if m == nil {
 		m = map[string]jx.Raw{}
@@ -28392,6 +28504,13 @@ type DeliverySummary struct {
 	// deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate
 	// its URL's credential.
 	ResponseBody NilString `json:"response_body"`
+	// The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as
+	// sent, listing only rules you can read now; empty when it named none of those. Recorded for
+	// deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries,
+	//  records of no attempt, attempts before this field), for a caller that cannot read email rules or
+	// whose organization does not have them, below content depth, and once the message's content is
+	// discarded.
+	Rules []DeliverySummaryRulesItem `json:"rules"`
 	// Whether this is the latest attempt of its delivery: the one recorded last, where a record of no
 	// attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A
 	// retry is recorded as a new attempt with its own id and attempt_count (not always higher than the
@@ -28514,6 +28633,11 @@ func (s *DeliverySummary) GetResponseBody() NilString {
 	return s.ResponseBody
 }
 
+// GetRules returns the value of Rules.
+func (s *DeliverySummary) GetRules() []DeliverySummaryRulesItem {
+	return s.Rules
+}
+
 // GetLatestAttempt returns the value of LatestAttempt.
 func (s *DeliverySummary) GetLatestAttempt() bool {
 	return s.LatestAttempt
@@ -28614,6 +28738,11 @@ func (s *DeliverySummary) SetResponseBody(val NilString) {
 	s.ResponseBody = val
 }
 
+// SetRules sets the value of Rules.
+func (s *DeliverySummary) SetRules(val []DeliverySummaryRulesItem) {
+	s.Rules = val
+}
+
 // SetLatestAttempt sets the value of LatestAttempt.
 func (s *DeliverySummary) SetLatestAttempt(val bool) {
 	s.LatestAttempt = val
@@ -28663,6 +28792,31 @@ func (s *DeliverySummaryEmail) SetRecipient(val string) {
 // SetSubject sets the value of Subject.
 func (s *DeliverySummaryEmail) SetSubject(val OptNilString) {
 	s.Subject = val
+}
+
+type DeliverySummaryRulesItem struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// GetID returns the value of ID.
+func (s *DeliverySummaryRulesItem) GetID() string {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *DeliverySummaryRulesItem) GetName() string {
+	return s.Name
+}
+
+// SetID sets the value of ID.
+func (s *DeliverySummaryRulesItem) SetID(val string) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *DeliverySummaryRulesItem) SetName(val string) {
+	s.Name = val
 }
 
 // Delivery status. skipped_by_rules: the endpoint's rules filtered the event out. held: kept back,
@@ -32042,12 +32196,13 @@ type EmailDetail struct {
 	// before acting: when `newer_inbound_count` is above zero, read the newer messages and answer the
 	// latest state once. Carries no text the sender wrote.
 	Collaboration OptEmailDetailCollaboration `json:"collaboration"`
-	// Attachment metadata (file name, type, size), the same items in the same order as `parsed.
-	// attachments`. Kept for a credential that reads headers only, where `parsed` is null. Empty when
-	// the email has none, its content is withheld (read `status` and `rejection_reason`), or it is not
-	// parsed yet or its parse failed (read `parse_status`). No bytes; download a part with
-	// `/emails/{id}/attachments/{part_index}`.
-	Attachments []EmailAttachment `json:"attachments"`
+	// Attachment metadata (file name, type, size, and a description where one was read), the same parts
+	// in the same order as `parsed.attachments`. Only these items carry `description`; `parsed.
+	// attachments` keeps the shape the webhook payload has. Kept for a credential that reads headers
+	// only, where `parsed` is null. Empty when the email has none, its content is withheld (read
+	// `status` and `rejection_reason`), or it is not parsed yet or its parse failed (read
+	// `parse_status`). No bytes; download a part with `/emails/{id}/attachments/{part_index}`.
+	Attachments []EmailDetailAttachment `json:"attachments"`
 	// Historical import; never sender or SMTP delivery proof. EML uploads are unverified even when
 	// downloaded from a provider. Null for live mail. Excluded from live tails and deltas.
 	Imported NilEmailDetailImported `json:"imported"`
@@ -32368,7 +32523,7 @@ func (s *EmailDetail) GetCollaboration() OptEmailDetailCollaboration {
 }
 
 // GetAttachments returns the value of Attachments.
-func (s *EmailDetail) GetAttachments() []EmailAttachment {
+func (s *EmailDetail) GetAttachments() []EmailDetailAttachment {
 	return s.Attachments
 }
 
@@ -32688,7 +32843,7 @@ func (s *EmailDetail) SetCollaboration(val OptEmailDetailCollaboration) {
 }
 
 // SetAttachments sets the value of Attachments.
-func (s *EmailDetail) SetAttachments(val []EmailAttachment) {
+func (s *EmailDetail) SetAttachments(val []EmailDetailAttachment) {
 	s.Attachments = val
 }
 
@@ -32700,6 +32855,94 @@ func (s *EmailDetail) SetImported(val NilEmailDetailImported) {
 // SetSnippet sets the value of Snippet.
 func (s *EmailDetail) SetSnippet(val NilString) {
 	s.Snippet = val
+}
+
+// Merged schema.
+// Ref: #/components/schemas/EmailDetailAttachment
+type EmailDetailAttachment struct {
+	Filename    OptNilString `json:"filename"`
+	ContentType OptNilString `json:"content_type"`
+	SizeBytes   int          `json:"size_bytes"`
+	SHA256      OptNilString `json:"sha256"`
+	// Zero-based index of this part within the message.
+	PartIndex OptInt `json:"part_index"`
+	// This part's file name inside the message's attachments archive. Absent on attachments stored
+	// before it was recorded.
+	TarPath OptString `json:"tar_path"`
+	// A one-line description of what the attachment is, read from the file when the organization has
+	// attachment reading on. Null when the part was not read, could not be read, or attachment reading
+	// is off.
+	Description NilString `json:"description"`
+}
+
+// GetFilename returns the value of Filename.
+func (s *EmailDetailAttachment) GetFilename() OptNilString {
+	return s.Filename
+}
+
+// GetContentType returns the value of ContentType.
+func (s *EmailDetailAttachment) GetContentType() OptNilString {
+	return s.ContentType
+}
+
+// GetSizeBytes returns the value of SizeBytes.
+func (s *EmailDetailAttachment) GetSizeBytes() int {
+	return s.SizeBytes
+}
+
+// GetSHA256 returns the value of SHA256.
+func (s *EmailDetailAttachment) GetSHA256() OptNilString {
+	return s.SHA256
+}
+
+// GetPartIndex returns the value of PartIndex.
+func (s *EmailDetailAttachment) GetPartIndex() OptInt {
+	return s.PartIndex
+}
+
+// GetTarPath returns the value of TarPath.
+func (s *EmailDetailAttachment) GetTarPath() OptString {
+	return s.TarPath
+}
+
+// GetDescription returns the value of Description.
+func (s *EmailDetailAttachment) GetDescription() NilString {
+	return s.Description
+}
+
+// SetFilename sets the value of Filename.
+func (s *EmailDetailAttachment) SetFilename(val OptNilString) {
+	s.Filename = val
+}
+
+// SetContentType sets the value of ContentType.
+func (s *EmailDetailAttachment) SetContentType(val OptNilString) {
+	s.ContentType = val
+}
+
+// SetSizeBytes sets the value of SizeBytes.
+func (s *EmailDetailAttachment) SetSizeBytes(val int) {
+	s.SizeBytes = val
+}
+
+// SetSHA256 sets the value of SHA256.
+func (s *EmailDetailAttachment) SetSHA256(val OptNilString) {
+	s.SHA256 = val
+}
+
+// SetPartIndex sets the value of PartIndex.
+func (s *EmailDetailAttachment) SetPartIndex(val OptInt) {
+	s.PartIndex = val
+}
+
+// SetTarPath sets the value of TarPath.
+func (s *EmailDetailAttachment) SetTarPath(val OptString) {
+	s.TarPath = val
+}
+
+// SetDescription sets the value of Description.
+func (s *EmailDetailAttachment) SetDescription(val NilString) {
+	s.Description = val
 }
 
 // What the message declared about being automated, verbatim:
@@ -34015,7 +34258,9 @@ func NewStringArrayEmailDetailUnderstandingFactsItemValue(v []string) EmailDetai
 // Merged schema.
 // Ref: #/components/schemas/EmailListMeta
 type EmailListMeta struct {
-	// Total number of matching records.
+	// Total number of matching records. Absent when a history page is read with `count=false` (no count
+	// runs), or when the count does not fit its time budget (`total_unavailable` is then true).
+	// `has_more` still says whether another page follows.
 	Total OptInt `json:"total"`
 	// Page size used for this request.
 	Limit int `json:"limit"`
@@ -36151,9 +36396,12 @@ type EmailRule struct {
 	IsAuthor bool `json:"is_author"`
 	// To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to
 	// it waiting for their answer (GET /email-rule-objections).
-	PendingObjections OptInt    `json:"pending_objections"`
-	CreatedAt         time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
+	PendingObjections OptInt `json:"pending_objections"`
+	// On the list with all=true only: who receives what it matches now. Null when it could not be read
+	// in time.
+	Receivers OptNilEmailRuleReceivers `json:"receivers"`
+	CreatedAt time.Time                `json:"created_at"`
+	UpdatedAt time.Time                `json:"updated_at"`
 }
 
 // GetID returns the value of ID.
@@ -36214,6 +36462,11 @@ func (s *EmailRule) GetIsAuthor() bool {
 // GetPendingObjections returns the value of PendingObjections.
 func (s *EmailRule) GetPendingObjections() OptInt {
 	return s.PendingObjections
+}
+
+// GetReceivers returns the value of Receivers.
+func (s *EmailRule) GetReceivers() OptNilEmailRuleReceivers {
+	return s.Receivers
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -36284,6 +36537,11 @@ func (s *EmailRule) SetIsAuthor(val bool) {
 // SetPendingObjections sets the value of PendingObjections.
 func (s *EmailRule) SetPendingObjections(val OptInt) {
 	s.PendingObjections = val
+}
+
+// SetReceivers sets the value of Receivers.
+func (s *EmailRule) SetReceivers(val OptNilEmailRuleReceivers) {
+	s.Receivers = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -36487,6 +36745,80 @@ func (s *EmailRuleBodyKind) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Ref: #/components/schemas/EmailRuleChangedEmails
+type EmailRuleChangedEmails struct {
+	Count int `json:"count"`
+	// Newest first, at most 50; count is the full number.
+	Emails []EmailRuleChangedEmailsEmailsItem `json:"emails"`
+}
+
+// GetCount returns the value of Count.
+func (s *EmailRuleChangedEmails) GetCount() int {
+	return s.Count
+}
+
+// GetEmails returns the value of Emails.
+func (s *EmailRuleChangedEmails) GetEmails() []EmailRuleChangedEmailsEmailsItem {
+	return s.Emails
+}
+
+// SetCount sets the value of Count.
+func (s *EmailRuleChangedEmails) SetCount(val int) {
+	s.Count = val
+}
+
+// SetEmails sets the value of Emails.
+func (s *EmailRuleChangedEmails) SetEmails(val []EmailRuleChangedEmailsEmailsItem) {
+	s.Emails = val
+}
+
+type EmailRuleChangedEmailsEmailsItem struct {
+	EmailID    uuid.UUID   `json:"email_id"`
+	Subject    NilString   `json:"subject"`
+	From       NilString   `json:"from"`
+	ReceivedAt NilDateTime `json:"received_at"`
+}
+
+// GetEmailID returns the value of EmailID.
+func (s *EmailRuleChangedEmailsEmailsItem) GetEmailID() uuid.UUID {
+	return s.EmailID
+}
+
+// GetSubject returns the value of Subject.
+func (s *EmailRuleChangedEmailsEmailsItem) GetSubject() NilString {
+	return s.Subject
+}
+
+// GetFrom returns the value of From.
+func (s *EmailRuleChangedEmailsEmailsItem) GetFrom() NilString {
+	return s.From
+}
+
+// GetReceivedAt returns the value of ReceivedAt.
+func (s *EmailRuleChangedEmailsEmailsItem) GetReceivedAt() NilDateTime {
+	return s.ReceivedAt
+}
+
+// SetEmailID sets the value of EmailID.
+func (s *EmailRuleChangedEmailsEmailsItem) SetEmailID(val uuid.UUID) {
+	s.EmailID = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *EmailRuleChangedEmailsEmailsItem) SetSubject(val NilString) {
+	s.Subject = val
+}
+
+// SetFrom sets the value of From.
+func (s *EmailRuleChangedEmailsEmailsItem) SetFrom(val NilString) {
+	s.From = val
+}
+
+// SetReceivedAt sets the value of ReceivedAt.
+func (s *EmailRuleChangedEmailsEmailsItem) SetReceivedAt(val NilDateTime) {
+	s.ReceivedAt = val
 }
 
 // Ref: #/components/schemas/EmailRuleCoverage
@@ -37202,13 +37534,16 @@ type EmailRuleDecisionOnMyMail struct {
 	QuestionAnswers []jx.Raw `json:"question_answers"`
 	// Present, as true, when the email's content cannot be read: matched still says what the rule
 	// decided, and parts and question_answers are empty.
-	DetailWithheld OptBool   `json:"detail_withheld"`
-	CreatedAt      time.Time `json:"created_at"`
+	DetailWithheld OptBool `json:"detail_withheld"`
+	// When the rule made this decision.
+	DecidedAt time.Time `json:"decided_at"`
 	// The email's sender address, as GET /v1/emails/{id} shows it.
 	FromAddress NilString `json:"from_address"`
 	Subject     NilString `json:"subject"`
-	// When the email arrived. Null, with the other two, when you are not shown the email (it awaits
-	// sender authentication).
+	// Which of your mailboxes the email was received in.
+	Recipient NilString `json:"recipient"`
+	// When the email arrived. Null, with from_address, subject and recipient, when you are not shown the
+	// email (it awaits sender authentication).
 	ReceivedAt NilDateTime `json:"received_at"`
 }
 
@@ -37257,9 +37592,9 @@ func (s *EmailRuleDecisionOnMyMail) GetDetailWithheld() OptBool {
 	return s.DetailWithheld
 }
 
-// GetCreatedAt returns the value of CreatedAt.
-func (s *EmailRuleDecisionOnMyMail) GetCreatedAt() time.Time {
-	return s.CreatedAt
+// GetDecidedAt returns the value of DecidedAt.
+func (s *EmailRuleDecisionOnMyMail) GetDecidedAt() time.Time {
+	return s.DecidedAt
 }
 
 // GetFromAddress returns the value of FromAddress.
@@ -37270,6 +37605,11 @@ func (s *EmailRuleDecisionOnMyMail) GetFromAddress() NilString {
 // GetSubject returns the value of Subject.
 func (s *EmailRuleDecisionOnMyMail) GetSubject() NilString {
 	return s.Subject
+}
+
+// GetRecipient returns the value of Recipient.
+func (s *EmailRuleDecisionOnMyMail) GetRecipient() NilString {
+	return s.Recipient
 }
 
 // GetReceivedAt returns the value of ReceivedAt.
@@ -37322,9 +37662,9 @@ func (s *EmailRuleDecisionOnMyMail) SetDetailWithheld(val OptBool) {
 	s.DetailWithheld = val
 }
 
-// SetCreatedAt sets the value of CreatedAt.
-func (s *EmailRuleDecisionOnMyMail) SetCreatedAt(val time.Time) {
-	s.CreatedAt = val
+// SetDecidedAt sets the value of DecidedAt.
+func (s *EmailRuleDecisionOnMyMail) SetDecidedAt(val time.Time) {
+	s.DecidedAt = val
 }
 
 // SetFromAddress sets the value of FromAddress.
@@ -37335,6 +37675,11 @@ func (s *EmailRuleDecisionOnMyMail) SetFromAddress(val NilString) {
 // SetSubject sets the value of Subject.
 func (s *EmailRuleDecisionOnMyMail) SetSubject(val NilString) {
 	s.Subject = val
+}
+
+// SetRecipient sets the value of Recipient.
+func (s *EmailRuleDecisionOnMyMail) SetRecipient(val NilString) {
+	s.Recipient = val
 }
 
 // SetReceivedAt sets the value of ReceivedAt.
@@ -37606,6 +37951,11 @@ type EmailRuleExpectationsCheck struct {
 	FailedSamples []EmailRuleSampleDetail `json:"failed_samples"`
 	// Made-up emails not decided.
 	UndecidedSamples []EmailRuleSampleDetail `json:"undecided_samples"`
+	// Emails by id, passed or failed, decided by an answer below 0.75 confidence: judged again they may
+	// come out the other way.
+	CloseCalls []uuid.UUID `json:"close_calls"`
+	// Made-up emails that were close calls.
+	CloseCallSamples []EmailRuleSampleDetail `json:"close_call_samples"`
 }
 
 // GetVersion returns the value of Version.
@@ -37638,6 +37988,16 @@ func (s *EmailRuleExpectationsCheck) GetUndecidedSamples() []EmailRuleSampleDeta
 	return s.UndecidedSamples
 }
 
+// GetCloseCalls returns the value of CloseCalls.
+func (s *EmailRuleExpectationsCheck) GetCloseCalls() []uuid.UUID {
+	return s.CloseCalls
+}
+
+// GetCloseCallSamples returns the value of CloseCallSamples.
+func (s *EmailRuleExpectationsCheck) GetCloseCallSamples() []EmailRuleSampleDetail {
+	return s.CloseCallSamples
+}
+
 // SetVersion sets the value of Version.
 func (s *EmailRuleExpectationsCheck) SetVersion(val NilInt) {
 	s.Version = val
@@ -37666,6 +38026,16 @@ func (s *EmailRuleExpectationsCheck) SetFailedSamples(val []EmailRuleSampleDetai
 // SetUndecidedSamples sets the value of UndecidedSamples.
 func (s *EmailRuleExpectationsCheck) SetUndecidedSamples(val []EmailRuleSampleDetail) {
 	s.UndecidedSamples = val
+}
+
+// SetCloseCalls sets the value of CloseCalls.
+func (s *EmailRuleExpectationsCheck) SetCloseCalls(val []uuid.UUID) {
+	s.CloseCalls = val
+}
+
+// SetCloseCallSamples sets the value of CloseCallSamples.
+func (s *EmailRuleExpectationsCheck) SetCloseCallSamples(val []EmailRuleSampleDetail) {
+	s.CloseCallSamples = val
 }
 
 // Grant: what it matches can be shared. do_not_share: it blocks sharing what it matches.
@@ -37715,6 +38085,7 @@ type EmailRuleLookAlike struct {
 	Kind EmailRuleLookAlikeKind `json:"kind"`
 	// Match: a near case the rule should match; no_match: one it should not.
 	Expected EmailRuleLookAlikeExpected `json:"expected"`
+	Group    EmailRuleLookAlikeGroup    `json:"group"`
 	// Why the rule should, or should not, match it.
 	Why string `json:"why"`
 	// A made-up email, as test-sample takes it.
@@ -37724,7 +38095,11 @@ type EmailRuleLookAlike struct {
 	// match). undecided: the rule reads a spam score, which it cannot carry, whatever it decided; or not
 	// matched on something it could not decide (not classified, a fact or answer missing, or not reached
 	// in time).
-	Status          EmailRuleLookAlikeStatus                `json:"status"`
+	Status EmailRuleLookAlikeStatus `json:"status"`
+	// Passed or failed on an answer below 0.75 confidence, so asking again (a new version, or any
+	// judgment of a made-up email) may decide it the other way. Never for one its conditions alone
+	// decided.
+	CloseCall       bool                                    `json:"close_call"`
 	QuestionAnswers []EmailRuleLookAlikeQuestionAnswersItem `json:"question_answers"`
 }
 
@@ -37736,6 +38111,11 @@ func (s *EmailRuleLookAlike) GetKind() EmailRuleLookAlikeKind {
 // GetExpected returns the value of Expected.
 func (s *EmailRuleLookAlike) GetExpected() EmailRuleLookAlikeExpected {
 	return s.Expected
+}
+
+// GetGroup returns the value of Group.
+func (s *EmailRuleLookAlike) GetGroup() EmailRuleLookAlikeGroup {
+	return s.Group
 }
 
 // GetWhy returns the value of Why.
@@ -37758,6 +38138,11 @@ func (s *EmailRuleLookAlike) GetStatus() EmailRuleLookAlikeStatus {
 	return s.Status
 }
 
+// GetCloseCall returns the value of CloseCall.
+func (s *EmailRuleLookAlike) GetCloseCall() bool {
+	return s.CloseCall
+}
+
 // GetQuestionAnswers returns the value of QuestionAnswers.
 func (s *EmailRuleLookAlike) GetQuestionAnswers() []EmailRuleLookAlikeQuestionAnswersItem {
 	return s.QuestionAnswers
@@ -37771,6 +38156,11 @@ func (s *EmailRuleLookAlike) SetKind(val EmailRuleLookAlikeKind) {
 // SetExpected sets the value of Expected.
 func (s *EmailRuleLookAlike) SetExpected(val EmailRuleLookAlikeExpected) {
 	s.Expected = val
+}
+
+// SetGroup sets the value of Group.
+func (s *EmailRuleLookAlike) SetGroup(val EmailRuleLookAlikeGroup) {
+	s.Group = val
 }
 
 // SetWhy sets the value of Why.
@@ -37791,6 +38181,11 @@ func (s *EmailRuleLookAlike) SetOutcome(val EmailRuleLookAlikeOutcome) {
 // SetStatus sets the value of Status.
 func (s *EmailRuleLookAlike) SetStatus(val EmailRuleLookAlikeStatus) {
 	s.Status = val
+}
+
+// SetCloseCall sets the value of CloseCall.
+func (s *EmailRuleLookAlike) SetCloseCall(val bool) {
+	s.CloseCall = val
 }
 
 // SetQuestionAnswers sets the value of QuestionAnswers.
@@ -37968,14 +38363,64 @@ func (s *EmailRuleLookAlikeExpected) UnmarshalText(data []byte) error {
 	}
 }
 
+type EmailRuleLookAlikeGroup string
+
+const (
+	EmailRuleLookAlikeGroupPrivate   EmailRuleLookAlikeGroup = "private"
+	EmailRuleLookAlikeGroupNearMiss  EmailRuleLookAlikeGroup = "near_miss"
+	EmailRuleLookAlikeGroupMustMatch EmailRuleLookAlikeGroup = "must_match"
+)
+
+// AllValues returns all EmailRuleLookAlikeGroup values.
+func (EmailRuleLookAlikeGroup) AllValues() []EmailRuleLookAlikeGroup {
+	return []EmailRuleLookAlikeGroup{
+		EmailRuleLookAlikeGroupPrivate,
+		EmailRuleLookAlikeGroupNearMiss,
+		EmailRuleLookAlikeGroupMustMatch,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleLookAlikeGroup) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleLookAlikeGroupPrivate:
+		return []byte(s), nil
+	case EmailRuleLookAlikeGroupNearMiss:
+		return []byte(s), nil
+	case EmailRuleLookAlikeGroupMustMatch:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleLookAlikeGroup) UnmarshalText(data []byte) error {
+	switch EmailRuleLookAlikeGroup(data) {
+	case EmailRuleLookAlikeGroupPrivate:
+		*s = EmailRuleLookAlikeGroupPrivate
+		return nil
+	case EmailRuleLookAlikeGroupNearMiss:
+		*s = EmailRuleLookAlikeGroupNearMiss
+		return nil
+	case EmailRuleLookAlikeGroupMustMatch:
+		*s = EmailRuleLookAlikeGroupMustMatch
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type EmailRuleLookAlikeKind string
 
 const (
-	EmailRuleLookAlikeKindMedical          EmailRuleLookAlikeKind = "medical"
-	EmailRuleLookAlikeKindPayroll          EmailRuleLookAlikeKind = "payroll"
-	EmailRuleLookAlikeKindPersonalPurchase EmailRuleLookAlikeKind = "personal_purchase"
-	EmailRuleLookAlikeKindBankTax          EmailRuleLookAlikeKind = "bank_tax"
-	EmailRuleLookAlikeKindOther            EmailRuleLookAlikeKind = "other"
+	EmailRuleLookAlikeKindMedical                EmailRuleLookAlikeKind = "medical"
+	EmailRuleLookAlikeKindPayroll                EmailRuleLookAlikeKind = "payroll"
+	EmailRuleLookAlikeKindPersonalPurchase       EmailRuleLookAlikeKind = "personal_purchase"
+	EmailRuleLookAlikeKindBankTax                EmailRuleLookAlikeKind = "bank_tax"
+	EmailRuleLookAlikeKindLegal                  EmailRuleLookAlikeKind = "legal"
+	EmailRuleLookAlikeKindPersonalCorrespondence EmailRuleLookAlikeKind = "personal_correspondence"
+	EmailRuleLookAlikeKindOther                  EmailRuleLookAlikeKind = "other"
 )
 
 // AllValues returns all EmailRuleLookAlikeKind values.
@@ -37985,6 +38430,8 @@ func (EmailRuleLookAlikeKind) AllValues() []EmailRuleLookAlikeKind {
 		EmailRuleLookAlikeKindPayroll,
 		EmailRuleLookAlikeKindPersonalPurchase,
 		EmailRuleLookAlikeKindBankTax,
+		EmailRuleLookAlikeKindLegal,
+		EmailRuleLookAlikeKindPersonalCorrespondence,
 		EmailRuleLookAlikeKindOther,
 	}
 }
@@ -37999,6 +38446,10 @@ func (s EmailRuleLookAlikeKind) MarshalText() ([]byte, error) {
 	case EmailRuleLookAlikeKindPersonalPurchase:
 		return []byte(s), nil
 	case EmailRuleLookAlikeKindBankTax:
+		return []byte(s), nil
+	case EmailRuleLookAlikeKindLegal:
+		return []byte(s), nil
+	case EmailRuleLookAlikeKindPersonalCorrespondence:
 		return []byte(s), nil
 	case EmailRuleLookAlikeKindOther:
 		return []byte(s), nil
@@ -38021,6 +38472,12 @@ func (s *EmailRuleLookAlikeKind) UnmarshalText(data []byte) error {
 		return nil
 	case EmailRuleLookAlikeKindBankTax:
 		*s = EmailRuleLookAlikeKindBankTax
+		return nil
+	case EmailRuleLookAlikeKindLegal:
+		*s = EmailRuleLookAlikeKindLegal
+		return nil
+	case EmailRuleLookAlikeKindPersonalCorrespondence:
+		*s = EmailRuleLookAlikeKindPersonalCorrespondence
 		return nil
 	case EmailRuleLookAlikeKindOther:
 		*s = EmailRuleLookAlikeKindOther
@@ -38520,9 +38977,12 @@ type EmailRuleRead struct {
 	IsAuthor bool `json:"is_author"`
 	// To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to
 	// it waiting for their answer (GET /email-rule-objections).
-	PendingObjections OptInt    `json:"pending_objections"`
-	CreatedAt         time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
+	PendingObjections OptInt `json:"pending_objections"`
+	// On the list with all=true only: who receives what it matches now. Null when it could not be read
+	// in time.
+	Receivers OptNilEmailRuleReceivers `json:"receivers"`
+	CreatedAt time.Time                `json:"created_at"`
+	UpdatedAt time.Time                `json:"updated_at"`
 	// Its current version: english and tree, with Primitive's reading and notes. current_version is its
 	// number. GET /email-rules lists rules without it.
 	Current NilEmailRuleVersion `json:"current"`
@@ -38590,6 +39050,11 @@ func (s *EmailRuleRead) GetIsAuthor() bool {
 // GetPendingObjections returns the value of PendingObjections.
 func (s *EmailRuleRead) GetPendingObjections() OptInt {
 	return s.PendingObjections
+}
+
+// GetReceivers returns the value of Receivers.
+func (s *EmailRuleRead) GetReceivers() OptNilEmailRuleReceivers {
+	return s.Receivers
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -38675,6 +39140,11 @@ func (s *EmailRuleRead) SetIsAuthor(val bool) {
 // SetPendingObjections sets the value of PendingObjections.
 func (s *EmailRuleRead) SetPendingObjections(val OptInt) {
 	s.PendingObjections = val
+}
+
+// SetReceivers sets the value of Receivers.
+func (s *EmailRuleRead) SetReceivers(val OptNilEmailRuleReceivers) {
+	s.Receivers = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -39626,14 +40096,165 @@ func (s *EmailRuleSampleDetail) SetLabel(val NilString) {
 	s.Label = val
 }
 
+// Ref: #/components/schemas/EmailRuleSampleGroupCounts
+type EmailRuleSampleGroupCounts struct {
+	Private   EmailRuleSampleGroupCountsPrivate   `json:"private"`
+	NearMiss  EmailRuleSampleGroupCountsNearMiss  `json:"near_miss"`
+	MustMatch EmailRuleSampleGroupCountsMustMatch `json:"must_match"`
+}
+
+// GetPrivate returns the value of Private.
+func (s *EmailRuleSampleGroupCounts) GetPrivate() EmailRuleSampleGroupCountsPrivate {
+	return s.Private
+}
+
+// GetNearMiss returns the value of NearMiss.
+func (s *EmailRuleSampleGroupCounts) GetNearMiss() EmailRuleSampleGroupCountsNearMiss {
+	return s.NearMiss
+}
+
+// GetMustMatch returns the value of MustMatch.
+func (s *EmailRuleSampleGroupCounts) GetMustMatch() EmailRuleSampleGroupCountsMustMatch {
+	return s.MustMatch
+}
+
+// SetPrivate sets the value of Private.
+func (s *EmailRuleSampleGroupCounts) SetPrivate(val EmailRuleSampleGroupCountsPrivate) {
+	s.Private = val
+}
+
+// SetNearMiss sets the value of NearMiss.
+func (s *EmailRuleSampleGroupCounts) SetNearMiss(val EmailRuleSampleGroupCountsNearMiss) {
+	s.NearMiss = val
+}
+
+// SetMustMatch sets the value of MustMatch.
+func (s *EmailRuleSampleGroupCounts) SetMustMatch(val EmailRuleSampleGroupCountsMustMatch) {
+	s.MustMatch = val
+}
+
+type EmailRuleSampleGroupCountsMustMatch struct {
+	Passed    int `json:"passed"`
+	Failed    int `json:"failed"`
+	Undecided int `json:"undecided"`
+}
+
+// GetPassed returns the value of Passed.
+func (s *EmailRuleSampleGroupCountsMustMatch) GetPassed() int {
+	return s.Passed
+}
+
+// GetFailed returns the value of Failed.
+func (s *EmailRuleSampleGroupCountsMustMatch) GetFailed() int {
+	return s.Failed
+}
+
+// GetUndecided returns the value of Undecided.
+func (s *EmailRuleSampleGroupCountsMustMatch) GetUndecided() int {
+	return s.Undecided
+}
+
+// SetPassed sets the value of Passed.
+func (s *EmailRuleSampleGroupCountsMustMatch) SetPassed(val int) {
+	s.Passed = val
+}
+
+// SetFailed sets the value of Failed.
+func (s *EmailRuleSampleGroupCountsMustMatch) SetFailed(val int) {
+	s.Failed = val
+}
+
+// SetUndecided sets the value of Undecided.
+func (s *EmailRuleSampleGroupCountsMustMatch) SetUndecided(val int) {
+	s.Undecided = val
+}
+
+type EmailRuleSampleGroupCountsNearMiss struct {
+	Passed    int `json:"passed"`
+	Failed    int `json:"failed"`
+	Undecided int `json:"undecided"`
+}
+
+// GetPassed returns the value of Passed.
+func (s *EmailRuleSampleGroupCountsNearMiss) GetPassed() int {
+	return s.Passed
+}
+
+// GetFailed returns the value of Failed.
+func (s *EmailRuleSampleGroupCountsNearMiss) GetFailed() int {
+	return s.Failed
+}
+
+// GetUndecided returns the value of Undecided.
+func (s *EmailRuleSampleGroupCountsNearMiss) GetUndecided() int {
+	return s.Undecided
+}
+
+// SetPassed sets the value of Passed.
+func (s *EmailRuleSampleGroupCountsNearMiss) SetPassed(val int) {
+	s.Passed = val
+}
+
+// SetFailed sets the value of Failed.
+func (s *EmailRuleSampleGroupCountsNearMiss) SetFailed(val int) {
+	s.Failed = val
+}
+
+// SetUndecided sets the value of Undecided.
+func (s *EmailRuleSampleGroupCountsNearMiss) SetUndecided(val int) {
+	s.Undecided = val
+}
+
+type EmailRuleSampleGroupCountsPrivate struct {
+	Passed    int `json:"passed"`
+	Failed    int `json:"failed"`
+	Undecided int `json:"undecided"`
+}
+
+// GetPassed returns the value of Passed.
+func (s *EmailRuleSampleGroupCountsPrivate) GetPassed() int {
+	return s.Passed
+}
+
+// GetFailed returns the value of Failed.
+func (s *EmailRuleSampleGroupCountsPrivate) GetFailed() int {
+	return s.Failed
+}
+
+// GetUndecided returns the value of Undecided.
+func (s *EmailRuleSampleGroupCountsPrivate) GetUndecided() int {
+	return s.Undecided
+}
+
+// SetPassed sets the value of Passed.
+func (s *EmailRuleSampleGroupCountsPrivate) SetPassed(val int) {
+	s.Passed = val
+}
+
+// SetFailed sets the value of Failed.
+func (s *EmailRuleSampleGroupCountsPrivate) SetFailed(val int) {
+	s.Failed = val
+}
+
+// SetUndecided sets the value of Undecided.
+func (s *EmailRuleSampleGroupCountsPrivate) SetUndecided(val int) {
+	s.Undecided = val
+}
+
 // Ref: #/components/schemas/EmailRuleSampleJudgment
 type EmailRuleSampleJudgment struct {
 	Index    int                             `json:"index"`
 	SampleID NilUUID                         `json:"sample_id"`
 	Label    NilString                       `json:"label"`
 	Expected EmailRuleSampleJudgmentExpected `json:"expected"`
-	Outcome  EmailRuleSampleJudgmentOutcome  `json:"outcome"`
-	Status   EmailRuleSampleJudgmentStatus   `json:"status"`
+	// Its group, when sent with one.
+	Group   OptEmailRuleSampleJudgmentGroup `json:"group"`
+	Outcome EmailRuleSampleJudgmentOutcome  `json:"outcome"`
+	Status  EmailRuleSampleJudgmentStatus   `json:"status"`
+	// Passed or failed on an answer below 0.75 confidence, so asking again (a new version, or any
+	// judgment of a made-up email) may decide it the other way. Never for one its conditions alone
+	// decided.
+	CloseCall bool `json:"close_call"`
 	// On an undecided one only: why.
 	Reason OptEmailRuleSampleJudgmentReason `json:"reason"`
 	// On an undecided one only: whether judging it again can decide it.
@@ -39661,6 +40282,11 @@ func (s *EmailRuleSampleJudgment) GetExpected() EmailRuleSampleJudgmentExpected 
 	return s.Expected
 }
 
+// GetGroup returns the value of Group.
+func (s *EmailRuleSampleJudgment) GetGroup() OptEmailRuleSampleJudgmentGroup {
+	return s.Group
+}
+
 // GetOutcome returns the value of Outcome.
 func (s *EmailRuleSampleJudgment) GetOutcome() EmailRuleSampleJudgmentOutcome {
 	return s.Outcome
@@ -39669,6 +40295,11 @@ func (s *EmailRuleSampleJudgment) GetOutcome() EmailRuleSampleJudgmentOutcome {
 // GetStatus returns the value of Status.
 func (s *EmailRuleSampleJudgment) GetStatus() EmailRuleSampleJudgmentStatus {
 	return s.Status
+}
+
+// GetCloseCall returns the value of CloseCall.
+func (s *EmailRuleSampleJudgment) GetCloseCall() bool {
+	return s.CloseCall
 }
 
 // GetReason returns the value of Reason.
@@ -39706,6 +40337,11 @@ func (s *EmailRuleSampleJudgment) SetExpected(val EmailRuleSampleJudgmentExpecte
 	s.Expected = val
 }
 
+// SetGroup sets the value of Group.
+func (s *EmailRuleSampleJudgment) SetGroup(val OptEmailRuleSampleJudgmentGroup) {
+	s.Group = val
+}
+
 // SetOutcome sets the value of Outcome.
 func (s *EmailRuleSampleJudgment) SetOutcome(val EmailRuleSampleJudgmentOutcome) {
 	s.Outcome = val
@@ -39714,6 +40350,11 @@ func (s *EmailRuleSampleJudgment) SetOutcome(val EmailRuleSampleJudgmentOutcome)
 // SetStatus sets the value of Status.
 func (s *EmailRuleSampleJudgment) SetStatus(val EmailRuleSampleJudgmentStatus) {
 	s.Status = val
+}
+
+// SetCloseCall sets the value of CloseCall.
+func (s *EmailRuleSampleJudgment) SetCloseCall(val bool) {
+	s.CloseCall = val
 }
 
 // SetReason sets the value of Reason.
@@ -39766,6 +40407,55 @@ func (s *EmailRuleSampleJudgmentExpected) UnmarshalText(data []byte) error {
 		return nil
 	case EmailRuleSampleJudgmentExpectedNoMatch:
 		*s = EmailRuleSampleJudgmentExpectedNoMatch
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Its group, when sent with one.
+type EmailRuleSampleJudgmentGroup string
+
+const (
+	EmailRuleSampleJudgmentGroupPrivate   EmailRuleSampleJudgmentGroup = "private"
+	EmailRuleSampleJudgmentGroupNearMiss  EmailRuleSampleJudgmentGroup = "near_miss"
+	EmailRuleSampleJudgmentGroupMustMatch EmailRuleSampleJudgmentGroup = "must_match"
+)
+
+// AllValues returns all EmailRuleSampleJudgmentGroup values.
+func (EmailRuleSampleJudgmentGroup) AllValues() []EmailRuleSampleJudgmentGroup {
+	return []EmailRuleSampleJudgmentGroup{
+		EmailRuleSampleJudgmentGroupPrivate,
+		EmailRuleSampleJudgmentGroupNearMiss,
+		EmailRuleSampleJudgmentGroupMustMatch,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleSampleJudgmentGroup) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleSampleJudgmentGroupPrivate:
+		return []byte(s), nil
+	case EmailRuleSampleJudgmentGroupNearMiss:
+		return []byte(s), nil
+	case EmailRuleSampleJudgmentGroupMustMatch:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleSampleJudgmentGroup) UnmarshalText(data []byte) error {
+	switch EmailRuleSampleJudgmentGroup(data) {
+	case EmailRuleSampleJudgmentGroupPrivate:
+		*s = EmailRuleSampleJudgmentGroupPrivate
+		return nil
+	case EmailRuleSampleJudgmentGroupNearMiss:
+		*s = EmailRuleSampleJudgmentGroupNearMiss
+		return nil
+	case EmailRuleSampleJudgmentGroupMustMatch:
+		*s = EmailRuleSampleJudgmentGroupMustMatch
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -40451,7 +41141,7 @@ type EmailRuleShare struct {
 	DeliveryPaused NilBool `json:"delivery_paused"`
 	// For the member it is shared with, on the dashboard or the Primitive CLI, while it is live and
 	// their access reads content: whether it is working, so a quiet mailbox can be told from a stopped
-	// share. Null otherwise, and when it could not be read.
+	// share (checked false when that could not be read just now). Null otherwise.
 	Activity NilEmailRuleShareActivity `json:"activity"`
 	// Whether you are the member sharing their mail.
 	IsGranter bool `json:"is_granter"`
@@ -40632,8 +41322,11 @@ func (s *EmailRuleShare) SetRuleID(val NilUUID) {
 type EmailRuleShareActivity struct {
 	// The start of the hour in which the rule last decided on any email in the sharing member's
 	// mailboxes since the share began, counting only hours that have ended and the hour of the newest
-	// email shared; null if none.
+	// email shared; null if none, or if it could not be checked.
 	LastDecidedAt NilDateTime `json:"last_decided_at"`
+	// False when whether the share is working could not be read just now (last_decided_at is then null):
+	// read it again.
+	Checked bool `json:"checked"`
 }
 
 // GetLastDecidedAt returns the value of LastDecidedAt.
@@ -40641,9 +41334,19 @@ func (s *EmailRuleShareActivity) GetLastDecidedAt() NilDateTime {
 	return s.LastDecidedAt
 }
 
+// GetChecked returns the value of Checked.
+func (s *EmailRuleShareActivity) GetChecked() bool {
+	return s.Checked
+}
+
 // SetLastDecidedAt sets the value of LastDecidedAt.
 func (s *EmailRuleShareActivity) SetLastDecidedAt(val NilDateTime) {
 	s.LastDecidedAt = val
+}
+
+// SetChecked sets the value of Checked.
+func (s *EmailRuleShareActivity) SetChecked(val bool) {
+	s.Checked = val
 }
 
 // Ref: #/components/schemas/EmailRuleShareBeneficiary
@@ -40964,6 +41667,168 @@ func (s *EmailRuleState) UnmarshalText(data []byte) error {
 	}
 }
 
+// Ref: #/components/schemas/EmailRuleTestSampleInput
+type EmailRuleTestSampleInput struct {
+	Expected EmailRuleTestSampleInputExpected `json:"expected"`
+	// What the email stands for, such as a personal medical bill.
+	Label     OptNilString              `json:"label"`
+	Email     EmailRuleSavedSampleEmail `json:"email"`
+	ID        OptUUID                   `json:"id"`
+	CreatedAt OptString                 `json:"created_at"`
+	// Its look-alike group: counted by group in the answer.
+	Group OptEmailRuleTestSampleInputGroup `json:"group"`
+}
+
+// GetExpected returns the value of Expected.
+func (s *EmailRuleTestSampleInput) GetExpected() EmailRuleTestSampleInputExpected {
+	return s.Expected
+}
+
+// GetLabel returns the value of Label.
+func (s *EmailRuleTestSampleInput) GetLabel() OptNilString {
+	return s.Label
+}
+
+// GetEmail returns the value of Email.
+func (s *EmailRuleTestSampleInput) GetEmail() EmailRuleSavedSampleEmail {
+	return s.Email
+}
+
+// GetID returns the value of ID.
+func (s *EmailRuleTestSampleInput) GetID() OptUUID {
+	return s.ID
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *EmailRuleTestSampleInput) GetCreatedAt() OptString {
+	return s.CreatedAt
+}
+
+// GetGroup returns the value of Group.
+func (s *EmailRuleTestSampleInput) GetGroup() OptEmailRuleTestSampleInputGroup {
+	return s.Group
+}
+
+// SetExpected sets the value of Expected.
+func (s *EmailRuleTestSampleInput) SetExpected(val EmailRuleTestSampleInputExpected) {
+	s.Expected = val
+}
+
+// SetLabel sets the value of Label.
+func (s *EmailRuleTestSampleInput) SetLabel(val OptNilString) {
+	s.Label = val
+}
+
+// SetEmail sets the value of Email.
+func (s *EmailRuleTestSampleInput) SetEmail(val EmailRuleSavedSampleEmail) {
+	s.Email = val
+}
+
+// SetID sets the value of ID.
+func (s *EmailRuleTestSampleInput) SetID(val OptUUID) {
+	s.ID = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *EmailRuleTestSampleInput) SetCreatedAt(val OptString) {
+	s.CreatedAt = val
+}
+
+// SetGroup sets the value of Group.
+func (s *EmailRuleTestSampleInput) SetGroup(val OptEmailRuleTestSampleInputGroup) {
+	s.Group = val
+}
+
+type EmailRuleTestSampleInputExpected string
+
+const (
+	EmailRuleTestSampleInputExpectedMatch   EmailRuleTestSampleInputExpected = "match"
+	EmailRuleTestSampleInputExpectedNoMatch EmailRuleTestSampleInputExpected = "no_match"
+)
+
+// AllValues returns all EmailRuleTestSampleInputExpected values.
+func (EmailRuleTestSampleInputExpected) AllValues() []EmailRuleTestSampleInputExpected {
+	return []EmailRuleTestSampleInputExpected{
+		EmailRuleTestSampleInputExpectedMatch,
+		EmailRuleTestSampleInputExpectedNoMatch,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleTestSampleInputExpected) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleTestSampleInputExpectedMatch:
+		return []byte(s), nil
+	case EmailRuleTestSampleInputExpectedNoMatch:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleTestSampleInputExpected) UnmarshalText(data []byte) error {
+	switch EmailRuleTestSampleInputExpected(data) {
+	case EmailRuleTestSampleInputExpectedMatch:
+		*s = EmailRuleTestSampleInputExpectedMatch
+		return nil
+	case EmailRuleTestSampleInputExpectedNoMatch:
+		*s = EmailRuleTestSampleInputExpectedNoMatch
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Its look-alike group: counted by group in the answer.
+type EmailRuleTestSampleInputGroup string
+
+const (
+	EmailRuleTestSampleInputGroupPrivate   EmailRuleTestSampleInputGroup = "private"
+	EmailRuleTestSampleInputGroupNearMiss  EmailRuleTestSampleInputGroup = "near_miss"
+	EmailRuleTestSampleInputGroupMustMatch EmailRuleTestSampleInputGroup = "must_match"
+)
+
+// AllValues returns all EmailRuleTestSampleInputGroup values.
+func (EmailRuleTestSampleInputGroup) AllValues() []EmailRuleTestSampleInputGroup {
+	return []EmailRuleTestSampleInputGroup{
+		EmailRuleTestSampleInputGroupPrivate,
+		EmailRuleTestSampleInputGroupNearMiss,
+		EmailRuleTestSampleInputGroupMustMatch,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleTestSampleInputGroup) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleTestSampleInputGroupPrivate:
+		return []byte(s), nil
+	case EmailRuleTestSampleInputGroupNearMiss:
+		return []byte(s), nil
+	case EmailRuleTestSampleInputGroupMustMatch:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleTestSampleInputGroup) UnmarshalText(data []byte) error {
+	switch EmailRuleTestSampleInputGroup(data) {
+	case EmailRuleTestSampleInputGroupPrivate:
+		*s = EmailRuleTestSampleInputGroupPrivate
+		return nil
+	case EmailRuleTestSampleInputGroupNearMiss:
+		*s = EmailRuleTestSampleInputGroupNearMiss
+		return nil
+	case EmailRuleTestSampleInputGroupMustMatch:
+		*s = EmailRuleTestSampleInputGroupMustMatch
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Ref: #/components/schemas/EmailRuleTested
 type EmailRuleTested struct {
 	ID         NilUUID `json:"id"`
@@ -41076,9 +41941,9 @@ type EmailRuleTree struct {
 	// A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...
 	// ]}, {any: [...]}, {not: ...}.
 	When EmailRuleTreeWhen `json:"when"`
-	// Yes/no questions asked once the conditions match, over the email's text and attachment names,
-	// never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any
-	// yes.
+	// Yes/no questions asked once the conditions match, over the email's text and attachment names, and
+	// text read from PDF and image attachments where attachment reading is active for the organization.
+	// A grant rule needs every one yes; a do_not_share rule matches on any yes.
 	Questions []string `json:"questions"`
 }
 
@@ -41130,9 +41995,9 @@ type EmailRuleTreeInput struct {
 	// A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...
 	// ]}, {any: [...]}, {not: ...}.
 	When EmailRuleTreeInputWhen `json:"when"`
-	// Yes/no questions asked once the conditions match, over the email's text and attachment names,
-	// never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any
-	// yes. Left out, none.
+	// Yes/no questions asked once the conditions match, over the email's text and attachment names, and
+	// text read from PDF and image attachments where attachment reading is active for the organization.
+	// A grant rule needs every one yes; a do_not_share rule matches on any yes. Left out, none.
 	Questions []string `json:"questions"`
 }
 
@@ -41324,6 +42189,113 @@ func (s *EmailRuleVersion) SetSQL(val OptEmailRuleVersionSQL) {
 	s.SQL = val
 }
 
+// Ref: #/components/schemas/EmailRuleVersionChanges
+type EmailRuleVersionChanges struct {
+	// Version: the rule's current version (rule_id). requested: the request's rule as asked (request_id).
+	ComparedTo EmailRuleVersionChangesComparedTo `json:"compared_to"`
+	// Present exactly when compared_to is version: its number.
+	ComparedToVersion OptInt `json:"compared_to_version"`
+	// Emails this tree matches that the one compared against does not.
+	NewlyMatched EmailRuleChangedEmails `json:"newly_matched"`
+	// Emails the one compared against matches that this tree does not.
+	StopsMatching EmailRuleChangedEmails `json:"stops_matching"`
+	// Emails listed in results that either could not decide (unclassified, skipped and not found
+	// included), in neither list.
+	Undecided int `json:"undecided"`
+}
+
+// GetComparedTo returns the value of ComparedTo.
+func (s *EmailRuleVersionChanges) GetComparedTo() EmailRuleVersionChangesComparedTo {
+	return s.ComparedTo
+}
+
+// GetComparedToVersion returns the value of ComparedToVersion.
+func (s *EmailRuleVersionChanges) GetComparedToVersion() OptInt {
+	return s.ComparedToVersion
+}
+
+// GetNewlyMatched returns the value of NewlyMatched.
+func (s *EmailRuleVersionChanges) GetNewlyMatched() EmailRuleChangedEmails {
+	return s.NewlyMatched
+}
+
+// GetStopsMatching returns the value of StopsMatching.
+func (s *EmailRuleVersionChanges) GetStopsMatching() EmailRuleChangedEmails {
+	return s.StopsMatching
+}
+
+// GetUndecided returns the value of Undecided.
+func (s *EmailRuleVersionChanges) GetUndecided() int {
+	return s.Undecided
+}
+
+// SetComparedTo sets the value of ComparedTo.
+func (s *EmailRuleVersionChanges) SetComparedTo(val EmailRuleVersionChangesComparedTo) {
+	s.ComparedTo = val
+}
+
+// SetComparedToVersion sets the value of ComparedToVersion.
+func (s *EmailRuleVersionChanges) SetComparedToVersion(val OptInt) {
+	s.ComparedToVersion = val
+}
+
+// SetNewlyMatched sets the value of NewlyMatched.
+func (s *EmailRuleVersionChanges) SetNewlyMatched(val EmailRuleChangedEmails) {
+	s.NewlyMatched = val
+}
+
+// SetStopsMatching sets the value of StopsMatching.
+func (s *EmailRuleVersionChanges) SetStopsMatching(val EmailRuleChangedEmails) {
+	s.StopsMatching = val
+}
+
+// SetUndecided sets the value of Undecided.
+func (s *EmailRuleVersionChanges) SetUndecided(val int) {
+	s.Undecided = val
+}
+
+// Version: the rule's current version (rule_id). requested: the request's rule as asked (request_id).
+type EmailRuleVersionChangesComparedTo string
+
+const (
+	EmailRuleVersionChangesComparedToVersion   EmailRuleVersionChangesComparedTo = "version"
+	EmailRuleVersionChangesComparedToRequested EmailRuleVersionChangesComparedTo = "requested"
+)
+
+// AllValues returns all EmailRuleVersionChangesComparedTo values.
+func (EmailRuleVersionChangesComparedTo) AllValues() []EmailRuleVersionChangesComparedTo {
+	return []EmailRuleVersionChangesComparedTo{
+		EmailRuleVersionChangesComparedToVersion,
+		EmailRuleVersionChangesComparedToRequested,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailRuleVersionChangesComparedTo) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailRuleVersionChangesComparedToVersion:
+		return []byte(s), nil
+	case EmailRuleVersionChangesComparedToRequested:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailRuleVersionChangesComparedTo) UnmarshalText(data []byte) error {
+	switch EmailRuleVersionChangesComparedTo(data) {
+	case EmailRuleVersionChangesComparedToVersion:
+		*s = EmailRuleVersionChangesComparedToVersion
+		return nil
+	case EmailRuleVersionChangesComparedToRequested:
+		*s = EmailRuleVersionChangesComparedToRequested
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Present only when include_sql was true.
 type EmailRuleVersionSQL struct {
 	// A parameterized boolean expression over one row per email.
@@ -41375,9 +42347,12 @@ type EmailRuleWithVersion struct {
 	IsAuthor bool `json:"is_author"`
 	// To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to
 	// it waiting for their answer (GET /email-rule-objections).
-	PendingObjections OptInt    `json:"pending_objections"`
-	CreatedAt         time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
+	PendingObjections OptInt `json:"pending_objections"`
+	// On the list with all=true only: who receives what it matches now. Null when it could not be read
+	// in time.
+	Receivers OptNilEmailRuleReceivers `json:"receivers"`
+	CreatedAt time.Time                `json:"created_at"`
+	UpdatedAt time.Time                `json:"updated_at"`
 	// Its current version: english and tree, with Primitive's reading and notes. current_version is its
 	// number. GET /email-rules lists rules without it.
 	Current NilEmailRuleVersion `json:"current"`
@@ -41441,6 +42416,11 @@ func (s *EmailRuleWithVersion) GetIsAuthor() bool {
 // GetPendingObjections returns the value of PendingObjections.
 func (s *EmailRuleWithVersion) GetPendingObjections() OptInt {
 	return s.PendingObjections
+}
+
+// GetReceivers returns the value of Receivers.
+func (s *EmailRuleWithVersion) GetReceivers() OptNilEmailRuleReceivers {
+	return s.Receivers
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -41516,6 +42496,11 @@ func (s *EmailRuleWithVersion) SetIsAuthor(val bool) {
 // SetPendingObjections sets the value of PendingObjections.
 func (s *EmailRuleWithVersion) SetPendingObjections(val OptInt) {
 	s.PendingObjections = val
+}
+
+// SetReceivers sets the value of Receivers.
+func (s *EmailRuleWithVersion) SetReceivers(val OptNilEmailRuleReceivers) {
+	s.Receivers = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -41784,9 +42769,12 @@ type EmailRuleWritten struct {
 	IsAuthor bool `json:"is_author"`
 	// To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to
 	// it waiting for their answer (GET /email-rule-objections).
-	PendingObjections OptInt    `json:"pending_objections"`
-	CreatedAt         time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
+	PendingObjections OptInt `json:"pending_objections"`
+	// On the list with all=true only: who receives what it matches now. Null when it could not be read
+	// in time.
+	Receivers OptNilEmailRuleReceivers `json:"receivers"`
+	CreatedAt time.Time                `json:"created_at"`
+	UpdatedAt time.Time                `json:"updated_at"`
 	// Its current version: english and tree, with Primitive's reading and notes. current_version is its
 	// number. GET /email-rules lists rules without it.
 	Current NilEmailRuleVersion `json:"current"`
@@ -41866,6 +42854,11 @@ func (s *EmailRuleWritten) GetIsAuthor() bool {
 // GetPendingObjections returns the value of PendingObjections.
 func (s *EmailRuleWritten) GetPendingObjections() OptInt {
 	return s.PendingObjections
+}
+
+// GetReceivers returns the value of Receivers.
+func (s *EmailRuleWritten) GetReceivers() OptNilEmailRuleReceivers {
+	return s.Receivers
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -41966,6 +42959,11 @@ func (s *EmailRuleWritten) SetIsAuthor(val bool) {
 // SetPendingObjections sets the value of PendingObjections.
 func (s *EmailRuleWritten) SetPendingObjections(val OptInt) {
 	s.PendingObjections = val
+}
+
+// SetReceivers sets the value of Receivers.
+func (s *EmailRuleWritten) SetReceivers(val OptNilEmailRuleReceivers) {
+	s.Receivers = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -45999,6 +46997,9 @@ type Endpoint struct {
 	// /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that
 	// is not a webhook.
 	SignedWith OptEndpointSignedWith `json:"signed_with"`
+	// For a webhook: the custom request headers it sends on every delivery, by name, with each value
+	// redacted. Empty when it has none. Absent for an endpoint that is not a webhook.
+	Headers []EndpointHeadersItem `json:"headers"`
 	// Only in the response that creates a webhook made with a signing secret of its own (one made as a
 	// person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate
 	// for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.
@@ -46143,6 +47144,11 @@ func (s *Endpoint) GetDelivery() OptNilEndpointDelivery {
 // GetSignedWith returns the value of SignedWith.
 func (s *Endpoint) GetSignedWith() OptEndpointSignedWith {
 	return s.SignedWith
+}
+
+// GetHeaders returns the value of Headers.
+func (s *Endpoint) GetHeaders() []EndpointHeadersItem {
+	return s.Headers
 }
 
 // GetSigningSecret returns the value of SigningSecret.
@@ -46290,6 +47296,11 @@ func (s *Endpoint) SetSignedWith(val OptEndpointSignedWith) {
 	s.SignedWith = val
 }
 
+// SetHeaders sets the value of Headers.
+func (s *Endpoint) SetHeaders(val []EndpointHeadersItem) {
+	s.Headers = val
+}
+
 // SetSigningSecret sets the value of SigningSecret.
 func (s *Endpoint) SetSigningSecret(val OptString) {
 	s.SigningSecret = val
@@ -46299,6 +47310,8 @@ func (s *Endpoint) SetSigningSecret(val OptString) {
 type EndpointCreateWarning struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
+	// The HTTP status the URL answered, on url_requires_login and url_redirects.
+	Status OptInt `json:"status"`
 	// The other webhook a same_path_as_another_endpoint warning names.
 	EndpointID      OptUUID `json:"endpoint_id"`
 	AdditionalProps EndpointCreateWarningAdditional
@@ -46312,6 +47325,11 @@ func (s *EndpointCreateWarning) GetCode() string {
 // GetMessage returns the value of Message.
 func (s *EndpointCreateWarning) GetMessage() string {
 	return s.Message
+}
+
+// GetStatus returns the value of Status.
+func (s *EndpointCreateWarning) GetStatus() OptInt {
+	return s.Status
 }
 
 // GetEndpointID returns the value of EndpointID.
@@ -46332,6 +47350,11 @@ func (s *EndpointCreateWarning) SetCode(val string) {
 // SetMessage sets the value of Message.
 func (s *EndpointCreateWarning) SetMessage(val string) {
 	s.Message = val
+}
+
+// SetStatus sets the value of Status.
+func (s *EndpointCreateWarning) SetStatus(val OptInt) {
+	s.Status = val
 }
 
 // SetEndpointID sets the value of EndpointID.
@@ -46536,6 +47559,54 @@ func (s *EndpointDeliveryReasonsItem) SetAdditionalProps(val EndpointDeliveryRea
 type EndpointDeliveryReasonsItemAdditional map[string]jx.Raw
 
 func (s *EndpointDeliveryReasonsItemAdditional) init() EndpointDeliveryReasonsItemAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type EndpointHeadersItem struct {
+	Name string `json:"name"`
+	// Always [redacted]: a value is never returned.
+	Value           string `json:"value"`
+	AdditionalProps EndpointHeadersItemAdditional
+}
+
+// GetName returns the value of Name.
+func (s *EndpointHeadersItem) GetName() string {
+	return s.Name
+}
+
+// GetValue returns the value of Value.
+func (s *EndpointHeadersItem) GetValue() string {
+	return s.Value
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *EndpointHeadersItem) GetAdditionalProps() EndpointHeadersItemAdditional {
+	return s.AdditionalProps
+}
+
+// SetName sets the value of Name.
+func (s *EndpointHeadersItem) SetName(val string) {
+	s.Name = val
+}
+
+// SetValue sets the value of Value.
+func (s *EndpointHeadersItem) SetValue(val string) {
+	s.Value = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *EndpointHeadersItem) SetAdditionalProps(val EndpointHeadersItemAdditional) {
+	s.AdditionalProps = val
+}
+
+type EndpointHeadersItemAdditional map[string]jx.Raw
+
+func (s *EndpointHeadersItemAdditional) init() EndpointHeadersItemAdditional {
 	m := *s
 	if m == nil {
 		m = map[string]jx.Raw{}
@@ -47065,8 +48136,10 @@ func (EndpointSigningSecretResponseSuccess) AllValues() []EndpointSigningSecretR
 
 // Ref: #/components/schemas/EndpointUpdateWarning
 type EndpointUpdateWarning struct {
-	Code            string `json:"code"`
-	Message         string `json:"message"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	// The HTTP status the URL answered, on url_requires_login and url_redirects.
+	Status          OptInt `json:"status"`
 	AdditionalProps EndpointUpdateWarningAdditional
 }
 
@@ -47078,6 +48151,11 @@ func (s *EndpointUpdateWarning) GetCode() string {
 // GetMessage returns the value of Message.
 func (s *EndpointUpdateWarning) GetMessage() string {
 	return s.Message
+}
+
+// GetStatus returns the value of Status.
+func (s *EndpointUpdateWarning) GetStatus() OptInt {
+	return s.Status
 }
 
 // GetAdditionalProps returns the value of AdditionalProps.
@@ -47093,6 +48171,11 @@ func (s *EndpointUpdateWarning) SetCode(val string) {
 // SetMessage sets the value of Message.
 func (s *EndpointUpdateWarning) SetMessage(val string) {
 	s.Message = val
+}
+
+// SetStatus sets the value of Status.
+func (s *EndpointUpdateWarning) SetStatus(val OptInt) {
+	s.Status = val
 }
 
 // SetAdditionalProps sets the value of AdditionalProps.
@@ -53285,7 +54368,7 @@ func (*GenerateLookAlikesOK) generateLookAlikesRes() {}
 // Ref: #/components/schemas/GenerateLookAlikesRequest
 type GenerateLookAlikesRequest struct {
 	// An unsaved rule tree, as the compile answer's rule gives it or written by hand. With rule_id: that
-	// tree as the rule's next version.
+	// tree as the rule's next version. With request_id: that tree as an edit of the request's rule.
 	Tree OptEmailRuleTreeInput `json:"tree"`
 	// What the tree is meant to match; without it, the tree is described in words.
 	English OptString `json:"english"`
@@ -53508,11 +54591,13 @@ func (s *GenerateLookAlikesRequestKind) UnmarshalText(data []byte) error {
 type GenerateLookAlikesRequestKindsItem string
 
 const (
-	GenerateLookAlikesRequestKindsItemMedical          GenerateLookAlikesRequestKindsItem = "medical"
-	GenerateLookAlikesRequestKindsItemPayroll          GenerateLookAlikesRequestKindsItem = "payroll"
-	GenerateLookAlikesRequestKindsItemPersonalPurchase GenerateLookAlikesRequestKindsItem = "personal_purchase"
-	GenerateLookAlikesRequestKindsItemBankTax          GenerateLookAlikesRequestKindsItem = "bank_tax"
-	GenerateLookAlikesRequestKindsItemOther            GenerateLookAlikesRequestKindsItem = "other"
+	GenerateLookAlikesRequestKindsItemMedical                GenerateLookAlikesRequestKindsItem = "medical"
+	GenerateLookAlikesRequestKindsItemPayroll                GenerateLookAlikesRequestKindsItem = "payroll"
+	GenerateLookAlikesRequestKindsItemPersonalPurchase       GenerateLookAlikesRequestKindsItem = "personal_purchase"
+	GenerateLookAlikesRequestKindsItemBankTax                GenerateLookAlikesRequestKindsItem = "bank_tax"
+	GenerateLookAlikesRequestKindsItemLegal                  GenerateLookAlikesRequestKindsItem = "legal"
+	GenerateLookAlikesRequestKindsItemPersonalCorrespondence GenerateLookAlikesRequestKindsItem = "personal_correspondence"
+	GenerateLookAlikesRequestKindsItemOther                  GenerateLookAlikesRequestKindsItem = "other"
 )
 
 // AllValues returns all GenerateLookAlikesRequestKindsItem values.
@@ -53522,6 +54607,8 @@ func (GenerateLookAlikesRequestKindsItem) AllValues() []GenerateLookAlikesReques
 		GenerateLookAlikesRequestKindsItemPayroll,
 		GenerateLookAlikesRequestKindsItemPersonalPurchase,
 		GenerateLookAlikesRequestKindsItemBankTax,
+		GenerateLookAlikesRequestKindsItemLegal,
+		GenerateLookAlikesRequestKindsItemPersonalCorrespondence,
 		GenerateLookAlikesRequestKindsItemOther,
 	}
 }
@@ -53536,6 +54623,10 @@ func (s GenerateLookAlikesRequestKindsItem) MarshalText() ([]byte, error) {
 	case GenerateLookAlikesRequestKindsItemPersonalPurchase:
 		return []byte(s), nil
 	case GenerateLookAlikesRequestKindsItemBankTax:
+		return []byte(s), nil
+	case GenerateLookAlikesRequestKindsItemLegal:
+		return []byte(s), nil
+	case GenerateLookAlikesRequestKindsItemPersonalCorrespondence:
 		return []byte(s), nil
 	case GenerateLookAlikesRequestKindsItemOther:
 		return []byte(s), nil
@@ -53558,6 +54649,12 @@ func (s *GenerateLookAlikesRequestKindsItem) UnmarshalText(data []byte) error {
 		return nil
 	case GenerateLookAlikesRequestKindsItemBankTax:
 		*s = GenerateLookAlikesRequestKindsItemBankTax
+		return nil
+	case GenerateLookAlikesRequestKindsItemLegal:
+		*s = GenerateLookAlikesRequestKindsItemLegal
+		return nil
+	case GenerateLookAlikesRequestKindsItemPersonalCorrespondence:
+		*s = GenerateLookAlikesRequestKindsItemPersonalCorrespondence
 		return nil
 	case GenerateLookAlikesRequestKindsItemOther:
 		*s = GenerateLookAlikesRequestKindsItemOther
@@ -53605,12 +54702,14 @@ func (s *GenerateLookAlikesResult) SetCounts(val GenerateLookAlikesResultCounts)
 }
 
 type GenerateLookAlikesResultCounts struct {
-	Passed    int `json:"passed"`
-	Failed    int `json:"failed"`
-	Undecided int `json:"undecided"`
+	Passed     int `json:"passed"`
+	Failed     int `json:"failed"`
+	Undecided  int `json:"undecided"`
+	CloseCalls int `json:"close_calls"`
 	// Asked for but not returned: not written, outside the sample bounds, or of a kind and expected not
 	// asked for.
-	Dropped int `json:"dropped"`
+	Dropped int                        `json:"dropped"`
+	ByGroup EmailRuleSampleGroupCounts `json:"by_group"`
 }
 
 // GetPassed returns the value of Passed.
@@ -53628,9 +54727,19 @@ func (s *GenerateLookAlikesResultCounts) GetUndecided() int {
 	return s.Undecided
 }
 
+// GetCloseCalls returns the value of CloseCalls.
+func (s *GenerateLookAlikesResultCounts) GetCloseCalls() int {
+	return s.CloseCalls
+}
+
 // GetDropped returns the value of Dropped.
 func (s *GenerateLookAlikesResultCounts) GetDropped() int {
 	return s.Dropped
+}
+
+// GetByGroup returns the value of ByGroup.
+func (s *GenerateLookAlikesResultCounts) GetByGroup() EmailRuleSampleGroupCounts {
+	return s.ByGroup
 }
 
 // SetPassed sets the value of Passed.
@@ -53648,9 +54757,19 @@ func (s *GenerateLookAlikesResultCounts) SetUndecided(val int) {
 	s.Undecided = val
 }
 
+// SetCloseCalls sets the value of CloseCalls.
+func (s *GenerateLookAlikesResultCounts) SetCloseCalls(val int) {
+	s.CloseCalls = val
+}
+
 // SetDropped sets the value of Dropped.
 func (s *GenerateLookAlikesResultCounts) SetDropped(val int) {
 	s.Dropped = val
+}
+
+// SetByGroup sets the value of ByGroup.
+func (s *GenerateLookAlikesResultCounts) SetByGroup(val EmailRuleSampleGroupCounts) {
+	s.ByGroup = val
 }
 
 type GenerateLookAlikesServiceUnavailable ErrorResponse
@@ -55516,10 +56635,17 @@ type GetDeliveryResult struct {
 	// the endpoint wrote it. Null for a caller who cannot read the webhook (GET /endpoints/{id}; a
 	// deleted webhook only for a caller who reads every webhook), since a receiver's answer can restate
 	// its URL's credential.
-	ResponseBody NilString                 `json:"response_body"`
-	CreatedAt    string                    `json:"created_at"`
-	UpdatedAt    string                    `json:"updated_at"`
-	Email        NilGetDeliveryResultEmail `json:"email"`
+	ResponseBody NilString `json:"response_body"`
+	// The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as
+	// sent, listing only rules you can read now; empty when it named none of those. Recorded for
+	// deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries,
+	//  records of no attempt, attempts before this field), for a caller that cannot read email rules or
+	// whose organization does not have them, below content depth, and once the message's content is
+	// discarded.
+	Rules     []GetDeliveryResultRulesItem `json:"rules"`
+	CreatedAt string                       `json:"created_at"`
+	UpdatedAt string                       `json:"updated_at"`
+	Email     NilGetDeliveryResultEmail    `json:"email"`
 	// Whether this is the latest attempt of its delivery: the one recorded last, where a record of no
 	// attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A
 	// retry is recorded as a new attempt with its own id and attempt_count (not always higher than the
@@ -55633,6 +56759,11 @@ func (s *GetDeliveryResult) GetResponseBody() NilString {
 	return s.ResponseBody
 }
 
+// GetRules returns the value of Rules.
+func (s *GetDeliveryResult) GetRules() []GetDeliveryResultRulesItem {
+	return s.Rules
+}
+
 // GetCreatedAt returns the value of CreatedAt.
 func (s *GetDeliveryResult) GetCreatedAt() string {
 	return s.CreatedAt
@@ -55736,6 +56867,11 @@ func (s *GetDeliveryResult) SetResponseStatus(val NilInt) {
 // SetResponseBody sets the value of ResponseBody.
 func (s *GetDeliveryResult) SetResponseBody(val NilString) {
 	s.ResponseBody = val
+}
+
+// SetRules sets the value of Rules.
+func (s *GetDeliveryResult) SetRules(val []GetDeliveryResultRulesItem) {
+	s.Rules = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
@@ -55947,6 +57083,31 @@ func (s *GetDeliveryResultEmail) SetRecipient(val NilString) {
 // SetSubject sets the value of Subject.
 func (s *GetDeliveryResultEmail) SetSubject(val NilString) {
 	s.Subject = val
+}
+
+type GetDeliveryResultRulesItem struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// GetID returns the value of ID.
+func (s *GetDeliveryResultRulesItem) GetID() string {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *GetDeliveryResultRulesItem) GetName() string {
+	return s.Name
+}
+
+// SetID sets the value of ID.
+func (s *GetDeliveryResultRulesItem) SetID(val string) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *GetDeliveryResultRulesItem) SetName(val string) {
+	s.Name = val
 }
 
 type GetDeliveryTooManyRequests ErrorResponseHeaders
@@ -56754,6 +57915,53 @@ func (*GetEmailRuleScopeTooManyRequests) getEmailRuleScopeRes() {}
 type GetEmailRuleScopeUnauthorized ErrorResponseHeaders
 
 func (*GetEmailRuleScopeUnauthorized) getEmailRuleScopeRes() {}
+
+type GetEmailRuleSettingsBadRequest ErrorResponse
+
+func (*GetEmailRuleSettingsBadRequest) getEmailRuleSettingsRes() {}
+
+type GetEmailRuleSettingsForbidden ErrorResponse
+
+func (*GetEmailRuleSettingsForbidden) getEmailRuleSettingsRes() {}
+
+type GetEmailRuleSettingsNotFound ErrorResponse
+
+func (*GetEmailRuleSettingsNotFound) getEmailRuleSettingsRes() {}
+
+type GetEmailRuleSettingsOK struct {
+	Success bool                                  `json:"success"`
+	Data    OrgSettingsGetEmailRuleSettingsResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetEmailRuleSettingsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetEmailRuleSettingsOK) GetData() OrgSettingsGetEmailRuleSettingsResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetEmailRuleSettingsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetEmailRuleSettingsOK) SetData(val OrgSettingsGetEmailRuleSettingsResult) {
+	s.Data = val
+}
+
+func (*GetEmailRuleSettingsOK) getEmailRuleSettingsRes() {}
+
+type GetEmailRuleSettingsTooManyRequests ErrorResponseHeaders
+
+func (*GetEmailRuleSettingsTooManyRequests) getEmailRuleSettingsRes() {}
+
+type GetEmailRuleSettingsUnauthorized ErrorResponseHeaders
+
+func (*GetEmailRuleSettingsUnauthorized) getEmailRuleSettingsRes() {}
 
 type GetEmailRuleShareForbidden ErrorResponse
 
@@ -68858,14 +70066,17 @@ type ListEmailRuleDecisionsResultItem struct {
 	WithheldBy []EmailRuleWithheldBy `json:"withheld_by"`
 	// With withheld_by: how many more kept it back that you cannot see, or that were deleted since.
 	// Those rules are not shown; an admin can see them.
-	WithheldByHidden OptInt    `json:"withheld_by_hidden"`
-	CreatedAt        time.Time `json:"created_at"`
+	WithheldByHidden OptInt `json:"withheld_by_hidden"`
+	// When the rule made this decision.
+	DecidedAt time.Time `json:"decided_at"`
 	// The decided email's sender address, as GET /v1/emails/{id} shows it.
 	FromAddress NilString `json:"from_address"`
 	// The decided email's subject, as GET /v1/emails/{id} shows it.
 	Subject NilString `json:"subject"`
-	// When the decided email arrived. Null, with the other two, when you are not shown the email (it
-	// awaits sender authentication).
+	// The mailbox the decided email was received in, as GET /v1/emails/{id} shows it (to_email).
+	Recipient NilString `json:"recipient"`
+	// When the decided email arrived. Null, with from_address, subject and recipient, when you are not
+	// shown the email (it awaits sender authentication).
 	ReceivedAt NilDateTime `json:"received_at"`
 }
 
@@ -68924,9 +70135,9 @@ func (s *ListEmailRuleDecisionsResultItem) GetWithheldByHidden() OptInt {
 	return s.WithheldByHidden
 }
 
-// GetCreatedAt returns the value of CreatedAt.
-func (s *ListEmailRuleDecisionsResultItem) GetCreatedAt() time.Time {
-	return s.CreatedAt
+// GetDecidedAt returns the value of DecidedAt.
+func (s *ListEmailRuleDecisionsResultItem) GetDecidedAt() time.Time {
+	return s.DecidedAt
 }
 
 // GetFromAddress returns the value of FromAddress.
@@ -68937,6 +70148,11 @@ func (s *ListEmailRuleDecisionsResultItem) GetFromAddress() NilString {
 // GetSubject returns the value of Subject.
 func (s *ListEmailRuleDecisionsResultItem) GetSubject() NilString {
 	return s.Subject
+}
+
+// GetRecipient returns the value of Recipient.
+func (s *ListEmailRuleDecisionsResultItem) GetRecipient() NilString {
+	return s.Recipient
 }
 
 // GetReceivedAt returns the value of ReceivedAt.
@@ -68999,9 +70215,9 @@ func (s *ListEmailRuleDecisionsResultItem) SetWithheldByHidden(val OptInt) {
 	s.WithheldByHidden = val
 }
 
-// SetCreatedAt sets the value of CreatedAt.
-func (s *ListEmailRuleDecisionsResultItem) SetCreatedAt(val time.Time) {
-	s.CreatedAt = val
+// SetDecidedAt sets the value of DecidedAt.
+func (s *ListEmailRuleDecisionsResultItem) SetDecidedAt(val time.Time) {
+	s.DecidedAt = val
 }
 
 // SetFromAddress sets the value of FromAddress.
@@ -69012,6 +70228,11 @@ func (s *ListEmailRuleDecisionsResultItem) SetFromAddress(val NilString) {
 // SetSubject sets the value of Subject.
 func (s *ListEmailRuleDecisionsResultItem) SetSubject(val NilString) {
 	s.Subject = val
+}
+
+// SetRecipient sets the value of Recipient.
+func (s *ListEmailRuleDecisionsResultItem) SetRecipient(val NilString) {
+	s.Recipient = val
 }
 
 // SetReceivedAt sets the value of ReceivedAt.
@@ -71780,6 +73001,48 @@ type ListEmailRuleVersionsUnauthorized ErrorResponseHeaders
 
 func (*ListEmailRuleVersionsUnauthorized) listEmailRuleVersionsRes() {}
 
+// True: every rule in the organization, any author (owners and admins).
+type ListEmailRulesAll string
+
+const (
+	ListEmailRulesAllTrue  ListEmailRulesAll = "true"
+	ListEmailRulesAllFalse ListEmailRulesAll = "false"
+)
+
+// AllValues returns all ListEmailRulesAll values.
+func (ListEmailRulesAll) AllValues() []ListEmailRulesAll {
+	return []ListEmailRulesAll{
+		ListEmailRulesAllTrue,
+		ListEmailRulesAllFalse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListEmailRulesAll) MarshalText() ([]byte, error) {
+	switch s {
+	case ListEmailRulesAllTrue:
+		return []byte(s), nil
+	case ListEmailRulesAllFalse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListEmailRulesAll) UnmarshalText(data []byte) error {
+	switch ListEmailRulesAll(data) {
+	case ListEmailRulesAllTrue:
+		*s = ListEmailRulesAllTrue
+		return nil
+	case ListEmailRulesAllFalse:
+		*s = ListEmailRulesAllFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type ListEmailRulesBadRequest ErrorResponse
 
 func (*ListEmailRulesBadRequest) listEmailRulesRes() {}
@@ -71845,6 +73108,48 @@ type ListEmailRulesForbidden ErrorResponse
 
 func (*ListEmailRulesForbidden) listEmailRulesRes() {}
 
+// Only rules of this kind.
+type ListEmailRulesKind string
+
+const (
+	ListEmailRulesKindGrant      ListEmailRulesKind = "grant"
+	ListEmailRulesKindDoNotShare ListEmailRulesKind = "do_not_share"
+)
+
+// AllValues returns all ListEmailRulesKind values.
+func (ListEmailRulesKind) AllValues() []ListEmailRulesKind {
+	return []ListEmailRulesKind{
+		ListEmailRulesKindGrant,
+		ListEmailRulesKindDoNotShare,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListEmailRulesKind) MarshalText() ([]byte, error) {
+	switch s {
+	case ListEmailRulesKindGrant:
+		return []byte(s), nil
+	case ListEmailRulesKindDoNotShare:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListEmailRulesKind) UnmarshalText(data []byte) error {
+	switch ListEmailRulesKind(data) {
+	case ListEmailRulesKindGrant:
+		*s = ListEmailRulesKindGrant
+		return nil
+	case ListEmailRulesKindDoNotShare:
+		*s = ListEmailRulesKindDoNotShare
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Merged schema.
 type ListEmailRulesOK struct {
 	Success bool                 `json:"success"`
@@ -71885,6 +73190,55 @@ func (s *ListEmailRulesOK) SetMeta(val CursorPageMeta) {
 func (*ListEmailRulesOK) listEmailRulesRes() {}
 
 type ListEmailRulesResult []EmailRule
+
+// Only rules in this state.
+type ListEmailRulesState string
+
+const (
+	ListEmailRulesStateDraft   ListEmailRulesState = "draft"
+	ListEmailRulesStateObserve ListEmailRulesState = "observe"
+	ListEmailRulesStateActive  ListEmailRulesState = "active"
+)
+
+// AllValues returns all ListEmailRulesState values.
+func (ListEmailRulesState) AllValues() []ListEmailRulesState {
+	return []ListEmailRulesState{
+		ListEmailRulesStateDraft,
+		ListEmailRulesStateObserve,
+		ListEmailRulesStateActive,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListEmailRulesState) MarshalText() ([]byte, error) {
+	switch s {
+	case ListEmailRulesStateDraft:
+		return []byte(s), nil
+	case ListEmailRulesStateObserve:
+		return []byte(s), nil
+	case ListEmailRulesStateActive:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListEmailRulesState) UnmarshalText(data []byte) error {
+	switch ListEmailRulesState(data) {
+	case ListEmailRulesStateDraft:
+		*s = ListEmailRulesStateDraft
+		return nil
+	case ListEmailRulesStateObserve:
+		*s = ListEmailRulesStateObserve
+		return nil
+	case ListEmailRulesStateActive:
+		*s = ListEmailRulesStateActive
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 type ListEmailRulesTooManyRequests ErrorResponseHeaders
 
@@ -89312,6 +90666,98 @@ func (o OptEmailRuleReadKind) Or(d EmailRuleReadKind) EmailRuleReadKind {
 	return d
 }
 
+// NewOptEmailRuleSampleGroupCounts returns new OptEmailRuleSampleGroupCounts with value set to v.
+func NewOptEmailRuleSampleGroupCounts(v EmailRuleSampleGroupCounts) OptEmailRuleSampleGroupCounts {
+	return OptEmailRuleSampleGroupCounts{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEmailRuleSampleGroupCounts is optional EmailRuleSampleGroupCounts.
+type OptEmailRuleSampleGroupCounts struct {
+	Value EmailRuleSampleGroupCounts
+	Set   bool
+}
+
+// IsSet returns true if OptEmailRuleSampleGroupCounts was set.
+func (o OptEmailRuleSampleGroupCounts) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEmailRuleSampleGroupCounts) Reset() {
+	var v EmailRuleSampleGroupCounts
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEmailRuleSampleGroupCounts) SetTo(v EmailRuleSampleGroupCounts) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEmailRuleSampleGroupCounts) Get() (v EmailRuleSampleGroupCounts, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEmailRuleSampleGroupCounts) Or(d EmailRuleSampleGroupCounts) EmailRuleSampleGroupCounts {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptEmailRuleSampleJudgmentGroup returns new OptEmailRuleSampleJudgmentGroup with value set to v.
+func NewOptEmailRuleSampleJudgmentGroup(v EmailRuleSampleJudgmentGroup) OptEmailRuleSampleJudgmentGroup {
+	return OptEmailRuleSampleJudgmentGroup{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEmailRuleSampleJudgmentGroup is optional EmailRuleSampleJudgmentGroup.
+type OptEmailRuleSampleJudgmentGroup struct {
+	Value EmailRuleSampleJudgmentGroup
+	Set   bool
+}
+
+// IsSet returns true if OptEmailRuleSampleJudgmentGroup was set.
+func (o OptEmailRuleSampleJudgmentGroup) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEmailRuleSampleJudgmentGroup) Reset() {
+	var v EmailRuleSampleJudgmentGroup
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEmailRuleSampleJudgmentGroup) SetTo(v EmailRuleSampleJudgmentGroup) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEmailRuleSampleJudgmentGroup) Get() (v EmailRuleSampleJudgmentGroup, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEmailRuleSampleJudgmentGroup) Or(d EmailRuleSampleJudgmentGroup) EmailRuleSampleJudgmentGroup {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptEmailRuleSampleJudgmentReason returns new OptEmailRuleSampleJudgmentReason with value set to v.
 func NewOptEmailRuleSampleJudgmentReason(v EmailRuleSampleJudgmentReason) OptEmailRuleSampleJudgmentReason {
 	return OptEmailRuleSampleJudgmentReason{
@@ -89450,6 +90896,52 @@ func (o OptEmailRuleScopeUsed) Or(d EmailRuleScopeUsed) EmailRuleScopeUsed {
 	return d
 }
 
+// NewOptEmailRuleTestSampleInputGroup returns new OptEmailRuleTestSampleInputGroup with value set to v.
+func NewOptEmailRuleTestSampleInputGroup(v EmailRuleTestSampleInputGroup) OptEmailRuleTestSampleInputGroup {
+	return OptEmailRuleTestSampleInputGroup{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEmailRuleTestSampleInputGroup is optional EmailRuleTestSampleInputGroup.
+type OptEmailRuleTestSampleInputGroup struct {
+	Value EmailRuleTestSampleInputGroup
+	Set   bool
+}
+
+// IsSet returns true if OptEmailRuleTestSampleInputGroup was set.
+func (o OptEmailRuleTestSampleInputGroup) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEmailRuleTestSampleInputGroup) Reset() {
+	var v EmailRuleTestSampleInputGroup
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEmailRuleTestSampleInputGroup) SetTo(v EmailRuleTestSampleInputGroup) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEmailRuleTestSampleInputGroup) Get() (v EmailRuleTestSampleInputGroup, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEmailRuleTestSampleInputGroup) Or(d EmailRuleTestSampleInputGroup) EmailRuleTestSampleInputGroup {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptEmailRuleTreeInput returns new OptEmailRuleTreeInput with value set to v.
 func NewOptEmailRuleTreeInput(v EmailRuleTreeInput) OptEmailRuleTreeInput {
 	return OptEmailRuleTreeInput{
@@ -89490,6 +90982,52 @@ func (o OptEmailRuleTreeInput) Get() (v EmailRuleTreeInput, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptEmailRuleTreeInput) Or(d EmailRuleTreeInput) EmailRuleTreeInput {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptEmailRuleVersionChanges returns new OptEmailRuleVersionChanges with value set to v.
+func NewOptEmailRuleVersionChanges(v EmailRuleVersionChanges) OptEmailRuleVersionChanges {
+	return OptEmailRuleVersionChanges{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEmailRuleVersionChanges is optional EmailRuleVersionChanges.
+type OptEmailRuleVersionChanges struct {
+	Value EmailRuleVersionChanges
+	Set   bool
+}
+
+// IsSet returns true if OptEmailRuleVersionChanges was set.
+func (o OptEmailRuleVersionChanges) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEmailRuleVersionChanges) Reset() {
+	var v EmailRuleVersionChanges
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEmailRuleVersionChanges) SetTo(v EmailRuleVersionChanges) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEmailRuleVersionChanges) Get() (v EmailRuleVersionChanges, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEmailRuleVersionChanges) Or(d EmailRuleVersionChanges) EmailRuleVersionChanges {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -93538,6 +95076,144 @@ func (o OptListEmailRuleSharesLive) Get() (v ListEmailRuleSharesLive, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptListEmailRuleSharesLive) Or(d ListEmailRuleSharesLive) ListEmailRuleSharesLive {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListEmailRulesAll returns new OptListEmailRulesAll with value set to v.
+func NewOptListEmailRulesAll(v ListEmailRulesAll) OptListEmailRulesAll {
+	return OptListEmailRulesAll{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListEmailRulesAll is optional ListEmailRulesAll.
+type OptListEmailRulesAll struct {
+	Value ListEmailRulesAll
+	Set   bool
+}
+
+// IsSet returns true if OptListEmailRulesAll was set.
+func (o OptListEmailRulesAll) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListEmailRulesAll) Reset() {
+	var v ListEmailRulesAll
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListEmailRulesAll) SetTo(v ListEmailRulesAll) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListEmailRulesAll) Get() (v ListEmailRulesAll, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListEmailRulesAll) Or(d ListEmailRulesAll) ListEmailRulesAll {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListEmailRulesKind returns new OptListEmailRulesKind with value set to v.
+func NewOptListEmailRulesKind(v ListEmailRulesKind) OptListEmailRulesKind {
+	return OptListEmailRulesKind{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListEmailRulesKind is optional ListEmailRulesKind.
+type OptListEmailRulesKind struct {
+	Value ListEmailRulesKind
+	Set   bool
+}
+
+// IsSet returns true if OptListEmailRulesKind was set.
+func (o OptListEmailRulesKind) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListEmailRulesKind) Reset() {
+	var v ListEmailRulesKind
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListEmailRulesKind) SetTo(v ListEmailRulesKind) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListEmailRulesKind) Get() (v ListEmailRulesKind, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListEmailRulesKind) Or(d ListEmailRulesKind) ListEmailRulesKind {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListEmailRulesState returns new OptListEmailRulesState with value set to v.
+func NewOptListEmailRulesState(v ListEmailRulesState) OptListEmailRulesState {
+	return OptListEmailRulesState{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListEmailRulesState is optional ListEmailRulesState.
+type OptListEmailRulesState struct {
+	Value ListEmailRulesState
+	Set   bool
+}
+
+// IsSet returns true if OptListEmailRulesState was set.
+func (o OptListEmailRulesState) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListEmailRulesState) Reset() {
+	var v ListEmailRulesState
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListEmailRulesState) SetTo(v ListEmailRulesState) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListEmailRulesState) Get() (v ListEmailRulesState, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListEmailRulesState) Or(d ListEmailRulesState) ListEmailRulesState {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -107644,6 +109320,76 @@ func (s *OrgSecretWriteResult) SetCreated(val bool) {
 	s.Created = val
 }
 
+// Ref: #/components/schemas/OrgSettings_getEmailRuleSettings_Result
+type OrgSettingsGetEmailRuleSettingsResult struct {
+	RulesReadAttachments bool `json:"rules_read_attachments"`
+	Available            bool `json:"available"`
+	HipaaMode            bool `json:"hipaa_mode"`
+	Active               bool `json:"active"`
+	AdditionalProps      OrgSettingsGetEmailRuleSettingsResultAdditional
+}
+
+// GetRulesReadAttachments returns the value of RulesReadAttachments.
+func (s *OrgSettingsGetEmailRuleSettingsResult) GetRulesReadAttachments() bool {
+	return s.RulesReadAttachments
+}
+
+// GetAvailable returns the value of Available.
+func (s *OrgSettingsGetEmailRuleSettingsResult) GetAvailable() bool {
+	return s.Available
+}
+
+// GetHipaaMode returns the value of HipaaMode.
+func (s *OrgSettingsGetEmailRuleSettingsResult) GetHipaaMode() bool {
+	return s.HipaaMode
+}
+
+// GetActive returns the value of Active.
+func (s *OrgSettingsGetEmailRuleSettingsResult) GetActive() bool {
+	return s.Active
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *OrgSettingsGetEmailRuleSettingsResult) GetAdditionalProps() OrgSettingsGetEmailRuleSettingsResultAdditional {
+	return s.AdditionalProps
+}
+
+// SetRulesReadAttachments sets the value of RulesReadAttachments.
+func (s *OrgSettingsGetEmailRuleSettingsResult) SetRulesReadAttachments(val bool) {
+	s.RulesReadAttachments = val
+}
+
+// SetAvailable sets the value of Available.
+func (s *OrgSettingsGetEmailRuleSettingsResult) SetAvailable(val bool) {
+	s.Available = val
+}
+
+// SetHipaaMode sets the value of HipaaMode.
+func (s *OrgSettingsGetEmailRuleSettingsResult) SetHipaaMode(val bool) {
+	s.HipaaMode = val
+}
+
+// SetActive sets the value of Active.
+func (s *OrgSettingsGetEmailRuleSettingsResult) SetActive(val bool) {
+	s.Active = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *OrgSettingsGetEmailRuleSettingsResult) SetAdditionalProps(val OrgSettingsGetEmailRuleSettingsResultAdditional) {
+	s.AdditionalProps = val
+}
+
+type OrgSettingsGetEmailRuleSettingsResultAdditional map[string]jx.Raw
+
+func (s *OrgSettingsGetEmailRuleSettingsResultAdditional) init() OrgSettingsGetEmailRuleSettingsResultAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
 // Ref: #/components/schemas/OrgSettings_getOrganization_Result
 type OrgSettingsGetOrganizationResult struct {
 	ID              string    `json:"id"`
@@ -108422,6 +110168,91 @@ func (s *OrgSettingsRevokeOAuthGrantResult) SetAdditionalProps(val OrgSettingsRe
 type OrgSettingsRevokeOAuthGrantResultAdditional map[string]jx.Raw
 
 func (s *OrgSettingsRevokeOAuthGrantResultAdditional) init() OrgSettingsRevokeOAuthGrantResultAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Ref: #/components/schemas/OrgSettings_updateEmailRuleSettings_Input
+type OrgSettingsUpdateEmailRuleSettingsInput struct {
+	RulesReadAttachments bool `json:"rules_read_attachments"`
+}
+
+// GetRulesReadAttachments returns the value of RulesReadAttachments.
+func (s *OrgSettingsUpdateEmailRuleSettingsInput) GetRulesReadAttachments() bool {
+	return s.RulesReadAttachments
+}
+
+// SetRulesReadAttachments sets the value of RulesReadAttachments.
+func (s *OrgSettingsUpdateEmailRuleSettingsInput) SetRulesReadAttachments(val bool) {
+	s.RulesReadAttachments = val
+}
+
+// Ref: #/components/schemas/OrgSettings_updateEmailRuleSettings_Result
+type OrgSettingsUpdateEmailRuleSettingsResult struct {
+	RulesReadAttachments bool `json:"rules_read_attachments"`
+	Available            bool `json:"available"`
+	HipaaMode            bool `json:"hipaa_mode"`
+	Active               bool `json:"active"`
+	AdditionalProps      OrgSettingsUpdateEmailRuleSettingsResultAdditional
+}
+
+// GetRulesReadAttachments returns the value of RulesReadAttachments.
+func (s *OrgSettingsUpdateEmailRuleSettingsResult) GetRulesReadAttachments() bool {
+	return s.RulesReadAttachments
+}
+
+// GetAvailable returns the value of Available.
+func (s *OrgSettingsUpdateEmailRuleSettingsResult) GetAvailable() bool {
+	return s.Available
+}
+
+// GetHipaaMode returns the value of HipaaMode.
+func (s *OrgSettingsUpdateEmailRuleSettingsResult) GetHipaaMode() bool {
+	return s.HipaaMode
+}
+
+// GetActive returns the value of Active.
+func (s *OrgSettingsUpdateEmailRuleSettingsResult) GetActive() bool {
+	return s.Active
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *OrgSettingsUpdateEmailRuleSettingsResult) GetAdditionalProps() OrgSettingsUpdateEmailRuleSettingsResultAdditional {
+	return s.AdditionalProps
+}
+
+// SetRulesReadAttachments sets the value of RulesReadAttachments.
+func (s *OrgSettingsUpdateEmailRuleSettingsResult) SetRulesReadAttachments(val bool) {
+	s.RulesReadAttachments = val
+}
+
+// SetAvailable sets the value of Available.
+func (s *OrgSettingsUpdateEmailRuleSettingsResult) SetAvailable(val bool) {
+	s.Available = val
+}
+
+// SetHipaaMode sets the value of HipaaMode.
+func (s *OrgSettingsUpdateEmailRuleSettingsResult) SetHipaaMode(val bool) {
+	s.HipaaMode = val
+}
+
+// SetActive sets the value of Active.
+func (s *OrgSettingsUpdateEmailRuleSettingsResult) SetActive(val bool) {
+	s.Active = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *OrgSettingsUpdateEmailRuleSettingsResult) SetAdditionalProps(val OrgSettingsUpdateEmailRuleSettingsResultAdditional) {
+	s.AdditionalProps = val
+}
+
+type OrgSettingsUpdateEmailRuleSettingsResultAdditional map[string]jx.Raw
+
+func (s *OrgSettingsUpdateEmailRuleSettingsResultAdditional) init() OrgSettingsUpdateEmailRuleSettingsResultAdditional {
 	m := *s
 	if m == nil {
 		m = map[string]jx.Raw{}
@@ -110030,13 +111861,23 @@ func (s *PresenceControlStatus) UnmarshalText(data []byte) error {
 
 // Ref: #/components/schemas/Projects_createProject_Input
 type ProjectsCreateProjectInput struct {
-	RequestID      uuid.UUID                               `json:"request_id"`
-	Name           string                                  `json:"name"`
-	Description    OptString                               `json:"description"`
-	Repository     OptNilString                            `json:"repository"`
-	Color          string                                  `json:"color"`
-	Members        []ProjectsCreateProjectInputMembersItem `json:"members"`
-	AgentAddresses []string                                `json:"agent_addresses"`
+	// Client-generated UUID for this operation. Reuse it with the same choices after an uncertain
+	// response; use a new UUID for a new operation.
+	RequestID uuid.UUID `json:"request_id"`
+	// Shared project name.
+	Name string `json:"name"`
+	// Shared project description; defaults to an empty string.
+	Description OptString `json:"description"`
+	// Repository identity as owner/repo or an HTTPS URL without credentials, query parameters or
+	// fragments. Omit or use null for none; local checkout paths are not shared.
+	Repository OptNilString `json:"repository"`
+	// Project display color as a six-digit hexadecimal value, including #.
+	Color string `json:"color"`
+	// Complete list of organization teammates and their project email destinations. Use [] for none.
+	Members []ProjectsCreateProjectInputMembersItem `json:"members"`
+	// Available agent addresses to link to the project. On update, replaces only links the caller can
+	// see; unseen live links are preserved. Use [] for no visible links.
+	AgentAddresses []string `json:"agent_addresses"`
 }
 
 // GetRequestID returns the value of RequestID.
@@ -110110,7 +111951,10 @@ func (s *ProjectsCreateProjectInput) SetAgentAddresses(val []string) {
 }
 
 type ProjectsCreateProjectInputMembersItem struct {
-	UserID    uuid.UUID                                      `json:"user_id"`
+	// Organization member to include in the project.
+	UserID uuid.UUID `json:"user_id"`
+	// Where this teammate receives project mail: work_email, or agent with one of their own addresses.
+	// Preserve private_agent to keep an existing private choice without exposing its address.
 	Recipient ProjectsCreateProjectInputMembersItemRecipient `json:"recipient"`
 }
 
@@ -110134,6 +111978,8 @@ func (s *ProjectsCreateProjectInputMembersItem) SetRecipient(val ProjectsCreateP
 	s.Recipient = val
 }
 
+// Where this teammate receives project mail: work_email, or agent with one of their own addresses.
+// Preserve private_agent to keep an existing private choice without exposing its address.
 type ProjectsCreateProjectInputMembersItemRecipient struct {
 	Kind    ProjectsCreateProjectInputMembersItemRecipientKind `json:"kind"`
 	Address OptString                                          `json:"address"`
@@ -110668,8 +112514,11 @@ func (s *ProjectsDeleteProjectResult) SetDeleted(val bool) {
 
 // Ref: #/components/schemas/Projects_inviteOrganizationMember_Input
 type ProjectsInviteOrganizationMemberInput struct {
+	// Client-generated UUID for this operation. Reuse it with the same choices after an uncertain
+	// response; use a new UUID for a new operation.
 	RequestID uuid.UUID `json:"request_id"`
-	Email     string    `json:"email"`
+	// Email address of the person to invite.
+	Email string `json:"email"`
 	// The role the person joins with: member (the default), none for no access, admin, a role template
 	// key or a custom role id. Anything above member, and member where every member reads all of the
 	// organization's mail, needs a signed-in dashboard session holding roles:assign. owner and
@@ -111133,8 +112982,11 @@ func (s *ProjectsInviteOrganizationMemberResultStatus) UnmarshalText(data []byte
 
 // Ref: #/components/schemas/Projects_inviteProjectMember_Input
 type ProjectsInviteProjectMemberInput struct {
+	// Client-generated UUID for this operation. Reuse it with the same choices after an uncertain
+	// response; use a new UUID for a new operation.
 	RequestID uuid.UUID `json:"request_id"`
-	Email     string    `json:"email"`
+	// Email address of the person to invite.
+	Email string `json:"email"`
 }
 
 // GetRequestID returns the value of RequestID.
@@ -113012,13 +114864,22 @@ func (s *ProjectsListProjectsResultItemsItemMembersItemRole) UnmarshalText(data 
 
 // Ref: #/components/schemas/Projects_updateProject_Input
 type ProjectsUpdateProjectInput struct {
-	Version        int                                     `json:"version"`
-	Name           string                                  `json:"name"`
-	Description    OptString                               `json:"description"`
-	Repository     OptNilString                            `json:"repository"`
-	Color          string                                  `json:"color"`
-	Members        []ProjectsUpdateProjectInputMembersItem `json:"members"`
-	AgentAddresses []string                                `json:"agent_addresses"`
+	// Current project version. Refresh the project before retrying a version conflict.
+	Version int `json:"version"`
+	// Shared project name.
+	Name string `json:"name"`
+	// Shared project description; defaults to an empty string.
+	Description OptString `json:"description"`
+	// Repository identity as owner/repo or an HTTPS URL without credentials, query parameters or
+	// fragments. Omit or use null for none; local checkout paths are not shared.
+	Repository OptNilString `json:"repository"`
+	// Project display color as a six-digit hexadecimal value, including #.
+	Color string `json:"color"`
+	// Complete list of organization teammates and their project email destinations. Use [] for none.
+	Members []ProjectsUpdateProjectInputMembersItem `json:"members"`
+	// Available agent addresses to link to the project. On update, replaces only links the caller can
+	// see; unseen live links are preserved. Use [] for no visible links.
+	AgentAddresses []string `json:"agent_addresses"`
 }
 
 // GetVersion returns the value of Version.
@@ -113092,7 +114953,10 @@ func (s *ProjectsUpdateProjectInput) SetAgentAddresses(val []string) {
 }
 
 type ProjectsUpdateProjectInputMembersItem struct {
-	UserID    uuid.UUID                                      `json:"user_id"`
+	// Organization member to include in the project.
+	UserID uuid.UUID `json:"user_id"`
+	// Where this teammate receives project mail: work_email, or agent with one of their own addresses.
+	// Preserve private_agent to keep an existing private choice without exposing its address.
 	Recipient ProjectsUpdateProjectInputMembersItemRecipient `json:"recipient"`
 }
 
@@ -113116,6 +114980,8 @@ func (s *ProjectsUpdateProjectInputMembersItem) SetRecipient(val ProjectsUpdateP
 	s.Recipient = val
 }
 
+// Where this teammate receives project mail: work_email, or agent with one of their own addresses.
+// Preserve private_agent to keep an existing private choice without exposing its address.
 type ProjectsUpdateProjectInputMembersItemRecipient struct {
 	Kind    ProjectsUpdateProjectInputMembersItemRecipientKind `json:"kind"`
 	Address OptString                                          `json:"address"`
@@ -134731,7 +136597,7 @@ func (*TestEmailRuleOnSampleOK) testEmailRuleOnSampleRes() {}
 // Ref: #/components/schemas/TestEmailRuleOnSampleRequest
 type TestEmailRuleOnSampleRequest struct {
 	// An unsaved rule tree, as the compile answer's rule gives it or written by hand. With rule_id: that
-	// tree as the rule's next version.
+	// tree as the rule's next version. With request_id: that tree as an edit of the request's rule.
 	Tree OptEmailRuleTreeInput `json:"tree"`
 	// Own_mailboxes (the default): mail to your own addresses and agents on the mail relay domains (for
 	// a rule that shares, those mail:share_own lets you share). author: all you can read, inboxes added
@@ -135675,7 +137541,7 @@ func (*TestEmailRuleOnSampleUnauthorized) testEmailRuleOnSampleRes() {}
 // Ref: #/components/schemas/TestEmailRuleRequest
 type TestEmailRuleRequest struct {
 	// An unsaved rule tree, as the compile answer's rule gives it or written by hand. With rule_id: that
-	// tree as the rule's next version.
+	// tree as the rule's next version. With request_id: that tree as an edit of the request's rule.
 	Tree OptEmailRuleTreeInput `json:"tree"`
 	// With tree: its description, which the answer's rule.warnings read.
 	English OptString `json:"english"`
@@ -135693,7 +137559,8 @@ type TestEmailRuleRequest struct {
 	// accepting would share, for the member asked).
 	RequestID OptUUID `json:"request_id"`
 	// Required with tree alone: do_not_share tests it as a rule that blocks sharing, so an email it
-	// cannot decide counts as matched. With rule_id and tree, must be the rule's own.
+	// cannot decide counts as matched. With rule_id and tree, must be the rule's own; with request_id
+	// and tree, grant.
 	Kind OptTestEmailRuleRequestKind `json:"kind"`
 	// Test exactly these emails, and any expected ones. Without it, the newest emails the rule can read
 	// are tested, at most 200 and none older than 30 days.
@@ -135861,9 +137728,9 @@ func (s *TestEmailRuleRequestEvaluationScope) UnmarshalText(data []byte) error {
 // Emails the rule must match and must not (at most 100), always tested whatever their age, and
 // made-up emails (samples, at most 20). Given, it replaces a saved rule's own.
 type TestEmailRuleRequestExpect struct {
-	Match   []uuid.UUID                       `json:"match"`
-	NoMatch []uuid.UUID                       `json:"no_match"`
-	Samples []EmailRuleExpectationSampleInput `json:"samples"`
+	Match   []uuid.UUID                `json:"match"`
+	NoMatch []uuid.UUID                `json:"no_match"`
+	Samples []EmailRuleTestSampleInput `json:"samples"`
 }
 
 // GetMatch returns the value of Match.
@@ -135877,7 +137744,7 @@ func (s *TestEmailRuleRequestExpect) GetNoMatch() []uuid.UUID {
 }
 
 // GetSamples returns the value of Samples.
-func (s *TestEmailRuleRequestExpect) GetSamples() []EmailRuleExpectationSampleInput {
+func (s *TestEmailRuleRequestExpect) GetSamples() []EmailRuleTestSampleInput {
 	return s.Samples
 }
 
@@ -135892,12 +137759,13 @@ func (s *TestEmailRuleRequestExpect) SetNoMatch(val []uuid.UUID) {
 }
 
 // SetSamples sets the value of Samples.
-func (s *TestEmailRuleRequestExpect) SetSamples(val []EmailRuleExpectationSampleInput) {
+func (s *TestEmailRuleRequestExpect) SetSamples(val []EmailRuleTestSampleInput) {
 	s.Samples = val
 }
 
 // Required with tree alone: do_not_share tests it as a rule that blocks sharing, so an email it
-// cannot decide counts as matched. With rule_id and tree, must be the rule's own.
+// cannot decide counts as matched. With rule_id and tree, must be the rule's own; with request_id
+// and tree, grant.
 type TestEmailRuleRequestKind string
 
 const (
@@ -135954,6 +137822,10 @@ type TestEmailRuleResult struct {
 	ScopeWarnings []EmailRuleScopeWarning `json:"scope_warnings"`
 	// Present when expect was given, or for a saved rule with saved expectations or made-up emails.
 	Expectations OptTestEmailRuleResultExpectations `json:"expectations"`
+	// With rule_id and tree, when the rule has a current version: what this tree would change against it
+	// (for a do_not_share rule, newly withheld and no longer withheld). With request_id and a tree other
+	// than the one asked: what it would change against the rule as asked.
+	Changes OptEmailRuleVersionChanges `json:"changes"`
 }
 
 // GetRule returns the value of Rule.
@@ -136001,6 +137873,11 @@ func (s *TestEmailRuleResult) GetExpectations() OptTestEmailRuleResultExpectatio
 	return s.Expectations
 }
 
+// GetChanges returns the value of Changes.
+func (s *TestEmailRuleResult) GetChanges() OptEmailRuleVersionChanges {
+	return s.Changes
+}
+
 // SetRule sets the value of Rule.
 func (s *TestEmailRuleResult) SetRule(val EmailRuleTested) {
 	s.Rule = val
@@ -136044,6 +137921,11 @@ func (s *TestEmailRuleResult) SetScopeWarnings(val []EmailRuleScopeWarning) {
 // SetExpectations sets the value of Expectations.
 func (s *TestEmailRuleResult) SetExpectations(val OptTestEmailRuleResultExpectations) {
 	s.Expectations = val
+}
+
+// SetChanges sets the value of Changes.
+func (s *TestEmailRuleResult) SetChanges(val OptEmailRuleVersionChanges) {
+	s.Changes = val
 }
 
 type TestEmailRuleResultClassification struct {
@@ -136210,6 +138092,10 @@ type TestEmailRuleResultExpectationsCounts struct {
 	Passed    int `json:"passed"`
 	Failed    int `json:"failed"`
 	Undecided int `json:"undecided"`
+	// Of passed and failed, how many were close calls.
+	CloseCalls int `json:"close_calls"`
+	// When samples carry a group: the samples alone, by group.
+	ByGroup OptEmailRuleSampleGroupCounts `json:"by_group"`
 }
 
 // GetPassed returns the value of Passed.
@@ -136227,6 +138113,16 @@ func (s *TestEmailRuleResultExpectationsCounts) GetUndecided() int {
 	return s.Undecided
 }
 
+// GetCloseCalls returns the value of CloseCalls.
+func (s *TestEmailRuleResultExpectationsCounts) GetCloseCalls() int {
+	return s.CloseCalls
+}
+
+// GetByGroup returns the value of ByGroup.
+func (s *TestEmailRuleResultExpectationsCounts) GetByGroup() OptEmailRuleSampleGroupCounts {
+	return s.ByGroup
+}
+
 // SetPassed sets the value of Passed.
 func (s *TestEmailRuleResultExpectationsCounts) SetPassed(val int) {
 	s.Passed = val
@@ -136242,11 +138138,25 @@ func (s *TestEmailRuleResultExpectationsCounts) SetUndecided(val int) {
 	s.Undecided = val
 }
 
+// SetCloseCalls sets the value of CloseCalls.
+func (s *TestEmailRuleResultExpectationsCounts) SetCloseCalls(val int) {
+	s.CloseCalls = val
+}
+
+// SetByGroup sets the value of ByGroup.
+func (s *TestEmailRuleResultExpectationsCounts) SetByGroup(val OptEmailRuleSampleGroupCounts) {
+	s.ByGroup = val
+}
+
 type TestEmailRuleResultExpectationsResultsItem struct {
 	EmailID  uuid.UUID                                          `json:"email_id"`
 	Expected TestEmailRuleResultExpectationsResultsItemExpected `json:"expected"`
 	Outcome  TestEmailRuleResultExpectationsResultsItemOutcome  `json:"outcome"`
 	Status   TestEmailRuleResultExpectationsResultsItemStatus   `json:"status"`
+	// Passed or failed on an answer below 0.75 confidence, so asking again (a new version, or any
+	// judgment of a made-up email) may decide it the other way. Never for one its conditions alone
+	// decided.
+	CloseCall bool `json:"close_call"`
 	// On an undecided one only: why.
 	Reason OptTestEmailRuleResultExpectationsResultsItemReason `json:"reason"`
 	// On an undecided one only: whether testing again can decide it.
@@ -136271,6 +138181,11 @@ func (s *TestEmailRuleResultExpectationsResultsItem) GetOutcome() TestEmailRuleR
 // GetStatus returns the value of Status.
 func (s *TestEmailRuleResultExpectationsResultsItem) GetStatus() TestEmailRuleResultExpectationsResultsItemStatus {
 	return s.Status
+}
+
+// GetCloseCall returns the value of CloseCall.
+func (s *TestEmailRuleResultExpectationsResultsItem) GetCloseCall() bool {
+	return s.CloseCall
 }
 
 // GetReason returns the value of Reason.
@@ -136301,6 +138216,11 @@ func (s *TestEmailRuleResultExpectationsResultsItem) SetOutcome(val TestEmailRul
 // SetStatus sets the value of Status.
 func (s *TestEmailRuleResultExpectationsResultsItem) SetStatus(val TestEmailRuleResultExpectationsResultsItemStatus) {
 	s.Status = val
+}
+
+// SetCloseCall sets the value of CloseCall.
+func (s *TestEmailRuleResultExpectationsResultsItem) SetCloseCall(val bool) {
+	s.CloseCall = val
 }
 
 // SetReason sets the value of Reason.
@@ -136582,9 +138502,13 @@ type TestEmailRuleResultResultsItem struct {
 	Recipient OptString    `json:"recipient"`
 	Subject   OptNilString `json:"subject"`
 	// On matched and near_miss: the file names the email lists, in order, at most 10 (the names its
-	// questions are given; never what is in the files). Parts with no name are left out; absent when
-	// there are none.
+	// questions are given). Parts with no name are left out; absent when there are none.
+	// attachment_descriptions says what each file is, where one was read.
 	AttachmentNames []string `json:"attachment_names"`
+	// Given exactly when attachment_names is, aligned with it by position: the one-line description read
+	// from each file where the organization has attachment reading on, else null (not read, could not be
+	// read, reading off, or an email you cannot open yourself).
+	AttachmentDescriptions []NilString `json:"attachment_descriptions"`
 	// How each top-level part of the rule decided. Present for matched, near_miss and no_match.
 	Parts []TestEmailRuleResultResultsItemPartsItem `json:"parts"`
 	// Facts the rule reads that this email's classification left out, so the rule did not match.
@@ -136646,6 +138570,11 @@ func (s *TestEmailRuleResultResultsItem) GetSubject() OptNilString {
 // GetAttachmentNames returns the value of AttachmentNames.
 func (s *TestEmailRuleResultResultsItem) GetAttachmentNames() []string {
 	return s.AttachmentNames
+}
+
+// GetAttachmentDescriptions returns the value of AttachmentDescriptions.
+func (s *TestEmailRuleResultResultsItem) GetAttachmentDescriptions() []NilString {
+	return s.AttachmentDescriptions
 }
 
 // GetParts returns the value of Parts.
@@ -136716,6 +138645,11 @@ func (s *TestEmailRuleResultResultsItem) SetSubject(val OptNilString) {
 // SetAttachmentNames sets the value of AttachmentNames.
 func (s *TestEmailRuleResultResultsItem) SetAttachmentNames(val []string) {
 	s.AttachmentNames = val
+}
+
+// SetAttachmentDescriptions sets the value of AttachmentDescriptions.
+func (s *TestEmailRuleResultResultsItem) SetAttachmentDescriptions(val []NilString) {
+	s.AttachmentDescriptions = val
 }
 
 // SetParts sets the value of Parts.
@@ -141287,6 +143221,57 @@ type UpdateEmailRuleServiceUnavailable ErrorResponse
 
 func (*UpdateEmailRuleServiceUnavailable) updateEmailRuleRes() {}
 
+type UpdateEmailRuleSettingsBadRequest ErrorResponse
+
+func (*UpdateEmailRuleSettingsBadRequest) updateEmailRuleSettingsRes() {}
+
+type UpdateEmailRuleSettingsConflict ErrorResponse
+
+func (*UpdateEmailRuleSettingsConflict) updateEmailRuleSettingsRes() {}
+
+type UpdateEmailRuleSettingsForbidden ErrorResponse
+
+func (*UpdateEmailRuleSettingsForbidden) updateEmailRuleSettingsRes() {}
+
+type UpdateEmailRuleSettingsNotFound ErrorResponse
+
+func (*UpdateEmailRuleSettingsNotFound) updateEmailRuleSettingsRes() {}
+
+type UpdateEmailRuleSettingsOK struct {
+	Success bool                                     `json:"success"`
+	Data    OrgSettingsUpdateEmailRuleSettingsResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *UpdateEmailRuleSettingsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *UpdateEmailRuleSettingsOK) GetData() OrgSettingsUpdateEmailRuleSettingsResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *UpdateEmailRuleSettingsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *UpdateEmailRuleSettingsOK) SetData(val OrgSettingsUpdateEmailRuleSettingsResult) {
+	s.Data = val
+}
+
+func (*UpdateEmailRuleSettingsOK) updateEmailRuleSettingsRes() {}
+
+type UpdateEmailRuleSettingsTooManyRequests ErrorResponseHeaders
+
+func (*UpdateEmailRuleSettingsTooManyRequests) updateEmailRuleSettingsRes() {}
+
+type UpdateEmailRuleSettingsUnauthorized ErrorResponseHeaders
+
+func (*UpdateEmailRuleSettingsUnauthorized) updateEmailRuleSettingsRes() {}
+
 type UpdateEmailRuleTooManyRequests ErrorResponseHeaders
 
 func (*UpdateEmailRuleTooManyRequests) updateEmailRuleRes() {}
@@ -141345,6 +143330,18 @@ type UpdateEndpointInput struct {
 	// A webhook's label, up to 200 characters, shown with it in lists; null removes it. Only for http
 	// webhooks: a pull destination keeps the name it was created with.
 	Name OptNilString `json:"name"`
+	// Custom request headers sent on every delivery to this webhook, for a receiver that needs a
+	// credential of its own (for example Authorization). At most 5 per webhook unless the organization's
+	// limit was raised. Values are secrets: stored encrypted and never returned. Names Primitive sets
+	// itself or reserves are refused (among them Content-Type, Content-Length, User-Agent, Host,
+	// Accept-Encoding, the signature headers, and names starting X-Primitive-, X-Webhook-, Primitive-,
+	// Proxy- or X-Forwarded-), as is a name given twice. Only for http webhooks. The list given replaces
+	// the whole stored list, so send every header the webhook should keep, with its value; [] removes
+	// them all. A webhook that has headers changes its URL only with headers in the same request: the
+	// values were set for the receiver at the old URL. A non-empty list needs url in the same request,
+	// so the values go to the receiver named (refused otherwise, details.reason headers_need_url); []
+	// needs no url.
+	Headers []UpdateEndpointInputHeadersItem `json:"headers"`
 }
 
 // GetURL returns the value of URL.
@@ -141382,6 +143379,11 @@ func (s *UpdateEndpointInput) GetName() OptNilString {
 	return s.Name
 }
 
+// GetHeaders returns the value of Headers.
+func (s *UpdateEndpointInput) GetHeaders() []UpdateEndpointInputHeadersItem {
+	return s.Headers
+}
+
 // SetURL sets the value of URL.
 func (s *UpdateEndpointInput) SetURL(val OptString) {
 	s.URL = val
@@ -141415,6 +143417,36 @@ func (s *UpdateEndpointInput) SetOwnerKeyID(val OptNilUUID) {
 // SetName sets the value of Name.
 func (s *UpdateEndpointInput) SetName(val OptNilString) {
 	s.Name = val
+}
+
+// SetHeaders sets the value of Headers.
+func (s *UpdateEndpointInput) SetHeaders(val []UpdateEndpointInputHeadersItem) {
+	s.Headers = val
+}
+
+type UpdateEndpointInputHeadersItem struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// GetName returns the value of Name.
+func (s *UpdateEndpointInputHeadersItem) GetName() string {
+	return s.Name
+}
+
+// GetValue returns the value of Value.
+func (s *UpdateEndpointInputHeadersItem) GetValue() string {
+	return s.Value
+}
+
+// SetName sets the value of Name.
+func (s *UpdateEndpointInputHeadersItem) SetName(val string) {
+	s.Name = val
+}
+
+// SetValue sets the value of Value.
+func (s *UpdateEndpointInputHeadersItem) SetValue(val string) {
+	s.Value = val
 }
 
 type UpdateEndpointInputRules struct {
@@ -144553,6 +146585,9 @@ type UpdatedEndpoint struct {
 	// /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that
 	// is not a webhook.
 	SignedWith OptUpdatedEndpointSignedWith `json:"signed_with"`
+	// For a webhook: the custom request headers it sends on every delivery, by name, with each value
+	// redacted. Empty when it has none. Absent for an endpoint that is not a webhook.
+	Headers []UpdatedEndpointHeadersItem `json:"headers"`
 	// Only in the response that creates a webhook made with a signing secret of its own (one made as a
 	// person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate
 	// for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.
@@ -144560,8 +146595,16 @@ type UpdatedEndpoint struct {
 	// When this update turned the webhook off or on without the request setting enabled.
 	// turned_off_owner_changed: the webhook was given to a new owner, so it is now off (disabled_reason
 	// owner_changed) until it is turned on or given a new URL. turned_on_new_url: it was off because its
-	// owner changed, and the new URL turned it back on. Empty when the update did neither. Other codes
-	// may be added.
+	// owner changed, and the new URL turned it back on. Empty when the update did neither. When the
+	// update gives a webhook a new URL, it is sent the test request POST /endpoints/{id}/test sends
+	// (within a budget of its own, separate from the test budget), and a warning says when its answer
+	// means deliveries will fail: url_requires_login: it answered 302, 401 or 403 (status names which),
+	// so the host appears to require a login. url_redirects: another redirect, which deliveries do not
+	// follow. url_unreachable: no answer within 5 seconds, or a connection error (deliveries wait longer,
+	//  so a slow receiver may still receive them). url_not_checked: the probe was not made or could not
+	// finish (the organization made many such checks just now, the signing secret could not be read, the
+	// URL changed again since this write, or the check failed). A caller who may not send the webhook a
+	// test request gets no probe and none of these. Other codes may be added.
 	Warnings []EndpointUpdateWarning `json:"warnings"`
 }
 
@@ -144703,6 +146746,11 @@ func (s *UpdatedEndpoint) GetDelivery() OptNilUpdatedEndpointDelivery {
 // GetSignedWith returns the value of SignedWith.
 func (s *UpdatedEndpoint) GetSignedWith() OptUpdatedEndpointSignedWith {
 	return s.SignedWith
+}
+
+// GetHeaders returns the value of Headers.
+func (s *UpdatedEndpoint) GetHeaders() []UpdatedEndpointHeadersItem {
+	return s.Headers
 }
 
 // GetSigningSecret returns the value of SigningSecret.
@@ -144853,6 +146901,11 @@ func (s *UpdatedEndpoint) SetDelivery(val OptNilUpdatedEndpointDelivery) {
 // SetSignedWith sets the value of SignedWith.
 func (s *UpdatedEndpoint) SetSignedWith(val OptUpdatedEndpointSignedWith) {
 	s.SignedWith = val
+}
+
+// SetHeaders sets the value of Headers.
+func (s *UpdatedEndpoint) SetHeaders(val []UpdatedEndpointHeadersItem) {
+	s.Headers = val
 }
 
 // SetSigningSecret sets the value of SigningSecret.
@@ -145046,6 +147099,54 @@ func (s *UpdatedEndpointDeliveryReasonsItem) SetAdditionalProps(val UpdatedEndpo
 type UpdatedEndpointDeliveryReasonsItemAdditional map[string]jx.Raw
 
 func (s *UpdatedEndpointDeliveryReasonsItemAdditional) init() UpdatedEndpointDeliveryReasonsItemAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type UpdatedEndpointHeadersItem struct {
+	Name string `json:"name"`
+	// Always [redacted]: a value is never returned.
+	Value           string `json:"value"`
+	AdditionalProps UpdatedEndpointHeadersItemAdditional
+}
+
+// GetName returns the value of Name.
+func (s *UpdatedEndpointHeadersItem) GetName() string {
+	return s.Name
+}
+
+// GetValue returns the value of Value.
+func (s *UpdatedEndpointHeadersItem) GetValue() string {
+	return s.Value
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *UpdatedEndpointHeadersItem) GetAdditionalProps() UpdatedEndpointHeadersItemAdditional {
+	return s.AdditionalProps
+}
+
+// SetName sets the value of Name.
+func (s *UpdatedEndpointHeadersItem) SetName(val string) {
+	s.Name = val
+}
+
+// SetValue sets the value of Value.
+func (s *UpdatedEndpointHeadersItem) SetValue(val string) {
+	s.Value = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *UpdatedEndpointHeadersItem) SetAdditionalProps(val UpdatedEndpointHeadersItemAdditional) {
+	s.AdditionalProps = val
+}
+
+type UpdatedEndpointHeadersItemAdditional map[string]jx.Raw
+
+func (s *UpdatedEndpointHeadersItemAdditional) init() UpdatedEndpointHeadersItemAdditional {
 	m := *s
 	if m == nil {
 		m = map[string]jx.Raw{}

@@ -13,6 +13,7 @@ from typing import cast
 from uuid import UUID
 
 if TYPE_CHECKING:
+  from ..models.create_endpoint_input_headers_item import CreateEndpointInputHeadersItem
   from ..models.create_endpoint_input_rules import CreateEndpointInputRules
 
 
@@ -52,6 +53,12 @@ class CreateEndpointInput:
                 reads, each checked against the key: only mail the key can read is sent, and nothing while the key is revoked or
                 suspended. It is never a domain or organization default: it is created as a route target, and is_route_target
                 false or takeover is refused. Not a connected agent key or a Function key.
+            headers (list[CreateEndpointInputHeadersItem] | Unset): Custom request headers sent on every delivery to this
+                webhook, for a receiver that needs a credential of its own (for example Authorization). At most 5 per webhook
+                unless the organization's limit was raised. Values are secrets: stored encrypted and never returned. Names
+                Primitive sets itself or reserves are refused (among them Content-Type, Content-Length, User-Agent, Host,
+                Accept-Encoding, the signature headers, and names starting X-Primitive-, X-Webhook-, Primitive-, Proxy- or
+                X-Forwarded-), as is a name given twice. Only for http webhooks.
      """
 
     kind: CreateEndpointInputKind | Unset = CreateEndpointInputKind.HTTP
@@ -64,12 +71,14 @@ class CreateEndpointInput:
     name: str | Unset = UNSET
     takeover: bool | Unset = UNSET
     owner_key_id: UUID | Unset = UNSET
+    headers: list[CreateEndpointInputHeadersItem] | Unset = UNSET
 
 
 
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.create_endpoint_input_headers_item import CreateEndpointInputHeadersItem # noqa: PLC0415
         from ..models.create_endpoint_input_rules import CreateEndpointInputRules # noqa: PLC0415
         kind: str | Unset = UNSET
         if not isinstance(self.kind, Unset):
@@ -106,6 +115,15 @@ class CreateEndpointInput:
         if not isinstance(self.owner_key_id, Unset):
             owner_key_id = str(self.owner_key_id)
 
+        headers: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.headers, Unset):
+            headers = []
+            for headers_item_data in self.headers:
+                headers_item = headers_item_data.to_dict()
+                headers.append(headers_item)
+
+
+
 
         field_dict: dict[str, Any] = {}
 
@@ -131,6 +149,8 @@ class CreateEndpointInput:
             field_dict["takeover"] = takeover
         if owner_key_id is not UNSET:
             field_dict["owner_key_id"] = owner_key_id
+        if headers is not UNSET:
+            field_dict["headers"] = headers
 
         return field_dict
 
@@ -138,6 +158,7 @@ class CreateEndpointInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.create_endpoint_input_headers_item import CreateEndpointInputHeadersItem # noqa: PLC0415
         from ..models.create_endpoint_input_rules import CreateEndpointInputRules # noqa: PLC0415
         d = dict(src_dict)
         _kind = d.pop("kind", UNSET)
@@ -210,6 +231,18 @@ class CreateEndpointInput:
 
 
 
+        _headers = d.pop("headers", UNSET)
+        headers: list[CreateEndpointInputHeadersItem] | Unset = UNSET
+        if _headers is not UNSET:
+            headers = []
+            for headers_item_data in _headers:
+                headers_item = CreateEndpointInputHeadersItem.from_dict(headers_item_data)
+
+
+
+                headers.append(headers_item)
+
+
         create_endpoint_input = cls(
             kind=kind,
             url=url,
@@ -221,6 +254,7 @@ class CreateEndpointInput:
             name=name,
             takeover=takeover,
             owner_key_id=owner_key_id,
+            headers=headers,
         )
 
         return create_endpoint_input

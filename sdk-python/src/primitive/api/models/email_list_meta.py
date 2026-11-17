@@ -26,7 +26,9 @@ class EmailListMeta:
         Attributes:
             limit (int): Page size used for this request
             cursor (None | str): Cursor for the next page, or null if no more results
-            total (int | Unset): Total number of matching records
+            total (int | Unset): Total number of matching records. Absent when a history page is read with `count=false` (no
+                count runs), or when the count does not fit its time budget (`total_unavailable` is then true). `has_more` still
+                says whether another page follows.
             recipient_outside_access (bool | Unset): Present, as true, when your credential is limited to some mailboxes,
                 recipient names one that is neither one of its addresses nor on one of its domains (or the credential reads no
                 received mail at all), and it reads through no email rule: the page is then empty however much mail that mailbox

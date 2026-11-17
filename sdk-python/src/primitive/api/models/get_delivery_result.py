@@ -14,6 +14,7 @@ from uuid import UUID
 if TYPE_CHECKING:
   from ..models.get_delivery_result_attempts_item import GetDeliveryResultAttemptsItem
   from ..models.get_delivery_result_email_type_0 import GetDeliveryResultEmailType0
+  from ..models.get_delivery_result_rules_type_0_item import GetDeliveryResultRulesType0Item
 
 
 
@@ -59,6 +60,12 @@ class GetDeliveryResult:
                 wherever it repeats them, and the rest is as the endpoint wrote it. Null for a caller who cannot read the
                 webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's
                 answer can restate its URL's credential.
+            rules (list[GetDeliveryResultRulesType0Item] | None): The rules this attempt's payload named in
+                email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it
+                named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not
+                recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read
+                email rules or whose organization does not have them, below content depth, and once the message's content is
+                discarded.
             created_at (str):
             updated_at (str):
             email (GetDeliveryResultEmailType0 | None):
@@ -111,6 +118,7 @@ class GetDeliveryResult:
     last_error_code: None | str
     response_status: int | None
     response_body: None | str
+    rules: list[GetDeliveryResultRulesType0Item] | None
     created_at: str
     updated_at: str
     email: GetDeliveryResultEmailType0 | None
@@ -127,6 +135,7 @@ class GetDeliveryResult:
     def to_dict(self) -> dict[str, Any]:
         from ..models.get_delivery_result_attempts_item import GetDeliveryResultAttemptsItem # noqa: PLC0415
         from ..models.get_delivery_result_email_type_0 import GetDeliveryResultEmailType0 # noqa: PLC0415
+        from ..models.get_delivery_result_rules_type_0_item import GetDeliveryResultRulesType0Item # noqa: PLC0415
         id = self.id
 
         email_id: None | str
@@ -168,6 +177,17 @@ class GetDeliveryResult:
 
         response_body: None | str
         response_body = self.response_body
+
+        rules: list[dict[str, Any]] | None
+        if isinstance(self.rules, list):
+            rules = []
+            for rules_type_0_item_data in self.rules:
+                rules_type_0_item = rules_type_0_item_data.to_dict()
+                rules.append(rules_type_0_item)
+
+
+        else:
+            rules = self.rules
 
         created_at = self.created_at
 
@@ -212,6 +232,7 @@ class GetDeliveryResult:
             "last_error_code": last_error_code,
             "response_status": response_status,
             "response_body": response_body,
+            "rules": rules,
             "created_at": created_at,
             "updated_at": updated_at,
             "email": email,
@@ -229,6 +250,7 @@ class GetDeliveryResult:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.get_delivery_result_attempts_item import GetDeliveryResultAttemptsItem # noqa: PLC0415
         from ..models.get_delivery_result_email_type_0 import GetDeliveryResultEmailType0 # noqa: PLC0415
+        from ..models.get_delivery_result_rules_type_0_item import GetDeliveryResultRulesType0Item # noqa: PLC0415
         d = dict(src_dict)
         id = d.pop("id")
 
@@ -329,6 +351,29 @@ class GetDeliveryResult:
         response_body = _parse_response_body(d.pop("response_body"))
 
 
+        def _parse_rules(data: object) -> list[GetDeliveryResultRulesType0Item] | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                rules_type_0 = []
+                _rules_type_0 = data
+                for rules_type_0_item_data in (_rules_type_0):
+                    rules_type_0_item = GetDeliveryResultRulesType0Item.from_dict(rules_type_0_item_data)
+
+
+
+                    rules_type_0.append(rules_type_0_item)
+
+                return rules_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[GetDeliveryResultRulesType0Item] | None, data)
+
+        rules = _parse_rules(d.pop("rules"))
+
+
         created_at = d.pop("created_at")
 
         updated_at = d.pop("updated_at")
@@ -394,6 +439,7 @@ class GetDeliveryResult:
             last_error_code=last_error_code,
             response_status=response_status,
             response_body=response_body,
+            rules=rules,
             created_at=created_at,
             updated_at=updated_at,
             email=email,

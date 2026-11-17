@@ -39,6 +39,7 @@ export const PERMISSIONS = [
   "delegations:manage",
   "domains:manage",
   "domains:read",
+  "email_rule_settings:manage",
   "endpoints:manage",
   "endpoints:pull",
   "filters:manage",
@@ -408,6 +409,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   ],
   "getEmailRuleScope": [
     "mail:read"
+  ],
+  "getEmailRuleSettings": [
+    "org:read"
   ],
   "getEmailRuleShare": [
     "mail:read"
@@ -969,6 +973,9 @@ export const OPERATION_PERMISSIONS: Readonly<Record<string, readonly Permission[
   ],
   "updateEmailRule": [
     "mail:read"
+  ],
+  "updateEmailRuleSettings": [
+    "email_rule_settings:manage"
   ],
   "updateEndpoint": [
     "endpoints:manage"

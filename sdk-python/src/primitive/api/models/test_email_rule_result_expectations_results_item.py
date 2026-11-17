@@ -31,6 +31,8 @@ class TestEmailRuleResultExpectationsResultsItem:
             expected (TestEmailRuleResultExpectationsResultsItemExpected):
             outcome (TestEmailRuleResultExpectationsResultsItemOutcome):
             status (TestEmailRuleResultExpectationsResultsItemStatus):
+            close_call (bool): Passed or failed on an answer below 0.75 confidence, so asking again (a new version, or any
+                judgment of a made-up email) may decide it the other way. Never for one its conditions alone decided.
             reason (TestEmailRuleResultExpectationsResultsItemReason | Unset): On an undecided one only: why.
             retryable (bool | Unset): On an undecided one only: whether testing again can decide it.
      """
@@ -39,6 +41,7 @@ class TestEmailRuleResultExpectationsResultsItem:
     expected: TestEmailRuleResultExpectationsResultsItemExpected
     outcome: TestEmailRuleResultExpectationsResultsItemOutcome
     status: TestEmailRuleResultExpectationsResultsItemStatus
+    close_call: bool
     reason: TestEmailRuleResultExpectationsResultsItemReason | Unset = UNSET
     retryable: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -56,6 +59,8 @@ class TestEmailRuleResultExpectationsResultsItem:
 
         status = self.status.value
 
+        close_call = self.close_call
+
         reason: str | Unset = UNSET
         if not isinstance(self.reason, Unset):
             reason = self.reason.value
@@ -71,6 +76,7 @@ class TestEmailRuleResultExpectationsResultsItem:
             "expected": expected,
             "outcome": outcome,
             "status": status,
+            "close_call": close_call,
         })
         if reason is not UNSET:
             field_dict["reason"] = reason
@@ -104,6 +110,8 @@ class TestEmailRuleResultExpectationsResultsItem:
 
 
 
+        close_call = d.pop("close_call")
+
         _reason = d.pop("reason", UNSET)
         reason: TestEmailRuleResultExpectationsResultsItemReason | Unset
         if isinstance(_reason,  Unset):
@@ -121,6 +129,7 @@ class TestEmailRuleResultExpectationsResultsItem:
             expected=expected,
             outcome=outcome,
             status=status,
+            close_call=close_call,
             reason=reason,
             retryable=retryable,
         )

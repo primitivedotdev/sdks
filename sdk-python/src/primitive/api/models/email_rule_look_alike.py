@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.email_rule_look_alike_expected import EmailRuleLookAlikeExpected
+from ..models.email_rule_look_alike_group import EmailRuleLookAlikeGroup
 from ..models.email_rule_look_alike_kind import EmailRuleLookAlikeKind
 from ..models.email_rule_look_alike_outcome import EmailRuleLookAlikeOutcome
 from ..models.email_rule_look_alike_status import EmailRuleLookAlikeStatus
@@ -32,6 +33,7 @@ class EmailRuleLookAlike:
         Attributes:
             kind (EmailRuleLookAlikeKind):
             expected (EmailRuleLookAlikeExpected): match: a near case the rule should match; no_match: one it should not.
+            group (EmailRuleLookAlikeGroup):
             why (str): Why the rule should, or should not, match it.
             email (EmailRuleLookAlikeEmail): A made-up email, as test-sample takes it.
             outcome (EmailRuleLookAlikeOutcome):
@@ -39,15 +41,19 @@ class EmailRuleLookAlike:
                 missed one it should match). undecided: the rule reads a spam score, which it cannot carry, whatever it decided;
                 or not matched on something it could not decide (not classified, a fact or answer missing, or not reached in
                 time).
+            close_call (bool): Passed or failed on an answer below 0.75 confidence, so asking again (a new version, or any
+                judgment of a made-up email) may decide it the other way. Never for one its conditions alone decided.
             question_answers (list[EmailRuleLookAlikeQuestionAnswersItem]):
      """
 
     kind: EmailRuleLookAlikeKind
     expected: EmailRuleLookAlikeExpected
+    group: EmailRuleLookAlikeGroup
     why: str
     email: EmailRuleLookAlikeEmail
     outcome: EmailRuleLookAlikeOutcome
     status: EmailRuleLookAlikeStatus
+    close_call: bool
     question_answers: list[EmailRuleLookAlikeQuestionAnswersItem]
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -62,6 +68,8 @@ class EmailRuleLookAlike:
 
         expected = self.expected.value
 
+        group = self.group.value
+
         why = self.why
 
         email = self.email.to_dict()
@@ -69,6 +77,8 @@ class EmailRuleLookAlike:
         outcome = self.outcome.value
 
         status = self.status.value
+
+        close_call = self.close_call
 
         question_answers = []
         for question_answers_item_data in self.question_answers:
@@ -83,10 +93,12 @@ class EmailRuleLookAlike:
         field_dict.update({
             "kind": kind,
             "expected": expected,
+            "group": group,
             "why": why,
             "email": email,
             "outcome": outcome,
             "status": status,
+            "close_call": close_call,
             "question_answers": question_answers,
         })
 
@@ -109,6 +121,11 @@ class EmailRuleLookAlike:
 
 
 
+        group = EmailRuleLookAlikeGroup(d.pop("group"))
+
+
+
+
         why = d.pop("why")
 
         email = EmailRuleLookAlikeEmail.from_dict(d.pop("email"))
@@ -126,6 +143,8 @@ class EmailRuleLookAlike:
 
 
 
+        close_call = d.pop("close_call")
+
         question_answers = []
         _question_answers = d.pop("question_answers")
         for question_answers_item_data in (_question_answers):
@@ -139,10 +158,12 @@ class EmailRuleLookAlike:
         email_rule_look_alike = cls(
             kind=kind,
             expected=expected,
+            group=group,
             why=why,
             email=email,
             outcome=outcome,
             status=status,
+            close_call=close_call,
             question_answers=question_answers,
         )
 

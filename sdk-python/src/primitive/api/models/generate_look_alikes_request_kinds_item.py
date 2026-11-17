@@ -2,9 +2,11 @@ from enum import StrEnum
 
 class GenerateLookAlikesRequestKindsItem(StrEnum):
     BANK_TAX = "bank_tax"
+    LEGAL = "legal"
     MEDICAL = "medical"
     OTHER = "other"
     PAYROLL = "payroll"
+    PERSONAL_CORRESPONDENCE = "personal_correspondence"
     PERSONAL_PURCHASE = "personal_purchase"
 
     def __str__(self) -> str:
