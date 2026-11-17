@@ -25,11 +25,13 @@ class EndpointCreateWarning:
         Attributes:
             code (str):
             message (str):
+            status (int | Unset): The HTTP status the URL answered, on url_requires_login and url_redirects.
             endpoint_id (UUID | Unset): The other webhook a same_path_as_another_endpoint warning names.
      """
 
     code: str
     message: str
+    status: int | Unset = UNSET
     endpoint_id: UUID | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -42,6 +44,8 @@ class EndpointCreateWarning:
 
         message = self.message
 
+        status = self.status
+
         endpoint_id: str | Unset = UNSET
         if not isinstance(self.endpoint_id, Unset):
             endpoint_id = str(self.endpoint_id)
@@ -53,6 +57,8 @@ class EndpointCreateWarning:
             "code": code,
             "message": message,
         })
+        if status is not UNSET:
+            field_dict["status"] = status
         if endpoint_id is not UNSET:
             field_dict["endpoint_id"] = endpoint_id
 
@@ -67,6 +73,8 @@ class EndpointCreateWarning:
 
         message = d.pop("message")
 
+        status = d.pop("status", UNSET)
+
         _endpoint_id = d.pop("endpoint_id", UNSET)
         endpoint_id: UUID | Unset
         if isinstance(_endpoint_id,  Unset):
@@ -80,6 +88,7 @@ class EndpointCreateWarning:
         endpoint_create_warning = cls(
             code=code,
             message=message,
+            status=status,
             endpoint_id=endpoint_id,
         )
 

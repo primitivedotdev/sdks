@@ -319,11 +319,12 @@ type Invoker interface {
 	// contract: rule, exactly the body create (with a name), update and the tests take, with an
 	// explanation of what it matches, the assumptions made, and warnings for what the columns cannot
 	// express. Where the columns fall short it adds up to five yes/no questions, asked only after the
-	// conditions match; they read the subject, the new text and attachment file names, never attachment
-	// contents. Nothing is read or saved: a scope given is carried into rule, and a test says how much
-	// mail the rule matches. include_sql returns the SQL it renders to. kind do_not_share compiles for
-	// recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no
-	// API key, agent key or narrowed token).
+	// conditions match; they read the subject, the new text and attachment file names, and text read
+	// from PDF and image attachments where attachment reading is active for the organization. Nothing is
+	// read or saved: a scope given is carried into rule, and a test says how much mail the rule matches.
+	// include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read,
+	// the email rules feature, and a member's own full-access credential (no API key, agent key or
+	// narrowed token).
 	//
 	// POST /email-rules/compile
 	CompileEmailRule(ctx context.Context, request *CompileEmailRuleRequest, params CompileEmailRuleParams) (CompileEmailRuleRes, error)
@@ -1425,6 +1426,16 @@ type Invoker interface {
 	//
 	// GET /email-rules/{id}/scope
 	GetEmailRuleScope(ctx context.Context, params GetEmailRuleScopeParams) (GetEmailRuleScopeRes, error)
+	// GetEmailRuleSettings invokes getEmailRuleSettings operation.
+	//
+	// Whether the organization lets email rules read PDF and image attachments, and whether that is
+	// active: it also needs email rules to be enabled for the organization (available) and HIPAA mode
+	// off. A missing setting reads as off.
+	// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+	// connected). API keys, agent connection keys and agents are refused.
+	//
+	// GET /email-rule-settings
+	GetEmailRuleSettings(ctx context.Context) (GetEmailRuleSettingsRes, error)
 	// GetEmailRuleShare invokes getEmailRuleShare operation.
 	//
 	// One share. Needs mail:read, the email rules feature, and a member's own full-access credential (no
@@ -2291,12 +2302,13 @@ type Invoker interface {
 	ListEmailRuleVersionsCoveringMe(ctx context.Context, params ListEmailRuleVersionsCoveringMeParams) (ListEmailRuleVersionsCoveringMeRes, error)
 	// ListEmailRules invokes listEmailRules operation.
 	//
-	// The rules the caller can see, newest first: their own, or every member's rules for a caller who
-	// reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
-	// for a selected rule) and current_version, but not the version's text: read that under current from
-	// GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs
-	// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
-	// key or narrowed token).
+	// The rules the caller can see, most recently changed first: their own, or every member's rules for
+	// a caller who reads the whole organization's mail. With all=true, every rule in the organization
+	// whoever wrote it, each with receivers, for owners and admins signed in themselves. Each carries
+	// its scope and current_version, not the version's text (GET /email-rules/{id}). author, mailbox,
+	// kind and state filter either list; a page filtered by mailbox may hold fewer rules than limit
+	// while meta.cursor continues. Needs mail:read, the email rules feature, and a member's own
+	// full-access credential (no API key, agent key or narrowed token).
 	//
 	// GET /email-rules
 	ListEmailRules(ctx context.Context, params ListEmailRulesParams) (ListEmailRulesRes, error)
@@ -3810,6 +3822,22 @@ type Invoker interface {
 	//
 	// PATCH /email-rules/{id}
 	UpdateEmailRule(ctx context.Context, request *UpdateEmailRuleRequest, params UpdateEmailRuleParams) (UpdateEmailRuleRes, error)
+	// UpdateEmailRuleSettings invokes updateEmailRuleSettings operation.
+	//
+	// Turn on or off whether email rules read PDF and image attachments. When on, each such attachment
+	// is read once by a hosted model and its text is given to the email classifier and to the questions
+	// of the organization's email rules, so it is a person's decision. Turning it on is refused with 409
+	// under HIPAA mode (hipaa_mode) or while email rules are not enabled for the organization
+	// (not_available). Turning it off is always allowed.
+	// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+	// `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+	// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+	// when the person's role could not do it anyway). The person's role must hold
+	// email_rule_settings:manage. API keys and agent connection keys are refused. An agent acting for
+	// the person is refused unless it carries a step-up token the person issued in the dashboard.
+	//
+	// PUT /email-rule-settings
+	UpdateEmailRuleSettings(ctx context.Context, request *OrgSettingsUpdateEmailRuleSettingsInput, params UpdateEmailRuleSettingsParams) (UpdateEmailRuleSettingsRes, error)
 	// UpdateEndpoint invokes updateEndpoint operation.
 	//
 	// Updates an active webhook endpoint. Changing the URL keeps the endpoint: its id, recipient routes,
@@ -7756,11 +7784,12 @@ func (c *Client) sendCliLogout(ctx context.Context, request OptCliLogoutInput, p
 // contract: rule, exactly the body create (with a name), update and the tests take, with an
 // explanation of what it matches, the assumptions made, and warnings for what the columns cannot
 // express. Where the columns fall short it adds up to five yes/no questions, asked only after the
-// conditions match; they read the subject, the new text and attachment file names, never attachment
-// contents. Nothing is read or saved: a scope given is carried into rule, and a test says how much
-// mail the rule matches. include_sql returns the SQL it renders to. kind do_not_share compiles for
-// recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no
-// API key, agent key or narrowed token).
+// conditions match; they read the subject, the new text and attachment file names, and text read
+// from PDF and image attachments where attachment reading is active for the organization. Nothing is
+// read or saved: a scope given is carried into rule, and a test says how much mail the rule matches.
+// include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read,
+// the email rules feature, and a member's own full-access credential (no API key, agent key or
+// narrowed token).
 //
 // POST /email-rules/compile
 func (c *Client) CompileEmailRule(ctx context.Context, request *CompileEmailRuleRequest, params CompileEmailRuleParams) (CompileEmailRuleRes, error) {
@@ -19384,6 +19413,117 @@ func (c *Client) sendGetEmailRuleScope(ctx context.Context, params GetEmailRuleS
 	return result, nil
 }
 
+// GetEmailRuleSettings invokes getEmailRuleSettings operation.
+//
+// Whether the organization lets email rules read PDF and image attachments, and whether that is
+// active: it also needs email rules to be enabled for the organization (available) and HIPAA mode
+// off. A missing setting reads as off.
+// Person only: a dashboard session or the person's own OAuth token (the CLI or an app they
+// connected). API keys, agent connection keys and agents are refused.
+//
+// GET /email-rule-settings
+func (c *Client) GetEmailRuleSettings(ctx context.Context) (GetEmailRuleSettingsRes, error) {
+	res, err := c.sendGetEmailRuleSettings(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetEmailRuleSettings(ctx context.Context) (res GetEmailRuleSettingsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getEmailRuleSettings"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/email-rule-settings"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetEmailRuleSettingsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/email-rule-settings"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetEmailRuleSettingsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetEmailRuleSettingsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetEmailRuleShare invokes getEmailRuleShare operation.
 //
 // One share. Needs mail:read, the email rules feature, and a member's own full-access credential (no
@@ -30528,12 +30668,13 @@ func (c *Client) sendListEmailRuleVersionsCoveringMe(ctx context.Context, params
 
 // ListEmailRules invokes listEmailRules operation.
 //
-// The rules the caller can see, newest first: their own, or every member's rules for a caller who
-// reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection
-// for a selected rule) and current_version, but not the version's text: read that under current from
-// GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs
-// mail:read, the email rules feature, and a member's own full-access credential (no API key, agent
-// key or narrowed token).
+// The rules the caller can see, most recently changed first: their own, or every member's rules for
+// a caller who reads the whole organization's mail. With all=true, every rule in the organization
+// whoever wrote it, each with receivers, for owners and admins signed in themselves. Each carries
+// its scope and current_version, not the version's text (GET /email-rules/{id}). author, mailbox,
+// kind and state filter either list; a page filtered by mailbox may hold fewer rules than limit
+// while meta.cursor continues. Needs mail:read, the email rules feature, and a member's own
+// full-access credential (no API key, agent key or narrowed token).
 //
 // GET /email-rules
 func (c *Client) ListEmailRules(ctx context.Context, params ListEmailRulesParams) (ListEmailRulesRes, error) {
@@ -30629,6 +30770,91 @@ func (c *Client) sendListEmailRules(ctx context.Context, params ListEmailRulesPa
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.MatchedEmailID.Get(); ok {
 				return e.EncodeValue(conv.UUIDToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "all" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "all",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.All.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "author" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "author",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Author.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "mailbox" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "mailbox",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Mailbox.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "kind" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "kind",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Kind.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "state" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "state",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.State.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
 			}
 			return nil
 		}); err != nil {
@@ -49620,6 +49846,143 @@ func (c *Client) sendUpdateEmailRule(ctx context.Context, request *UpdateEmailRu
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateEmailRuleResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateEmailRuleSettings invokes updateEmailRuleSettings operation.
+//
+// Turn on or off whether email rules read PDF and image attachments. When on, each such attachment
+// is read once by a hosted model and its text is given to the email classifier and to the questions
+// of the organization's email rules, so it is a person's decision. Turning it on is refused with 409
+// under HIPAA mode (hipaa_mode) or while email rules are not enabled for the organization
+// (not_available). Turning it off is always allowed.
+// Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose
+// `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403
+// step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden
+// when the person's role could not do it anyway). The person's role must hold
+// email_rule_settings:manage. API keys and agent connection keys are refused. An agent acting for
+// the person is refused unless it carries a step-up token the person issued in the dashboard.
+//
+// PUT /email-rule-settings
+func (c *Client) UpdateEmailRuleSettings(ctx context.Context, request *OrgSettingsUpdateEmailRuleSettingsInput, params UpdateEmailRuleSettingsParams) (UpdateEmailRuleSettingsRes, error) {
+	res, err := c.sendUpdateEmailRuleSettings(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendUpdateEmailRuleSettings(ctx context.Context, request *OrgSettingsUpdateEmailRuleSettingsInput, params UpdateEmailRuleSettingsParams) (res UpdateEmailRuleSettingsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateEmailRuleSettings"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/email-rule-settings"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UpdateEmailRuleSettingsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/email-rule-settings"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateEmailRuleSettingsRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Primitive-Step-Up",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.PrimitiveStepUp.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, UpdateEmailRuleSettingsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUpdateEmailRuleSettingsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

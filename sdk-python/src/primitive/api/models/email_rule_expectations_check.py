@@ -32,6 +32,9 @@ class EmailRuleExpectationsCheck:
             undecided (list[UUID]): Emails by id not decided.
             failed_samples (list[EmailRuleSampleDetail]): Made-up emails that failed, by index in the set judged and label.
             undecided_samples (list[EmailRuleSampleDetail]): Made-up emails not decided.
+            close_calls (list[UUID]): Emails by id, passed or failed, decided by an answer below 0.75 confidence: judged
+                again they may come out the other way.
+            close_call_samples (list[EmailRuleSampleDetail]): Made-up emails that were close calls.
      """
 
     version: int | None
@@ -40,6 +43,8 @@ class EmailRuleExpectationsCheck:
     undecided: list[UUID]
     failed_samples: list[EmailRuleSampleDetail]
     undecided_samples: list[EmailRuleSampleDetail]
+    close_calls: list[UUID]
+    close_call_samples: list[EmailRuleSampleDetail]
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -81,6 +86,20 @@ class EmailRuleExpectationsCheck:
 
 
 
+        close_calls = []
+        for close_calls_item_data in self.close_calls:
+            close_calls_item = str(close_calls_item_data)
+            close_calls.append(close_calls_item)
+
+
+
+        close_call_samples = []
+        for close_call_samples_item_data in self.close_call_samples:
+            close_call_samples_item = close_call_samples_item_data.to_dict()
+            close_call_samples.append(close_call_samples_item)
+
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -91,6 +110,8 @@ class EmailRuleExpectationsCheck:
             "undecided": undecided,
             "failed_samples": failed_samples,
             "undecided_samples": undecided_samples,
+            "close_calls": close_calls,
+            "close_call_samples": close_call_samples,
         })
 
         return field_dict
@@ -151,6 +172,26 @@ class EmailRuleExpectationsCheck:
             undecided_samples.append(undecided_samples_item)
 
 
+        close_calls = []
+        _close_calls = d.pop("close_calls")
+        for close_calls_item_data in (_close_calls):
+            close_calls_item = UUID(close_calls_item_data)
+
+
+
+            close_calls.append(close_calls_item)
+
+
+        close_call_samples = []
+        _close_call_samples = d.pop("close_call_samples")
+        for close_call_samples_item_data in (_close_call_samples):
+            close_call_samples_item = EmailRuleSampleDetail.from_dict(close_call_samples_item_data)
+
+
+
+            close_call_samples.append(close_call_samples_item)
+
+
         email_rule_expectations_check = cls(
             version=version,
             passed=passed,
@@ -158,6 +199,8 @@ class EmailRuleExpectationsCheck:
             undecided=undecided,
             failed_samples=failed_samples,
             undecided_samples=undecided_samples,
+            close_calls=close_calls,
+            close_call_samples=close_call_samples,
         )
 
 

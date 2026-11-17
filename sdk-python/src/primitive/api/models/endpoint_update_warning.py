@@ -24,10 +24,12 @@ class EndpointUpdateWarning:
         Attributes:
             code (str):
             message (str):
+            status (int | Unset): The HTTP status the URL answered, on url_requires_login and url_redirects.
      """
 
     code: str
     message: str
+    status: int | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -39,6 +41,8 @@ class EndpointUpdateWarning:
 
         message = self.message
 
+        status = self.status
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -46,6 +50,8 @@ class EndpointUpdateWarning:
             "code": code,
             "message": message,
         })
+        if status is not UNSET:
+            field_dict["status"] = status
 
         return field_dict
 
@@ -58,9 +64,12 @@ class EndpointUpdateWarning:
 
         message = d.pop("message")
 
+        status = d.pop("status", UNSET)
+
         endpoint_update_warning = cls(
             code=code,
             message=message,
+            status=status,
         )
 
 

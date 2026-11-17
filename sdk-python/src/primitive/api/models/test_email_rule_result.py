@@ -13,6 +13,7 @@ from typing import cast
 if TYPE_CHECKING:
   from ..models.email_rule_scope_warning import EmailRuleScopeWarning
   from ..models.email_rule_tested import EmailRuleTested
+  from ..models.email_rule_version_changes import EmailRuleVersionChanges
   from ..models.test_email_rule_result_classification import TestEmailRuleResultClassification
   from ..models.test_email_rule_result_counts import TestEmailRuleResultCounts
   from ..models.test_email_rule_result_expectations import TestEmailRuleResultExpectations
@@ -45,6 +46,7 @@ class TestEmailRuleResult:
                 organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
             expectations (TestEmailRuleResultExpectations | Unset): Present when expect was given, or for a saved rule with
                 saved expectations or made-up emails.
+            changes (EmailRuleVersionChanges | Unset):
      """
 
     rule: EmailRuleTested
@@ -56,6 +58,7 @@ class TestEmailRuleResult:
     summary: TestEmailRuleResultSummary | Unset = UNSET
     scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
     expectations: TestEmailRuleResultExpectations | Unset = UNSET
+    changes: EmailRuleVersionChanges | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -65,6 +68,7 @@ class TestEmailRuleResult:
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_tested import EmailRuleTested # noqa: PLC0415
+        from ..models.email_rule_version_changes import EmailRuleVersionChanges # noqa: PLC0415
         from ..models.test_email_rule_result_classification import TestEmailRuleResultClassification # noqa: PLC0415
         from ..models.test_email_rule_result_counts import TestEmailRuleResultCounts # noqa: PLC0415
         from ..models.test_email_rule_result_expectations import TestEmailRuleResultExpectations # noqa: PLC0415
@@ -106,6 +110,10 @@ class TestEmailRuleResult:
         if not isinstance(self.expectations, Unset):
             expectations = self.expectations.to_dict()
 
+        changes: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.changes, Unset):
+            changes = self.changes.to_dict()
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -123,6 +131,8 @@ class TestEmailRuleResult:
             field_dict["scope_warnings"] = scope_warnings
         if expectations is not UNSET:
             field_dict["expectations"] = expectations
+        if changes is not UNSET:
+            field_dict["changes"] = changes
 
         return field_dict
 
@@ -132,6 +142,7 @@ class TestEmailRuleResult:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_tested import EmailRuleTested # noqa: PLC0415
+        from ..models.email_rule_version_changes import EmailRuleVersionChanges # noqa: PLC0415
         from ..models.test_email_rule_result_classification import TestEmailRuleResultClassification # noqa: PLC0415
         from ..models.test_email_rule_result_counts import TestEmailRuleResultCounts # noqa: PLC0415
         from ..models.test_email_rule_result_expectations import TestEmailRuleResultExpectations # noqa: PLC0415
@@ -207,6 +218,16 @@ class TestEmailRuleResult:
 
 
 
+        _changes = d.pop("changes", UNSET)
+        changes: EmailRuleVersionChanges | Unset
+        if isinstance(_changes,  Unset):
+            changes = UNSET
+        else:
+            changes = EmailRuleVersionChanges.from_dict(_changes)
+
+
+
+
         test_email_rule_result = cls(
             rule=rule,
             window=window,
@@ -217,6 +238,7 @@ class TestEmailRuleResult:
             summary=summary,
             scope_warnings=scope_warnings,
             expectations=expectations,
+            changes=changes,
         )
 
 

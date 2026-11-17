@@ -1612,6 +1612,20 @@ func encodeUpdateEmailRuleRequest(
 	return nil
 }
 
+func encodeUpdateEmailRuleSettingsRequest(
+	req *OrgSettingsUpdateEmailRuleSettingsInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeUpdateEndpointRequest(
 	req *UpdateEndpointInput,
 	r *http.Request,

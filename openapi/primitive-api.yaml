@@ -256,7 +256,7 @@ tags:
     description: "API keys, the credential inventory, the credential audit trail and the credential policy. For people only: API keys, agent connection keys and agents never administer credentials. Key writes accept the person's own OAuth token with a step-up token; everything else is a dashboard session. Each operation says how it answers while the organization's credential features are not enabled."
     x-openapi-spec: https://api.primitive.dev/v1/openapi/tags/credentials
   - name: Organization settings
-    description: "Organization administration for people: your own connected apps and CLI logins, the organization's connected apps, its name and logo, and semantic search consent. API keys, agent connection keys and agents are refused. Billing and deleting the organization are done in the dashboard only."
+    description: "Organization administration for people: your own connected apps and CLI logins, the organization's connected apps, its name and logo, semantic search consent, and consent to email rules reading attachments. API keys, agent connection keys and agents are refused. Billing and deleting the organization are done in the dashboard only."
     x-openapi-spec: https://api.primitive.dev/v1/openapi/tags/organization-settings
   - name: Email notifications
     description: "The notification emails Primitive sends an organization's members: the organization chooses, per kind, whether it is off, left to each member or required, and each member chooses where it is left to them. Some kinds are always sent, and some (org_only) are the organization's alone: on for every owner and admin, or off. API keys, agent connection keys and agents are refused."
@@ -3250,7 +3250,7 @@ paths:
             enum:
               - "true"
               - "false"
-          description: "With `false`, a history page runs no total count: `meta.total` and `meta.total_capped` are absent, and `meta.has_more` still says whether another page follows. Unset or `true`, a history page reports its total as before. The forward tail (`since`) and `search` report the page itself as the total and run no count either way."
+          description: "With `false`, a history page runs no total count: `meta.total` and `meta.total_capped` are absent, and `meta.has_more` still says whether another page follows. Unset or `true`, a history page reports its total as before. The forward tail (`since`) and `search` run no count either way: `total` is the rows the page read, with `total_capped` `true` when a match lies past its last row."
         - name: group
           in: query
           required: false
@@ -23264,7 +23264,7 @@ paths:
     post:
       operationId: compileEmailRule
       summary: Compile a rule description
-      description: "Turns a plain-English description of which received emails to match into a rule over the column contract: rule, exactly the body create (with a name), update and the tests take, with an explanation of what it matches, the assumptions made, and warnings for what the columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only after the conditions match; they read the subject, the new text and attachment file names, never attachment contents. Nothing is read or saved: a scope given is carried into rule, and a test says how much mail the rule matches. include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
+      description: "Turns a plain-English description of which received emails to match into a rule over the column contract: rule, exactly the body create (with a name), update and the tests take, with an explanation of what it matches, the assumptions made, and warnings for what the columns cannot express. Where the columns fall short it adds up to five yes/no questions, asked only after the conditions match; they read the subject, the new text and attachment file names, and text read from PDF and image attachments where attachment reading is active for the organization. Nothing is read or saved: a scope given is carried into rule, and a test says how much mail the rule matches. include_sql returns the SQL it renders to. kind do_not_share compiles for recall. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
       tags:
         - Email Rules
       security:
@@ -23855,7 +23855,7 @@ paths:
     get:
       operationId: listEmailRules
       summary: List rules
-      description: "The rules the caller can see, newest first: their own, or every member's rules for a caller who reads the whole organization's mail. Each carries its scope (evaluation_scope, and scope_selection for a selected rule) and current_version, but not the version's text: read that under current from GET /email-rules/{id}. With matched_email_id, only the rules that matched that email. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
+      description: "The rules the caller can see, most recently changed first: their own, or every member's rules for a caller who reads the whole organization's mail. With all=true, every rule in the organization whoever wrote it, each with receivers, for owners and admins signed in themselves. Each carries its scope and current_version, not the version's text (GET /email-rules/{id}). author, mailbox, kind and state filter either list; a page filtered by mailbox may hold fewer rules than limit while meta.cursor continues. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token)."
       tags:
         - Email Rules
       security:
@@ -23880,11 +23880,65 @@ paths:
         - name: matched_email_id
           in: query
           required: false
-          description: Only rules that matched this email.
+          description: Only rules that matched this email. Not with all.
           schema:
             description: Only rules that matched this email.
             type: string
             format: uuid
+        - name: all
+          in: query
+          required: false
+          description: "true: every rule in the organization, any author (owners and admins)."
+          schema:
+            description: "true: every rule in the organization, any author (owners and admins)."
+            type: string
+            enum:
+              - "true"
+              - "false"
+        - name: author
+          in: query
+          required: false
+          description: "Only rules written by this member: their user id, or their member address (members:read, your own address, or with all)."
+          schema:
+            description: "Only rules written by this member: their user id, or their member address (members:read, your own address, or with all)."
+            anyOf:
+              - type: string
+                format: uuid
+              - type: string
+                maxLength: 254
+                format: email
+                pattern: ^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+        - name: mailbox
+          in: query
+          required: false
+          description: "Only rules whose scope reaches this mailbox now (another member's: members:read, or with all)."
+          schema:
+            description: "Only rules whose scope reaches this mailbox now (another member's: members:read, or with all)."
+            type: string
+            maxLength: 254
+            format: email
+            pattern: ^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+        - name: kind
+          in: query
+          required: false
+          description: Only rules of this kind.
+          schema:
+            description: Only rules of this kind.
+            type: string
+            enum:
+              - grant
+              - do_not_share
+        - name: state
+          in: query
+          required: false
+          description: Only rules in this state.
+          schema:
+            description: Only rules in this state.
+            type: string
+            enum:
+              - draft
+              - observe
+              - active
       responses:
         "200":
           description: List rules
@@ -23912,16 +23966,11 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy"
         "400":
-          description: Invalid request parameters
+          description: "validation_error: matched_email_id with all=true, or a cursor this list did not give you."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example:
-                success: false
-                error:
-                  code: validation_error
-                  message: Invalid domain format
         "401":
           description: Invalid or missing API key
           content:
@@ -23943,7 +23992,7 @@ paths:
             ratelimit-policy:
               $ref: "#/components/headers/ratelimit-policy-unauthenticated"
         "403":
-          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: matched_email_id with access to mail that shows headers only, since which rules matched an email is read from what it says."
+          description: "feature_not_enabled: this organization lacks the email rules feature; permission refusals answer forbidden or grant_forbidden. grant_forbidden with details.reason mail_depth: matched_email_id with access to mail that shows headers only. grant_forbidden with details.reason owner_or_admin_only or person_credential: all=true from anyone but an owner or admin signed in themselves. grant_forbidden with details.reason permission_missing (members:read): author or mailbox naming an address other than your own without all=true, by a caller who reads every mailbox but cannot list members."
           content:
             application/json:
               schema:
@@ -38090,7 +38139,7 @@ paths:
         - name: Primitive-Step-Up
           in: header
           required: false
-          description: A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+          description: A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting, email notification settings or whether email rules read attachments), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
           schema:
             type: string
             pattern: ^pstep_[0-9a-f]{64}$
@@ -38249,7 +38298,7 @@ paths:
         - name: Primitive-Step-Up
           in: header
           required: false
-          description: A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+          description: A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting, email notification settings or whether email rules read attachments), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
           schema:
             type: string
             pattern: ^pstep_[0-9a-f]{64}$
@@ -38407,7 +38456,7 @@ paths:
         - name: Primitive-Step-Up
           in: header
           required: false
-          description: A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+          description: A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting, email notification settings or whether email rules read attachments), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
           schema:
             type: string
             pattern: ^pstep_[0-9a-f]{64}$
@@ -38678,7 +38727,7 @@ paths:
         - name: Primitive-Step-Up
           in: header
           required: false
-          description: A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+          description: A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting, email notification settings or whether email rules read attachments), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
           schema:
             type: string
             pattern: ^pstep_[0-9a-f]{64}$
@@ -38803,6 +38852,268 @@ paths:
               $ref: "#/components/schemas/OrgSettings_updateSearchSettings_Input"
       x-primitive-permission:
         - search_settings:manage
+  /email-rule-settings:
+    get:
+      operationId: getEmailRuleSettings
+      summary: Get the email rule attachment setting
+      tags:
+        - Organization settings
+      security:
+        - BearerAuth: []
+      description: |-
+        Whether the organization lets email rules read PDF and image attachments, and whether that is active: it also needs email rules to be enabled for the organization (available) and HIPAA mode off. A missing setting reads as off.
+
+        Person only: a dashboard session or the person's own OAuth token (the CLI or an app they connected). API keys, agent connection keys and agents are refused.
+      x-primitive-person-only:
+        access: person
+      parameters: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - data
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/OrgSettings_getEmailRuleSettings_Result"
+          headers:
+            ratelimit-limit:
+              $ref: "#/components/headers/ratelimit-limit"
+            ratelimit-remaining:
+              $ref: "#/components/headers/ratelimit-remaining"
+            ratelimit-reset:
+              $ref: "#/components/headers/ratelimit-reset"
+            ratelimit-policy:
+              $ref: "#/components/headers/ratelimit-policy"
+        "400":
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: validation_error
+                  message: Invalid domain format
+        "401":
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: unauthorized
+                  message: Invalid or missing API key
+          headers:
+            ratelimit-limit:
+              $ref: "#/components/headers/ratelimit-limit-unauthenticated"
+            ratelimit-remaining:
+              $ref: "#/components/headers/ratelimit-remaining-unauthenticated"
+            ratelimit-reset:
+              $ref: "#/components/headers/ratelimit-reset-unauthenticated"
+            ratelimit-policy:
+              $ref: "#/components/headers/ratelimit-policy-unauthenticated"
+        "403":
+          description: Authenticated caller lacks permission for the operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: forbidden
+                  message: Insufficient permissions
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: not_found
+                  message: Resource not found
+        "429":
+          description: Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+            ratelimit-limit:
+              $ref: "#/components/headers/ratelimit-limit-429"
+            ratelimit-remaining:
+              $ref: "#/components/headers/ratelimit-remaining-429"
+            ratelimit-reset:
+              $ref: "#/components/headers/ratelimit-reset"
+            ratelimit-policy:
+              $ref: "#/components/headers/ratelimit-policy-429"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: rate_limit_exceeded
+                  message: Rate limit exceeded
+      x-primitive-permission:
+        - org:read
+    put:
+      operationId: updateEmailRuleSettings
+      summary: Change the email rule attachment setting
+      tags:
+        - Organization settings
+      security:
+        - BearerAuth: []
+      description: |-
+        Turn on or off whether email rules read PDF and image attachments. When on, each such attachment is read once by a hosted model and its text is given to the email classifier and to the questions of the organization's email rules, so it is a person's decision. Turning it on is refused with 409 under HIPAA mode (hipaa_mode) or while email rules are not enabled for the organization (not_available). Turning it off is always allowed.
+
+        Person only: a dashboard session, or the person's own OAuth token with a step-up token for purpose `org_settings.write` in the Primitive-Step-Up header. Without one an OAuth token is answered 403 step_up_required, whose details carry the dashboard URL that issues it (or 403 grant_forbidden when the person's role could not do it anyway). The person's role must hold email_rule_settings:manage. API keys and agent connection keys are refused. An agent acting for the person is refused unless it carries a step-up token the person issued in the dashboard.
+      x-primitive-person-only:
+        access: step_up
+        step_up_purpose: org_settings.write
+      parameters:
+        - name: Primitive-Step-Up
+          in: header
+          required: false
+          description: A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting, email notification settings or whether email rules read attachments), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+          schema:
+            type: string
+            pattern: ^pstep_[0-9a-f]{64}$
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - data
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    $ref: "#/components/schemas/OrgSettings_updateEmailRuleSettings_Result"
+          headers:
+            ratelimit-limit:
+              $ref: "#/components/headers/ratelimit-limit"
+            ratelimit-remaining:
+              $ref: "#/components/headers/ratelimit-remaining"
+            ratelimit-reset:
+              $ref: "#/components/headers/ratelimit-reset"
+            ratelimit-policy:
+              $ref: "#/components/headers/ratelimit-policy"
+        "400":
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: validation_error
+                  message: Invalid domain format
+        "401":
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: unauthorized
+                  message: Invalid or missing API key
+          headers:
+            ratelimit-limit:
+              $ref: "#/components/headers/ratelimit-limit-unauthenticated"
+            ratelimit-remaining:
+              $ref: "#/components/headers/ratelimit-remaining-unauthenticated"
+            ratelimit-reset:
+              $ref: "#/components/headers/ratelimit-reset-unauthenticated"
+            ratelimit-policy:
+              $ref: "#/components/headers/ratelimit-policy-unauthenticated"
+        "403":
+          description: Authenticated caller lacks permission for the operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: forbidden
+                  message: Insufficient permissions
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: not_found
+                  message: Resource not found
+        "409":
+          description: The request conflicts with the current state of the resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: conflict
+                  message: The request conflicts with the current state of the resource
+        "429":
+          description: Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+            ratelimit-limit:
+              $ref: "#/components/headers/ratelimit-limit-429"
+            ratelimit-remaining:
+              $ref: "#/components/headers/ratelimit-remaining-429"
+            ratelimit-reset:
+              $ref: "#/components/headers/ratelimit-reset"
+            ratelimit-policy:
+              $ref: "#/components/headers/ratelimit-policy-429"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: rate_limit_exceeded
+                  message: Rate limit exceeded
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgSettings_updateEmailRuleSettings_Input"
+      x-primitive-permission:
+        - email_rule_settings:manage
   /email-notification-settings:
     get:
       operationId: getEmailNotificationSettings
@@ -38940,7 +39251,7 @@ paths:
         - name: Primitive-Step-Up
           in: header
           required: false
-          description: A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting or email notification settings), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
+          description: A single-use step-up token of purpose `org_settings.write` (Change the organization name, logo, semantic search setting, email notification settings or whether email rules read attachments), valid 5 minutes. When this operation answers 403 `step_up_required`, the person confirms at the link in `details.step_up_url` and the request is retried with the token that page shows, in this header. Accepted only with the person's own OAuth token of the client it was confirmed for; refused with a token issued for MCP, with any API key or agent connection key, and with a dashboard session.
           schema:
             type: string
             pattern: ^pstep_[0-9a-f]{64}$
@@ -46657,8 +46968,8 @@ components:
         attachments:
           type: array
           items:
-            $ref: "#/components/schemas/EmailAttachment"
-          description: Attachment metadata (file name, type, size), the same items in the same order as `parsed.attachments`. Kept for a credential that reads headers only, where `parsed` is null. Empty when the email has none, its content is withheld (read `status` and `rejection_reason`), or it is not parsed yet or its parse failed (read `parse_status`). No bytes; download a part with `/emails/{id}/attachments/{part_index}`.
+            $ref: "#/components/schemas/EmailDetailAttachment"
+          description: Attachment metadata (file name, type, size, and a description where one was read), the same parts in the same order as `parsed.attachments`. Only these items carry `description`; `parsed.attachments` keeps the shape the webhook payload has. Kept for a credential that reads headers only, where `parsed` is null. Empty when the email has none, its content is withheld (read `status` and `rejection_reason`), or it is not parsed yet or its parse failed (read `parse_status`). No bytes; download a part with `/emails/{id}/attachments/{part_index}`.
         imported:
           type:
             - object
@@ -50371,6 +50682,21 @@ components:
           enum:
             - own_secret
             - organization_secret
+        headers:
+          description: "For a webhook: the custom request headers it sends on every delivery, by name, with each value redacted. Empty when it has none. Absent for an endpoint that is not a webhook."
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              value:
+                type: string
+                description: "Always [redacted]: a value is never returned."
+            required:
+              - name
+              - value
+            additionalProperties: {}
         signing_secret:
           description: "Only in the response that creates a webhook made with a signing secret of its own (one made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret."
           type: string
@@ -50477,6 +50803,24 @@ components:
           type: string
           format: uuid
           pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        headers:
+          description: "Custom request headers sent on every delivery to this webhook, for a receiver that needs a credential of its own (for example Authorization). At most 5 per webhook unless the organization's limit was raised. Values are secrets: stored encrypted and never returned. Names Primitive sets itself or reserves are refused (among them Content-Type, Content-Length, User-Agent, Host, Accept-Encoding, the signature headers, and names starting X-Primitive-, X-Webhook-, Primitive-, Proxy- or X-Forwarded-), as is a name given twice. Only for http webhooks."
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                minLength: 1
+                maxLength: 100
+              value:
+                type: string
+                minLength: 1
+                maxLength: 4096
+            required:
+              - name
+              - value
+            additionalProperties: false
     UpdateEndpointInput:
       type: object
       additionalProperties: false
@@ -50552,6 +50896,24 @@ components:
             - string
             - "null"
           minLength: 1
+        headers:
+          description: "Custom request headers sent on every delivery to this webhook, for a receiver that needs a credential of its own (for example Authorization). At most 5 per webhook unless the organization's limit was raised. Values are secrets: stored encrypted and never returned. Names Primitive sets itself or reserves are refused (among them Content-Type, Content-Length, User-Agent, Host, Accept-Encoding, the signature headers, and names starting X-Primitive-, X-Webhook-, Primitive-, Proxy- or X-Forwarded-), as is a name given twice. Only for http webhooks. The list given replaces the whole stored list, so send every header the webhook should keep, with its value; [] removes them all. A webhook that has headers changes its URL only with headers in the same request: the values were set for the receiver at the old URL. A non-empty list needs url in the same request, so the values go to the receiver named (refused otherwise, details.reason headers_need_url); [] needs no url."
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                minLength: 1
+                maxLength: 100
+              value:
+                type: string
+                minLength: 1
+                maxLength: 4096
+            required:
+              - name
+              - value
+            additionalProperties: false
       minProperties: 1
     TestResult:
       type: object
@@ -53908,7 +54270,7 @@ components:
           properties:
             total:
               type: integer
-              description: Total number of matching records
+              description: Total number of matching records. Absent when a history page is read with `count=false` (no count runs), or when the count does not fit its time budget (`total_unavailable` is then true). `has_more` still says whether another page follows.
             limit:
               type: integer
               description: Page size used for this request
@@ -54631,6 +54993,36 @@ components:
         - tree_version
         - columns
         - limits
+    EmailRuleBody:
+      type: object
+      properties:
+        english:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: The description it was compiled from.
+        kind:
+          type: string
+          enum:
+            - grant
+            - do_not_share
+          description: grant or do_not_share.
+        tree:
+          $ref: "#/components/schemas/EmailRuleTree"
+        evaluation_scope:
+          description: Present only when given at compile.
+          type: string
+          enum:
+            - author
+            - own_mailboxes
+            - selected
+        scope_selection:
+          description: With evaluation_scope selected only.
+          $ref: "#/components/schemas/EmailRuleScopeSelection"
+      required:
+        - english
+        - kind
+        - tree
     EmailRuleTree:
       type: object
       properties:
@@ -54650,72 +55042,12 @@ components:
           type: array
           items:
             type: string
-          description: Yes/no questions asked once the conditions match, over the email's text and attachment names, never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any yes.
+          description: Yes/no questions asked once the conditions match, over the email's text and attachment names, and text read from PDF and image attachments where attachment reading is active for the organization. A grant rule needs every one yes; a do_not_share rule matches on any yes.
       required:
         - version
         - vocabulary
         - when
         - questions
-    EmailRuleScopeUsed:
-      type: object
-      properties:
-        evaluation_scope:
-          type: string
-          enum:
-            - author
-            - own_mailboxes
-            - selected
-          description: author, own_mailboxes or selected, as a rule's evaluation_scope.
-        scope_selection:
-          type:
-            - object
-            - "null"
-          properties:
-            addresses:
-              maxItems: 100
-              type: array
-              items:
-                type: string
-                maxLength: 320
-            domains:
-              maxItems: 50
-              type: array
-              items:
-                type: string
-                maxLength: 253
-          required:
-            - addresses
-            - domains
-          description: What a selected scope names; null for any other.
-      required:
-        - evaluation_scope
-        - scope_selection
-    EmailRuleScopeWarning:
-      type: object
-      properties:
-        name:
-          type: string
-          maxLength: 320
-        kind:
-          type: string
-          enum:
-            - address
-            - domain
-        reason:
-          type: string
-          enum:
-            - unknown_domain
-            - inactive_domain
-            - unknown_address
-          description: "unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet."
-        message:
-          type: string
-          maxLength: 1000
-      required:
-        - name
-        - kind
-        - reason
-        - message
     EmailRuleScopeSelection:
       type: object
       properties:
@@ -54834,6 +55166,121 @@ components:
         - vocabulary
         - kind
         - warnings
+    EmailRuleScopeUsed:
+      type: object
+      properties:
+        evaluation_scope:
+          type: string
+          enum:
+            - author
+            - own_mailboxes
+            - selected
+          description: author, own_mailboxes or selected, as a rule's evaluation_scope.
+        scope_selection:
+          type:
+            - object
+            - "null"
+          properties:
+            addresses:
+              maxItems: 100
+              type: array
+              items:
+                type: string
+                maxLength: 320
+            domains:
+              maxItems: 50
+              type: array
+              items:
+                type: string
+                maxLength: 253
+          required:
+            - addresses
+            - domains
+          description: What a selected scope names; null for any other.
+      required:
+        - evaluation_scope
+        - scope_selection
+    EmailRuleScopeWarning:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 320
+        kind:
+          type: string
+          enum:
+            - address
+            - domain
+        reason:
+          type: string
+          enum:
+            - unknown_domain
+            - inactive_domain
+            - unknown_address
+          description: "unknown_domain: none of the organization's domains. inactive_domain: one of its domains, not active now, so no new mail arrives. unknown_address: no inbox known as someone's, and no mail has reached it yet."
+        message:
+          type: string
+          maxLength: 1000
+      required:
+        - name
+        - kind
+        - reason
+        - message
+    EmailRuleSampleGroupCounts:
+      type: object
+      properties:
+        private:
+          type: object
+          properties:
+            passed:
+              type: integer
+              minimum: 0
+            failed:
+              type: integer
+              minimum: 0
+            undecided:
+              type: integer
+              minimum: 0
+          required:
+            - passed
+            - failed
+            - undecided
+        near_miss:
+          type: object
+          properties:
+            passed:
+              type: integer
+              minimum: 0
+            failed:
+              type: integer
+              minimum: 0
+            undecided:
+              type: integer
+              minimum: 0
+          required:
+            - passed
+            - failed
+            - undecided
+        must_match:
+          type: object
+          properties:
+            passed:
+              type: integer
+              minimum: 0
+            failed:
+              type: integer
+              minimum: 0
+            undecided:
+              type: integer
+              minimum: 0
+          required:
+            - passed
+            - failed
+            - undecided
+      required:
+        - private
+        - near_miss
+        - must_match
     EmailRuleSampleJudgment:
       type: object
       properties:
@@ -54854,6 +55301,13 @@ components:
           enum:
             - match
             - no_match
+        group:
+          description: Its group, when sent with one.
+          type: string
+          enum:
+            - private
+            - near_miss
+            - must_match
         outcome:
           type: string
           enum:
@@ -54867,6 +55321,9 @@ components:
             - passed
             - failed
             - undecided
+        close_call:
+          type: boolean
+          description: Passed or failed on an answer below 0.75 confidence, so asking again (a new version, or any judgment of a made-up email) may decide it the other way. Never for one its conditions alone decided.
         reason:
           description: "On an undecided one only: why."
           type: string
@@ -54908,7 +55365,66 @@ components:
         - expected
         - outcome
         - status
+        - close_call
         - question_answers
+    EmailRuleVersionChanges:
+      type: object
+      properties:
+        compared_to_version:
+          type: integer
+          exclusiveMinimum: 0
+          description: The rule's current version, compared against.
+        newly_matched:
+          description: Emails this tree matches that the live version does not.
+          $ref: "#/components/schemas/EmailRuleChangedEmails"
+        stops_matching:
+          description: Emails the live version matches that this tree does not.
+          $ref: "#/components/schemas/EmailRuleChangedEmails"
+        undecided:
+          type: integer
+          minimum: 0
+          description: Emails listed in results that either version could not decide (unclassified, skipped and not found included), in neither list.
+      required:
+        - compared_to_version
+        - newly_matched
+        - stops_matching
+        - undecided
+    EmailRuleChangedEmails:
+      type: object
+      properties:
+        count:
+          type: integer
+          minimum: 0
+        emails:
+          type: array
+          items:
+            type: object
+            properties:
+              email_id:
+                type: string
+                format: uuid
+              subject:
+                type:
+                  - string
+                  - "null"
+              from:
+                type:
+                  - string
+                  - "null"
+              received_at:
+                type:
+                  - string
+                  - "null"
+                format: date-time
+            required:
+              - email_id
+              - subject
+              - from
+              - received_at
+          description: Newest first, at most 50; count is the full number.
+      required:
+        - count
+        - emails
     EmailRuleTreeInput:
       type: object
       properties:
@@ -54925,7 +55441,7 @@ components:
           additionalProperties: {}
           description: "A condition {column, op, value?, min_confidence?} (see GET /email-rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}."
         questions:
-          description: Yes/no questions asked once the conditions match, over the email's text and attachment names, never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on any yes. Left out, none.
+          description: Yes/no questions asked once the conditions match, over the email's text and attachment names, and text read from PDF and image attachments where attachment reading is active for the organization. A grant rule needs every one yes; a do_not_share rule matches on any yes. Left out, none.
           type: array
           items:
             type: string
@@ -54934,7 +55450,7 @@ components:
         - vocabulary
         - when
       additionalProperties: false
-    EmailRuleExpectationSampleInput:
+    EmailRuleTestSampleInput:
       type: object
       properties:
         expected:
@@ -54957,6 +55473,13 @@ components:
           format: uuid
         created_at:
           type: string
+        group:
+          description: "Its look-alike group: counted by group in the answer."
+          type: string
+          enum:
+            - private
+            - near_miss
+            - must_match
       required:
         - expected
         - email
@@ -55097,7 +55620,7 @@ components:
               maxItems: 20
               type: array
               items:
-                $ref: "#/components/schemas/EmailRuleExpectationSampleInput"
+                $ref: "#/components/schemas/EmailRuleTestSampleInput"
           additionalProperties: false
           description: Emails the rule must match and must not (at most 100), always tested whatever their age, and made-up emails (samples, at most 20). Given, it replaces a saved rule's own.
       additionalProperties: false
@@ -55241,10 +55764,17 @@ components:
                   - string
                   - "null"
               attachment_names:
-                description: "On matched and near_miss: the file names the email lists, in order, at most 10 (the names its questions are given; never what is in the files). Parts with no name are left out; absent when there are none."
+                description: "On matched and near_miss: the file names the email lists, in order, at most 10 (the names its questions are given). Parts with no name are left out; absent when there are none. attachment_descriptions says what each file is, where one was read."
                 type: array
                 items:
                   type: string
+              attachment_descriptions:
+                description: "Given exactly when attachment_names is, aligned with it by position: the one-line description read from each file where the organization has attachment reading on, else null (not read, could not be read, reading off, or an email you cannot open yourself)."
+                type: array
+                items:
+                  type:
+                    - string
+                    - "null"
               parts:
                 description: How each top-level part of the rule decided. Present for matched, near_miss and no_match.
                 type: array
@@ -55444,10 +55974,18 @@ components:
                 undecided:
                   type: integer
                   minimum: 0
+                close_calls:
+                  type: integer
+                  minimum: 0
+                  description: Of passed and failed, how many were close calls.
+                by_group:
+                  description: "When samples carry a group: the samples alone, by group."
+                  $ref: "#/components/schemas/EmailRuleSampleGroupCounts"
               required:
                 - passed
                 - failed
                 - undecided
+                - close_calls
             results:
               type: array
               items:
@@ -55476,6 +56014,9 @@ components:
                       - passed
                       - failed
                       - undecided
+                  close_call:
+                    type: boolean
+                    description: Passed or failed on an answer below 0.75 confidence, so asking again (a new version, or any judgment of a made-up email) may decide it the other way. Never for one its conditions alone decided.
                   reason:
                     description: "On an undecided one only: why."
                     type: string
@@ -55492,6 +56033,7 @@ components:
                   - expected
                   - outcome
                   - status
+                  - close_call
               description: match first, then no_match, each in the order given (saved expectations by email id).
             samples:
               description: Made-up emails judged (expect.samples, or a saved rule's), in order; counts include them.
@@ -55502,6 +56044,9 @@ components:
             - passed
             - counts
             - results
+        changes:
+          description: "With rule_id and tree, when the rule has a current version: what this tree would change against it. For a do_not_share rule, newly withheld and no longer withheld."
+          $ref: "#/components/schemas/EmailRuleVersionChanges"
       required:
         - rule
         - window
@@ -55519,6 +56064,8 @@ components:
             - payroll
             - personal_purchase
             - bank_tax
+            - legal
+            - personal_correspondence
             - other
         expected:
           type: string
@@ -55526,6 +56073,12 @@ components:
             - match
             - no_match
           description: "match: a near case the rule should match; no_match: one it should not."
+        group:
+          type: string
+          enum:
+            - private
+            - near_miss
+            - must_match
         why:
           type: string
           description: Why the rule should, or should not, match it.
@@ -55590,6 +56143,9 @@ components:
             - failed
             - undecided
           description: "failed: the rule decided it against expected (shared one it should not, or missed one it should match). undecided: the rule reads a spam score, which it cannot carry, whatever it decided; or not matched on something it could not decide (not classified, a fact or answer missing, or not reached in time)."
+        close_call:
+          type: boolean
+          description: Passed or failed on an answer below 0.75 confidence, so asking again (a new version, or any judgment of a made-up email) may decide it the other way. Never for one its conditions alone decided.
         question_answers:
           type: array
           items:
@@ -55615,10 +56171,12 @@ components:
       required:
         - kind
         - expected
+        - group
         - why
         - email
         - outcome
         - status
+        - close_call
         - question_answers
     GenerateLookAlikesRequest:
       type: object
@@ -55662,7 +56220,7 @@ components:
         kinds:
           description: Which kinds, taken in turn, all expected no_match; other is a business near miss. Left out, a default mix.
           minItems: 1
-          maxItems: 5
+          maxItems: 7
           type: array
           items:
             type: string
@@ -55671,6 +56229,8 @@ components:
               - payroll
               - personal_purchase
               - bank_tax
+              - legal
+              - personal_correspondence
               - other
         to:
           description: The mailbox they arrive in; by default the first address (alphabetically) a selected scope names that a made-up email can be sent to, preferring one the author still reads; else the rule author's (a request's target's) sign-in address when you may see it, else yours.
@@ -55700,15 +56260,22 @@ components:
             undecided:
               type: integer
               minimum: 0
+            close_calls:
+              type: integer
+              minimum: 0
             dropped:
               type: integer
               minimum: 0
               description: "Asked for but not returned: not written, outside the sample bounds, or of a kind and expected not asked for."
+            by_group:
+              $ref: "#/components/schemas/EmailRuleSampleGroupCounts"
           required:
             - passed
             - failed
             - undecided
+            - close_calls
             - dropped
+            - by_group
       required:
         - rule
         - look_alikes
@@ -56014,6 +56581,11 @@ components:
           description: "To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to it waiting for their answer (GET /email-rule-objections)."
           type: integer
           minimum: 0
+        receivers:
+          description: "On the list with all=true only: who receives what it matches now. Null when it could not be read in time."
+          anyOf:
+            - $ref: "#/components/schemas/EmailRuleReceivers"
+            - type: "null"
         created_at:
           type: string
           format: date-time
@@ -56120,6 +56692,125 @@ components:
         - user_id
         - name
         - email
+    EmailRuleReceivers:
+      type: object
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            properties:
+              owner:
+                anyOf:
+                  - type: object
+                    properties:
+                      kind:
+                        type: string
+                        const: member
+                      user_id:
+                        type: string
+                        description: The member's user id.
+                        format: uuid
+                      name:
+                        description: Their name; null when they have none set.
+                        type:
+                          - string
+                          - "null"
+                    required:
+                      - kind
+                      - user_id
+                      - name
+                  - type: object
+                    properties:
+                      kind:
+                        type: string
+                        const: organization
+                        description: "Held by no member: an organization key, or one whose holder has left."
+                    required:
+                      - kind
+              count:
+                type: integer
+                exclusiveMinimum: 0
+            required:
+              - owner
+              - count
+          description: "API keys that work now (not revoked, expired or suspended) and hold mail:read, whose access lists the rule or its live share. Owner: who holds each, or the organization."
+        webhooks:
+          type: array
+          items:
+            type: object
+            properties:
+              owner:
+                anyOf:
+                  - type: object
+                    properties:
+                      kind:
+                        type: string
+                        const: member
+                      user_id:
+                        type: string
+                        description: The member's user id.
+                        format: uuid
+                      name:
+                        description: Their name; null when they have none set.
+                        type:
+                          - string
+                          - "null"
+                    required:
+                      - kind
+                      - user_id
+                      - name
+                  - type: object
+                    properties:
+                      kind:
+                        type: string
+                        const: organization
+                        description: "Held by no member: an organization key, or one whose holder has left."
+                    required:
+                      - kind
+              count:
+                type: integer
+                exclusiveMinimum: 0
+            required:
+              - owner
+              - count
+          description: "Webhooks taking received mail, bounces or reports that are sent what it matches: those of the key delivery acts as, when it lists the rule or its live share (owner: its holder, or the organization), and those of the member it is shared with (owner: that member)."
+        shares:
+          type: array
+          items:
+            type: object
+            properties:
+              beneficiary:
+                type: object
+                properties:
+                  kind:
+                    type: string
+                    const: member
+                  user_id:
+                    type: string
+                    description: The member's user id.
+                    format: uuid
+                  name:
+                    description: Their name; null when they have none set.
+                    type:
+                      - string
+                      - "null"
+                required:
+                  - kind
+                  - user_id
+                  - name
+              count:
+                type: integer
+                exclusiveMinimum: 0
+            required:
+              - beneficiary
+              - count
+          description: The rule's live share (at most one), by its member, if they can read it and it is among their newest 20 shares.
+      required:
+        - keys
+        - webhooks
+        - shares
+      description: Who receives what the rule shares, by person and count. Empty unless it is an active grant rule.
     EmailRuleVersion:
       type: object
       properties:
@@ -56193,6 +56884,60 @@ components:
         - label
         - email
         - created_at
+    EmailRuleExpectationsCheck:
+      type: object
+      properties:
+        version:
+          type:
+            - integer
+            - "null"
+          exclusiveMinimum: 0
+          description: The version judged, once saved; null in a refusal.
+        passed:
+          type: boolean
+          description: Whether every expectation passed.
+        failed:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Emails by id that failed.
+        undecided:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Emails by id not decided.
+        failed_samples:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmailRuleSampleDetail"
+          description: Made-up emails that failed, by index in the set judged and label.
+        undecided_samples:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmailRuleSampleDetail"
+          description: Made-up emails not decided.
+        close_calls:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: "Emails by id, passed or failed, decided by an answer below 0.75 confidence: judged again they may come out the other way."
+        close_call_samples:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmailRuleSampleDetail"
+          description: Made-up emails that were close calls.
+      required:
+        - version
+        - passed
+        - failed
+        - undecided
+        - failed_samples
+        - undecided_samples
+        - close_calls
+        - close_call_samples
     EmailRuleSampleDetail:
       type: object
       properties:
@@ -56206,6 +56951,33 @@ components:
       required:
         - index
         - label
+    EmailRuleExpectationSampleInput:
+      type: object
+      properties:
+        expected:
+          type: string
+          enum:
+            - match
+            - no_match
+        label:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 200
+          pattern: ^[^\u0000]*$
+          description: What the email stands for, such as a personal medical bill.
+        email:
+          $ref: "#/components/schemas/EmailRuleSavedSampleEmail"
+        id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+      required:
+        - expected
+        - email
+      additionalProperties: false
     CreateEmailRuleRequest:
       type: object
       properties:
@@ -56330,6 +57102,11 @@ components:
           description: "To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to it waiting for their answer (GET /email-rule-objections)."
           type: integer
           minimum: 0
+        receivers:
+          description: "On the list with all=true only: who receives what it matches now. Null when it could not be read in time."
+          anyOf:
+            - $ref: "#/components/schemas/EmailRuleReceivers"
+            - type: "null"
         created_at:
           type: string
           format: date-time
@@ -56421,6 +57198,11 @@ components:
           description: "To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to it waiting for their answer (GET /email-rule-objections)."
           type: integer
           minimum: 0
+        receivers:
+          description: "On the list with all=true only: who receives what it matches now. Null when it could not be read in time."
+          anyOf:
+            - $ref: "#/components/schemas/EmailRuleReceivers"
+            - type: "null"
         created_at:
           type: string
           format: date-time
@@ -56654,9 +57436,10 @@ components:
             type: integer
             minimum: 0
             description: "With withheld_by: how many more kept it back that you cannot see, or that were deleted since. Those rules are not shown; an admin can see them."
-          created_at:
+          decided_at:
             type: string
             format: date-time
+            description: When the rule made this decision.
           from_address:
             description: The decided email's sender address, as GET /v1/emails/{id} shows it.
             type:
@@ -56667,12 +57450,17 @@ components:
             type:
               - string
               - "null"
+          recipient:
+            description: The mailbox the decided email was received in, as GET /v1/emails/{id} shows it (to_email).
+            type:
+              - string
+              - "null"
           received_at:
             type:
               - string
               - "null"
             format: date-time
-            description: When the decided email arrived. Null, with the other two, when you are not shown the email (it awaits sender authentication).
+            description: When the decided email arrived. Null, with from_address, subject and recipient, when you are not shown the email (it awaits sender authentication).
         required:
           - id
           - email_id
@@ -56682,9 +57470,10 @@ components:
           - near_miss
           - parts
           - question_answers
-          - created_at
+          - decided_at
           - from_address
           - subject
+          - recipient
           - received_at
     EmailRuleCoveringAuthor:
       type: object
@@ -56706,125 +57495,6 @@ components:
         - user_id
         - name
         - email
-    EmailRuleReceivers:
-      type: object
-      properties:
-        keys:
-          type: array
-          items:
-            type: object
-            properties:
-              owner:
-                anyOf:
-                  - type: object
-                    properties:
-                      kind:
-                        type: string
-                        const: member
-                      user_id:
-                        type: string
-                        description: The member's user id.
-                        format: uuid
-                      name:
-                        description: Their name; null when they have none set.
-                        type:
-                          - string
-                          - "null"
-                    required:
-                      - kind
-                      - user_id
-                      - name
-                  - type: object
-                    properties:
-                      kind:
-                        type: string
-                        const: organization
-                        description: "Held by no member: an organization key, or one whose holder has left."
-                    required:
-                      - kind
-              count:
-                type: integer
-                exclusiveMinimum: 0
-            required:
-              - owner
-              - count
-          description: "API keys that work now (not revoked, expired or suspended) and hold mail:read, whose access lists the rule or its live share. Owner: who holds each, or the organization."
-        webhooks:
-          type: array
-          items:
-            type: object
-            properties:
-              owner:
-                anyOf:
-                  - type: object
-                    properties:
-                      kind:
-                        type: string
-                        const: member
-                      user_id:
-                        type: string
-                        description: The member's user id.
-                        format: uuid
-                      name:
-                        description: Their name; null when they have none set.
-                        type:
-                          - string
-                          - "null"
-                    required:
-                      - kind
-                      - user_id
-                      - name
-                  - type: object
-                    properties:
-                      kind:
-                        type: string
-                        const: organization
-                        description: "Held by no member: an organization key, or one whose holder has left."
-                    required:
-                      - kind
-              count:
-                type: integer
-                exclusiveMinimum: 0
-            required:
-              - owner
-              - count
-          description: "Webhooks taking received mail, bounces or reports that are sent what it matches: those of the key delivery acts as, when it lists the rule or its live share (owner: its holder, or the organization), and those of the member it is shared with (owner: that member)."
-        shares:
-          type: array
-          items:
-            type: object
-            properties:
-              beneficiary:
-                type: object
-                properties:
-                  kind:
-                    type: string
-                    const: member
-                  user_id:
-                    type: string
-                    description: The member's user id.
-                    format: uuid
-                  name:
-                    description: Their name; null when they have none set.
-                    type:
-                      - string
-                      - "null"
-                required:
-                  - kind
-                  - user_id
-                  - name
-              count:
-                type: integer
-                exclusiveMinimum: 0
-            required:
-              - beneficiary
-              - count
-          description: The rule's live share (at most one), by its member, if they can read it and it is among their newest 20 shares.
-      required:
-        - keys
-        - webhooks
-        - shares
-      description: Who receives what the rule shares, by person and count. Empty unless it is an active grant rule.
     ListEmailRuleResultsResult:
       type: object
       properties:
@@ -57489,6 +58159,11 @@ components:
           description: "To its author, on the dashboard or the Primitive CLI, on GET, the list and a create: objections to it waiting for their answer (GET /email-rule-objections)."
           type: integer
           minimum: 0
+        receivers:
+          description: "On the list with all=true only: who receives what it matches now. Null when it could not be read in time."
+          anyOf:
+            - $ref: "#/components/schemas/EmailRuleReceivers"
+            - type: "null"
         created_at:
           type: string
           format: date-time
@@ -57556,7 +58231,7 @@ components:
             - boolean
             - "null"
         activity:
-          description: "For the member it is shared with, on the dashboard or the Primitive CLI, while it is live and their access reads content: whether it is working, so a quiet mailbox can be told from a stopped share. Null otherwise, and when it could not be read."
+          description: "For the member it is shared with, on the dashboard or the Primitive CLI, while it is live and their access reads content: whether it is working, so a quiet mailbox can be told from a stopped share (checked false when that could not be read just now). Null otherwise."
           anyOf:
             - $ref: "#/components/schemas/EmailRuleShareActivity"
             - type: "null"
@@ -57632,9 +58307,13 @@ components:
             - string
             - "null"
           format: date-time
-          description: The start of the hour in which the rule last decided on any email in the sharing member's mailboxes since the share began, counting only hours that have ended and the hour of the newest email shared; null if none.
+          description: The start of the hour in which the rule last decided on any email in the sharing member's mailboxes since the share began, counting only hours that have ended and the hour of the newest email shared; null if none, or if it could not be checked.
+        checked:
+          type: boolean
+          description: "False when whether the share is working could not be read just now (last_decided_at is then null): read it again."
       required:
         - last_decided_at
+        - checked
     EmailRuleShareGranter:
       type: object
       properties:
@@ -58347,9 +59026,10 @@ components:
           description: "Present, as true, when the email's content cannot be read: matched still says what the rule decided, and parts and question_answers are empty."
           type: boolean
           const: true
-        created_at:
+        decided_at:
           type: string
           format: date-time
+          description: When the rule made this decision.
         from_address:
           description: The email's sender address, as GET /v1/emails/{id} shows it.
           type:
@@ -58359,12 +59039,17 @@ components:
           type:
             - string
             - "null"
+        recipient:
+          description: Which of your mailboxes the email was received in.
+          type:
+            - string
+            - "null"
         received_at:
           type:
             - string
             - "null"
           format: date-time
-          description: When the email arrived. Null, with the other two, when you are not shown the email (it awaits sender authentication).
+          description: When the email arrived. Null, with from_address, subject and recipient, when you are not shown the email (it awaits sender authentication).
       required:
         - id
         - email_id
@@ -58374,9 +59059,10 @@ components:
         - near_miss
         - parts
         - question_answers
-        - created_at
+        - decided_at
         - from_address
         - subject
+        - recipient
         - received_at
     ListEmailRuleDecisionsOnMyMailResult:
       type: array
@@ -58870,6 +59556,19 @@ components:
           type: string
           format: date-time
           description: Everything that arrived at or before this instant is read. A future instant is clamped to now.
+    EmailDetailAttachment:
+      description: "Metadata for one attachment of a received email, as the top-level `attachments` of GET /emails/{id} list it: EmailAttachment with the part's `description` (`parsed.attachments` has none)."
+      allOf:
+        - $ref: "#/components/schemas/EmailAttachment"
+        - type: object
+          properties:
+            description:
+              type:
+                - string
+                - "null"
+              description: A one-line description of what the attachment is, read from the file when the organization has attachment reading on. Null when the part was not read, could not be read, or attachment reading is off.
+          required:
+            - description
     EmailReadableLink:
       type: object
       required:
@@ -64498,6 +65197,48 @@ components:
       required:
         - semantic_search_opt_in
       additionalProperties: false
+    OrgSettings_getEmailRuleSettings_Result:
+      type: object
+      properties:
+        rules_read_attachments:
+          type: boolean
+        available:
+          type: boolean
+        hipaa_mode:
+          type: boolean
+        active:
+          type: boolean
+      required:
+        - rules_read_attachments
+        - available
+        - hipaa_mode
+        - active
+      additionalProperties: {}
+    OrgSettings_updateEmailRuleSettings_Result:
+      type: object
+      properties:
+        rules_read_attachments:
+          type: boolean
+        available:
+          type: boolean
+        hipaa_mode:
+          type: boolean
+        active:
+          type: boolean
+      required:
+        - rules_read_attachments
+        - available
+        - hipaa_mode
+        - active
+      additionalProperties: {}
+    OrgSettings_updateEmailRuleSettings_Input:
+      type: object
+      properties:
+        rules_read_attachments:
+          type: boolean
+      required:
+        - rules_read_attachments
+      additionalProperties: false
     EmailNotifications_getEmailNotificationSettings_Result:
       type: object
       properties:
@@ -67120,6 +67861,11 @@ components:
           type: string
         message:
           type: string
+        status:
+          description: The HTTP status the URL answered, on url_requires_login and url_redirects.
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
         endpoint_id:
           description: The other webhook a same_path_as_another_endpoint warning names.
           type: string
@@ -67135,7 +67881,7 @@ components:
         - type: object
           properties:
             warnings:
-              description: "For a webhook (kind http). same_path_as_another_endpoint: another webhook you can see, on and not deleted, sends to the same scheme, host and path with any query string, so each email both receive is delivered twice; endpoint_id names it (at most 5, newest first). The URL is never echoed. Empty when none; absent when it could not be checked (a caller who may not read endpoints, or a failed read). Other codes may be added."
+              description: "For a webhook (kind http). same_path_as_another_endpoint: another webhook you can see, on and not deleted, sends to the same scheme, host and path with any query string, so each email both receive is delivered twice; endpoint_id names it (at most 5, newest first). The URL is never echoed. A created webhook is also sent the test request POST /endpoints/{id}/test sends (within a budget of its own, separate from the test budget); the webhook is saved whatever it answers: url_requires_login: it answered 302, 401 or 403 (status names which), so the host appears to require a login. url_redirects: another redirect, which deliveries do not follow. url_unreachable: no answer within 5 seconds, or a connection error (deliveries wait longer, so a slow receiver may still receive them). url_not_checked: the probe was not made or could not finish (the organization made many such checks just now, the signing secret could not be read, the URL changed again since this write, or the check failed). A caller who may not send the webhook a test request gets no probe and none of these. Absent only when the same-path check could not be made and the probe found nothing to warn about; when the same-path check could not be made, the list has no same_path_as_another_endpoint entries whatever else it holds. Other codes may be added."
               type: array
               items:
                 $ref: "#/components/schemas/EndpointCreateWarning"
@@ -67146,6 +67892,11 @@ components:
           type: string
         message:
           type: string
+        status:
+          description: The HTTP status the URL answered, on url_requires_login and url_redirects.
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
       required:
         - code
         - message
@@ -67159,7 +67910,7 @@ components:
           properties:
             warnings:
               default: []
-              description: "When this update turned the webhook off or on without the request setting enabled. turned_off_owner_changed: the webhook was given to a new owner, so it is now off (disabled_reason owner_changed) until it is turned on or given a new URL. turned_on_new_url: it was off because its owner changed, and the new URL turned it back on. Empty when the update did neither. Other codes may be added."
+              description: "When this update turned the webhook off or on without the request setting enabled. turned_off_owner_changed: the webhook was given to a new owner, so it is now off (disabled_reason owner_changed) until it is turned on or given a new URL. turned_on_new_url: it was off because its owner changed, and the new URL turned it back on. Empty when the update did neither. When the update gives a webhook a new URL, it is sent the test request POST /endpoints/{id}/test sends (within a budget of its own, separate from the test budget), and a warning says when its answer means deliveries will fail: url_requires_login: it answered 302, 401 or 403 (status names which), so the host appears to require a login. url_redirects: another redirect, which deliveries do not follow. url_unreachable: no answer within 5 seconds, or a connection error (deliveries wait longer, so a slow receiver may still receive them). url_not_checked: the probe was not made or could not finish (the organization made many such checks just now, the signing secret could not be read, the URL changed again since this write, or the check failed). A caller who may not send the webhook a test request gets no probe and none of these. Other codes may be added."
               type: array
               items:
                 $ref: "#/components/schemas/EndpointUpdateWarning"
@@ -67411,77 +68162,6 @@ components:
         - admin
         - member
       description: "The key of a built-in role. Every other role, including the `operator` template, is a template or custom role with a key of its own. A member's `role` (and the `stored_role` a role assignment returns) can also be `restricted`, which is not a built-in role and cannot be assigned: it stands for a template or custom role that does not fully include `member`, or for no role at all."
-    EmailRuleExpectationsCheck:
-      type: object
-      properties:
-        version:
-          type:
-            - integer
-            - "null"
-          exclusiveMinimum: 0
-          description: The version judged, once saved; null in a refusal.
-        passed:
-          type: boolean
-          description: Whether every expectation passed.
-        failed:
-          type: array
-          items:
-            type: string
-            format: uuid
-          description: Emails by id that failed.
-        undecided:
-          type: array
-          items:
-            type: string
-            format: uuid
-          description: Emails by id not decided.
-        failed_samples:
-          type: array
-          items:
-            $ref: "#/components/schemas/EmailRuleSampleDetail"
-          description: Made-up emails that failed, by index in the set judged and label.
-        undecided_samples:
-          type: array
-          items:
-            $ref: "#/components/schemas/EmailRuleSampleDetail"
-          description: Made-up emails not decided.
-      required:
-        - version
-        - passed
-        - failed
-        - undecided
-        - failed_samples
-        - undecided_samples
-    EmailRuleBody:
-      type: object
-      properties:
-        english:
-          type: string
-          minLength: 1
-          maxLength: 2000
-          description: The description it was compiled from.
-        kind:
-          type: string
-          enum:
-            - grant
-            - do_not_share
-          description: grant or do_not_share.
-        tree:
-          $ref: "#/components/schemas/EmailRuleTree"
-        evaluation_scope:
-          description: Present only when given at compile.
-          type: string
-          enum:
-            - author
-            - own_mailboxes
-            - selected
-        scope_selection:
-          description: With evaluation_scope selected only.
-          $ref: "#/components/schemas/EmailRuleScopeSelection"
-      required:
-        - english
-        - kind
-        - tree
   headers:
     IdempotentReplayed:
       description: Set to `true` when the request was answered with an existing send instead of making a new one. Absent on a request that sent. On a batch it means at least one message replayed; see `Idempotent-Replayed-Count`.

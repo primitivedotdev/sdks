@@ -26,10 +26,13 @@ class EmailRuleShareActivity:
         Attributes:
             last_decided_at (datetime.datetime | None): The start of the hour in which the rule last decided on any email in
                 the sharing member's mailboxes since the share began, counting only hours that have ended and the hour of the
-                newest email shared; null if none.
+                newest email shared; null if none, or if it could not be checked.
+            checked (bool): False when whether the share is working could not be read just now (last_decided_at is then
+                null): read it again.
      """
 
     last_decided_at: datetime.datetime | None
+    checked: bool
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -43,11 +46,14 @@ class EmailRuleShareActivity:
         else:
             last_decided_at = self.last_decided_at
 
+        checked = self.checked
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "last_decided_at": last_decided_at,
+            "checked": checked,
         })
 
         return field_dict
@@ -75,8 +81,11 @@ class EmailRuleShareActivity:
         last_decided_at = _parse_last_decided_at(d.pop("last_decided_at"))
 
 
+        checked = d.pop("checked")
+
         email_rule_share_activity = cls(
             last_decided_at=last_decided_at,
+            checked=checked,
         )
 
 

@@ -425,6 +425,10 @@ type GetEmailRuleScopeRes interface {
 	getEmailRuleScopeRes()
 }
 
+type GetEmailRuleSettingsRes interface {
+	getEmailRuleSettingsRes()
+}
+
 type GetEmailRuleShareRes interface {
 	getEmailRuleShareRes()
 }
@@ -1239,6 +1243,10 @@ type UpdateEmailNotificationSettingsRes interface {
 
 type UpdateEmailRuleRes interface {
 	updateEmailRuleRes()
+}
+
+type UpdateEmailRuleSettingsRes interface {
+	updateEmailRuleSettingsRes()
 }
 
 type UpdateEndpointRes interface {

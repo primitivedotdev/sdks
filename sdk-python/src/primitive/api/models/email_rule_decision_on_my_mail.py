@@ -34,11 +34,12 @@ class EmailRuleDecisionOnMyMail:
             parts (list[Any]): How each top-level part of the rule decided.
             question_answers (list[Any]): The answers to the rule's own questions, when they were asked: each with question,
                 answer, confidence and, when unanswered, error_class, as a test gives them.
-            created_at (datetime.datetime):
+            decided_at (datetime.datetime): When the rule made this decision.
             from_address (None | str): The email's sender address, as GET /v1/emails/{id} shows it.
             subject (None | str):
-            received_at (datetime.datetime | None): When the email arrived. Null, with the other two, when you are not shown
-                the email (it awaits sender authentication).
+            recipient (None | str): Which of your mailboxes the email was received in.
+            received_at (datetime.datetime | None): When the email arrived. Null, with from_address, subject and recipient,
+                when you are not shown the email (it awaits sender authentication).
             detail_withheld (bool | Unset): Present, as true, when the email's content cannot be read: matched still says
                 what the rule decided, and parts and question_answers are empty.
      """
@@ -51,9 +52,10 @@ class EmailRuleDecisionOnMyMail:
     near_miss: bool
     parts: list[Any]
     question_answers: list[Any]
-    created_at: datetime.datetime
+    decided_at: datetime.datetime
     from_address: None | str
     subject: None | str
+    recipient: None | str
     received_at: datetime.datetime | None
     detail_withheld: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -83,13 +85,16 @@ class EmailRuleDecisionOnMyMail:
 
 
 
-        created_at = self.created_at.isoformat()
+        decided_at = self.decided_at.isoformat()
 
         from_address: None | str
         from_address = self.from_address
 
         subject: None | str
         subject = self.subject
+
+        recipient: None | str
+        recipient = self.recipient
 
         received_at: None | str
         if isinstance(self.received_at, datetime.datetime):
@@ -111,9 +116,10 @@ class EmailRuleDecisionOnMyMail:
             "near_miss": near_miss,
             "parts": parts,
             "question_answers": question_answers,
-            "created_at": created_at,
+            "decided_at": decided_at,
             "from_address": from_address,
             "subject": subject,
+            "recipient": recipient,
             "received_at": received_at,
         })
         if detail_withheld is not UNSET:
@@ -153,7 +159,7 @@ class EmailRuleDecisionOnMyMail:
         question_answers = cast(list[Any], d.pop("question_answers"))
 
 
-        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
+        decided_at = datetime.datetime.fromisoformat(d.pop("decided_at"))
 
 
 
@@ -172,6 +178,14 @@ class EmailRuleDecisionOnMyMail:
             return cast(None | str, data)
 
         subject = _parse_subject(d.pop("subject"))
+
+
+        def _parse_recipient(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        recipient = _parse_recipient(d.pop("recipient"))
 
 
         def _parse_received_at(data: object) -> datetime.datetime | None:
@@ -203,9 +217,10 @@ class EmailRuleDecisionOnMyMail:
             near_miss=near_miss,
             parts=parts,
             question_answers=question_answers,
-            created_at=created_at,
+            decided_at=decided_at,
             from_address=from_address,
             subject=subject,
+            recipient=recipient,
             received_at=received_at,
             detail_withheld=detail_withheld,
         )

@@ -45,8 +45,11 @@ class TestEmailRuleResultResultsItem:
                 Given with received_at, from_address and subject, so absent for not_found.
             subject (None | str | Unset):
             attachment_names (list[str] | Unset): On matched and near_miss: the file names the email lists, in order, at
-                most 10 (the names its questions are given; never what is in the files). Parts with no name are left out; absent
-                when there are none.
+                most 10 (the names its questions are given). Parts with no name are left out; absent when there are none.
+                attachment_descriptions says what each file is, where one was read.
+            attachment_descriptions (list[None | str] | Unset): Given exactly when attachment_names is, aligned with it by
+                position: the one-line description read from each file where the organization has attachment reading on, else
+                null (not read, could not be read, reading off, or an email you cannot open yourself).
             parts (list[TestEmailRuleResultResultsItemPartsItem] | Unset): How each top-level part of the rule decided.
                 Present for matched, near_miss and no_match.
             missing_facts (list[str] | Unset): Facts the rule reads that this email's classification left out, so the rule
@@ -80,6 +83,7 @@ class TestEmailRuleResultResultsItem:
     recipient: str | Unset = UNSET
     subject: None | str | Unset = UNSET
     attachment_names: list[str] | Unset = UNSET
+    attachment_descriptions: list[None | str] | Unset = UNSET
     parts: list[TestEmailRuleResultResultsItemPartsItem] | Unset = UNSET
     missing_facts: list[str] | Unset = UNSET
     values: TestEmailRuleResultResultsItemValues | Unset = UNSET
@@ -122,6 +126,16 @@ class TestEmailRuleResultResultsItem:
         attachment_names: list[str] | Unset = UNSET
         if not isinstance(self.attachment_names, Unset):
             attachment_names = self.attachment_names
+
+
+
+        attachment_descriptions: list[None | str] | Unset = UNSET
+        if not isinstance(self.attachment_descriptions, Unset):
+            attachment_descriptions = []
+            for attachment_descriptions_item_data in self.attachment_descriptions:
+                attachment_descriptions_item: None | str
+                attachment_descriptions_item = attachment_descriptions_item_data
+                attachment_descriptions.append(attachment_descriptions_item)
 
 
 
@@ -185,6 +199,8 @@ class TestEmailRuleResultResultsItem:
             field_dict["subject"] = subject
         if attachment_names is not UNSET:
             field_dict["attachment_names"] = attachment_names
+        if attachment_descriptions is not UNSET:
+            field_dict["attachment_descriptions"] = attachment_descriptions
         if parts is not UNSET:
             field_dict["parts"] = parts
         if missing_facts is not UNSET:
@@ -253,6 +269,21 @@ class TestEmailRuleResultResultsItem:
 
 
         attachment_names = cast(list[str], d.pop("attachment_names", UNSET))
+
+
+        _attachment_descriptions = d.pop("attachment_descriptions", UNSET)
+        attachment_descriptions: list[None | str] | Unset = UNSET
+        if _attachment_descriptions is not UNSET:
+            attachment_descriptions = []
+            for attachment_descriptions_item_data in _attachment_descriptions:
+                def _parse_attachment_descriptions_item(data: object) -> None | str:
+                    if data is None:
+                        return data
+                    return cast(None | str, data)
+
+                attachment_descriptions_item = _parse_attachment_descriptions_item(attachment_descriptions_item_data)
+
+                attachment_descriptions.append(attachment_descriptions_item)
 
 
         _parts = d.pop("parts", UNSET)
@@ -330,6 +361,7 @@ class TestEmailRuleResultResultsItem:
             recipient=recipient,
             subject=subject,
             attachment_names=attachment_names,
+            attachment_descriptions=attachment_descriptions,
             parts=parts,
             missing_facts=missing_facts,
             values=values,

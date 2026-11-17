@@ -19,6 +19,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.endpoint_delivery_type_0 import EndpointDeliveryType0
+  from ..models.endpoint_headers_item import EndpointHeadersItem
   from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities
   from ..models.endpoint_rules import EndpointRules
 
@@ -83,6 +84,9 @@ class Endpoint:
             signed_with (EndpointSignedWith | Unset): Which secret signs deliveries to this webhook: its own (read it from
                 GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a
                 webhook.
+            headers (list[EndpointHeadersItem] | Unset): For a webhook: the custom request headers it sends on every
+                delivery, by name, with each value redacted. Empty when it has none. Absent for an endpoint that is not a
+                webhook.
             signing_secret (str | Unset): Only in the response that creates a webhook made with a signing secret of its own
                 (one made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate
                 for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.
@@ -116,6 +120,7 @@ class Endpoint:
     disabled_reason: None | str | Unset = UNSET
     delivery: EndpointDeliveryType0 | None | Unset = UNSET
     signed_with: EndpointSignedWith | Unset = UNSET
+    headers: list[EndpointHeadersItem] | Unset = UNSET
     signing_secret: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -125,6 +130,7 @@ class Endpoint:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.endpoint_delivery_type_0 import EndpointDeliveryType0 # noqa: PLC0415
+        from ..models.endpoint_headers_item import EndpointHeadersItem # noqa: PLC0415
         from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities # noqa: PLC0415
         from ..models.endpoint_rules import EndpointRules # noqa: PLC0415
         id = str(self.id)
@@ -265,6 +271,15 @@ class Endpoint:
             signed_with = self.signed_with.value
 
 
+        headers: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.headers, Unset):
+            headers = []
+            for headers_item_data in self.headers:
+                headers_item = headers_item_data.to_dict()
+                headers.append(headers_item)
+
+
+
         signing_secret = self.signing_secret
 
 
@@ -318,6 +333,8 @@ class Endpoint:
             field_dict["delivery"] = delivery
         if signed_with is not UNSET:
             field_dict["signed_with"] = signed_with
+        if headers is not UNSET:
+            field_dict["headers"] = headers
         if signing_secret is not UNSET:
             field_dict["signing_secret"] = signing_secret
 
@@ -328,6 +345,7 @@ class Endpoint:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.endpoint_delivery_type_0 import EndpointDeliveryType0 # noqa: PLC0415
+        from ..models.endpoint_headers_item import EndpointHeadersItem # noqa: PLC0415
         from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities # noqa: PLC0415
         from ..models.endpoint_rules import EndpointRules # noqa: PLC0415
         d = dict(src_dict)
@@ -640,6 +658,18 @@ class Endpoint:
 
 
 
+        _headers = d.pop("headers", UNSET)
+        headers: list[EndpointHeadersItem] | Unset = UNSET
+        if _headers is not UNSET:
+            headers = []
+            for headers_item_data in _headers:
+                headers_item = EndpointHeadersItem.from_dict(headers_item_data)
+
+
+
+                headers.append(headers_item)
+
+
         signing_secret = d.pop("signing_secret", UNSET)
 
         endpoint = cls(
@@ -671,6 +701,7 @@ class Endpoint:
             disabled_reason=disabled_reason,
             delivery=delivery,
             signed_with=signed_with,
+            headers=headers,
             signing_secret=signing_secret,
         )
 

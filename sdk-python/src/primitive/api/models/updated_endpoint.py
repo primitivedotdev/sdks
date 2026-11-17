@@ -19,6 +19,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.endpoint_delivery_type_0 import EndpointDeliveryType0
+  from ..models.endpoint_headers_item import EndpointHeadersItem
   from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities
   from ..models.endpoint_rules import EndpointRules
   from ..models.endpoint_update_warning import EndpointUpdateWarning
@@ -48,8 +49,15 @@ class UpdatedEndpoint:
             warnings (list[EndpointUpdateWarning]): When this update turned the webhook off or on without the request
                 setting enabled. turned_off_owner_changed: the webhook was given to a new owner, so it is now off
                 (disabled_reason owner_changed) until it is turned on or given a new URL. turned_on_new_url: it was off because
-                its owner changed, and the new URL turned it back on. Empty when the update did neither. Other codes may be
-                added.
+                its owner changed, and the new URL turned it back on. Empty when the update did neither. When the update gives a
+                webhook a new URL, it is sent the test request POST /endpoints/{id}/test sends (within a budget of its own,
+                separate from the test budget), and a warning says when its answer means deliveries will fail:
+                url_requires_login: it answered 302, 401 or 403 (status names which), so the host appears to require a login.
+                url_redirects: another redirect, which deliveries do not follow. url_unreachable: no answer within 5 seconds, or
+                a connection error (deliveries wait longer, so a slow receiver may still receive them). url_not_checked: the
+                probe was not made or could not finish (the organization made many such checks just now, the signing secret
+                could not be read, the URL changed again since this write, or the check failed). A caller who may not send the
+                webhook a test request gets no probe and none of these. Other codes may be added.
             recipient (None | str | Unset): Server-enforced recipient for an address-scoped pull subscription; null for an
                 account-wide destination created before pull creation required a connected-agent credential.
             receiver_capabilities (EndpointReceiverCapabilities | Unset):
@@ -89,6 +97,9 @@ class UpdatedEndpoint:
             signed_with (EndpointSignedWith | Unset): Which secret signs deliveries to this webhook: its own (read it from
                 GET /endpoints/{id}/signing-secret), or the organization's webhook secret. Absent for an endpoint that is not a
                 webhook.
+            headers (list[EndpointHeadersItem] | Unset): For a webhook: the custom request headers it sends on every
+                delivery, by name, with each value redacted. Empty when it has none. Absent for an endpoint that is not a
+                webhook.
             signing_secret (str | Unset): Only in the response that creates a webhook made with a signing secret of its own
                 (one made as a person's own, or by an API key limited to some mailboxes, a third-party app or an agent delegate
                 for itself): that secret, shown this once. Read it again from GET /endpoints/{id}/signing-secret.
@@ -123,6 +134,7 @@ class UpdatedEndpoint:
     disabled_reason: None | str | Unset = UNSET
     delivery: EndpointDeliveryType0 | None | Unset = UNSET
     signed_with: EndpointSignedWith | Unset = UNSET
+    headers: list[EndpointHeadersItem] | Unset = UNSET
     signing_secret: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -132,6 +144,7 @@ class UpdatedEndpoint:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.endpoint_delivery_type_0 import EndpointDeliveryType0 # noqa: PLC0415
+        from ..models.endpoint_headers_item import EndpointHeadersItem # noqa: PLC0415
         from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities # noqa: PLC0415
         from ..models.endpoint_rules import EndpointRules # noqa: PLC0415
         from ..models.endpoint_update_warning import EndpointUpdateWarning # noqa: PLC0415
@@ -280,6 +293,15 @@ class UpdatedEndpoint:
             signed_with = self.signed_with.value
 
 
+        headers: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.headers, Unset):
+            headers = []
+            for headers_item_data in self.headers:
+                headers_item = headers_item_data.to_dict()
+                headers.append(headers_item)
+
+
+
         signing_secret = self.signing_secret
 
 
@@ -334,6 +356,8 @@ class UpdatedEndpoint:
             field_dict["delivery"] = delivery
         if signed_with is not UNSET:
             field_dict["signed_with"] = signed_with
+        if headers is not UNSET:
+            field_dict["headers"] = headers
         if signing_secret is not UNSET:
             field_dict["signing_secret"] = signing_secret
 
@@ -344,6 +368,7 @@ class UpdatedEndpoint:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.endpoint_delivery_type_0 import EndpointDeliveryType0 # noqa: PLC0415
+        from ..models.endpoint_headers_item import EndpointHeadersItem # noqa: PLC0415
         from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities # noqa: PLC0415
         from ..models.endpoint_rules import EndpointRules # noqa: PLC0415
         from ..models.endpoint_update_warning import EndpointUpdateWarning # noqa: PLC0415
@@ -667,6 +692,18 @@ class UpdatedEndpoint:
 
 
 
+        _headers = d.pop("headers", UNSET)
+        headers: list[EndpointHeadersItem] | Unset = UNSET
+        if _headers is not UNSET:
+            headers = []
+            for headers_item_data in _headers:
+                headers_item = EndpointHeadersItem.from_dict(headers_item_data)
+
+
+
+                headers.append(headers_item)
+
+
         signing_secret = d.pop("signing_secret", UNSET)
 
         updated_endpoint = cls(
@@ -699,6 +736,7 @@ class UpdatedEndpoint:
             disabled_reason=disabled_reason,
             delivery=delivery,
             signed_with=signed_with,
+            headers=headers,
             signing_secret=signing_secret,
         )
 

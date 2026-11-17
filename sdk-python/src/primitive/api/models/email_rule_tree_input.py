@@ -31,8 +31,8 @@ class EmailRuleTreeInput:
             when (EmailRuleTreeInputWhen): A condition {column, op, value?, min_confidence?} (see GET /email-
                 rules/vocabulary) or {all: [...]}, {any: [...]}, {not: ...}.
             questions (list[str] | Unset): Yes/no questions asked once the conditions match, over the email's text and
-                attachment names, never attachment contents. A grant rule needs every one yes; a do_not_share rule matches on
-                any yes. Left out, none.
+                attachment names, and text read from PDF and image attachments where attachment reading is active for the
+                organization. A grant rule needs every one yes; a do_not_share rule matches on any yes. Left out, none.
      """
 
     version: EmailRuleTreeInputVersion

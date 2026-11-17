@@ -21,6 +21,7 @@ if TYPE_CHECKING:
   from ..models.email_rule_author import EmailRuleAuthor
   from ..models.email_rule_expectation_sample import EmailRuleExpectationSample
   from ..models.email_rule_expectations_check import EmailRuleExpectationsCheck
+  from ..models.email_rule_receivers import EmailRuleReceivers
   from ..models.email_rule_scope_names import EmailRuleScopeNames
   from ..models.email_rule_scope_warning import EmailRuleScopeWarning
   from ..models.email_rule_version import EmailRuleVersion
@@ -57,6 +58,8 @@ class CreateEmailRuleResult:
                 fact narrows it, or its several questions are alternatives.
             pending_objections (int | Unset): To its author, on the dashboard or the Primitive CLI, on GET, the list and a
                 create: objections to it waiting for their answer (GET /email-rule-objections).
+            receivers (EmailRuleReceivers | None | Unset): On the list with all=true only: who receives what it matches now.
+                Null when it could not be read in time.
             scope_warnings (list[EmailRuleScopeWarning] | Unset): Names in scope_selection that match nothing this
                 organization receives mail at (a typo, or an inbox not yet in use). Present only when there are some.
             expectations (CreateEmailRuleResultExpectations | Unset): Its saved expectations, each list by email id, as
@@ -85,6 +88,7 @@ class CreateEmailRuleResult:
     kind: CreateEmailRuleResultKind | Unset = UNSET
     protection_note: str | Unset = UNSET
     pending_objections: int | Unset = UNSET
+    receivers: EmailRuleReceivers | None | Unset = UNSET
     scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
     expectations: CreateEmailRuleResultExpectations | Unset = UNSET
     expectation_samples: list[EmailRuleExpectationSample] | Unset = UNSET
@@ -102,6 +106,7 @@ class CreateEmailRuleResult:
         from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
         from ..models.email_rule_expectation_sample import EmailRuleExpectationSample # noqa: PLC0415
         from ..models.email_rule_expectations_check import EmailRuleExpectationsCheck # noqa: PLC0415
+        from ..models.email_rule_receivers import EmailRuleReceivers # noqa: PLC0415
         from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
         from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
@@ -146,6 +151,14 @@ class CreateEmailRuleResult:
         protection_note = self.protection_note
 
         pending_objections = self.pending_objections
+
+        receivers: dict[str, Any] | None | Unset
+        if isinstance(self.receivers, Unset):
+            receivers = UNSET
+        elif isinstance(self.receivers, EmailRuleReceivers):
+            receivers = self.receivers.to_dict()
+        else:
+            receivers = self.receivers
 
         scope_warnings: list[dict[str, Any]] | Unset = UNSET
         if not isinstance(self.scope_warnings, Unset):
@@ -200,6 +213,8 @@ class CreateEmailRuleResult:
             field_dict["protection_note"] = protection_note
         if pending_objections is not UNSET:
             field_dict["pending_objections"] = pending_objections
+        if receivers is not UNSET:
+            field_dict["receivers"] = receivers
         if scope_warnings is not UNSET:
             field_dict["scope_warnings"] = scope_warnings
         if expectations is not UNSET:
@@ -222,6 +237,7 @@ class CreateEmailRuleResult:
         from ..models.email_rule_author import EmailRuleAuthor # noqa: PLC0415
         from ..models.email_rule_expectation_sample import EmailRuleExpectationSample # noqa: PLC0415
         from ..models.email_rule_expectations_check import EmailRuleExpectationsCheck # noqa: PLC0415
+        from ..models.email_rule_receivers import EmailRuleReceivers # noqa: PLC0415
         from ..models.email_rule_scope_names import EmailRuleScopeNames # noqa: PLC0415
         from ..models.email_rule_scope_warning import EmailRuleScopeWarning # noqa: PLC0415
         from ..models.email_rule_version import EmailRuleVersion # noqa: PLC0415
@@ -320,6 +336,26 @@ class CreateEmailRuleResult:
 
         pending_objections = d.pop("pending_objections", UNSET)
 
+        def _parse_receivers(data: object) -> EmailRuleReceivers | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                receivers_type_1 = EmailRuleReceivers.from_dict(data)
+
+
+
+                return receivers_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRuleReceivers | None | Unset, data)
+
+        receivers = _parse_receivers(d.pop("receivers", UNSET))
+
+
         _scope_warnings = d.pop("scope_warnings", UNSET)
         scope_warnings: list[EmailRuleScopeWarning] | Unset = UNSET
         if _scope_warnings is not UNSET:
@@ -390,6 +426,7 @@ class CreateEmailRuleResult:
             kind=kind,
             protection_note=protection_note,
             pending_objections=pending_objections,
+            receivers=receivers,
             scope_warnings=scope_warnings,
             expectations=expectations,
             expectation_samples=expectation_samples,
