@@ -4,12 +4,14 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   expectSamples,
+  groupCountsLines,
   lookAlikeSample,
   lookAlikeSamples,
   lookAlikesReport,
   pickSamples,
   samplesBodyFields,
   samplesFromJson,
+  savedSample,
 } from "../../src/oclif/email-rule-samples.js";
 
 let dir = "";
@@ -281,6 +283,56 @@ describe("samplesBodyFields and expectSamples", () => {
     ]);
   });
 
+  it("keeps a look-alike's group for a test, and saves only expected, label and email", () => {
+    const grouped = answer([
+      {
+        ...lookAlike("Your dental invoice", "failed", "matched"),
+        group: "private",
+      },
+      {
+        ...lookAlike("Statement", "passed", "matched", "near_case", "match"),
+        group: "must_match",
+      },
+      { ...lookAlike("Odd", "passed", "no_match"), group: "unknown" },
+    ]);
+    const path = file("la.json", { success: true, data: grouped });
+    const tested = expectSamples({ "expect-samples-file": path }) ?? [];
+    expect(tested.map((sample) => sample.group)).toEqual([
+      "private",
+      "must_match",
+      undefined,
+    ]);
+    const saved = samplesBodyFields(false)({
+      "expectation-samples-file": path,
+      pick: "1,2",
+    })[0]?.value as Record<string, unknown>[];
+    expect(saved).toHaveLength(2);
+    for (const sample of saved)
+      expect(Object.keys(sample).sort()).toEqual([
+        "email",
+        "expected",
+        "label",
+      ]);
+    // A samples file written by hand loses its group, and anything else, too.
+    const raw = file("raw.json", [
+      {
+        expected: "no_match",
+        label: null,
+        email: email("x"),
+        group: "private",
+        note: 1,
+      },
+    ]);
+    expect(
+      samplesBodyFields(true)({ "add-expectation-samples-file": raw })[0]
+        ?.value,
+    ).toEqual([{ expected: "no_match", label: null, email: email("x") }]);
+    expect(savedSample({ expected: "match", email: {} })).toEqual({
+      expected: "match",
+      email: {},
+    });
+  });
+
   it("fails like --body-file on a file it cannot read or parse", () => {
     expect(() =>
       expectSamples({ "expect-samples-file": join(dir, "missing.json") }),
@@ -319,10 +371,59 @@ describe("lookAlikesReport", () => {
     ]);
   });
 
+  it("marks close calls and groups, and counts them", () => {
+    const report = lookAlikesReport({
+      look_alikes: [
+        {
+          ...lookAlike("Your dental invoice", "passed", "no_match"),
+          group: "private",
+          close_call: true,
+        },
+      ],
+      counts: {
+        passed: 1,
+        failed: 0,
+        undecided: 0,
+        close_calls: 1,
+        dropped: 0,
+        by_group: {
+          private: { passed: 1, failed: 0, undecided: 0 },
+          near_miss: { passed: 0, failed: 0, undecided: 0 },
+          must_match: { passed: 0, failed: 0, undecided: 0 },
+        },
+      },
+    });
+    expect(report.lines).toEqual([
+      '1. passed  medical (private)  "Your dental invoice" from billing@clinic.example',
+      "   Why it should not match: Your dental invoice is private.",
+      "   no_match (expected no_match); a close call: decided by an answer below 0.75 confidence, so it may come out the other way when judged again",
+      "Counts: 1 passed, 0 failed, 0 undecided; 1 close call.",
+      "By group: private 1 passed.",
+    ]);
+  });
+
   it("prints only the counts and notes when none came back", () => {
     expect(lookAlikesReport(answer([])).lines).toEqual([
       "Counts: 0 passed, 0 failed, 0 undecided.",
       "These emails are made up; none was sent or stored.",
     ]);
+  });
+});
+
+describe("groupCountsLines", () => {
+  it("names each group with something in it, and nothing for none", () => {
+    expect(
+      groupCountsLines({
+        private: { passed: 3, failed: 0, undecided: 0 },
+        near_miss: { passed: 1, failed: 1, undecided: 2 },
+        must_match: { passed: 0, failed: 0, undecided: 0 },
+      }),
+    ).toEqual([
+      "By group: private 3 passed; near_miss 1 passed, 1 failed, 2 undecided.",
+    ]);
+    expect(groupCountsLines(undefined)).toEqual([]);
+    expect(
+      groupCountsLines({ private: { passed: 0, failed: 0, undecided: 0 } }),
+    ).toEqual([]);
   });
 });

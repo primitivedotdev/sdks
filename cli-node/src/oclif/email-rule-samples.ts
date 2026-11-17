@@ -54,11 +54,35 @@ export function readJsonFileFlag(path: string, flag: string): unknown {
 /** The longest label the API keeps on a sample. */
 const SAMPLE_LABEL_MAX = 200;
 
+/** A look-alike's group, which a test counts samples by. */
+export type SampleGroup = "private" | "near_miss" | "must_match";
+
+const SAMPLE_GROUPS: ReadonlySet<string> = new Set([
+  "private",
+  "near_miss",
+  "must_match",
+]);
+
 export type ExpectationSample = {
   expected: "match" | "no_match";
   label?: string | null;
   email: Record<string, unknown>;
+  /** Sent in a test's expect.samples only: a rule's saved samples take no group. */
+  group?: SampleGroup;
 };
+
+/**
+ * A sample as a rule keeps it (expectation_samples and
+ * add_expectation_samples): only expected, label and email. The API refuses
+ * anything else there, a look-alike's group among them.
+ */
+export function savedSample(sample: ExpectationSample): ExpectationSample {
+  return {
+    expected: sample.expected,
+    ...(sample.label !== undefined ? { label: sample.label } : {}),
+    email: sample.email,
+  };
+}
 
 /** A look-alike of a generate-look-alikes answer, and the sample it saves as. */
 type LookAlikeEntry = {
@@ -87,9 +111,10 @@ function lookAlikeExpected(
 
 /**
  * A look-alike as a sample, keeping its `expected` (most must not match; a
- * near case the rule should take must match): the email as written,
- * labelled with its kind and why ("medical: ..."), or the why alone when
- * both do not fit a label.
+ * near case the rule should take must match) and its group: the email as
+ * written, labelled with its kind and why ("medical: ..."), or the why alone
+ * when both do not fit a label. The group goes to a test only; savedSample
+ * leaves it out of what a rule keeps.
  */
 export function lookAlikeSample(lookAlike: unknown): ExpectationSample | null {
   if (!isRecord(lookAlike) || !isRecord(lookAlike.email)) return null;
@@ -102,10 +127,15 @@ export function lookAlikeSample(lookAlike: unknown): ExpectationSample | null {
       : why.length <= SAMPLE_LABEL_MAX
         ? why
         : `${cutLabel(why, SAMPLE_LABEL_MAX - 3)}...`;
+  const group =
+    typeof lookAlike.group === "string" && SAMPLE_GROUPS.has(lookAlike.group)
+      ? (lookAlike.group as SampleGroup)
+      : undefined;
   return {
     expected: lookAlikeExpected(lookAlike),
     ...(label ? { label } : {}),
     email: lookAlike.email,
+    ...(group ? { group } : {}),
   };
 }
 
@@ -247,6 +277,7 @@ function givenSamplesFlag(
  * The body fields a samples file sets on create-email-rule and
  * update-email-rule: expectation_samples (on update it replaces them) or, on
  * update, add_expectation_samples. With --pick, only the samples it names.
+ * Each is sent as savedSample gives it, without a look-alike's group.
  */
 export function samplesBodyFields(
   canAdd: boolean,
@@ -270,7 +301,7 @@ export function samplesBodyFields(
           flag === ADD_SAMPLES_FILE_FLAG
             ? "add_expectation_samples"
             : "expectation_samples",
-        value: samples,
+        value: samples.map(savedSample),
       },
     ];
   };
@@ -279,7 +310,8 @@ export function samplesBodyFields(
 /**
  * The samples test-email-rule expects, from --expect-samples-file (only
  * those --pick chooses if given), or null without the flag. They go in
- * expect.samples.
+ * expect.samples, each look-alike keeping its group, which the answer counts
+ * samples by.
  */
 export function expectSamples(
   flags: Record<string, unknown>,
@@ -296,6 +328,32 @@ export function expectSamples(
 /** --pick's help, naming the flags it chooses from. */
 export function pickFlagHelp(flags: readonly string[]): string {
   return `Take only these samples from ${flags.map((flag) => `--${flag}`).join(" or ")}, by their numbers from 1 as generate-look-alikes printed them: --pick 2,4. A number the file does not hold is refused.`;
+}
+
+/**
+ * What a close call means, beside a passed or failed one: it was decided by an
+ * answer below 0.75 confidence, so judging it again may decide it the other
+ * way.
+ */
+export const CLOSE_CALL_NOTE =
+  "a close call: decided by an answer below 0.75 confidence, so it may come out the other way when judged again";
+
+/**
+ * Counts by look-alike group (by_group), one line, groups with nothing in
+ * them left out: "By group: private 3 passed; near_miss 1 passed, 1 failed."
+ */
+export function groupCountsLines(byGroup: unknown): string[] {
+  if (!isRecord(byGroup)) return [];
+  const parts: string[] = [];
+  for (const group of SAMPLE_GROUPS) {
+    const tally = byGroup[group];
+    if (!isRecord(tally)) continue;
+    const counted = (["passed", "failed", "undecided"] as const)
+      .filter((key) => typeof tally[key] === "number" && Number(tally[key]) > 0)
+      .map((key) => `${tally[key]} ${key}`);
+    if (counted.length > 0) parts.push(`${group} ${counted.join(", ")}`);
+  }
+  return parts.length > 0 ? [`By group: ${parts.join("; ")}.`] : [];
 }
 
 // generate-look-alikes
@@ -317,22 +375,27 @@ export function lookAlikesReport(data: unknown): OperationReport {
     const kind = shownLine(lookAlike.kind) || "other";
     const outcome = shownLine(lookAlike.outcome) || "not_decided";
     const expected = lookAlikeExpected(lookAlike);
+    const group = shownLine(lookAlike.group);
     lines.push(
-      `${index + 1}. ${status}  ${kind}  ${subject ? `"${subject}"` : "(no subject)"} from ${from || "an unknown sender"}`,
+      `${index + 1}. ${status}  ${kind}${group ? ` (${group})` : ""}  ${subject ? `"${subject}"` : "(no subject)"} from ${from || "an unknown sender"}`,
     );
     const why = shownLine(lookAlike.why);
     if (why)
       lines.push(
         `   Why it should ${expected === "match" ? "" : "not "}match: ${why}`,
       );
-    lines.push(`   ${outcome} (expected ${expected})`);
+    lines.push(
+      `   ${outcome} (expected ${expected})${lookAlike.close_call === true ? `; ${CLOSE_CALL_NOTE}` : ""}`,
+    );
   });
   const counts = isRecord(data.counts) ? data.counts : {};
   const count = (key: string) =>
     typeof counts[key] === "number" ? (counts[key] as number) : 0;
   const dropped = count("dropped");
+  const closeCalls = count("close_calls");
   lines.push(
-    `Counts: ${count("passed")} passed, ${count("failed")} failed, ${count("undecided")} undecided${dropped > 0 ? `; ${dropped} asked for did not come back` : ""}.`,
+    `Counts: ${count("passed")} passed, ${count("failed")} failed, ${count("undecided")} undecided${closeCalls > 0 ? `; ${closeCalls} close ${closeCalls === 1 ? "call" : "calls"}` : ""}${dropped > 0 ? `; ${dropped} asked for did not come back` : ""}.`,
+    ...groupCountsLines(counts.by_group),
     ...ruleNotesLines(data),
   );
   return { lines: lines.map(terminalLine) };
