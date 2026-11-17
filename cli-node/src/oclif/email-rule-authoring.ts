@@ -513,9 +513,11 @@ export function changesLines(changes: unknown, kind?: unknown): string[] {
   const version =
     changes.compared_to === "requested"
       ? "the rule as asked"
-      : typeof changes.compared_to_version === "number"
-        ? `version ${changes.compared_to_version}`
-        : "the current version";
+      : changes.compared_to !== undefined && changes.compared_to !== "version"
+        ? "the rule compared against"
+        : typeof changes.compared_to_version === "number"
+          ? `version ${changes.compared_to_version}`
+          : "the current version";
   const withheld = kind === "do_not_share";
   const words = withheld
     ? (["newly withheld", "no longer withheld"] as const)

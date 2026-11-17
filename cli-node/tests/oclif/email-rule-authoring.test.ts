@@ -2730,6 +2730,16 @@ describe("the test report: changes against the current version and close calls",
       "  Newly matched:",
       '    "Subject g" from g@sender.example (g)',
     ]);
+    expect(
+      changesLines({
+        compared_to: "something_new",
+        newly_matched: changed(0, []),
+        stops_matching: changed(0, []),
+        undecided: 0,
+      })[0],
+    ).toBe(
+      "Against the rule compared against: 0 newly matched, 0 stop matching.",
+    );
     expect(changesLines(undefined)).toEqual([]);
   });
 

@@ -180,7 +180,8 @@ describe("retry IDs through generated commands and real HTTP", () => {
       (operation) => operation.sdkName === "inviteOrganizationMember",
     );
     if (!original?.requestSchema) throw new Error("Invitation schema missing");
-    // The marker belongs only to this fixture; the shipped contract is unchanged.
+    // The shipped contract carries the marker too; set it here so the test
+    // does not depend on it.
     const requestSchema = structuredClone(original.requestSchema);
     const properties = requestSchema.properties as Record<
       string,
