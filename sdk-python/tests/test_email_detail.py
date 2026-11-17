@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import datetime
 
+from primitive.api.models.email_detail import EmailDetail
+
 # Round-trip test that pins the new fields on EmailDetail (replies,
 # from_known_address, sender_connected_agent_verified, body_text, body_html). A future regen that
 # drops one of these fields would silently break the SDK contract;
 # this test fails loudly when that happens.
 from primitive.api.models.email_detail_attachment import EmailDetailAttachment
-from primitive.api.models.email_detail import EmailDetail
 from primitive.api.models.email_detail_awaiting import EmailDetailAwaiting
 from primitive.api.models.email_detail_imported_type_0 import (
     EmailDetailImportedType0,
