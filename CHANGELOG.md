@@ -16,7 +16,141 @@ the same OpenAPI spec. See `RELEASE.md`.
 OpenAPI document the API serves, and every client is regenerated from it. Most
 of the changes below follow from that document.
 
-Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.19` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.19`), and `3.0.0rc19` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.18` (`3.0.0rc18`), which printed the API's response body under `--json`, gave CLI errors a code, reshaped the compile answer into the body rule writes take, put one expectations gate on rule writes, dropped the prose notes from rule answers, listed your own sends by default in `sent list`, required event types on a new webhook and added `primitive skills install`, `3.0.0-preview.17` (`3.0.0rc17`), which set the email rule and key fields and stopped promising `receivers_changed` notices, `3.0.0-preview.16` (`3.0.0rc16`), which kept a rule's share across a new version and added attachment names on rule tests, compile scope warnings, labelled sample details on judged writes, `stopped` coverage notices, the mail a rule test covered and the emails it matched, `--same-emails-as`, text length checks before sending and the API's message on a refused send, and printed webhook URLs as stored again, `3.0.0-preview.15` (`3.0.0rc15`), which added `rule_deliveries` on email reads, protection on sample tests, tests of a pending rule request, the test window's scope and compile's breadth scope, `existing` on an idempotent rule request, the successor's details on key rotation, `outside_scope` as a reason a rule did not run, `do_not_share_note` on grant rules and `rule_now` on coverage notices, `3.0.0-preview.14` (`3.0.0rc14`), which added email notification settings in the SDKs, `receivers_changed` coverage notices with their totals, webhook URL query strings hidden in endpoint output and activity read retries, `3.0.0-preview.13` (`3.0.0rc13`), which added email detail attachments, attachment names on made-up emails, compile scope, rule share and objection notices, objection box `mine` and the mail import operations, `3.0.0-preview.12` (`3.0.0rc12`), which added imported mail, pending coverage rows, endpoint and key warnings and the default check of writes to rules that keys or webhooks read, `3.0.0-preview.11` (`3.0.0rc11`), which added server notes on rule requests, rule receivers, `activity concerning` and the rule objection webhook events, `3.0.0-preview.10` (`3.0.0rc10`), which added email rule objections, the email rule scope flags and true or false on boolean flags, `3.0.0-preview.9` (`3.0.0rc9`), which added email rule oversight and look-alikes that carry `expected`, and changed what `hidden` counts on rule results, `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
+Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.20` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.20`), and `3.0.0rc20` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.19` (`3.0.0rc19`), which added the CLI domain focus and the `domain_ids` mail filter and limited email rules to mail on the mail relay domains, `3.0.0-preview.18` (`3.0.0rc18`), which printed the API's response body under `--json`, gave CLI errors a code, reshaped the compile answer into the body rule writes take, put one expectations gate on rule writes, dropped the prose notes from rule answers, listed your own sends by default in `sent list`, required event types on a new webhook and added `primitive skills install`, `3.0.0-preview.17` (`3.0.0rc17`), which set the email rule and key fields and stopped promising `receivers_changed` notices, `3.0.0-preview.16` (`3.0.0rc16`), which kept a rule's share across a new version and added attachment names on rule tests, compile scope warnings, labelled sample details on judged writes, `stopped` coverage notices, the mail a rule test covered and the emails it matched, `--same-emails-as`, text length checks before sending and the API's message on a refused send, and printed webhook URLs as stored again, `3.0.0-preview.15` (`3.0.0rc15`), which added `rule_deliveries` on email reads, protection on sample tests, tests of a pending rule request, the test window's scope and compile's breadth scope, `existing` on an idempotent rule request, the successor's details on key rotation, `outside_scope` as a reason a rule did not run, `do_not_share_note` on grant rules and `rule_now` on coverage notices, `3.0.0-preview.14` (`3.0.0rc14`), which added email notification settings in the SDKs, `receivers_changed` coverage notices with their totals, webhook URL query strings hidden in endpoint output and activity read retries, `3.0.0-preview.13` (`3.0.0rc13`), which added email detail attachments, attachment names on made-up emails, compile scope, rule share and objection notices, objection box `mine` and the mail import operations, `3.0.0-preview.12` (`3.0.0rc12`), which added imported mail, pending coverage rows, endpoint and key warnings and the default check of writes to rules that keys or webhooks read, `3.0.0-preview.11` (`3.0.0rc11`), which added server notes on rule requests, rule receivers, `activity concerning` and the rule objection webhook events, `3.0.0-preview.10` (`3.0.0rc10`), which added email rule objections, the email rule scope flags and true or false on boolean flags, `3.0.0-preview.9` (`3.0.0rc9`), which added email rule oversight and look-alikes that carry `expected`, and changed what `hidden` counts on rule results, `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
+
+What `3.0.0-preview.20` (`3.0.0rc20`) changes from `3.0.0-preview.19`:
+
+API and SDKs, breaking:
+
+- Email rule decisions carry `decided_at`, when the rule made the decision,
+  in place of `created_at`, on `listEmailRuleDecisions` and
+  `listEmailRuleDecisionsOnMyMail`. In Python the field is `decided_at` and
+  in Go `DecidedAt`.
+- These fields are now required in the generated types: `close_call` on
+  each expectation result and judged made-up email of a rule test, and on
+  each look-alike; `close_calls` in the test's expectation counts and the
+  look-alike counts; `close_calls` and `close_call_samples` on a write's
+  `expectations_check`; `group` on each look-alike and `by_group` in the
+  look-alike counts; `recipient` on both decision listings; `rules` on
+  `DeliverySummary` and `getDelivery`'s result; `description` on each of
+  `getEmail`'s top-level `attachments`; `checked` on a rule share's
+  `activity`. In Python, models built with positional arguments see the new
+  fields in their spec order.
+- `getEmail`'s top-level `attachments` are `EmailDetailAttachment`
+  (`EmailAttachment` with `description`), in Python and Go. In Go
+  `EmailDetail.Attachments` is `[]EmailDetailAttachment`.
+- In Python and Go, the made-up emails `testEmailRule`'s `expect.samples`
+  takes are `EmailRuleTestSampleInput` (was
+  `EmailRuleExpectationSampleInput`), which takes an optional `group`.
+  `EmailRuleExpectationSampleInput` stays the type of a rule's saved
+  `expectation_samples` and `add_expectation_samples`, which take no group.
+
+API and SDKs, added:
+
+- `testEmailRule` answers `changes` (`EmailRuleVersionChanges`) for a tree
+  given with `rule_id` when the rule has a current version: the emails the
+  tree newly matches and stops matching against that version (newly
+  withheld and no longer withheld for a do_not_share rule), each a `count`
+  and up to 50 emails newest first, and how many were `undecided`.
+  `compared_to` is `version`, with `compared_to_version`.
+- `testEmailRule` takes `tree` with `request_id`: your edit of a pending
+  request's rule (with it, only `english` and `kind` `grant`). For a tree
+  other than the one asked, `changes` compares it with the request's rule
+  as asked (`compared_to` `requested`).
+- Close calls: an expectation, made-up email or look-alike passed or failed
+  on an answer below 0.75 confidence carries `close_call`, since judged
+  again it may come out the other way. The counts carry `close_calls`, and
+  a write's `expectations_check` carries `close_calls` (emails by id) and
+  `close_call_samples`.
+- Look-alike groups: each look-alike carries `group` (`private`,
+  `near_miss` or `must_match`) and the look-alike counts carry `by_group`.
+  A made-up email sent in a test's `expect.samples` takes the same `group`,
+  and the test's expectation counts then carry `by_group` for the samples.
+- `generateLookAlikes` takes the `legal` and `personal_correspondence`
+  kinds, and `kinds` takes up to 7.
+- `listEmailRuleDecisions` and `listEmailRuleDecisionsOnMyMail` carry each
+  email's `recipient`, the mailbox it was received in.
+- `listEmailRules` takes `all` (`"true"`: every rule in the organization,
+  any author, for owners and admins), `author` (a user id or member
+  address), `mailbox` (rules whose scope reaches it now), `kind` and
+  `state`. With `all`, each rule carries `receivers`. The list is ordered
+  most recently changed first.
+- `getEmail`'s top-level `attachments` carry `description`, a one-line
+  description read from the file where the organization has attachment
+  reading on, else null. `testEmailRule` results carry
+  `attachment_descriptions`, aligned with `attachment_names`. Rule
+  questions read text from PDF and image attachments where attachment
+  reading is active for the organization.
+- `getEmailRuleSettings` and `updateEmailRuleSettings` (`/email-rule-settings`)
+  read and set `rules_read_attachments`, with `available`, `hipaa_mode` and
+  `active`. For a person only, not an API key or an agent key. Changing it
+  needs `email_rule_settings:manage` and, with an OAuth token, a step-up
+  token of purpose `org_settings.write`; turning it on is refused with
+  `409` under HIPAA mode (`hipaa_mode`) or while email rules are not
+  available (`not_available`).
+- A rule share's `activity` carries `checked`: false when whether the share
+  is working could not be read just now, with `last_decided_at` null.
+- Webhooks take custom request `headers` on `createEndpoint` and
+  `updateEndpoint` (name and value, values stored encrypted and never
+  returned), and endpoint reads list them with each value redacted. On
+  `updateEndpoint` the list replaces the stored one and `[]` removes them;
+  a non-empty list needs `url` in the same request (`details.reason`
+  `headers_need_url`), and a webhook that has headers changes its URL only
+  with headers in the same request.
+- A created webhook, and an updated one given a new URL, is sent a test
+  request, and the answer's `warnings` can carry `url_requires_login` and
+  `url_redirects` (with the `status` the URL answered), `url_unreachable`
+  and `url_not_checked`. The webhook is saved whatever it answered.
+- `listDeliveries` and `getDelivery` carry `rules`, the rules the
+  attempt's payload named that you can read, by id and name.
+- The `request_id` of `createProject`, `inviteOrganizationMember` and
+  `inviteProjectMember` is marked `x-primitive-retry-id` in the spec.
+
+CLI, breaking:
+
+- A generated command missing a required request body field, after its
+  flags, JSON and defaults are merged, stops before authentication or any
+  request with exit 2 and error code `usage_error`, whose
+  `error.details.missing` lists each field as `{ field, flag, json_path }`
+  (`flag` is null for a field only JSON can give).
+- An `--event-types` value that cannot be used, on `endpoints create` or
+  `update`, is refused before authentication.
+
+CLI, added:
+
+- `test-email-rule` prints, without `--json`, how many emails the tree
+  would newly match and stop matching against the rule's current version,
+  or against a request's rule as asked, with a few subjects each way, and
+  marks the expectations and samples a close call decided. The look-alikes
+  report marks close calls and prints the counts by group. The `--json`
+  document is unchanged.
+- `--expectation-samples-file` and `--add-expectation-samples-file` send
+  only `expected`, `label` and `email` of each made-up email;
+  `--expect-samples-file` on a test keeps each look-alike's `group`.
+- `list-email-rules` takes `--all`, `--author`, `--mailbox`, `--kind` and
+  `--state`, prints a table of the rules (with RECEIVERS for `--all`), and
+  says what to do when `--all` or an address filter is refused. The
+  decision listings print a table with when each was decided, the outcome,
+  the email, its mailbox, sender and subject. The tables go to stderr;
+  stdout keeps the JSON.
+- `endpoints create` and `endpoints update` take a repeatable `--header
+  'Name: value'`, and `update` takes `--clear-headers`. An update that sets
+  headers without `--url` reads the webhook's URL and sends it, keeping a
+  webhook that is turned off turned off. No message repeats a header
+  value. Both commands print the answer's warnings, such as a URL that
+  appears to require a login.
+- An unknown command suggests up to three nearby commands or topic help,
+  in `error.details.suggestions` under `--json`, and still exits 2 with
+  `command_not_found`.
+- Short and full help group a command's flags as required inputs, command
+  options and common flags, in that order, and name required fields that
+  only JSON can give.
+- For a request field marked `x-primitive-retry-id`, a generated command
+  creates a retry ID when the flag is left out and reuses it through
+  approval. Human output prints it before the request; under `--json`,
+  `cli_retry_ids` lists it as `{ field, flag, json_path, value, source }`
+  on success or failure, so the same request can be retried with it. `projects create-project`, `organizations invite-organization-member`
+  and `projects invite-project-member` do so for `--request-id`.
 
 What `3.0.0-preview.19` (`3.0.0rc19`) changes from `3.0.0-preview.18`:
 
@@ -393,7 +527,7 @@ What `3.0.0-preview.17` (`3.0.0rc17`) changes from `3.0.0-preview.16`:
   CLI moves from 1.75.0.
 - The Go module path is `github.com/primitivedotdev/sdks/sdk-go/v3`. Update
   imports from `.../sdk-go/v2` and `.../sdk-go/v2/api`.
-- `primitive functions init` scaffolds projects on `^3.0.0-preview.19` of both
+- `primitive functions init` scaffolds projects on `^3.0.0-preview.20` of both
   `@primitivedotdev/sdk` and `primitive`.
 
 #### Removed code
@@ -481,6 +615,18 @@ no longer `UNSET` in Python, plain or `Nil*` fields rather than `Opt*` in Go):
 - `testEndpointRules`' answer: `delivery`.
 - `listEmails`: `data`. In Python it comes before `meta` in the arguments of
   `ListEmailsResponse200`.
+- Email rule tests and look-alikes: `close_call` on each judged
+  expectation, made-up email and look-alike, `close_calls` in the test's
+  expectation counts and the look-alike counts, and each look-alike's
+  `group` and the look-alike counts' `by_group`. A write's
+  `expectations_check`: `close_calls` and `close_call_samples`.
+- `listEmailRuleDecisions` and `listEmailRuleDecisionsOnMyMail` items:
+  `recipient`.
+- `DeliverySummary` and `getDelivery`'s result: `rules`.
+- `getEmail`'s top-level `attachments`: `description`. They are
+  `EmailDetailAttachment` in Python and Go; in Go `EmailDetail.Attachments`
+  is `[]EmailDetailAttachment`.
+- A rule share's `activity`: `checked`.
 
 #### Nullable values
 
@@ -766,6 +912,24 @@ Go (package `api`):
 - `search --domain` and `emails watch --domain` take a domain name as the
   focus for that command instead of adding a `domain:` filter to the query.
 
+#### Email rule decision time
+
+- Email rule decisions carry `decided_at` in place of `created_at` on
+  `listEmailRuleDecisions` and `listEmailRuleDecisionsOnMyMail`
+  (`decided_at` in Python, `DecidedAt` in Go).
+- In Python and Go, the made-up emails `testEmailRule`'s `expect.samples`
+  takes are `EmailRuleTestSampleInput`, which takes an optional `group`;
+  `EmailRuleExpectationSampleInput` stays the type of a rule's saved
+  made-up emails.
+
+#### CLI missing request fields
+
+- A generated command missing a required request body field stops before
+  authentication or any request with exit 2 and error code `usage_error`,
+  listing each field in `error.details.missing` (`field`, `flag`,
+  `json_path`). An `--event-types` value that cannot be used is refused
+  before authentication.
+
 #### CLI `--json` output
 
 - `--json` on every generated command prints the API's response body
@@ -958,7 +1122,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - Organization settings: `listMyGrants`, `revokeMyGrant`, `listOAuthGrants`,
   `revokeOAuthGrant`, `getOrganization`, `updateOrganization`,
   `updateOrganizationLogo`, `removeOrganizationLogo`, `getSearchSettings`,
-  `updateSearchSettings`.
+  `updateSearchSettings`, `getEmailRuleSettings`, `updateEmailRuleSettings`
+  (whether email rules read PDF and image attachments, for a person only).
 - Organizations: `listOrganizationInvitations`, `inviteOrganizationMember`,
   `revokeOrganizationInvitation`.
 - Projects: `listOrganizationPeople`, `listProjects`, `createProject`,
@@ -1114,6 +1279,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
   metadata (file name, type, size), in the order of `parsed.attachments`,
   and kept for a credential that reads headers only, where `parsed` is null.
   It is required on `EmailDetail`, so the Python and Go clients expect it.
+  Each carries `description`, a one-line description read from the file
+  where the organization has attachment reading on, else null.
 - A made-up email takes `attachment_names`, its attachments' file names,
   paired with `attachment_types` by position (the same number of each when
   both list files): in `testEmailRuleOnSample`, in the expectation samples
@@ -1328,7 +1495,21 @@ date-time is kept as null and sorts last. A sync stops with an error after
     is another member's rule that decided on your own mail, with its
     `author`; its `name` is null unless it is known to cover you.
   - `listEmailRuleDecisions` carries each email's `from_address`, `subject`
-    and `received_at`.
+    and `received_at`, and it and `listEmailRuleDecisionsOnMyMail` carry
+    `recipient` and `decided_at`.
+  - `listEmailRules` takes `all`, `author`, `mailbox`, `kind` and `state`;
+    with `all`, each rule carries `receivers`.
+  - `testEmailRule` answers `changes`: what the tree would newly match and
+    stop matching against the rule's current version, or against a
+    request's rule as asked (`compared_to`).
+  - Judged expectations, made-up emails and look-alikes carry `close_call`,
+    and the counts `close_calls`. Look-alikes carry `group` (`private`,
+    `near_miss` or `must_match`) and their counts `by_group`;
+    `generateLookAlikes` takes the `legal` and `personal_correspondence`
+    kinds.
+  - `testEmailRule` results carry `attachment_descriptions`, and rule
+    questions read text from PDF and image attachments where attachment
+    reading is active.
   - `listEmailRuleVersions` lists versions newest first with `limit` and
     `cursor`; `versions` is optional.
   - `listEmailRuleDecisions` and `listEmailRuleResults` carry
@@ -1372,6 +1553,11 @@ date-time is kept as null and sorts last. A sync stops with an error after
     would be sent to it, and every reason they would not).
   - `testEndpointRules` answers with `delivery` and declares `503`; in Go it
     is a typed response.
+  - `createEndpoint` and `updateEndpoint` take custom request `headers`,
+    which endpoint reads list with values redacted, and their `warnings`
+    can carry `url_requires_login`, `url_redirects` (with `status`),
+    `url_unreachable` and `url_not_checked` from a test request to a new
+    URL.
 - Credentials: `getCredentialPolicy`, `updateCredentialPolicy` and
   `getKeyBuilder`'s `policy` carry `cli_writes_require_approval`; `getKey`
   and `listKeys` items carry `status`; `revokeCredential` takes
@@ -1417,8 +1603,8 @@ date-time is kept as null and sorts last. A sync stops with an error after
     revoke it with `revokeCredential` or in `decideSuspension`, whatever it
     reaches, as themself rather than through another app.
 - `getDelivery` carries `attempts`; it and `listDeliveries` carry
-  `latest_attempt`, `next_attempt_at`, `response_status` and
-  `response_body`.
+  `latest_attempt`, `next_attempt_at`, `response_status`,
+  `response_body` and `rules`, the rules the attempt's payload named.
 - `ErrorResponse.error.details` declares `feature`, `feature_name`,
   `enabled_by` and `contact_email`, which a `feature_disabled` error
   carries.
@@ -1725,6 +1911,21 @@ parsers.
 
 #### CLI
 
+- `test-email-rule` prints what the tree would change against the rule's
+  current version or a request's rule as asked, and marks close calls;
+  the look-alikes report prints counts by group.
+- `list-email-rules` takes `--all`, `--author`, `--mailbox`, `--kind` and
+  `--state` and prints a table; the decision listings print a table.
+- `endpoints create` and `update` take a repeatable `--header 'Name:
+  value'`, `update` takes `--clear-headers`, and both print the answer's
+  warnings.
+- An unknown command suggests nearby commands in
+  `error.details.suggestions`.
+- Help groups flags as required inputs, command options and common
+  flags.
+- For a request field marked `x-primitive-retry-id`, a generated command
+  creates and prints a retry ID when the flag is left out, and lists it in
+  `cli_retry_ids` under `--json`.
 - `primitive focus set <domain...>`, `focus set --all`, `focus` and `focus
   clear` choose, show and clear the domains a profile lists and searches.
   The focus is saved per profile and organization, never in a credential
