@@ -1,7 +1,10 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { PrimitiveApiClient } from "@primitivedotdev/api-core";
+import {
+  operationManifest,
+  PrimitiveApiClient,
+} from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const auth = vi.hoisted(() => ({ create: vi.fn() }));
@@ -10,15 +13,28 @@ vi.mock("../../src/oclif/api-client.js", async (original) => ({
   createAuthenticatedCliApiClient: auth.create,
 }));
 
+import { createOperationCommand } from "../../src/oclif/api-command.js";
 import { COMMANDS } from "../../src/oclif/index.js";
+import { guardJsonOutput } from "../../src/oclif/json-output.js";
 
 const root = resolve(import.meta.dirname, "../..");
 type Runnable = {
   run(argv: string[], options: { root: string }): Promise<unknown>;
 };
-const command = COMMANDS[
-  "organizations:invite-organization-member"
-] as unknown as Runnable;
+const operation = operationManifest.find(
+  (op) => op.sdkName === "inviteOrganizationMember",
+);
+if (!operation?.requestSchema) throw new Error("Invitation schema missing");
+// Test omission errors independently of opt-in defaults in the shipped contract.
+const requestSchema = structuredClone(operation.requestSchema);
+const properties = requestSchema.properties as Record<
+  string,
+  Record<string, unknown>
+>;
+delete properties.request_id["x-primitive-retry-id"];
+const concrete = createOperationCommand({ ...operation, requestSchema });
+guardJsonOutput(concrete as unknown as Parameters<typeof guardJsonOutput>[0]);
+const command = concrete as unknown as Runnable;
 const requestId = "11111111-1111-4111-8111-111111111111";
 const missingEmail = { field: "email", flag: "--email", json_path: "$.email" };
 const missingId = {
@@ -51,7 +67,7 @@ afterEach(() => {
   rmSync(configDir, { recursive: true, force: true });
 });
 
-describe("required bodies through the command registry", () => {
+describe("required bodies through generated commands", () => {
   it.each([
     [[], [missingId, missingEmail]],
     [["--email", "member@example.com"], [missingId]],

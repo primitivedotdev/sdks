@@ -95,6 +95,12 @@ import {
   replyStateSurfaceForOperation,
 } from "./reply-state.js";
 import { assertRequiredBodyFields } from "./required-body-fields.js";
+import {
+  prepareRetryIds,
+  rememberRetryIds,
+  retryIdFields,
+  writeRetryIdNotice,
+} from "./retry-ids.js";
 import { RULE_NOTES_TAGS, ruleNotesReport } from "./rule-notes.js";
 import {
   ALL_SENDERS_FLAG,
@@ -1116,6 +1122,7 @@ const RESERVED_FLAG_NAMES = new Set([
 function bodyFieldFlag(
   field: BodyFieldDescriptor,
   aliases?: string[],
+  generatedRetryId = false,
 ): unknown {
   // Pass the full first-line description through. oclif's --help
   // renderer wraps long values across multiple lines on its own,
@@ -1133,7 +1140,9 @@ function bodyFieldFlag(
   // form. The runtime body merger validates the final assembled
   // body against the same server-side schema either way.
   const common = {
-    description: field.description || field.name,
+    description: generatedRetryId
+      ? `Retry ID, generated when omitted. ${field.description || field.name}`
+      : field.description || field.name,
     ...(aliases && aliases.length > 0 ? { aliases } : {}),
   };
   // withBooleanFlagValues reads `--flag true|false` for it in run().
@@ -1155,7 +1164,10 @@ function bodyFieldFlag(
   return Flags.string({
     ...common,
     description:
-      withLengthLimit(field.description, field.maxLength) || field.name,
+      withLengthLimit(
+        generatedRetryId ? common.description : field.description,
+        field.maxLength,
+      ) || field.name,
   });
 }
 
@@ -1256,13 +1268,18 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     // pass would happily pick up the path param's value and
     // silently write it into the body.)
     const bodyFields = extractBodyFields(operation.requestSchema);
+    const generatedRetryIds = new Set(retryIdFields(operation.requestSchema));
     const aliasesForOperation = OPERATION_FLAG_ALIASES[operation.sdkName];
     for (const field of bodyFields) {
       if (field.kind === "complex") continue;
       const name = flagName(field.name);
       if (RESERVED_FLAG_NAMES.has(name)) continue;
       if (flags[name] !== undefined) continue;
-      flags[name] = bodyFieldFlag(field, aliasesForOperation?.[field.name]);
+      flags[name] = bodyFieldFlag(
+        field,
+        aliasesForOperation?.[field.name],
+        generatedRetryIds.has(field.name),
+      );
       bodyFieldFlagToProperty.set(name, field.name);
     }
 
@@ -1961,6 +1978,12 @@ export function createOperationCommand(
           `--${flag}`,
         ]),
       );
+      const retry = prepareRetryIds(
+        operation.requestSchema,
+        body,
+        bodyFieldFlagToProperty,
+      );
+      body = retry.body;
       assertRequiredBodyFields(
         operation.requestSchema,
         body,
@@ -1969,6 +1992,8 @@ export function createOperationCommand(
       );
       const tooLong = overLongBodyField(operation.requestSchema, body);
       if (tooLong) throw cliError(tooLong);
+      if (parsedFlags.json === true) rememberRetryIds(this, retry.ids);
+      else writeRetryIdNotice(retry.ids);
 
       await runWithTiming(parsedFlags.time === true, async () => {
         const { apiClient, auth, baseUrlOverridden } =

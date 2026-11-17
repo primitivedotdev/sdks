@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Config } from "@oclif/core";
+import { operationManifest } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import PrimitiveHelp, { FULL_HELP_COMMANDS } from "../../src/oclif/help.js";
 import { COMMANDS } from "../../src/oclif/index.js";
@@ -96,7 +97,16 @@ describe("short command help", () => {
       expect(options).toBeGreaterThan(required);
       expect(common).toBeGreaterThan(options);
       expect(help.slice(required, options)).toContain("--email");
-      expect(help.slice(required, options)).toContain("--request-id");
+      const generated = operationManifest.find(
+        (op) => op.sdkName === "inviteOrganizationMember",
+      )?.requestSchema?.properties as
+        | Record<string, Record<string, unknown>>
+        | undefined;
+      expect(
+        generated?.request_id?.["x-primitive-retry-id"] === true
+          ? help.slice(options, common)
+          : help.slice(required, options),
+      ).toContain("--request-id");
       expect(help.slice(required, options)).not.toContain("--api-key");
       expect(help.slice(options, common)).toContain("--role");
       for (const flag of [

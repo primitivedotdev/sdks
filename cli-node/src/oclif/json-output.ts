@@ -1,5 +1,6 @@
 import { format } from "node:util";
 import { type Command, Flags } from "@oclif/core";
+import { type GeneratedRetryId, takeRetryIds } from "./retry-ids.js";
 
 /**
  * Parse-safe `--json` output.
@@ -206,6 +207,7 @@ export type ComposeJsonDocumentInput = {
   stdout: string;
   /** Set when the command threw. */
   thrown?: { error: unknown };
+  retryIds?: readonly GeneratedRetryId[];
 };
 
 /**
@@ -213,6 +215,15 @@ export type ComposeJsonDocumentInput = {
  * what it wrote to stdout and stderr and how it ended.
  */
 export function composeJsonDocument(input: ComposeJsonDocumentInput): unknown {
+  const document = composeResult(input);
+  if (!input.retryIds?.length) return document;
+  return {
+    ...(isPlainObject(document) ? document : { data: document }),
+    cli_retry_ids: input.retryIds,
+  };
+}
+
+function composeResult(input: ComposeJsonDocumentInput): unknown {
   const { errorPayload, warnings: stderrLines } = summarizeStderr(input.stderr);
   const failed = input.exitCode !== 0;
   let warnings = stderrLines;
@@ -335,6 +346,7 @@ export function guardJsonOutput(cls: CommandClass): void {
       stderr: capture.stderr,
       stdout: capture.stdout.join(""),
       thrown,
+      retryIds: takeRetryIds(this),
     });
     console.log(JSON.stringify(document, null, 2));
     if (thrown) {

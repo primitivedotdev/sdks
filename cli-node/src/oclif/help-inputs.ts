@@ -1,5 +1,6 @@
 import type { PrimitiveOperationManifest } from "@primitivedotdev/api-core";
 import { missingBodyFields } from "./required-body-fields.js";
+import { retryIdFields } from "./retry-ids.js";
 
 export const HELP_GROUPS = ["required", "command", "common"] as const;
 export type HelpGroup = (typeof HELP_GROUPS)[number];
@@ -57,16 +58,23 @@ export function operationHelpInputs(
   const propertyFlags = new Map(
     [...bodyFlagToProperty].map(([flag, property]) => [property, `--${flag}`]),
   );
-  const missing = operation.bodyRequired
-    ? missingBodyFields(operation.requestSchema, {}, propertyFlags, true)
-    : [];
+  const generated = new Set(retryIdFields(operation.requestSchema));
+  const missing =
+    operation.bodyRequired || generated.size > 0
+      ? missingBodyFields(
+          operation.requestSchema,
+          {},
+          propertyFlags,
+          true,
+        ).filter((field) => !generated.has(field.field))
+      : [];
   return {
     requiredFlags: [
       ...missing.flatMap((field) => (field.flag ? [field.flag.slice(2)] : [])),
       ...(positionalFlag ? [positionalFlag] : []),
     ],
     requiredJsonFields:
-      operation.bodyRequired && missing.length === 0
+      operation.bodyRequired && missing.length === 0 && generated.size === 0
         ? ["$"]
         : missing
             .filter((field) => field.flag === null)
