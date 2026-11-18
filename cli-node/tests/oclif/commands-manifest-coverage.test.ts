@@ -1078,12 +1078,7 @@ describe("COMMANDS / manifest coverage", () => {
     expect(updateWarning?.message).toContain("npm install -g primitive@latest");
   });
 
-  it("points activity help at its real views", () => {
-    const description =
-      readCliPackageJson().oclif?.topics?.activity?.description ?? "";
-    for (const view of ["asked", "concerning", "created"])
-      expect(description).toContain(`primitive activity ${view}`);
-    expect(description).not.toContain("primitive doctor");
+  it("keeps the focus read at the bare parent command", () => {
     expect(COMMANDS.focus).toBeDefined();
     expect(COMMANDS["focus:get"]).toBeUndefined();
   });

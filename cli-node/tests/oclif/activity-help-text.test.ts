@@ -37,15 +37,15 @@ describe("where the activity and emails help points a reader", () => {
     );
   });
 
-  it("names the activity commands and doctor in the activity topic", () => {
+  it("names the activity views for requests and rules", () => {
     const activity = topics.activity?.description ?? "";
     for (const named of [
       "`primitive activity asked`",
       "`primitive activity concerning`",
       "`primitive activity created`",
-      "`primitive doctor`",
     ])
       expect(activity).toContain(named);
+    expect(activity).not.toContain("`primitive doctor`");
   });
 
   it("points emails list to the one-line table", () => {
