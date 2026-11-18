@@ -58,6 +58,21 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("exposes bounded recent-mail limits and cursor continuation", () => {
+    const latest = COMMANDS["emails:latest"];
+    expect(latest).toBeDefined();
+    expect(latest.flags?.cursor?.type).toBe("option");
+    expect(latest.flags?.limit).toMatchObject({
+      min: 1,
+      max: 1000,
+      default: 10,
+    });
+    expect(latest.description).toContain("cursor pagination");
+    expect(readCliPackageJson().oclif?.topics?.emails?.description).toContain(
+      "--cursor",
+    );
+  });
+
   it("never consumes stdin as a positional argument", () => {
     for (const [id, command] of Object.entries(COMMANDS)) {
       for (const [name, argument] of Object.entries(command.args ?? {})) {
