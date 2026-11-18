@@ -31,6 +31,7 @@ import {
   isAutomatedRejectedError,
 } from "./automated-filter.js";
 import { withBooleanFlagValues } from "./boolean-flag-values.js";
+import { fetchBoundedPages } from "./bounded-pages.js";
 import {
   canonicalBodyFlagName,
   canonicalCliText,
@@ -2241,56 +2242,17 @@ export function createOperationCommand(
         // Set when the request budget ends paging before --limit is reached.
         let pagingNote: string | undefined;
         const callPaged = async () => {
-          const max = pageMaximum ?? wanted;
-          const rows: unknown[] = [];
-          let sentCursor = query.cursor;
-          let last = await callOperation(undefined, {
-            ...query,
-            limit: Math.min(max, wanted),
+          const page = await fetchBoundedPages({
+            wanted,
+            maximum: pageMaximum ?? wanted,
+            cursor: typeof query.cursor === "string" ? query.cursor : undefined,
+            call: (limit, cursor) =>
+              callOperation(undefined, { ...query, limit, cursor }),
           });
-          // Only a null cursor ends a list: a page can come back short, even
-          // empty, with more to read. Bound the requests anyway, and say so
-          // when the bound is what stopped it.
-          const budget = Math.ceil(wanted / max) + 20;
-          for (let requests = 1; ; requests += 1) {
-            if (last.error) return last;
-            const envelope = last.data as OperationResponseEnvelope;
-            const page = Array.isArray(envelope?.data) ? envelope.data : [];
-            rows.push(...page);
-            const cursor = envelope?.meta?.cursor ?? undefined;
-            const exhausted =
-              Boolean(cursor) &&
-              cursor !== sentCursor &&
-              rows.length < wanted &&
-              requests >= budget;
-            if (exhausted)
-              pagingNote = `Stopped after ${requests} requests with ${rows.length} of ${wanted}; more may remain. Continue with --cursor ${cursor}.`;
-            if (
-              !cursor ||
-              cursor === sentCursor ||
-              rows.length >= wanted ||
-              exhausted
-            ) {
-              return {
-                ...last,
-                data: {
-                  ...(envelope ?? {}),
-                  data: rows,
-                  meta: {
-                    ...(envelope?.meta ?? {}),
-                    limit: wanted,
-                    cursor: cursor ?? null,
-                  },
-                },
-              };
-            }
-            sentCursor = cursor;
-            last = await callOperation(undefined, {
-              ...query,
-              cursor,
-              limit: Math.min(max, wanted - rows.length),
-            });
-          }
+          pagingNote = page.note;
+          return page.envelope
+            ? { ...page.result, data: page.envelope }
+            : page.result;
         };
         // Giving someone a role that reads every mailbox says so first, so
         // the person approving the change sees it before the step-up link.
@@ -2479,7 +2441,7 @@ export function createOperationCommand(
         if (cursor && !jsonOutput) {
           process.stderr.write(`next cursor: ${cursor}\n`);
         }
-        if (pagingNote && !jsonOutput) process.stderr.write(`${pagingNote}\n`);
+        if (pagingNote) process.stderr.write(`${pagingNote}\n`);
         const summary: string[] = [];
 
         // Empty-result hint. When a list-style operation returns
@@ -2539,7 +2501,8 @@ export function createOperationCommand(
           envelope.data.length === 0 &&
           focus.focused &&
           query.since === undefined &&
-          query.cursor === undefined
+          query.cursor === undefined &&
+          !envelope?.meta?.cursor
         ) {
           const countParam = focusSpec?.countParam;
           const note = await focusEmptyHint(focus, async () => {

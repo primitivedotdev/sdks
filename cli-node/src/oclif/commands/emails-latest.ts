@@ -4,11 +4,13 @@ import { listEmails } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
+  PAGED_LIMIT_MAX,
   runWithTiming,
   surfaceUnauthorizedHint,
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { fetchBoundedPages } from "../bounded-pages.js";
 import { emptyEmailListHint, readCallerMailFor } from "../empty-mail-hint.js";
 import {
   countFromMeta,
@@ -45,7 +47,7 @@ import {
 // output, callers should use `emails:list` and pipe to jq.
 
 const DEFAULT_LIMIT = 10;
-const MAX_LIMIT = 100;
+const API_PAGE_MAXIMUM = 100;
 // Truncation widths chosen so a row fits in ~140 columns total. Long
 // values wrap to "..." rather than blowing out terminal layout.
 const SUBJECT_DISPLAY_WIDTH = 50;
@@ -124,7 +126,7 @@ export function formatHeader(idWidth: number): string {
 
 class EmailsLatestCommand extends Command {
   static description =
-    `Print the N most recent inbound emails as a one-line-per-row text table. Designed for quick triage and visual scanning. For programmatic access, use \`primitive emails list\` (full JSON envelope, cursor pagination, filters) or pass \`--json\` here for the same raw shape without pagination/filters.
+    `Print the N most recent inbound emails as a one-line-per-row text table. Designed for quick triage and visual scanning. For programmatic access, use \`primitive emails list\` (full JSON envelope, cursor pagination, filters) or pass \`--json\` here for the same response envelope, including cursor pagination.
 
   ID display is TTY-aware. When STDOUT is a terminal, the table truncates each row's id to the first ${ID_DISPLAY_WIDTH_SHORT} characters for readability. When STDOUT is piped or redirected (the row stream is being consumed by another command), the full UUID is printed so the id can be fed straight back into \`emails:get\`, \`emails:delete\`, etc. without a separate \`--json\` round-trip.
 
@@ -136,7 +138,8 @@ class EmailsLatestCommand extends Command {
 
   static examples = [
     "<%= config.bin %> emails latest",
-    "<%= config.bin %> emails latest --limit 25",
+    "<%= config.bin %> emails latest --limit 200",
+    "<%= config.bin %> emails latest --cursor <cursor> --json",
     "<%= config.bin %> emails latest | head -1 | awk '{print $1}'  # full UUID since piped",
     "<%= config.bin %> emails latest --json | jq '.data[0].id'",
     "<%= config.bin %> emails latest --awaiting you",
@@ -155,13 +158,17 @@ class EmailsLatestCommand extends Command {
       hidden: true,
     }),
     limit: Flags.integer({
-      description: `Number of rows to print (1-${MAX_LIMIT}, default ${DEFAULT_LIMIT}).`,
+      description: `Number of rows to print (1-${PAGED_LIMIT_MAX}, default ${DEFAULT_LIMIT}), fetched in pages of at most ${API_PAGE_MAXIMUM}. Continue with --cursor for more.`,
       default: DEFAULT_LIMIT,
       // oclif validates min/max at parse time and emits a consistent
       // out-of-range error before run() is reached, so no manual
       // bounds check is needed here.
       min: 1,
-      max: MAX_LIMIT,
+      max: PAGED_LIMIT_MAX,
+    }),
+    cursor: Flags.string({
+      description:
+        "Continue from meta.cursor of a previous listing. The next cursor is printed on stderr, or in meta.cursor with --json.",
     }),
     awaiting: Flags.string({
       description: AWAITING_FLAG_DESCRIPTION,
@@ -198,14 +205,22 @@ class EmailsLatestCommand extends Command {
       });
       const query = {
         limit: flags.limit,
+        ...(flags.cursor !== undefined ? { cursor: flags.cursor } : {}),
         ...(awaiting ? { awaiting } : {}),
         ...focus.params,
       };
-      const result = await listEmails({
-        client: apiClient.client,
-        query,
-        responseStyle: "fields",
+      const paged = await fetchBoundedPages({
+        wanted: flags.limit,
+        maximum: API_PAGE_MAXIMUM,
+        cursor: flags.cursor,
+        call: (limit, cursor) =>
+          listEmails({
+            client: apiClient.client,
+            query: { ...query, limit, cursor },
+            responseStyle: "fields",
+          }),
       });
+      const result = paged.result;
 
       if (result.error) {
         const errorPayload = extractErrorPayload(result.error);
@@ -227,7 +242,9 @@ class EmailsLatestCommand extends Command {
         return;
       }
 
-      const envelope = result.data as { data?: EmailSummary[] } | undefined;
+      const envelope = (paged.envelope ?? result.data) as
+        | { data?: EmailSummary[]; meta?: { cursor?: string | null } }
+        | undefined;
 
       // With --awaiting the rows are only meaningful when the server
       // actually filtered on reply state. Rows without the fields mean
@@ -245,9 +262,23 @@ class EmailsLatestCommand extends Command {
       }
 
       const rows = envelope?.data ?? [];
+      // An empty history page or a bounded window does not prove a domain is empty.
+      const cursorHint =
+        rows.length === 0 &&
+        (flags.cursor !== undefined || envelope?.meta?.cursor)
+          ? emptyEmailListHint({
+              filterFlags: awaiting ? [`--awaiting ${awaiting}`] : [],
+              ...(flags.cursor !== undefined
+                ? { pastFlag: "--cursor" as const }
+                : {}),
+              nextCursor: envelope?.meta?.cursor,
+              caller: null,
+            })
+          : null;
       // Focused and empty: how much matches on the other domains.
       const note =
-        rows.length === 0
+        cursorHint ??
+        (rows.length === 0
           ? await focusEmptyHint(focus, async () => {
               const counted = await listEmails({
                 client: apiClient.client,
@@ -260,13 +291,14 @@ class EmailsLatestCommand extends Command {
               });
               return counted.error ? null : countFromMeta(counted.data);
             })
-          : null;
+          : null);
 
       if (flags.json) {
         // Raw envelope on stdout. Mirrors the shape `emails:list`
         // emits so callers can swap one for the other when they want
         // table vs json without remembering different command names.
         const document = withFocusMeta(envelope ?? null, focus);
+        if (paged.note) process.stderr.write(`${paged.note}\n`);
         this.log(
           JSON.stringify(
             note && document ? { ...document, summary: note } : document,
@@ -278,6 +310,9 @@ class EmailsLatestCommand extends Command {
       }
 
       writeFocusLine(focus, false);
+      if (envelope?.meta?.cursor)
+        process.stderr.write(`next cursor: ${envelope.meta.cursor}\n`);
+      if (paged.note) process.stderr.write(`${paged.note}\n`);
       if (rows.length === 0) {
         if (note) {
           process.stderr.write(`${note}\n`);

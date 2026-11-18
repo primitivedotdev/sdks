@@ -42,6 +42,7 @@ import { fileURLToPath } from "node:url";
 const SMOKES = [
   ["smoke-command-pairs.mjs"],
   ["smoke-member-roles.mjs"],
+  ["smoke-recent-mail-pagination.mjs"],
   ["smoke-cli-input-output.mjs"],
   ["smoke-help-groups.mjs"],
   ["smoke-command-suggestions.mjs"],
