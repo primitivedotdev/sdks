@@ -80,7 +80,9 @@ export function combineCommandPair(
     flags[name] = {
       ...flag,
       required: false,
-      default: undefined,
+      // Defaults shown for a single input form are descriptive only.
+      // The neutral parser below never applies them before delegation.
+      default: a && b ? undefined : flag.default,
       ...(booleanFlag(a) && booleanFlag(b)
         ? {
             type: "boolean",
