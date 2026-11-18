@@ -2866,11 +2866,11 @@ describe("roles commands", () => {
       "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111",
       "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111",
     ]);
-    expect(COMMANDS["members:list"]).toBe(RolesMembersCommand);
-    expect(COMMANDS["roles:members"]).toBe(RolesMembersCommand);
+    expect(COMMANDS["members:list"]).toHaveProperty("pairedCommand", true);
+    expect(COMMANDS["roles:members"]).toBeUndefined();
   });
 
-  it("roles members prints the server's refusal and exits 1", async () => {
+  it("members list prints the server's refusal and exits 1", async () => {
     useServer(() =>
       Response.json(
         {

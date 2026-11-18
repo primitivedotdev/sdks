@@ -15,10 +15,8 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 
-// Friendly credit commands. The generated operation wrappers stay available
-// as credits:get-credit-balance for raw API parity; redeem is hand-rolled for
-// both ids because the generated wrapper cannot send the required
-// Idempotency-Key header.
+// Readable credit commands also accept structured request inputs through
+// their canonical paths. Redemption generates its required Idempotency-Key.
 
 const API_KEY_FLAG = Flags.string({
   description:

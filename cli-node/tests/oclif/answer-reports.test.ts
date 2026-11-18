@@ -112,7 +112,7 @@ describe("route warnings", () => {
     for (const [command, argv] of [
       [RoutesUpdateCommand, [ROUTE, "--priority", "5"]],
       [
-        COMMANDS["routes:create-route"],
+        COMMANDS["routes:create"],
         [
           "--raw-body",
           JSON.stringify({
@@ -122,7 +122,7 @@ describe("route warnings", () => {
           }),
         ],
       ],
-      [COMMANDS["routes:update-route"], [ROUTE, "--priority", "5"]],
+      [COMMANDS["routes:update"], [ROUTE, "--priority", "5"]],
     ] as const) {
       const written = await run(command as never, [...argv]);
       expect(written.exitCode, written.stderr).toBeUndefined();

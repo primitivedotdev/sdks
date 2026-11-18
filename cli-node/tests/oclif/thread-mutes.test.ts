@@ -5,7 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   profileName: "work" as string | undefined,
-  requests: [] as { method: string; path: string }[],
+  requests: [] as {
+    method: string;
+    path: string;
+    url: string;
+    authorization: string | null;
+  }[],
   // Default: a server that predates thread mutes.
   respond: (_method: string, path: string): Response =>
     Response.json(
@@ -22,14 +27,22 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../../src/oclif/api-client.js", async () => {
   const { PrimitiveApiClient } = await import("@primitivedotdev/api-core");
   return {
-    createAuthenticatedCliApiClient: async () => ({
+    createAuthenticatedCliApiClient: async (params: {
+      apiKey?: string;
+      apiBaseUrl?: string;
+    }) => ({
       apiClient: new PrimitiveApiClient({
-        apiKey: "fixture",
-        apiBaseUrl: "https://api.example.test/v1",
+        apiKey: params.apiKey ?? "fixture",
+        apiBaseUrl: params.apiBaseUrl ?? "https://api.example.test/v1",
         fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
           const request = new Request(input, init);
           const path = new URL(request.url).pathname;
-          mocks.requests.push({ method: request.method, path });
+          mocks.requests.push({
+            method: request.method,
+            path,
+            url: request.url,
+            authorization: request.headers.get("authorization"),
+          });
           return mocks.respond(request.method, path);
         },
       }),
@@ -332,6 +345,155 @@ describe("threads mute commands", () => {
     expect(stderr.join("")).toContain("stored locally");
   });
 
+  it.each([
+    [ThreadsMuteCommand, "PUT", true],
+    [ThreadsUnmuteCommand, "DELETE", false],
+  ] as const)(
+    "uses ordinary credentials and an explicit address for %s",
+    async (command, method, muted) => {
+      mocks.profileName = undefined;
+      mocks.respond = () =>
+        Response.json({
+          success: true,
+          data: {
+            thread_id: thread,
+            address: "member@example.com",
+            muted,
+            muted_at: muted ? "2026-10-01T00:00:00.000Z" : null,
+          },
+        });
+      const output = capture();
+      await command.run(
+        [
+          "--id",
+          thread,
+          "--address",
+          "member@example.com",
+          "--api-key",
+          "ordinary-key",
+          "--api-base-url",
+          "https://alternate.example.test/v1",
+        ],
+        { root },
+      );
+      expect(mocks.requests).toEqual([
+        {
+          method,
+          path: `/v1/threads/${thread}/mute`,
+          url: `https://alternate.example.test/v1/threads/${thread}/mute?address=member%40example.com`,
+          authorization: "Bearer ordinary-key",
+        },
+      ]);
+      expect(output()).toMatchObject({ address: "member@example.com", muted });
+      expect(readThreadMutes(configDir, "work")).toEqual([]);
+    },
+  );
+
+  it("clears local mutes when unmuting the connected profile's explicit address", async () => {
+    await muteThread(configDir, "work", thread, null);
+    mocks.respond = () =>
+      Response.json({
+        success: true,
+        data: {
+          thread_id: thread,
+          address: "agent@example.com",
+          muted: false,
+          muted_at: null,
+        },
+      });
+    const output = capture();
+    await ThreadsUnmuteCommand.run(
+      ["--id", thread, "--address", "agent@example.com"],
+      { root },
+    );
+    expect(output()).toMatchObject({
+      removed: true,
+      server: "unmuted",
+      muted: false,
+    });
+    expect(readThreadMutes(configDir, "work")).toEqual([]);
+  });
+
+  it("leaves the connected profile's local mutes intact for another address", async () => {
+    await muteThread(configDir, "work", thread, null);
+    mocks.respond = () =>
+      Response.json({
+        success: true,
+        data: {
+          thread_id: thread,
+          address: "other@example.com",
+          muted: false,
+          muted_at: null,
+        },
+      });
+    const output = capture();
+    await ThreadsUnmuteCommand.run(
+      ["--id", thread, "--address", "other@example.com"],
+      { root },
+    );
+    expect(output()).toMatchObject({
+      address: "other@example.com",
+      muted: false,
+    });
+    expect(isThreadMuted(configDir, "work", thread, null)).toBe(true);
+    expect(
+      new URL(mocks.requests[0]?.url ?? "").searchParams.get("address"),
+    ).toBe("other@example.com");
+  });
+
+  it.each([ThreadsMuteCommand, ThreadsUnmuteCommand])(
+    "refuses local changes for another address with %s",
+    async (command) => {
+      await muteThread(configDir, "work", thread, null);
+      vi.stubEnv("CLAUDE_CODE_SESSION_ID", claude.slice(7));
+      await expect(
+        command.run(
+          ["--id", thread, "--address", "other@example.com", "--session-only"],
+          { root },
+        ),
+      ).rejects.toThrow(/connected agent profile for the requested address/);
+      expect(mocks.requests).toEqual([]);
+      expect(isThreadMuted(configDir, "work", thread, null)).toBe(true);
+    },
+  );
+
+  it("does not store another address's mute locally when the server is unsupported", async () => {
+    await expect(
+      ThreadsMuteCommand.run(
+        ["--id", thread, "--address", "other@example.com"],
+        { root },
+      ),
+    ).rejects.toThrow(/connected agent profile for the requested address/);
+    expect(readThreadMutes(configDir, "work")).toEqual([]);
+  });
+
+  it.each([ThreadsMuteCommand, ThreadsUnmuteCommand])(
+    "preserves local state after the server refuses %s",
+    async (command) => {
+      await muteThread(configDir, "work", otherThread, null);
+      if (command === ThreadsUnmuteCommand)
+        await muteThread(configDir, "work", thread, null);
+      const before = readThreadMutes(configDir, "work");
+      mocks.respond = () =>
+        Response.json(
+          {
+            success: false,
+            error: {
+              code: "forbidden",
+              message: "Thread mute permission denied",
+            },
+          },
+          { status: 403 },
+        );
+      vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      capture();
+      await command.run(["--id", thread], { root });
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+      expect(readThreadMutes(configDir, "work")).toEqual(before);
+    },
+  );
+
   it("--session-only needs a runtime session and skips the server", async () => {
     vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     await expect(
@@ -340,7 +502,7 @@ describe("threads mute commands", () => {
     expect(mocks.requests).toEqual([]);
   });
 
-  it("requires a connected profile and a thread UUID", async () => {
+  it("requires a thread UUID and a connected profile for local fallback", async () => {
     vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     await expect(
       ThreadsMuteCommand.run(["--id", "not-a-thread"], { root }),

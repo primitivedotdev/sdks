@@ -20,7 +20,7 @@ const HAND_ROLLED_VISIBLE_TOPICS = new Set([
   // Read-only key and role views over the credentials and roles operations.
   "keys",
   "roles",
-  // `members list`, the same command as `roles members`.
+  // `members list` is the canonical member listing.
   "members",
   "network",
   "otp",
@@ -54,7 +54,12 @@ describe("oclif topics", () => {
 
     // Tags with no generated commands below them need no visible topic.
     // semantic-search is offered at the root; its API tag remains Search.
-    const offered = new Set(cliOperationManifest.map((op) => op.tagCommand));
+    const offered = new Set(
+      cliOperationManifest.flatMap((op) => {
+        const parts = op.tagCommand.split(":");
+        return parts.map((_, index) => parts.slice(0, index + 1).join(":"));
+      }),
+    );
     const unoffered = new Set(
       operationManifest
         .map((op) => op.tagCommand)

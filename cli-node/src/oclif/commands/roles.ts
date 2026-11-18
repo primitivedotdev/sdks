@@ -199,8 +199,8 @@ export class RolesMembersCommand extends Command {
   static summary = "List members and their roles";
 
   static examples = [
-    "<%= config.bin %> roles members",
-    "<%= config.bin %> roles members --query alice",
+    "<%= config.bin %> members list",
+    "<%= config.bin %> members list --query alice",
     "<%= config.bin %> members list --json",
   ];
 

@@ -69,9 +69,11 @@ try {
   assert.match((await run(['whoami','--help-full'])).stdout,/identity offline/);
   await api(["contacts", "create",peer,'--name','Peer','--json']);
   await api(['contacts','list','--json']);
-  assert.equal(JSON.parse((await api(['contacts','get',peer,'--json'])).stdout).address,peer);
+  const jsonContact=JSON.parse((await api(['contacts','get',peer,'--json'])).stdout);
+  assert.equal(jsonContact.success,true);
+  assert.equal(jsonContact.data.address,peer);
   const defaultContact=await api(['contacts','get',peer]);
-  assert.deepEqual(JSON.parse(defaultContact.stdout),JSON.parse((await api(['contacts','get',peer,'--json'])).stdout),'explicit JSON preserves the default output');
+  assert.deepEqual(JSON.parse(defaultContact.stdout),jsonContact.data,'JSON data preserves the default result');
   await api(['contacts','update',peer,'--name','Renamed','--json']);
   await api(["agent", "contacts", "create",peer,'--agent',agent,'--notify','--json']);
   assert.equal(contact.display_name,'Renamed');assert.equal(member.notify,true);

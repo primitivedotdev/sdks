@@ -280,7 +280,7 @@ primitive keys revoke <id>
 
 Creating, rotating and changing a key run directly. If your organization requires approval, the command prints the approval link, opens it where it can, and waits for the one-time token the page shows. In a script it prints the link and exits: approve, then run it again with `--step-up-token`. The new secret is printed once, alone on stdout (or in the JSON with `--json`), and the CLI never saves it, so store it right away. `keys revoke` asks for confirmation; pass `--yes` in scripts.
 
-`primitive roles list`, `primitive roles groups`, `primitive roles mailbox-access` and `primitive roles access-mode` read roles, groups, mailbox access and the access mode. `primitive roles members` (also `primitive members list`) lists the members and their roles. Where the server has not enabled them, they print `feature_disabled`. The built-in roles are `owner`, `admin` and `member`. Operator is a template with every permission `admin` has except managing members, changing roles, managing mailbox delegations, sending invitations and billing. By default, owners, admins and operators may use the CLI. An organization can open it to every member by setting `cli_access` to `all_members` in its credential policy.
+`primitive roles list`, `primitive roles groups`, `primitive roles mailbox-access` and `primitive roles access-mode` read roles, groups, mailbox access and the access mode. `primitive members list` lists the members and their roles. Where the server has not enabled them, they print `feature_disabled`. The built-in roles are `owner`, `admin` and `member`. Operator is a template with every permission `admin` has except managing members, changing roles, managing mailbox delegations, sending invitations and billing. By default, owners, admins and operators may use the CLI. An organization can open it to every member by setting `cli_access` to `all_members` in its credential policy.
 
 ### Trying the preview
 
@@ -1598,3 +1598,14 @@ The ordinary final reply still needs to be read and evaluated. A clarification
 or blocker does not end that conversation. Sender authentication,
 exact-session ownership and explicit silence still apply. Separate topics
 remain separate conversations.
+
+## Canonical commands
+
+Generated request inputs and readable task inputs share one short command path.
+For example, `wake schedules create` accepts `--from`, `--to` and `--cron`, or
+request fields through `--raw-body`/`--body-file`. Inputs exclusive to one form
+cannot be mixed; the CLI reports those combinations before making a request.
+With `--json`, both forms put the result in `data` and preserve pagination metadata.
+Retired spellings are refused with a suggestion, never executed as aliases.
+`functions redeploy --id <id>` redeploys stored source; add `--file <bundle>`
+to upload a new bundle, with the existing secret and deployment-wait options.

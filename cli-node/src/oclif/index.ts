@@ -3,6 +3,7 @@ import type { PrimitiveOperationManifest } from "@primitivedotdev/api-core";
 import { createOperationCommand } from "./api-command.js";
 import { setKnownCommands } from "./api-path-commands.js";
 import {
+  COMMAND_PAIR_RENAMES,
   canonicalCommandId,
   canonicalCommands,
   canonicalOperation,
@@ -12,6 +13,7 @@ import {
   cliOperationManifest,
   rawCliOperationManifest,
 } from "./cli-operations.js";
+import { combineCommandPair } from "./command-pairs.js";
 import { ignoreArgumentStdin } from "./command-stdin.js";
 import {
   ActivityAskedCommand,
@@ -905,8 +907,7 @@ const rawCommands: Record<string, typeof Command> = {
   "routes:reorder": RoutesReorderCommand,
   "routes:remove": RoutesRemoveCommand,
   // Friendly Primitive Memories commands. The generated operation-shaped
-  // wrappers remain available as memories:set-memory, memories:get-memory,
-  // memories:delete-memory, and memories:search-memories for raw API parity.
+  // request flags and readable task inputs share the canonical commands.
   "memories:set": MemoriesSetCommand,
   "memories:get": MemoriesGetCommand,
   "memories:delete": MemoriesDeleteCommand,
@@ -914,7 +915,7 @@ const rawCommands: Record<string, typeof Command> = {
   // Credit codes and balance. `credits:redeem <code>` generates the required
   // Idempotency-Key and prints the grant or the refusal message;
   // `credits:balance` prints a readable summary. The generated
-  // credits:get-credit-balance wrapper stays available for raw JSON.
+  // request inputs share the same canonical balance command.
   "credits:redeem": CreditsRedeemCommand,
   "credits:redeem-credit-code": CreditsRedeemCommand,
   "credits:balance": CreditsBalanceCommand,
@@ -953,6 +954,25 @@ const rawCommands: Record<string, typeof Command> = {
   "wake:authorizations:delete": WakeAuthorizationsDeleteCommand,
   "wake:dispatches:list": WakeDispatchesListCommand,
 };
+
+// Fold each task/API pair before rekeying: different implementations never
+// survive as near-identical command names.
+for (const [oldId, target] of Object.entries(COMMAND_PAIR_RENAMES)) {
+  const request = generatedCommands[oldId];
+  if (!request) continue; // Same-class spelling, folded by canonicalCommands.
+  const taskEntry = Object.entries(rawCommands).find(
+    ([id]) =>
+      !Object.hasOwn(COMMAND_PAIR_RENAMES, id) &&
+      canonicalCommandId(id) === target,
+  );
+  if (!taskEntry) throw new Error(`Missing task command for ${oldId}`);
+  const combined = combineCommandPair(taskEntry[1], request, {
+    storedRedeploy: oldId === "functions:redeploy-function",
+  });
+  for (const id of Object.keys(rawCommands)) {
+    if (canonicalCommandId(id) === target) rawCommands[id] = combined;
+  }
+}
 
 export const COMMANDS = canonicalCommands(rawCommands);
 
