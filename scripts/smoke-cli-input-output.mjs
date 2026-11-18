@@ -28,6 +28,7 @@ assert(address && typeof address === "object");
 const env = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
   !/^(PRIMITIVE_|CLAUDE|CODEX|HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|http_proxy|https_proxy|all_proxy)/.test(key)));
 Object.assign(env, { HOME: config, XDG_CONFIG_HOME: config, PRIMITIVE_CONFIG_DIR: config,
+  SHELL: "/bin/bash",
   PRIMITIVE_API_BASE_URL: `http://127.0.0.1:${address.port}/v1`,
   PRIMITIVE_API_KEY: "fixture-only", PRIMITIVE_SKIP_NEW_VERSION_CHECK: "1" });
 
@@ -60,6 +61,13 @@ try {
     JSON.parse(result.stdout);
   }
   const before = requests.length;
+  const pluginHelp = await run(["help"], undefined, true);
+  assert.equal(pluginHelp.code, 0, pluginHelp.stdout + pluginHelp.stderr);
+  assert.match(pluginHelp.stdout, /USAGE/);
+  const pluginArgument = await run(["autocomplete", "script"]);
+  assert.equal(pluginArgument.code, 0, pluginArgument.stdout + pluginArgument.stderr);
+  assert.match(pluginArgument.stdout, /PRIMITIVE_AC_BASH_SETUP_PATH=/);
+  assert.equal(requests.length, before);
   const missing = await run(["email-rules", "get", "--json"]);
   assert.equal(missing.code, 2, missing.stdout + missing.stderr);
   assert.equal(requests.length, before, "stdin must not substitute for a missing id");
