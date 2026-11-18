@@ -300,7 +300,7 @@ describe("the refusal until a focus is chosen", () => {
 
 describe("a credential the server will not list domains for", () => {
   const RULES_ONLY =
-    "This credential reads only the mail its email rules granted, not any domain, so it cannot list or read domains or filter mail by domain. That is how its access was made, so asking again will not change it: list its mail without a domain filter, or use a credential whose access names the domain.";
+    "This credential reads only the mail its email rules granted, not any domain, so it cannot read domains or filter mail by domain, and asking again will not change that. List its mail without a domain filter, or use a credential whose access names a domain.";
   const refused = () =>
     Response.json(
       {
@@ -345,17 +345,43 @@ describe("a credential the server will not list domains for", () => {
     expect((set.thrown as Error).message).toBe(RULES_ONLY);
     const shown = await run("focus", []);
     expect(shown.thrown).toBeUndefined();
-    expect(shown.stdout).toContain(RULES_ONLY);
-    expect(shown.stdout).not.toContain("just now");
+    expect(shown.stdout.trim()).toBe(RULES_ONLY);
+    // focus set cannot work either, so it is not suggested.
+    expect(shown.stdout).not.toContain("Choose with");
+    const json = JSON.parse((await run("focus", ["--json"])).stdout);
+    expect(json.refusal).toEqual({
+      code: "grant_forbidden",
+      message: RULES_ONLY,
+    });
+  });
+
+  it("ignores the session's focus for a credential it lists no domain for", async () => {
+    domainsAnswer = refused;
+    process.env[FOCUS_ENV] = "support.example.com";
+    const listed = await run("emails:list", []);
+    expect(listed.thrown).toBeUndefined();
+    expect(emailCalls()).toHaveLength(1);
+    expect(emailCalls()[0]?.query.get("domain_ids")).toBeNull();
   });
 
   it("keeps the retry hint for a lookup that may pass next time", async () => {
-    for (const status of [429, 503]) {
-      domainsAnswer = () =>
-        Response.json(
-          { success: false, error: { code: "unavailable", message: "busy" } },
-          { status },
-        );
+    const answers: [number, unknown][] = [
+      [408, { success: false, error: { code: "timeout", message: "slow" } }],
+      [
+        429,
+        { success: false, error: { code: "rate_limited", message: "busy" } },
+      ],
+      [
+        503,
+        { success: false, error: { code: "unavailable", message: "busy" } },
+      ],
+      // A 401 has its own hint elsewhere, and is not told as a refusal here.
+      [401, { success: false, error: { code: "unauthorized", message: "no" } }],
+      // A 403 whose body cannot be read is not shown as the server's words.
+      [403, { success: false, error: { code: "Not A Code!", message: "x" } }],
+    ];
+    for (const [status, body] of answers) {
+      domainsAnswer = () => Response.json(body, { status });
       const latest = await run("emails:list", [
         "--domain",
         "support.example.com",

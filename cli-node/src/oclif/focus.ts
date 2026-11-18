@@ -271,9 +271,8 @@ export const DOMAINS_TIMEOUT_MS = 5_000;
 
 /**
  * The server refused to list this credential's domains, and asking again will
- * not change that (a 4xx other than 408 or 429): for example a key whose
- * access lists only email rules, which reads no domain. Its code and message
- * are the server's.
+ * not change that (a 403): for example a key whose access lists only email
+ * rules, which reads no domain. Its code and message are the server's.
  */
 export type DomainsRefusal = { code: string; message: string };
 
@@ -320,23 +319,15 @@ export async function readDomainsOrRefusal(
 }
 
 /**
- * The verified domains this credential can read mail on; null when they
- * cannot be read, for whatever reason (readDomainsOrRefusal says which).
+ * A refusal asking again will not change, from an error answer: a 403 with a
+ * code and message. Null for anything else, which may pass next time or has
+ * its own hint (a 401), or that cannot be read.
  */
-export async function readReadableDomains(
-  client: DomainsClient,
-  timeoutMs = DOMAINS_TIMEOUT_MS,
-): Promise<ReadableDomains | null> {
-  return (await readDomainsOrRefusal(client, timeoutMs)).readable;
-}
-
-/** A refusal asking again will not change, from an error answer; null for one that may pass, or that cannot be read. */
 function refusalOf(
   error: unknown,
   status: number | undefined,
 ): DomainsRefusal | null {
-  if (status === undefined || status < 400 || status >= 500) return null;
-  if (status === 408 || status === 429) return null;
+  if (status !== 403) return null;
   const body = (error as { error?: { code?: unknown; message?: unknown } })
     ?.error;
   const code =
@@ -512,8 +503,6 @@ export type ResolveFocusParams = {
   env?: Record<string, string | undefined>;
   /** Read the domains (tests replace it). */
   readDomains?: (client: DomainsClient) => Promise<ReadableDomains | null>;
-  /** For tests: reads the domains or the server's refusal, in place of readDomainsOrRefusal. */
-  readDomainsOrRefusal?: typeof readDomainsOrRefusal;
   now?: () => Date;
 };
 
@@ -557,9 +546,7 @@ export async function resolveFocus(
   // A refusal is kept only when the domains came from the server itself.
   const { readable, refusal } = params.readDomains
     ? { readable: await params.readDomains(params.client), refusal: null }
-    : await (params.readDomainsOrRefusal ?? readDomainsOrRefusal)(
-        params.client,
-      );
+    : await readDomainsOrRefusal(params.client);
   const orgId =
     readable?.orgId ??
     params.auth.connectedAgent?.orgId ??
@@ -568,6 +555,9 @@ export async function resolveFocus(
 
   if (asked?.source === "env" && readable && readable.domains.length <= 1)
     return NO_FOCUS;
+  // Nor for a credential the server will not list any domain for: it reads
+  // none, so the session's focus does not apply to it.
+  if (asked?.source === "env" && !readable && refusal) return NO_FOCUS;
   if (asked && "all" in asked) {
     return {
       ...NO_FOCUS,

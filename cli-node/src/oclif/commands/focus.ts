@@ -164,11 +164,17 @@ export class FocusCommand extends Command {
             session_override: session,
             domains: names,
             applies: names === null ? null : names.length > 1,
+            ...(state.refusal ? { refusal: state.refusal } : {}),
           },
           null,
           2,
         ),
       );
+      return;
+    }
+    // Refused for good: there is nothing to choose, so only why.
+    if (state.refusal) {
+      this.log(state.refusal.message.replace(/\.?$/, "."));
       return;
     }
     if (names !== null && names.length <= 1) {
@@ -184,9 +190,7 @@ export class FocusCommand extends Command {
       this.log(`${FOCUS_ENV}=${session} overrides it in this session.`);
     this.log(
       names === null
-        ? state.refusal
-          ? state.refusal.message.replace(/\.?$/, ".")
-          : "Could not read this credential's domains just now."
+        ? "Could not read this credential's domains just now."
         : `Domains this credential reads mail on: ${joinNames(names)}.`,
     );
     if (!choice)
