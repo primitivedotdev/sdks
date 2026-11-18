@@ -142,23 +142,24 @@ def sync_detailed(
     them, and the objections to rules they wrote, under their current membership, each naming the member
     who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in
     withheld. With relation=concerning it lists instead what other members did that concerns the
-    person's own mail: each time a rule started covering one of their mailboxes, saved a new version
-    while covering it, or stopped covering it, named as the rule was then, naming its author in
-    created_through, under their current membership; only on the dashboard or the Primitive CLI. A key,
-    an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads as
-    ended. Notices are written by a periodic job and can lag, a held new version by up to about 15
-    minutes; GET /v1/email-rules/covering-me is the live view. For what covers you now, read GET /email-
-    rules/covering-me.
+    person's own mail: each time a rule in observe or active started covering one of their mailboxes,
+    turned active after they were told of it in observe, saved a new version while covering it, or
+    stopped covering it, named as the rule was then, naming its author in created_through, under their
+    current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none,
+    and gets email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a
+    periodic job and can lag, a held new version by up to about 15 minutes; GET /v1/email-
+    rules/covering-me is the live view. For what covers you now, read GET /email-rules/covering-me.
 
     Args:
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
             asked: what other members asked of you, open or answered: rule requests made to you, and
             objections to rules you wrote; kind may then name only email_rule_request and
-            email_rule_objection. concerning: what other members did that concerns your own mail: an
-            active rule that started covering one of your mailboxes, saved a new version while
-            covering it, or stopped covering it (email_rule_coverage, the only kind it takes). A rule
-            in draft or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and
-            concerning are for a person's own view only. Default: ListActivityObjectsRelation.CREATED.
+            email_rule_objection. concerning: what other members did that concerns your own mail: a
+            rule in observe or active that started covering one of your mailboxes, turned active after
+            you were told of it in observe, saved a new version while covering it, or stopped covering
+            it (email_rule_coverage, the only kind it takes). A draft rule is not told of; GET
+            /v1/email-rules/covering-me lists it. asked and concerning are for a person's own view
+            only. Default: ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
         limit (int | Unset):  Default: 50.
@@ -214,23 +215,24 @@ def sync(
     them, and the objections to rules they wrote, under their current membership, each naming the member
     who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in
     withheld. With relation=concerning it lists instead what other members did that concerns the
-    person's own mail: each time a rule started covering one of their mailboxes, saved a new version
-    while covering it, or stopped covering it, named as the rule was then, naming its author in
-    created_through, under their current membership; only on the dashboard or the Primitive CLI. A key,
-    an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads as
-    ended. Notices are written by a periodic job and can lag, a held new version by up to about 15
-    minutes; GET /v1/email-rules/covering-me is the live view. For what covers you now, read GET /email-
-    rules/covering-me.
+    person's own mail: each time a rule in observe or active started covering one of their mailboxes,
+    turned active after they were told of it in observe, saved a new version while covering it, or
+    stopped covering it, named as the rule was then, naming its author in created_through, under their
+    current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none,
+    and gets email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a
+    periodic job and can lag, a held new version by up to about 15 minutes; GET /v1/email-
+    rules/covering-me is the live view. For what covers you now, read GET /email-rules/covering-me.
 
     Args:
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
             asked: what other members asked of you, open or answered: rule requests made to you, and
             objections to rules you wrote; kind may then name only email_rule_request and
-            email_rule_objection. concerning: what other members did that concerns your own mail: an
-            active rule that started covering one of your mailboxes, saved a new version while
-            covering it, or stopped covering it (email_rule_coverage, the only kind it takes). A rule
-            in draft or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and
-            concerning are for a person's own view only. Default: ListActivityObjectsRelation.CREATED.
+            email_rule_objection. concerning: what other members did that concerns your own mail: a
+            rule in observe or active that started covering one of your mailboxes, turned active after
+            you were told of it in observe, saved a new version while covering it, or stopped covering
+            it (email_rule_coverage, the only kind it takes). A draft rule is not told of; GET
+            /v1/email-rules/covering-me lists it. asked and concerning are for a person's own view
+            only. Default: ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
         limit (int | Unset):  Default: 50.
@@ -281,23 +283,24 @@ async def asyncio_detailed(
     them, and the objections to rules they wrote, under their current membership, each naming the member
     who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in
     withheld. With relation=concerning it lists instead what other members did that concerns the
-    person's own mail: each time a rule started covering one of their mailboxes, saved a new version
-    while covering it, or stopped covering it, named as the rule was then, naming its author in
-    created_through, under their current membership; only on the dashboard or the Primitive CLI. A key,
-    an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads as
-    ended. Notices are written by a periodic job and can lag, a held new version by up to about 15
-    minutes; GET /v1/email-rules/covering-me is the live view. For what covers you now, read GET /email-
-    rules/covering-me.
+    person's own mail: each time a rule in observe or active started covering one of their mailboxes,
+    turned active after they were told of it in observe, saved a new version while covering it, or
+    stopped covering it, named as the rule was then, naming its author in created_through, under their
+    current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none,
+    and gets email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a
+    periodic job and can lag, a held new version by up to about 15 minutes; GET /v1/email-
+    rules/covering-me is the live view. For what covers you now, read GET /email-rules/covering-me.
 
     Args:
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
             asked: what other members asked of you, open or answered: rule requests made to you, and
             objections to rules you wrote; kind may then name only email_rule_request and
-            email_rule_objection. concerning: what other members did that concerns your own mail: an
-            active rule that started covering one of your mailboxes, saved a new version while
-            covering it, or stopped covering it (email_rule_coverage, the only kind it takes). A rule
-            in draft or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and
-            concerning are for a person's own view only. Default: ListActivityObjectsRelation.CREATED.
+            email_rule_objection. concerning: what other members did that concerns your own mail: a
+            rule in observe or active that started covering one of your mailboxes, turned active after
+            you were told of it in observe, saved a new version while covering it, or stopped covering
+            it (email_rule_coverage, the only kind it takes). A draft rule is not told of; GET
+            /v1/email-rules/covering-me lists it. asked and concerning are for a person's own view
+            only. Default: ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
         limit (int | Unset):  Default: 50.
@@ -353,23 +356,24 @@ async def asyncio(
     them, and the objections to rules they wrote, under their current membership, each naming the member
     who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in
     withheld. With relation=concerning it lists instead what other members did that concerns the
-    person's own mail: each time a rule started covering one of their mailboxes, saved a new version
-    while covering it, or stopped covering it, named as the rule was then, naming its author in
-    created_through, under their current membership; only on the dashboard or the Primitive CLI. A key,
-    an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads as
-    ended. Notices are written by a periodic job and can lag, a held new version by up to about 15
-    minutes; GET /v1/email-rules/covering-me is the live view. For what covers you now, read GET /email-
-    rules/covering-me.
+    person's own mail: each time a rule in observe or active started covering one of their mailboxes,
+    turned active after they were told of it in observe, saved a new version while covering it, or
+    stopped covering it, named as the rule was then, naming its author in created_through, under their
+    current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none,
+    and gets email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a
+    periodic job and can lag, a held new version by up to about 15 minutes; GET /v1/email-
+    rules/covering-me is the live view. For what covers you now, read GET /email-rules/covering-me.
 
     Args:
         relation (ListActivityObjectsRelation | Unset): created (the default): what you created.
             asked: what other members asked of you, open or answered: rule requests made to you, and
             objections to rules you wrote; kind may then name only email_rule_request and
-            email_rule_objection. concerning: what other members did that concerns your own mail: an
-            active rule that started covering one of your mailboxes, saved a new version while
-            covering it, or stopped covering it (email_rule_coverage, the only kind it takes). A rule
-            in draft or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and
-            concerning are for a person's own view only. Default: ListActivityObjectsRelation.CREATED.
+            email_rule_objection. concerning: what other members did that concerns your own mail: a
+            rule in observe or active that started covering one of your mailboxes, turned active after
+            you were told of it in observe, saved a new version while covering it, or stopped covering
+            it (email_rule_coverage, the only kind it takes). A draft rule is not told of; GET
+            /v1/email-rules/covering-me lists it. asked and concerning are for a person's own view
+            only. Default: ListActivityObjectsRelation.CREATED.
         kind (str | Unset):
         state (ListActivityObjectsState | Unset):  Default: ListActivityObjectsState.ALL.
         limit (int | Unset):  Default: 50.

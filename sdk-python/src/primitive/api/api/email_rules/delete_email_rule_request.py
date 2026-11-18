@@ -99,9 +99,10 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[DeleteEmailRuleRequestResponse200 | ErrorResponse]:
-    """ Delete a withdrawn rule request
+    """ Delete a withdrawn or declined rule request
 
-     Deletes a request you withdrew, for everyone who could see it. Needs mail:read, the email rules
+     Deletes a request you made that you withdrew or that was declined, for everyone who could see it. An
+    accepted request stays: it is the record of who agreed to share. Needs mail:read, the email rules
     feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
@@ -133,9 +134,10 @@ def sync(
     client: AuthenticatedClient | Client,
 
 ) -> DeleteEmailRuleRequestResponse200 | ErrorResponse | None:
-    """ Delete a withdrawn rule request
+    """ Delete a withdrawn or declined rule request
 
-     Deletes a request you withdrew, for everyone who could see it. Needs mail:read, the email rules
+     Deletes a request you made that you withdrew or that was declined, for everyone who could see it. An
+    accepted request stays: it is the record of who agreed to share. Needs mail:read, the email rules
     feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
@@ -162,9 +164,10 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[DeleteEmailRuleRequestResponse200 | ErrorResponse]:
-    """ Delete a withdrawn rule request
+    """ Delete a withdrawn or declined rule request
 
-     Deletes a request you withdrew, for everyone who could see it. Needs mail:read, the email rules
+     Deletes a request you made that you withdrew or that was declined, for everyone who could see it. An
+    accepted request stays: it is the record of who agreed to share. Needs mail:read, the email rules
     feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:
@@ -196,9 +199,10 @@ async def asyncio(
     client: AuthenticatedClient | Client,
 
 ) -> DeleteEmailRuleRequestResponse200 | ErrorResponse | None:
-    """ Delete a withdrawn rule request
+    """ Delete a withdrawn or declined rule request
 
-     Deletes a request you withdrew, for everyone who could see it. Needs mail:read, the email rules
+     Deletes a request you made that you withdrew or that was declined, for everyone who could see it. An
+    accepted request stays: it is the record of who agreed to share. Needs mail:read, the email rules
     feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 
     Args:

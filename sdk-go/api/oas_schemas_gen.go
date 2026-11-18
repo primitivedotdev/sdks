@@ -13964,6 +13964,11 @@ type CreateEmailRuleRequestResult struct {
 	// For the member asked, while pending: what accepting would share. Null otherwise. Whether it was
 	// accepted with changes is edited_on_accept on the share.
 	ShareTerms NilString `json:"share_terms"`
+	// When it was accepted with changes, for the member who asked and the member asked: the English that
+	// was accepted, beside english, which stays what was asked for. Null otherwise, and from a core-api
+	// release that predates the field. (The accepted English can match english when only the tree
+	// changed.).
+	AcceptedEnglish NilString `json:"accepted_english"`
 	// Present, as true, when the create carried an Idempotency-Key and you already had a pending request
 	// to this member asking exactly this (name, english, tree and message, naming the member the same
 	// way): that request is returned (200), and no second one is made or sent.
@@ -14065,6 +14070,11 @@ func (s *CreateEmailRuleRequestResult) GetShareTerms() NilString {
 	return s.ShareTerms
 }
 
+// GetAcceptedEnglish returns the value of AcceptedEnglish.
+func (s *CreateEmailRuleRequestResult) GetAcceptedEnglish() NilString {
+	return s.AcceptedEnglish
+}
+
 // GetExisting returns the value of Existing.
 func (s *CreateEmailRuleRequestResult) GetExisting() OptBool {
 	return s.Existing
@@ -14163,6 +14173,11 @@ func (s *CreateEmailRuleRequestResult) SetDeclineReason(val NilString) {
 // SetShareTerms sets the value of ShareTerms.
 func (s *CreateEmailRuleRequestResult) SetShareTerms(val NilString) {
 	s.ShareTerms = val
+}
+
+// SetAcceptedEnglish sets the value of AcceptedEnglish.
+func (s *CreateEmailRuleRequestResult) SetAcceptedEnglish(val NilString) {
+	s.AcceptedEnglish = val
 }
 
 // SetExisting sets the value of Existing.
@@ -36906,7 +36921,7 @@ type EmailRuleCoveringAuthor struct {
 	UserID uuid.UUID `json:"user_id"`
 	// Their name; null when they have none set.
 	Name NilString `json:"name"`
-	// Sign-in email; null unless you can list member emails or this is you.
+	// Sign-in email: a rule over your mail always names who wrote it. Null only when they have none.
 	Email NilString `json:"email"`
 }
 
@@ -39719,6 +39734,11 @@ type EmailRuleRequest struct {
 	// For the member asked, while pending: what accepting would share. Null otherwise. Whether it was
 	// accepted with changes is edited_on_accept on the share.
 	ShareTerms NilString `json:"share_terms"`
+	// When it was accepted with changes, for the member who asked and the member asked: the English that
+	// was accepted, beside english, which stays what was asked for. Null otherwise, and from a core-api
+	// release that predates the field. (The accepted English can match english when only the tree
+	// changed.).
+	AcceptedEnglish NilString `json:"accepted_english"`
 }
 
 // GetID returns the value of ID.
@@ -39816,6 +39836,11 @@ func (s *EmailRuleRequest) GetShareTerms() NilString {
 	return s.ShareTerms
 }
 
+// GetAcceptedEnglish returns the value of AcceptedEnglish.
+func (s *EmailRuleRequest) GetAcceptedEnglish() NilString {
+	return s.AcceptedEnglish
+}
+
 // SetID sets the value of ID.
 func (s *EmailRuleRequest) SetID(val uuid.UUID) {
 	s.ID = val
@@ -39909,6 +39934,11 @@ func (s *EmailRuleRequest) SetDeclineReason(val NilString) {
 // SetShareTerms sets the value of ShareTerms.
 func (s *EmailRuleRequest) SetShareTerms(val NilString) {
 	s.ShareTerms = val
+}
+
+// SetAcceptedEnglish sets the value of AcceptedEnglish.
+func (s *EmailRuleRequest) SetAcceptedEnglish(val NilString) {
+	s.AcceptedEnglish = val
 }
 
 // Ref: #/components/schemas/EmailRuleRequestProposer
@@ -41124,8 +41154,8 @@ type EmailRuleShare struct {
 	CreatedAt time.Time   `json:"created_at"`
 	EndedAt   NilDateTime `json:"ended_at"`
 	// Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin or
-	// rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown).
-	// Null while it has not.
+	// rule_deleted (the rule was deleted; the share keeps its record and rule_name, and the rule is no
+	// longer shown). Null while it has not.
 	EndReason NilEmailRuleShareEndReason `json:"end_reason"`
 	// The version of the rule that was accepted. A later version keeps the share: what each version
 	// matches is shared from when it is saved.
@@ -41133,6 +41163,9 @@ type EmailRuleShare struct {
 	// Whether the member who accepted changed the rule's English or tree before accepting (a new name
 	// does not count).
 	EditedOnAccept bool `json:"edited_on_accept"`
+	// When edited_on_accept, for the member sharing their mail and the member it is shared with, live or
+	// not: what was asked for beside what was accepted. Null otherwise, and for anyone else.
+	AcceptChanges NilEmailRuleShareAcceptChanges `json:"accept_changes"`
 	// Not ended, and both people are still members under the memberships that were recorded.
 	Live bool `json:"live"`
 	// True when the rule is active and the share live but new email is not being shared now (what was
@@ -41149,8 +41182,14 @@ type EmailRuleShare struct {
 	IsBeneficiary bool                      `json:"is_beneficiary"`
 	Granter       EmailRuleShareGranter     `json:"granter"`
 	Beneficiary   EmailRuleShareBeneficiary `json:"beneficiary"`
+	// The rule's name, for anyone who can see the share. While the share is live, its current name; once
+	// it has ended, its name when it ended (a later rename is not shown), also after the rule is deleted.
+	//  Null when the share is not live and no name was recorded as it ended (it ended before names were
+	// recorded, or one of its people is no longer a member), except for the member sharing their mail,
+	// who is told its current name.
+	RuleName NilString `json:"rule_name"`
 	// The rule's name, state and description; null once the share is not live, except for the member
-	// sharing their mail.
+	// sharing their mail, and once the rule is deleted.
 	Rule NilEmailRuleShareRule `json:"rule"`
 	// The rule itself. Only for the member sharing their mail; null for anyone else. The member it is
 	// shared with lists this share's id in a key's grant.rules instead (from the dashboard), and their
@@ -41193,6 +41232,11 @@ func (s *EmailRuleShare) GetEditedOnAccept() bool {
 	return s.EditedOnAccept
 }
 
+// GetAcceptChanges returns the value of AcceptChanges.
+func (s *EmailRuleShare) GetAcceptChanges() NilEmailRuleShareAcceptChanges {
+	return s.AcceptChanges
+}
+
 // GetLive returns the value of Live.
 func (s *EmailRuleShare) GetLive() bool {
 	return s.Live
@@ -41226,6 +41270,11 @@ func (s *EmailRuleShare) GetGranter() EmailRuleShareGranter {
 // GetBeneficiary returns the value of Beneficiary.
 func (s *EmailRuleShare) GetBeneficiary() EmailRuleShareBeneficiary {
 	return s.Beneficiary
+}
+
+// GetRuleName returns the value of RuleName.
+func (s *EmailRuleShare) GetRuleName() NilString {
+	return s.RuleName
 }
 
 // GetRule returns the value of Rule.
@@ -41273,6 +41322,11 @@ func (s *EmailRuleShare) SetEditedOnAccept(val bool) {
 	s.EditedOnAccept = val
 }
 
+// SetAcceptChanges sets the value of AcceptChanges.
+func (s *EmailRuleShare) SetAcceptChanges(val NilEmailRuleShareAcceptChanges) {
+	s.AcceptChanges = val
+}
+
 // SetLive sets the value of Live.
 func (s *EmailRuleShare) SetLive(val bool) {
 	s.Live = val
@@ -41308,6 +41362,11 @@ func (s *EmailRuleShare) SetBeneficiary(val EmailRuleShareBeneficiary) {
 	s.Beneficiary = val
 }
 
+// SetRuleName sets the value of RuleName.
+func (s *EmailRuleShare) SetRuleName(val NilString) {
+	s.RuleName = val
+}
+
 // SetRule sets the value of Rule.
 func (s *EmailRuleShare) SetRule(val NilEmailRuleShareRule) {
 	s.Rule = val
@@ -41316,6 +41375,35 @@ func (s *EmailRuleShare) SetRule(val NilEmailRuleShareRule) {
 // SetRuleID sets the value of RuleID.
 func (s *EmailRuleShare) SetRuleID(val NilUUID) {
 	s.RuleID = val
+}
+
+// When edited_on_accept, for the member sharing their mail and the member it is shared with, live or
+// not: what was asked for beside what was accepted. Null otherwise, and for anyone else.
+type EmailRuleShareAcceptChanges struct {
+	// The English the member who asked asked for.
+	RequestedEnglish string `json:"requested_english"`
+	// The English that was accepted. Can match requested_english when only the tree changed.
+	AcceptedEnglish string `json:"accepted_english"`
+}
+
+// GetRequestedEnglish returns the value of RequestedEnglish.
+func (s *EmailRuleShareAcceptChanges) GetRequestedEnglish() string {
+	return s.RequestedEnglish
+}
+
+// GetAcceptedEnglish returns the value of AcceptedEnglish.
+func (s *EmailRuleShareAcceptChanges) GetAcceptedEnglish() string {
+	return s.AcceptedEnglish
+}
+
+// SetRequestedEnglish sets the value of RequestedEnglish.
+func (s *EmailRuleShareAcceptChanges) SetRequestedEnglish(val string) {
+	s.RequestedEnglish = val
+}
+
+// SetAcceptedEnglish sets the value of AcceptedEnglish.
+func (s *EmailRuleShareAcceptChanges) SetAcceptedEnglish(val string) {
+	s.AcceptedEnglish = val
 }
 
 // Ref: #/components/schemas/EmailRuleShareActivity
@@ -41402,8 +41490,8 @@ func (s *EmailRuleShareBeneficiary) SetActive(val bool) {
 }
 
 // Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin or
-// rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown).
-// Null while it has not.
+// rule_deleted (the rule was deleted; the share keeps its record and rule_name, and the rule is no
+// longer shown). Null while it has not.
 type EmailRuleShareEndReason string
 
 const (
@@ -41463,8 +41551,8 @@ func (s *EmailRuleShareEndReason) UnmarshalText(data []byte) error {
 type EmailRuleShareGranter struct {
 	UserID uuid.UUID `json:"user_id"`
 	Name   NilString `json:"name"`
-	// Sign-in email; null unless you can list member emails, this is you, or this is a live share with
-	// you.
+	// Sign-in email; null unless you can list member emails, this is you, or the share is with you (live
+	// or not).
 	Email NilString `json:"email"`
 	// Still a member under the membership recorded (a request or share with someone who left no longer
 	// works).
@@ -41512,7 +41600,7 @@ func (s *EmailRuleShareGranter) SetActive(val bool) {
 }
 
 // The rule's name, state and description; null once the share is not live, except for the member
-// sharing their mail.
+// sharing their mail, and once the rule is deleted.
 type EmailRuleShareRule struct {
 	Name           string                  `json:"name"`
 	State          EmailRuleShareRuleState `json:"state"`
@@ -48481,8 +48569,8 @@ const (
 	ErrorResponseErrorCodeEmailRuleLookAlikesNotWritten            ErrorResponseErrorCode = "email_rule_look_alikes_not_written"
 	ErrorResponseErrorCodeEmailRuleNotCompiled                     ErrorResponseErrorCode = "email_rule_not_compiled"
 	ErrorResponseErrorCodeEmailRuleRequestLimit                    ErrorResponseErrorCode = "email_rule_request_limit"
+	ErrorResponseErrorCodeEmailRuleRequestNotDeletable             ErrorResponseErrorCode = "email_rule_request_not_deletable"
 	ErrorResponseErrorCodeEmailRuleRequestNotPending               ErrorResponseErrorCode = "email_rule_request_not_pending"
-	ErrorResponseErrorCodeEmailRuleRequestNotWithdrawn             ErrorResponseErrorCode = "email_rule_request_not_withdrawn"
 	ErrorResponseErrorCodeEmailRuleRequestPartyLeft                ErrorResponseErrorCode = "email_rule_request_party_left"
 	ErrorResponseErrorCodeEmailRuleRequestProposerOnly             ErrorResponseErrorCode = "email_rule_request_proposer_only"
 	ErrorResponseErrorCodeEmailRuleRequestTargetOnly               ErrorResponseErrorCode = "email_rule_request_target_only"
@@ -48846,8 +48934,8 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeEmailRuleLookAlikesNotWritten,
 		ErrorResponseErrorCodeEmailRuleNotCompiled,
 		ErrorResponseErrorCodeEmailRuleRequestLimit,
+		ErrorResponseErrorCodeEmailRuleRequestNotDeletable,
 		ErrorResponseErrorCodeEmailRuleRequestNotPending,
-		ErrorResponseErrorCodeEmailRuleRequestNotWithdrawn,
 		ErrorResponseErrorCodeEmailRuleRequestPartyLeft,
 		ErrorResponseErrorCodeEmailRuleRequestProposerOnly,
 		ErrorResponseErrorCodeEmailRuleRequestTargetOnly,
@@ -49367,9 +49455,9 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 		return []byte(s), nil
 	case ErrorResponseErrorCodeEmailRuleRequestLimit:
 		return []byte(s), nil
-	case ErrorResponseErrorCodeEmailRuleRequestNotPending:
+	case ErrorResponseErrorCodeEmailRuleRequestNotDeletable:
 		return []byte(s), nil
-	case ErrorResponseErrorCodeEmailRuleRequestNotWithdrawn:
+	case ErrorResponseErrorCodeEmailRuleRequestNotPending:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeEmailRuleRequestPartyLeft:
 		return []byte(s), nil
@@ -50250,11 +50338,11 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 	case ErrorResponseErrorCodeEmailRuleRequestLimit:
 		*s = ErrorResponseErrorCodeEmailRuleRequestLimit
 		return nil
+	case ErrorResponseErrorCodeEmailRuleRequestNotDeletable:
+		*s = ErrorResponseErrorCodeEmailRuleRequestNotDeletable
+		return nil
 	case ErrorResponseErrorCodeEmailRuleRequestNotPending:
 		*s = ErrorResponseErrorCodeEmailRuleRequestNotPending
-		return nil
-	case ErrorResponseErrorCodeEmailRuleRequestNotWithdrawn:
-		*s = ErrorResponseErrorCodeEmailRuleRequestNotWithdrawn
 		return nil
 	case ErrorResponseErrorCodeEmailRuleRequestPartyLeft:
 		*s = ErrorResponseErrorCodeEmailRuleRequestPartyLeft
@@ -66141,10 +66229,10 @@ func (*ListActivityObjectsOK) listActivityObjectsRes() {}
 // Created (the default): what you created. asked: what other members asked of you, open or answered:
 // rule requests made to you, and objections to rules you wrote; kind may then name only
 // email_rule_request and email_rule_objection. concerning: what other members did that concerns your
-// own mail: an active rule that started covering one of your mailboxes, saved a new version while
-// covering it, or stopped covering it (email_rule_coverage, the only kind it takes). A rule in draft
-// or observe is not told of; GET /v1/email-rules/covering-me lists it. asked and concerning are for
-// a person's own view only.
+// own mail: a rule in observe or active that started covering one of your mailboxes, turned active
+// after you were told of it in observe, saved a new version while covering it, or stopped covering
+// it (email_rule_coverage, the only kind it takes). A draft rule is not told of; GET
+// /v1/email-rules/covering-me lists it. asked and concerning are for a person's own view only.
 type ListActivityObjectsRelation string
 
 const (
@@ -66264,10 +66352,11 @@ type ListActivityObjectsResultItemsItem struct {
 	// Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or
 	// disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or
 	// ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API
-	// keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules),
-	// pending, accepted, declined or withdrawn (rule requests and objections; an objection may also be
-	// amended or closed), and for a coverage notice what it told: started (a rule was made or turned
-	// active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox),
+	// keys), pending, claimed, connected or revoked (agents), draft, observe, active or deleted (email
+	// rules), pending, accepted, declined or withdrawn (rule requests and objections; an objection may
+	// also be amended or closed), and for a coverage notice what it told: started (a rule in observe or
+	// active came to cover your mailboxes: made, turned on, or reaching you; once per rule, not per
+	// mailbox), activated (a rule you were told of while it was being tested in observe is now active),
 	// new_version, stopped (it no longer covers you, why in stop_reason), or baseline (it already
 	// covered you when notices began).
 	State     string    `json:"state"`
@@ -66286,8 +66375,9 @@ type ListActivityObjectsResultItemsItem struct {
 	// your mail; otherwise it answers not_found. A deleted rule is told by a stopped notice with
 	// stop_reason deleted.
 	RuleID OptUUID `json:"rule_id"`
-	// For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active,
-	// reaching none of your mailboxes now).
+	// For a stopped notice: deleted, turned_off (set to draft), or no_longer_covers (in observe or
+	// active, reaching none of your mailboxes now). A rule moved from active back to observe still
+	// covers you and is not stopped.
 	StopReason OptListActivityObjectsResultItemsItemStopReason `json:"stop_reason"`
 }
 
@@ -66483,8 +66573,9 @@ func (s *ListActivityObjectsResultItemsItemOwnedNow) UnmarshalText(data []byte) 
 	}
 }
 
-// For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active,
-// reaching none of your mailboxes now).
+// For a stopped notice: deleted, turned_off (set to draft), or no_longer_covers (in observe or
+// active, reaching none of your mailboxes now). A rule moved from active back to observe still
+// covers you and is not stopped.
 type ListActivityObjectsResultItemsItemStopReason string
 
 const (
@@ -83308,6 +83399,51 @@ func (o NilEmailRuleScopeUsedScopeSelection) Get() (v EmailRuleScopeUsedScopeSel
 
 // Or returns value if set, or given parameter if does not.
 func (o NilEmailRuleScopeUsedScopeSelection) Or(d EmailRuleScopeUsedScopeSelection) EmailRuleScopeUsedScopeSelection {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilEmailRuleShareAcceptChanges returns new NilEmailRuleShareAcceptChanges with value set to v.
+func NewNilEmailRuleShareAcceptChanges(v EmailRuleShareAcceptChanges) NilEmailRuleShareAcceptChanges {
+	return NilEmailRuleShareAcceptChanges{
+		Value: v,
+	}
+}
+
+// NilEmailRuleShareAcceptChanges is nullable EmailRuleShareAcceptChanges.
+type NilEmailRuleShareAcceptChanges struct {
+	Value EmailRuleShareAcceptChanges
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilEmailRuleShareAcceptChanges) SetTo(v EmailRuleShareAcceptChanges) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilEmailRuleShareAcceptChanges) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilEmailRuleShareAcceptChanges) SetToNull() {
+	o.Null = true
+	var v EmailRuleShareAcceptChanges
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilEmailRuleShareAcceptChanges) Get() (v EmailRuleShareAcceptChanges, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilEmailRuleShareAcceptChanges) Or(d EmailRuleShareAcceptChanges) EmailRuleShareAcceptChanges {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -123773,9 +123909,10 @@ type SemanticSearchInput struct {
 	Cursor OptString `json:"cursor"`
 	// Domain ids, at most 50: only received mail at one of them, tested on the ranked candidates, so a
 	// page can hold fewer than `limit` results. Received mail only: refused with corpus `outbound`, and
-	// the default corpus becomes `inbound`. Only narrows: an id you cannot read, or of another
-	// organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as
-	// given.
+	// the default corpus becomes `inbound`. A domain is matched by name within your organization: mail
+	// stored under an earlier record of a domain that was deleted and added again is included. Only
+	// narrows: an id you cannot read, or of another organization, matches no mail and is not reported as
+	// unknown. `meta.domain_ids` echoes the list as given.
 	DomainIds []uuid.UUID `json:"domain_ids"`
 }
 

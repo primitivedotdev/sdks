@@ -23402,8 +23402,10 @@ type ListEmailsParams struct {
 	// deleted or outranked between pages can show again on a later page under another id.
 	Group OptListEmailsGroup `json:",omitempty,omitzero"`
 	// Domain ids, comma-separated or with the key repeated, at most 50: only mail received at one of
-	// them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not
-	// reported as unknown. `meta.domain_ids` echoes the list as given.
+	// them. A domain is matched by name within your organization: mail stored under an earlier record of
+	// a domain that was deleted and added again is included. Only narrows: an id you cannot read, or of
+	// another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the
+	// list as given.
 	DomainIds OptString `json:",omitempty,omitzero"`
 	// Receiver presence mail: the presence probes sent to a connected agent and its answers. Left out by
 	// default for a connected-agent credential and listed by default for any other credential. `true`
@@ -36840,9 +36842,11 @@ type SearchEmailsParams struct {
 	// `truncated_fields`. Unknown values are a `validation_error`.
 	Include OptString `json:",omitempty,omitzero"`
 	// Domain ids, comma-separated or with the key repeated, at most 50: received mail at one of them,
-	// and with `direction` `outbound` or `any`, sent mail from an address at one of them. Only narrows:
-	// an id you cannot read, or of another organization, matches no mail and is not reported as unknown.
-	// `meta.domain_ids` echoes the list as given.
+	// and with `direction` `outbound` or `any`, sent mail from an address at one of them. A domain is
+	// matched by name within your organization: mail stored under an earlier record of a domain that was
+	// deleted and added again is included. Only narrows: an id you cannot read, or of another
+	// organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as
+	// given.
 	DomainIds OptString `json:",omitempty,omitzero"`
 }
 

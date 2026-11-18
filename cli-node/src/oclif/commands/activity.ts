@@ -285,7 +285,7 @@ export function formatAskedRows(
 
 const STOP_REASONS: ReadonlyMap<string, string> = new Map([
   ["deleted", "rule deleted"],
-  ["turned_off", "turned off"],
+  ["turned_off", "set to draft"],
   ["no_longer_covers", "no longer reaches your mailboxes"],
 ]);
 
@@ -304,12 +304,12 @@ export function stoppedText(item: ActivityItem): string | null {
 const COVERING_NOW = `\`primitive email-rule-oversight list-covering-me\` shows what covers you now.`;
 
 /**
- * One line per coverage notice: what it told (started, new_version, stopped,
- * or baseline for a rule that already covered you when notices began), when,
- * the rule's name then, its author and the rule's id (rule_id, never the
- * notice's own id, which no command takes); and, when any row is a stopped
- * notice with its reason, what changed (CHANGE). An empty listing is no
- * promise that nothing covers you, so it says where to look now.
+ * One line per coverage notice: what it told (started, activated,
+ * new_version, stopped, or baseline for a rule that already covered you when
+ * notices began), when, the rule's name then, its author and the rule's id
+ * (rule_id, never the notice's own id, which no command takes); and, when any
+ * row is a stopped notice with its reason, what changed (CHANGE). An empty
+ * listing is no promise that nothing covers you, so it says where to look now.
  */
 export function formatConcerningRows(items: readonly ActivityItem[]): string {
   if (items.length === 0) return `No coverage notices to show. ${COVERING_NOW}`;
@@ -590,7 +590,7 @@ export class ActivityAskedCommand extends Command {
 
 export class ActivityConcerningCommand extends Command {
   static description =
-    `List what other members' rules did that concerns your own mail, newest first: started (a rule began covering your mailboxes), new_version (it saved a new version while covering them), stopped (it stopped, with why), and baseline (it covered you when these notices began). Notices can lag, and a rule in draft or observe gets none: \`primitive email-rule-oversight list-covering-me\` lists what covers you now. RULE ID, and rule_id with --json, is the rule's id, which \`primitive email-rule-oversight get-covering-me <rule-id>\` and create-objection --rule-id take.`;
+    `List what other members' rules did that concerns your own mail, newest first: started (a rule in observe or active began covering your mailboxes), activated (a rule you were told of in observe is now active), new_version (it saved a new version while covering them), stopped (it stopped, with why), and baseline (it covered you when these notices began). Notices can lag, and a draft rule gets none: \`primitive email-rule-oversight list-covering-me\` lists what covers you now. RULE ID, and rule_id with --json, is the rule's id, which \`primitive email-rule-oversight get-covering-me <rule-id>\` and create-objection --rule-id take.`;
 
   static summary =
     "List rules that started covering your mail, changed or stopped";

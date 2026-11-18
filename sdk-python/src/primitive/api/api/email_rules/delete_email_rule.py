@@ -94,7 +94,8 @@ def sync_detailed(
 ) -> Response[DeleteEmailRuleResponse200 | ErrorResponse]:
     """ Delete a rule
 
-     Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
+     Deletes a rule: it is kept only as deleted, a rule nothing reads or changes again that grants no
+    access and is listed only in its author's activity, and its decisions go with it. A share of it ends
     (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer
     lists the shares it ended (ended_shares), and lists the unrevoked keys that still list it, which now
     read nothing through it (keys, other_keys; left out when they could not be read). The author or a
@@ -133,7 +134,8 @@ def sync(
 ) -> DeleteEmailRuleResponse200 | ErrorResponse | None:
     """ Delete a rule
 
-     Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
+     Deletes a rule: it is kept only as deleted, a rule nothing reads or changes again that grants no
+    access and is listed only in its author's activity, and its decisions go with it. A share of it ends
     (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer
     lists the shares it ended (ended_shares), and lists the unrevoked keys that still list it, which now
     read nothing through it (keys, other_keys; left out when they could not be read). The author or a
@@ -167,7 +169,8 @@ async def asyncio_detailed(
 ) -> Response[DeleteEmailRuleResponse200 | ErrorResponse]:
     """ Delete a rule
 
-     Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
+     Deletes a rule: it is kept only as deleted, a rule nothing reads or changes again that grants no
+    access and is listed only in its author's activity, and its decisions go with it. A share of it ends
     (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer
     lists the shares it ended (ended_shares), and lists the unrevoked keys that still list it, which now
     read nothing through it (keys, other_keys; left out when they could not be read). The author or a
@@ -206,7 +209,8 @@ async def asyncio(
 ) -> DeleteEmailRuleResponse200 | ErrorResponse | None:
     """ Delete a rule
 
-     Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
+     Deletes a rule: it is kept only as deleted, a rule nothing reads or changes again that grants no
+    access and is listed only in its author's activity, and its decisions go with it. A share of it ends
     (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer
     lists the shares it ended (ended_shares), and lists the unrevoked keys that still list it, which now
     read nothing through it (keys, other_keys; left out when they could not be read). The author or a

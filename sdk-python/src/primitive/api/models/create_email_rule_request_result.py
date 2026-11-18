@@ -54,6 +54,9 @@ class CreateEmailRuleRequestResult:
             decline_reason (None | str): Why the member asked declined it; null unless they gave a reason when declining.
             share_terms (None | str): For the member asked, while pending: what accepting would share. Null otherwise.
                 Whether it was accepted with changes is edited_on_accept on the share.
+            accepted_english (None | str): When it was accepted with changes, for the member who asked and the member asked:
+                the English that was accepted, beside english, which stays what was asked for. Null otherwise, and from a core-
+                api release that predates the field. (The accepted English can match english when only the tree changed.)
             existing (bool | Unset): Present, as true, when the create carried an Idempotency-Key and you already had a
                 pending request to this member asking exactly this (name, english, tree and message, naming the member the same
                 way): that request is returned (200), and no second one is made or sent.
@@ -78,6 +81,7 @@ class CreateEmailRuleRequestResult:
     message: None | str
     decline_reason: None | str
     share_terms: None | str
+    accepted_english: None | str
     existing: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -142,6 +146,9 @@ class CreateEmailRuleRequestResult:
         share_terms: None | str
         share_terms = self.share_terms
 
+        accepted_english: None | str
+        accepted_english = self.accepted_english
+
         existing = self.existing
 
 
@@ -167,6 +174,7 @@ class CreateEmailRuleRequestResult:
             "message": message,
             "decline_reason": decline_reason,
             "share_terms": share_terms,
+            "accepted_english": accepted_english,
         })
         if existing is not UNSET:
             field_dict["existing"] = existing
@@ -300,6 +308,14 @@ class CreateEmailRuleRequestResult:
         share_terms = _parse_share_terms(d.pop("share_terms"))
 
 
+        def _parse_accepted_english(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        accepted_english = _parse_accepted_english(d.pop("accepted_english"))
+
+
         existing = d.pop("existing", UNSET)
 
         create_email_rule_request_result = cls(
@@ -322,6 +338,7 @@ class CreateEmailRuleRequestResult:
             message=message,
             decline_reason=decline_reason,
             share_terms=share_terms,
+            accepted_english=accepted_english,
             existing=existing,
         )
 

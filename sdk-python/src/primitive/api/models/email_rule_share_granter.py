@@ -26,8 +26,8 @@ class EmailRuleShareGranter:
         Attributes:
             user_id (UUID):
             name (None | str):
-            email (None | str): Sign-in email; null unless you can list member emails, this is you, or this is a live share
-                with you.
+            email (None | str): Sign-in email; null unless you can list member emails, this is you, or the share is with you
+                (live or not).
             active (bool): Still a member under the membership recorded (a request or share with someone who left no longer
                 works).
      """

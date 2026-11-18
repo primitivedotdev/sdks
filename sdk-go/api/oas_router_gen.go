@@ -13322,7 +13322,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 											switch method {
 											case "DELETE":
 												r.name = DeleteEmailRuleRequestOperation
-												r.summary = "Delete a withdrawn rule request"
+												r.summary = "Delete a withdrawn or declined rule request"
 												r.operationID = "deleteEmailRuleRequest"
 												r.operationGroup = ""
 												r.pathPattern = "/email-rule-requests/{id}"

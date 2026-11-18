@@ -41,11 +41,12 @@ class ListActivityObjectsResultItemsItem:
             state (str): Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or
                 disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating
                 sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed,
-                connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn
-                (rule requests and objections; an objection may also be amended or closed), and for a coverage notice what it
-                told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once
-                per rule, not per mailbox), new_version, stopped (it no longer covers you, why in stop_reason), or baseline (it
-                already covered you when notices began).
+                connected or revoked (agents), draft, observe, active or deleted (email rules), pending, accepted, declined or
+                withdrawn (rule requests and objections; an objection may also be amended or closed), and for a coverage notice
+                what it told: started (a rule in observe or active came to cover your mailboxes: made, turned on, or reaching
+                you; once per rule, not per mailbox), activated (a rule you were told of while it was being tested in observe is
+                now active), new_version, stopped (it no longer covers you, why in stop_reason), or baseline (it already covered
+                you when notices began).
             created_at (datetime.datetime):
             ended_at (datetime.datetime | None): When it was deleted, replaced or revoked, when an API key expired, when a
                 repeating send stopped, or when a rule request or objection was decided (accepted, declined, withdrawn or, for
@@ -58,7 +59,8 @@ class ListActivityObjectsResultItemsItem:
                 GET /v1/email-rules/covering-me/{rule_id} shows the rule while it covers you, or as it last decided on your
                 mail; otherwise it answers not_found. A deleted rule is told by a stopped notice with stop_reason deleted.
             stop_reason (ListActivityObjectsResultItemsItemStopReason | Unset): For a stopped notice: deleted, turned_off
-                (no longer active), or no_longer_covers (active, reaching none of your mailboxes now).
+                (set to draft), or no_longer_covers (in observe or active, reaching none of your mailboxes now). A rule moved
+                from active back to observe still covers you and is not stopped.
      """
 
     kind: str
