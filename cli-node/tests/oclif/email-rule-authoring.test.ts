@@ -1924,20 +1924,28 @@ describe("emails facts", () => {
     }
   });
 
-  it("prints the classification with --json, or null without one", async () => {
+  it("prints the classification or null in the JSON envelope", async () => {
     answer(email(ready));
     const result = await run("emails:facts", [A, "--json"]);
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
     expect(JSON.parse(result.merged)).toEqual({
-      id: ready.classification_id,
-      vocabulary: "v1",
-      classified_at: ready.classified_at,
-      facts: ready.facts,
+      success: true,
+      data: {
+        id: ready.classification_id,
+        vocabulary: "v1",
+        classified_at: ready.classified_at,
+        facts: ready.facts,
+      },
+      meta: {},
     });
     answer(email({ version: 1, status: "pending" }));
     const none = await run("emails:facts", [A, "--json"]);
-    expect(JSON.parse(none.merged)).toBeNull();
+    expect(JSON.parse(none.merged)).toEqual({
+      success: true,
+      data: null,
+      meta: {},
+    });
   });
 
   it("says why when there is no classification, and when a ready one has no facts", async () => {

@@ -922,11 +922,15 @@ describe("keys commands", () => {
     );
 
     const json = await run(KeysListCommand, ["--include-revoked", "--json"]);
-    expect(JSON.parse(json.stdout)[1]).toMatchObject({
+    expect(JSON.parse(json.stdout).data[1]).toMatchObject({
       id: "gone",
       status: "revoked",
       revoked_at: "2026-11-11T13:05:00.000Z",
       revoked_by: "user-1",
+    });
+    expect(JSON.parse(json.stdout).meta).toEqual({
+      cursor: null,
+      has_more: false,
     });
   });
 
@@ -2831,7 +2835,7 @@ describe("roles commands", () => {
       "44444444-4444-4444-8444-444444444444",
     ]);
     expect(json.stderr).toBe("");
-    expect(JSON.parse(json.stdout)).toEqual(page);
+    expect(JSON.parse(json.stdout)).toEqual({ success: true, data: page });
     expect(new URL(requests[1]?.url ?? "").searchParams.get("cursor")).toBe(
       "44444444-4444-4444-8444-444444444444",
     );
