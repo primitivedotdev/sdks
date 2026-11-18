@@ -13965,9 +13965,8 @@ type CreateEmailRuleRequestResult struct {
 	// accepted with changes is edited_on_accept on the share.
 	ShareTerms NilString `json:"share_terms"`
 	// When it was accepted with changes, for the member who asked and the member asked: the English that
-	// was accepted, beside english, which stays what was asked for. Null otherwise, and from a core-api
-	// release that predates the field. (The accepted English can match english when only the tree
-	// changed.).
+	// was accepted, beside english, which stays what was asked for. Null otherwise. Older responses may
+	// omit this field. (The accepted English can match english when only the tree changed.).
 	AcceptedEnglish NilString `json:"accepted_english"`
 	// Present, as true, when the create carried an Idempotency-Key and you already had a pending request
 	// to this member asking exactly this (name, english, tree and message, naming the member the same
@@ -39735,9 +39734,8 @@ type EmailRuleRequest struct {
 	// accepted with changes is edited_on_accept on the share.
 	ShareTerms NilString `json:"share_terms"`
 	// When it was accepted with changes, for the member who asked and the member asked: the English that
-	// was accepted, beside english, which stays what was asked for. Null otherwise, and from a core-api
-	// release that predates the field. (The accepted English can match english when only the tree
-	// changed.).
+	// was accepted, beside english, which stays what was asked for. Null otherwise. Older responses may
+	// omit this field. (The accepted English can match english when only the tree changed.).
 	AcceptedEnglish NilString `json:"accepted_english"`
 }
 
