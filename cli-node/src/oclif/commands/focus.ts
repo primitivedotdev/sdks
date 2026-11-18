@@ -49,7 +49,8 @@ Override it for one command with --domain <name> or --all-domains, or for a sess
 
 type FocusState = {
   profile: FocusProfile;
-  orgId: string;
+  /** Null only when the server refused the domains and the credential names no organization (an API key). */
+  orgId: string | null;
   /** Null when the domains could not be read and the caller allows it. */
   readable: ReadableDomains | null;
   /** Why the server refused to list them for good, when it did. */
@@ -65,7 +66,7 @@ async function readState(
   command: Command,
   flags: CommonFlags,
   lookupOptional?: false,
-): Promise<FocusState & { readable: ReadableDomains }>;
+): Promise<FocusState & { orgId: string; readable: ReadableDomains }>;
 async function readState(
   command: Command,
   flags: CommonFlags,
@@ -81,7 +82,9 @@ async function readState(
   // organization when the domains cannot be read, as listings do.
   const fallbackOrg =
     auth.connectedAgent?.orgId ?? auth.credentials?.org_id ?? null;
-  if (!readable && lookupOptional && fallbackOrg)
+  // A refusal is shown even when no organization is known, as for an API key:
+  // nothing is saved for it then.
+  if (!readable && lookupOptional && (fallbackOrg || refusal))
     return {
       profile: focusProfile(command.config.configDir, auth),
       orgId: fallbackOrg,
@@ -151,7 +154,9 @@ export class FocusCommand extends Command {
   async run(): Promise<void> {
     const { flags } = await this.parse(FocusCommand);
     const state = await readState(this, flags, true);
-    const saved = loadSavedFocus(state.profile, state.orgId);
+    const saved = state.orgId
+      ? loadSavedFocus(state.profile, state.orgId)
+      : null;
     const choice = saved?.choice ?? null;
     const session = process.env[FOCUS_ENV]?.trim() || null;
     const names = state.readable?.domains.map((d) => d.name) ?? null;
@@ -308,10 +313,11 @@ ${FOCUS_DESCRIPTION}`;
     const { flags } = await this.parse(FocusClearCommand);
     const state = await readState(this, flags, true);
     let had = false;
-    saveFocus(state.profile, state.orgId, (current) => {
-      had = Boolean(current?.choice);
-      return null;
-    });
+    if (state.orgId)
+      saveFocus(state.profile, state.orgId, (current) => {
+        had = Boolean(current?.choice);
+        return null;
+      });
     if (flags.json) {
       this.log(
         JSON.stringify(

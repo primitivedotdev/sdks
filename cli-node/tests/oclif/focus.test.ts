@@ -355,6 +355,22 @@ describe("a credential the server will not list domains for", () => {
     });
   });
 
+  it("shows the refusal to an API key, which names no organization, in focus and focus --json", async () => {
+    domainsAnswer = refused;
+    auth = { source: "flag-or-env", credentials: null };
+    const shown = await run("focus", []);
+    expect(shown.thrown).toBeUndefined();
+    expect(shown.stdout.trim()).toBe(RULES_ONLY);
+    const json = JSON.parse((await run("focus", ["--json"])).stdout);
+    expect(json.refusal).toEqual({
+      code: "grant_forbidden",
+      message: RULES_ONLY,
+    });
+    const cleared = await run("focus:clear", []);
+    expect(cleared.thrown).toBeUndefined();
+    expect(existsSync(memberProfile().path)).toBe(false);
+  });
+
   it("never widens a session's focus it cannot apply: it says where the names came from", async () => {
     domainsAnswer = refused;
     process.env[FOCUS_ENV] = "support.example.com";
