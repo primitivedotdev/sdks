@@ -43,6 +43,7 @@
     },
     "dirname": "primitive",
     "hooks": {
+      "prerun": "./dist/oclif/command-stdin.js",
       "command_not_found": "./dist/oclif/command-not-found.js"
     },
     "plugins": [

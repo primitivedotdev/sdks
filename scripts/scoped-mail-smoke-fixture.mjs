@@ -132,10 +132,12 @@ export async function scopedMailFixture(binaryArgument) {
   const api = createServer(async (request, response) => {
     try {
       const url = new URL(request.url, "http://localhost");
-      requests.push({ method: request.method, url });
+      const entry = { method: request.method, url, body: "" };
+      requests.push(entry);
       if (url.pathname === stallPath) return;
       let raw = "";
       for await (const bytes of request) raw += bytes;
+      entry.body = raw;
       if (request.method === "POST" && url.pathname === "/v1/endpoints") {
         const input = JSON.parse(raw);
         assert.equal(input.kind, "pull");
@@ -339,12 +341,13 @@ export async function scopedMailFixture(binaryArgument) {
     "all_proxy",
   ])
     delete env[key];
-  function invoke(args) {
+  function invoke(args, input) {
     const child = spawn(process.execPath, [binary, ...args], {
       cwd: directory,
       env,
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
     });
+    if (input !== undefined) child.stdin.end(input);
     const run = { child, stdout: "", stderr: "", code: undefined };
     children.push(run);
     const timer = setTimeout(() => child.kill("SIGKILL"), 15000);
@@ -397,7 +400,7 @@ export async function scopedMailFixture(binaryArgument) {
     push,
     invoke,
     until,
-    run: async (args) => invoke(args).closed,
+    run: async (args, input) => invoke(args, input).closed,
     storedEmail: async (id) => {
       const roots = await readdir(join(directory, "shared-mail"));
       assert.equal(

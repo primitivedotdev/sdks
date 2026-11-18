@@ -24,6 +24,7 @@ import {
 function readCliPackageJson(): {
   files?: string[];
   oclif?: {
+    hooks?: Record<string, string>;
     plugins?: string[];
     topics?: Record<string, { description?: string; hidden?: boolean }>;
     "warn-if-update-available"?: {
@@ -57,6 +58,17 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("never consumes stdin as a positional argument", () => {
+    for (const [id, command] of Object.entries(COMMANDS)) {
+      for (const [name, argument] of Object.entries(command.args ?? {})) {
+        expect(argument.ignoreStdin, `${id} ${name}`).toBe(true);
+      }
+    }
+    expect(readCliPackageJson().oclif?.hooks?.prerun).toBe(
+      "./dist/oclif/command-stdin.js",
+    );
+  });
+
   it("removes every retired command spelling and keeps each replacement registered", () => {
     for (const [oldId, newId] of Object.entries(COMMAND_RENAMES)) {
       expect(COMMANDS[oldId], oldId).toBeUndefined();

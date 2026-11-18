@@ -463,10 +463,8 @@ async function runActivityList(
     command.log(
       JSON.stringify(
         {
-          covers,
-          items,
-          withheld,
-          next_cursor: cursor ?? null,
+          data: items,
+          meta: { covers, withheld, cursor: cursor ?? null },
         },
         null,
         2,

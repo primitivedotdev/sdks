@@ -290,8 +290,8 @@ describe("activity created command", () => {
     await ActivityCreatedCommand.run(["--all", "--json"], { root });
     expect(urls).toHaveLength(ALL_PAGES_LIMIT);
     const answer = JSON.parse(lines.join("\n"));
-    expect(answer.items).toHaveLength(ALL_PAGES_LIMIT);
-    expect(answer.next_cursor).toBe(`c${ALL_PAGES_LIMIT}`);
+    expect(answer.data).toHaveLength(ALL_PAGES_LIMIT);
+    expect(answer.meta.cursor).toBe(`c${ALL_PAGES_LIMIT}`);
   });
 
   it(`prints the resume command, --all kept, after ${ALL_PAGES_LIMIT} pages`, async () => {
@@ -458,6 +458,29 @@ describe("activity concerning command", () => {
   it("is registered beside activity asked", () => {
     expect(COMMANDS["activity:concerning"]).toBeDefined();
   });
+
+  it.each([
+    ["created", ActivityCreatedCommand],
+    ["asked", ActivityAskedCommand],
+    ["concerning", ActivityConcerningCommand],
+  ])(
+    "keeps rows and paging metadata in the list envelope for %s",
+    async (_name, command) => {
+      const row = item({ kind: "email_rule_coverage" });
+      useApi([page([], "more"), page([row], null)]);
+      const lines: string[] = [];
+      vi.spyOn(command.prototype, "log").mockImplementation(
+        (message?: string) => {
+          lines.push(message ?? "");
+        },
+      );
+      await command.run(["--all", "--json"], { root });
+      expect(JSON.parse(lines.join("\n"))).toEqual({
+        data: [row],
+        meta: { covers: "you", withheld: [], cursor: null },
+      });
+    },
+  );
 
   it("says under the table what a baseline notice is, when one is listed", () => {
     const out = formatConcerningRows([

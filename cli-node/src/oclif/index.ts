@@ -12,6 +12,7 @@ import {
   cliOperationManifest,
   rawCliOperationManifest,
 } from "./cli-operations.js";
+import { ignoreArgumentStdin } from "./command-stdin.js";
 import {
   ActivityAskedCommand,
   ActivityConcerningCommand,
@@ -954,6 +955,12 @@ const rawCommands: Record<string, typeof Command> = {
 };
 
 export const COMMANDS = canonicalCommands(rawCommands);
+
+// Positional arguments come from argv. Commands that accept a piped body,
+// secret or hook input read stdin themselves, after parsing their options.
+for (const command of new Set(Object.values(COMMANDS))) {
+  ignoreArgumentStdin(command);
+}
 
 // Server messages that name an API route get the command that calls it.
 setKnownCommands(Object.keys(COMMANDS), CANONICAL_OPERATION_ALIASES);

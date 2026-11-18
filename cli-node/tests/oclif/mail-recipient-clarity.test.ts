@@ -314,11 +314,11 @@ describe("sent list", () => {
     ]);
   });
 
-  it("prints whose sends these are and a table, sender first, after the JSON", async () => {
+  it("prints whose sends these are and a table, sender first, on stdout", async () => {
     responder = () => answer(true);
     const result = await run("sent:list", []);
-    expect(JSON.parse(result.stdout)).toEqual(rows);
-    const lines = result.stderr.trimEnd().split("\n");
+    expect(result.stderr).toBe("");
+    const lines = result.stdout.trimEnd().split("\n");
     expect(lines[0]).toBe(
       `Sends from your own addresses (${self}). --all-senders lists every send you can read.`,
     );
@@ -330,7 +330,7 @@ describe("sent list", () => {
     );
     responder = () => answer(false);
     const all = await run("sent:list", []);
-    expect(all.stderr).not.toContain("Sends from your own addresses");
+    expect(all.stdout).not.toContain("Sends from your own addresses");
   });
 
   it("adds nothing under --json, where meta.mine and from_address say it", async () => {

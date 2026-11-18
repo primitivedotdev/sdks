@@ -36,6 +36,7 @@ export default defineConfig([
       "oclif/index": "src/oclif/index.ts",
       "oclif/help": "src/oclif/help.ts",
       "oclif/command-not-found": "src/oclif/command-not-found.ts",
+      "oclif/command-stdin": "src/oclif/command-stdin.ts",
       "oclif/proxy-auto-detect": "src/oclif/proxy-auto-detect.ts",
       "oclif/root-signup-hint": "src/oclif/root-signup-hint.ts",
       "oclif/listen-supervisor": "src/oclif/listen-supervisor.ts",

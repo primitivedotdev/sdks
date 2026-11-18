@@ -2,8 +2,8 @@
 // own sends by default: it sends mine=true unless --all-senders is given. A
 // person sees the sends from their own addresses, a connected agent the
 // sends from its address; for an API key or another app the API does not
-// apply it, and says so in meta.mine. Without --json a table follows the JSON
-// on stderr, sender first, so whose each send is reads at a glance.
+// apply it, and says so in meta.mine. Without --json stdout is a table,
+// sender first, so whose each send is reads at a glance.
 
 import { shownText } from "./terminal-text.js";
 
@@ -71,7 +71,7 @@ export function sentListTable(rows: unknown): string[] {
   return [line(header), ...cells.map(line)];
 }
 
-/** What `sent list` prints on stderr after the JSON, without --json. */
+/** What `sent list` prints on stdout without --json. */
 export function sentListLines(envelope: unknown): string[] {
   const body = isRecord(envelope) ? envelope : {};
   const above = mineLine(body.meta);
