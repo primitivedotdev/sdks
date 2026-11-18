@@ -2,6 +2,7 @@ import { Command, Errors, Flags } from "@oclif/core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import { API_BASE_URL_FLAG_DESCRIPTION } from "../api-command.js";
 import {
+  type DomainsRefusal,
   FOCUS_ENV,
   type FocusChoice,
   type FocusProfile,
@@ -13,7 +14,7 @@ import {
   normalizeDomainNames,
   oneDomainAtATimeError,
   type ReadableDomains,
-  readReadableDomains,
+  readDomainsOrRefusal,
   resolveDomainNames,
   saveFocus,
 } from "../focus.js";
@@ -51,6 +52,8 @@ type FocusState = {
   orgId: string;
   /** Null when the domains could not be read and the caller allows it. */
   readable: ReadableDomains | null;
+  /** Why the server refused to list them for good, when it did. */
+  refusal?: DomainsRefusal | null;
 };
 
 async function readState(
@@ -73,7 +76,7 @@ async function readState(
     apiKey: flags["api-key"],
     apiBaseUrl: flags["api-base-url"],
   });
-  const readable = await readReadableDomains(apiClient.client);
+  const { readable, refusal } = await readDomainsOrRefusal(apiClient.client);
   // Showing and clearing a saved focus work from the credential's own
   // organization when the domains cannot be read, as listings do.
   const fallbackOrg =
@@ -83,7 +86,14 @@ async function readState(
       profile: focusProfile(command.config.configDir, auth),
       orgId: fallbackOrg,
       readable: null,
+      refusal,
     };
+  // Refused for good: the server's words and code, never a retry hint.
+  if (!readable && refusal)
+    throw new Errors.CLIError(refusal.message.replace(/\.?$/, "."), {
+      exit: 1,
+      code: refusal.code,
+    });
   if (!readable)
     throw new Errors.CLIError(
       "Could not read this credential's domains; retry in a moment.",
@@ -174,7 +184,9 @@ export class FocusCommand extends Command {
       this.log(`${FOCUS_ENV}=${session} overrides it in this session.`);
     this.log(
       names === null
-        ? "Could not read this credential's domains just now."
+        ? state.refusal
+          ? state.refusal.message.replace(/\.?$/, ".")
+          : "Could not read this credential's domains just now."
         : `Domains this credential reads mail on: ${joinNames(names)}.`,
     );
     if (!choice)

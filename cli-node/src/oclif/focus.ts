@@ -22,6 +22,7 @@ import { dirname, join } from "node:path";
 import { Errors, Flags } from "@oclif/core";
 import { listDomains } from "@primitivedotdev/api-core";
 import { agentProfileDirectory } from "./connected-agent-profile.js";
+import { shownLine } from "./terminal-text.js";
 
 export const FOCUS_ENV = "PRIMITIVE_FOCUS_DOMAINS";
 
@@ -269,23 +270,39 @@ export type ReadableDomains = { orgId: string | null; domains: FocusDomain[] };
 export const DOMAINS_TIMEOUT_MS = 5_000;
 
 /**
+ * The server refused to list this credential's domains, and asking again will
+ * not change that (a 4xx other than 408 or 429): for example a key whose
+ * access lists only email rules, which reads no domain. Its code and message
+ * are the server's.
+ */
+export type DomainsRefusal = { code: string; message: string };
+
+/**
  * The verified domains this credential can read mail on, from GET /domains,
  * which lists only the domains a credential confined to some mailboxes
- * reaches. Null when they cannot be read.
+ * reaches, or why the server refused to list them for good. Neither when they
+ * could not be read this time.
  */
-export async function readReadableDomains(
+export async function readDomainsOrRefusal(
   client: DomainsClient,
   timeoutMs = DOMAINS_TIMEOUT_MS,
-): Promise<ReadableDomains | null> {
+): Promise<{
+  readable: ReadableDomains | null;
+  refusal: DomainsRefusal | null;
+}> {
   try {
     const result = await listDomains({
       client,
       responseStyle: "fields",
       signal: AbortSignal.timeout(timeoutMs),
     });
-    if (result.error) return null;
+    if (result.error)
+      return {
+        readable: null,
+        refusal: refusalOf(result.error, result.response?.status),
+      };
     const rows = (result.data as { data?: unknown } | undefined)?.data;
-    if (!Array.isArray(rows)) return null;
+    if (!Array.isArray(rows)) return { readable: null, refusal: null };
     let orgId: string | null = null;
     const domains: FocusDomain[] = [];
     for (const row of rows) {
@@ -296,10 +313,39 @@ export async function readReadableDomains(
       domains.push({ name: row.domain.toLowerCase(), id: row.id });
     }
     domains.sort((a, b) => a.name.localeCompare(b.name));
-    return { orgId, domains };
+    return { readable: { orgId, domains }, refusal: null };
   } catch {
-    return null;
+    return { readable: null, refusal: null };
   }
+}
+
+/**
+ * The verified domains this credential can read mail on; null when they
+ * cannot be read, for whatever reason (readDomainsOrRefusal says which).
+ */
+export async function readReadableDomains(
+  client: DomainsClient,
+  timeoutMs = DOMAINS_TIMEOUT_MS,
+): Promise<ReadableDomains | null> {
+  return (await readDomainsOrRefusal(client, timeoutMs)).readable;
+}
+
+/** A refusal asking again will not change, from an error answer; null for one that may pass, or that cannot be read. */
+function refusalOf(
+  error: unknown,
+  status: number | undefined,
+): DomainsRefusal | null {
+  if (status === undefined || status < 400 || status >= 500) return null;
+  if (status === 408 || status === 429) return null;
+  const body = (error as { error?: { code?: unknown; message?: unknown } })
+    ?.error;
+  const code =
+    typeof body?.code === "string" && /^[a-z0-9_]{1,80}$/.test(body.code)
+      ? body.code
+      : null;
+  const message =
+    typeof body?.message === "string" ? shownLine(body.message).trim() : "";
+  return code && message ? { code, message } : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -466,6 +512,8 @@ export type ResolveFocusParams = {
   env?: Record<string, string | undefined>;
   /** Read the domains (tests replace it). */
   readDomains?: (client: DomainsClient) => Promise<ReadableDomains | null>;
+  /** For tests: reads the domains or the server's refusal, in place of readDomainsOrRefusal. */
+  readDomainsOrRefusal?: typeof readDomainsOrRefusal;
   now?: () => Date;
 };
 
@@ -506,8 +554,12 @@ export async function resolveFocus(
   }
 
   const profile = focusProfile(params.configDir, params.auth);
-  const read = params.readDomains ?? readReadableDomains;
-  const readable = await read(params.client);
+  // A refusal is kept only when the domains came from the server itself.
+  const { readable, refusal } = params.readDomains
+    ? { readable: await params.readDomains(params.client), refusal: null }
+    : await (params.readDomainsOrRefusal ?? readDomainsOrRefusal)(
+        params.client,
+      );
   const orgId =
     readable?.orgId ??
     params.auth.connectedAgent?.orgId ??
@@ -529,6 +581,14 @@ export async function resolveFocus(
     };
   }
   if (asked) {
+    // Refused for good: say so in the server's words, never suggest a retry.
+    if (!readable && refusal) {
+      throw focusError(
+        `Cannot look up ${joinNames(asked.names)}: ${refusal.message.replace(/\.?$/, ".")}`,
+        refusal.code,
+        1,
+      );
+    }
     if (!readable) {
       throw focusError(
         `Could not read this credential's domains to look up ${joinNames(asked.names)}; retry, or pass --all-domains.`,

@@ -48,6 +48,8 @@ type Call = {
 };
 let calls: Call[] = [];
 let domains: FocusDomain[] = [SALES, SUPPORT];
+/** What GET /v1/domains answers, when not the domains themselves. */
+let domainsAnswer: (() => Response) | null = null;
 let emails: (call: Call) => unknown[] = () => [];
 let total: (call: Call) => number = () => 0;
 let capped: (call: Call) => boolean = () => false;
@@ -81,7 +83,10 @@ function client() {
       };
       calls.push(call);
       if (url.pathname === "/v1/domains")
-        return Response.json({ success: true, data: domainRows() });
+        return (
+          domainsAnswer?.() ??
+          Response.json({ success: true, data: domainRows() })
+        );
       if (url.pathname === "/v1/emails" || url.pathname === "/v1/emails/search")
         return Response.json({
           success: true,
@@ -164,6 +169,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   calls = [];
   domains = [SALES, SUPPORT];
+  domainsAnswer = null;
   emails = () => [];
   total = () => 0;
   capped = () => false;
@@ -289,6 +295,74 @@ describe("the refusal until a focus is chosen", () => {
     const widened = await run("emails:list", ["--all-domains"]);
     expect(widened.thrown).toBeUndefined();
     expect(emailCalls()[0]?.query.get("domain_ids")).toBeNull();
+  });
+});
+
+describe("a credential the server will not list domains for", () => {
+  const RULES_ONLY =
+    "This credential reads only the mail its email rules granted, not any domain, so it cannot list or read domains or filter mail by domain. That is how its access was made, so asking again will not change it: list its mail without a domain filter, or use a credential whose access names the domain.";
+  const refused = () =>
+    Response.json(
+      {
+        success: false,
+        error: { code: "grant_forbidden", message: RULES_ONLY },
+      },
+      { status: 403 },
+    );
+
+  it("refuses --domain in the server's words and code, never with a retry hint", async () => {
+    domainsAnswer = refused;
+    const latest = await run("emails:list", [
+      "--domain",
+      "support.example.com",
+    ]);
+    expect(latest.thrown).toMatchObject({
+      code: "grant_forbidden",
+      oclif: { exit: 1 },
+    });
+    const message = (latest.thrown as Error).message;
+    expect(message).toBe(`Cannot look up support.example.com: ${RULES_ONLY}`);
+    expect(message).not.toMatch(/retry/i);
+    expect(emailCalls()).toHaveLength(0);
+  });
+
+  it("still lists with --all-domains, or with no domain asked, which need no domains", async () => {
+    domainsAnswer = refused;
+    expect(
+      (await run("emails:list", ["--all-domains"])).thrown,
+    ).toBeUndefined();
+    expect((await run("emails:list", [])).thrown).toBeUndefined();
+    expect(emailCalls()).toHaveLength(2);
+  });
+
+  it("says why in focus set and focus, instead of asking for a retry", async () => {
+    domainsAnswer = refused;
+    const set = await run("focus:set", ["support.example.com"]);
+    expect(set.thrown).toMatchObject({
+      code: "grant_forbidden",
+      oclif: { exit: 1 },
+    });
+    expect((set.thrown as Error).message).toBe(RULES_ONLY);
+    const shown = await run("focus", []);
+    expect(shown.thrown).toBeUndefined();
+    expect(shown.stdout).toContain(RULES_ONLY);
+    expect(shown.stdout).not.toContain("just now");
+  });
+
+  it("keeps the retry hint for a lookup that may pass next time", async () => {
+    for (const status of [429, 503]) {
+      domainsAnswer = () =>
+        Response.json(
+          { success: false, error: { code: "unavailable", message: "busy" } },
+          { status },
+        );
+      const latest = await run("emails:list", [
+        "--domain",
+        "support.example.com",
+      ]);
+      expect(latest.thrown).toMatchObject({ code: "focus_lookup_failed" });
+      expect((latest.thrown as Error).message).toMatch(/retry/);
+    }
   });
 });
 
