@@ -25,7 +25,7 @@ export default class EmailsFactsCommand extends Command {
   static description =
     `Show what the classifier read from a received email, from its understanding.facts (\`primitive emails get <id> --json\`): one fact per line with its value and confidence, for example \`is_cold_outreach: true at 0.69\`, or \`topics: [billing, invoice] at 0.80\` for a multi fact. An email with no classification yet, or none to read, prints why on stderr and nothing on stdout; with --json it prints the classification, or null.
 
-These are the facts as the classifier wrote them; a test's results[].values shows what a rule's conditions compared.`;
+With --json, the classification or null is in data, alongside success and meta. These are the facts as the classifier wrote them; a test's results[].values shows what a rule's conditions compared.`;
 
   static examples = [
     "<%= config.bin %> emails facts 3f0e1c2a-8b7d-4c6e-9a1b-2d3e4f5a6b7c",
@@ -40,7 +40,7 @@ These are the facts as the classifier wrote them; a test's results[].values show
     id: Flags.string({ description: ID_DESCRIPTION }),
     json: Flags.boolean({
       description:
-        "Print the classification (id, vocabulary, classified_at, facts) as one JSON document on stdout, or null when the email has none. A failure prints the error with exit_code.",
+        "Print success, data and meta as one JSON document. data is the classification (id, vocabulary, classified_at, facts), or null when the email has none. A failure prints the error with exit_code.",
     }),
     "api-key": Flags.string({
       description:
@@ -105,12 +105,24 @@ These are the facts as the classifier wrote them; a test's results[].values show
         process.exitCode = 1;
         return;
       }
-      const understanding = (
-        read.data as { data?: { understanding?: unknown } } | undefined
-      )?.data?.understanding;
+      const envelope = read.data as
+        | { data?: { understanding?: unknown }; meta?: unknown }
+        | undefined;
+      const understanding = envelope?.data?.understanding;
       const classification = classificationFromUnderstanding(understanding);
       if (flags.json) {
-        this.log(JSON.stringify(classification, null, 2));
+        this.log(
+          JSON.stringify(
+            {
+              ...envelope,
+              success: true,
+              data: classification,
+              meta: envelope?.meta ?? {},
+            },
+            null,
+            2,
+          ),
+        );
         return;
       }
       const lines = classification

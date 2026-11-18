@@ -92,7 +92,7 @@ type KeyGrantView = KeyView["grant"];
 type CreateGrant = CredentialsCreateKeyInput["grant"];
 
 export type Outcome<T> =
-  | { ok: true; data: T }
+  | { ok: true; data: T; envelope?: Record<string, unknown> }
   | { ok: false; payload: unknown; stepUpUrl?: string };
 
 type SdkResult = {
@@ -133,7 +133,10 @@ function unwrap<T>(data: unknown): T {
   return ((data as { data?: T } | undefined)?.data ?? data) as T;
 }
 
-async function call<T>(request: Promise<SdkResult>): Promise<Outcome<T>> {
+async function call<T>(
+  request: Promise<SdkResult>,
+  keepEnvelope = false,
+): Promise<Outcome<T>> {
   try {
     const result = await request;
     if (result.error !== undefined || !result.response?.ok) {
@@ -150,7 +153,13 @@ async function call<T>(request: Promise<SdkResult>): Promise<Outcome<T>> {
           : extractErrorPayload(result.error);
       return { ok: false, payload };
     }
-    return { ok: true, data: unwrap<T>(result.data) };
+    return {
+      ok: true,
+      data: unwrap<T>(result.data),
+      ...(keepEnvelope
+        ? { envelope: result.data as Record<string, unknown> }
+        : {}),
+    };
   } catch (error) {
     return { ok: false, payload: extractErrorPayload(error) };
   }
@@ -760,7 +769,9 @@ export class KeysListCommand extends Command {
       description:
         "List revoked keys too, each marked [revoked] with when it was revoked.",
     }),
-    json: Flags.boolean({ description: "Print the keys as JSON." }),
+    json: Flags.boolean({
+      description: "Print the keys in data, with continuation in meta.cursor.",
+    }),
   };
 
   async run(): Promise<void> {
@@ -768,6 +779,9 @@ export class KeysListCommand extends Command {
     const includeRevoked = flags["include-revoked"] === true;
     const auth = await authenticate(this, flags);
     const items: KeyView[] = [];
+    let envelope: Record<string, unknown> = {};
+    let meta: Record<string, unknown> = {};
+    const warnings: unknown[] = [];
     let cursor: string | undefined;
     for (let page = 0; page < LIST_PAGE_LIMIT; page += 1) {
       const result = await call<CredentialsListKeysResult>(
@@ -780,20 +794,37 @@ export class KeysListCommand extends Command {
             include_revoked: includeRevoked ? "true" : undefined,
           },
         }),
+        true,
       );
       if (!result.ok) {
         await reportKeysError(this, result, auth, Boolean(flags.json));
         return;
       }
+      envelope = { ...envelope, ...result.envelope };
+      meta = {
+        ...meta,
+        ...(result.envelope?.meta as Record<string, unknown> | undefined),
+      };
+      if (Array.isArray(result.envelope?.warnings))
+        warnings.push(...result.envelope.warnings);
       items.push(...(result.data.items as KeyView[]));
       cursor = result.data.next_cursor ?? undefined;
       if (!cursor) break;
     }
     if (flags.json) {
-      this.log(JSON.stringify(items, null, 2));
+      this.log(
+        JSON.stringify({
+          ...envelope,
+          success: true,
+          data: items,
+          meta: { ...meta, cursor: cursor ?? null, has_more: Boolean(cursor) },
+          ...(warnings.length ? { warnings } : {}),
+        }),
+      );
       return;
     }
     this.log(formatKeyRows(items, { includeRevoked }));
+    if (cursor) process.stderr.write(`next cursor: ${cursor}\n`);
   }
 }
 

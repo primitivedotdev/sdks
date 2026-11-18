@@ -78,6 +78,27 @@ describe("COMMANDS / manifest coverage", () => {
     expect(COMMANDS["org:list"]).toBeDefined();
   });
 
+  it("keeps canonical list envelopes and continuation guidance discoverable", () => {
+    for (const id of [
+      "keys:list",
+      "members:list",
+      "endpoints:list",
+      "emails:facts",
+    ]) {
+      expect(COMMANDS[id]?.flags).toHaveProperty("json");
+    }
+    expect(COMMANDS["keys:list"]?.flags.json.description).toContain(
+      "meta.cursor",
+    );
+    expect(COMMANDS["members:list"]?.description).toContain("meta.can_invite");
+    expect(COMMANDS["members:list"]?.flags.cursor.description).toContain(
+      "meta.cursor",
+    );
+    expect(COMMANDS["emails:facts"]?.flags.json.description).toContain(
+      "data and meta",
+    );
+  });
+
   it("preserves API descriptors while projecting executable command names", () => {
     for (const raw of rawCliOperationManifest) {
       const projected = cliOperationManifest.find(

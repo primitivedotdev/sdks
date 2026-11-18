@@ -69,12 +69,13 @@ const server = createServer(async (request, response) => {
   response.writeHead(result.status ?? 200, { "content-type": "application/json" });
   response.end(JSON.stringify(result.error
     ? { success: false, error: result.error }
-    : { success: true, data: result.data, ...(result.meta ? { meta: result.meta } : {}) }));
+    : { ...result, success: true }));
 });
 await new Promise((done) => server.listen(0, "127.0.0.1", done));
 const listening = server.address();
 assert(listening && typeof listening === "object");
-const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith("PRIMITIVE_")));
+const env = Object.fromEntries(Object.entries(process.env).filter(([name]) =>
+  !/^(PRIMITIVE_|CLAUDE|CODEX|HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|http_proxy|https_proxy|all_proxy)/.test(name)));
 Object.assign(env, {
   HOME: home, XDG_CONFIG_HOME: home, PRIMITIVE_CONFIG_DIR: home,
   PRIMITIVE_SKIP_NEW_VERSION_CHECK: "1", PRIMITIVE_API_KEY: "prim_test_only",
@@ -106,13 +107,13 @@ function document(result, expectedCode = 0) {
   assert.equal(result.stderr, "", result.stderr);
   return JSON.parse(result.stdout);
 }
-async function wire(args, expected, response = { data: { id } }, stdin) {
+async function wire(args, expected, response = { data: { id } }, stdin, expectedData = response.data) {
   requests.length = 0;
   reply = () => response;
   const output = document(await run([...args, "--json"], stdin));
   assert.equal(output.success, true, JSON.stringify(output));
   assert(output.data !== undefined, JSON.stringify(output));
-  for (const [key, value] of Object.entries(response.data))
+  for (const [key, value] of Object.entries(expectedData))
     assert.deepEqual(output.data[key], value, `${args.join(" ")}: data.${key}`);
   assert.equal(requests.length, 1, JSON.stringify(requests));
   const seen = requests[0];
@@ -245,11 +246,109 @@ try {
   }
   const paged = await wire(["keys", "list", "--cursor", "page-two", "--include-revoked"],
     { method: "GET", path: "/v1/keys", query: { cursor: "page-two", include_revoked: "true" } },
-    { data: { items: [], next_cursor: "page-three" } });
-  assert.equal(paged.data.next_cursor, "page-three");
+    { data: { items: [], next_cursor: "page-three" }, meta: { trace: "retained" }, warnings: ["key notice"] }, undefined, []);
+  assert.deepEqual(paged.data, []);
+  assert.deepEqual(paged.meta, { cursor: "page-three", has_more: true, trace: "retained" });
+  assert.deepEqual(paged.warnings, ["key notice"]);
   await wire(["keys", "list", "--cursor", "page-two", "--include-revoked", "false"],
     { method: "GET", path: "/v1/keys", query: { cursor: "page-two", include_revoked: "false" } },
-    { data: { items: [], next_cursor: null } });
+    { data: { items: [], next_cursor: null } }, undefined, []);
+
+  requests.length = 0;
+  reply = (request) => ({ data: { items: [{ id: request.query.cursor ?? id }],
+    next_cursor: request.query.cursor ? null : "second-page" },
+    warnings: [request.query.cursor ? "second page notice" : "first page notice"],
+    meta: request.query.cursor ? { second_page: true, trace: "second" } : { first_page: true, trace: "first" } });
+  const keys = document(await run(["keys", "list", "--include-revoked", "--json"]));
+  assert.deepEqual(keys.data, [{ id }, { id: "second-page" }]);
+  assert.deepEqual(keys.meta, { first_page: true, second_page: true, trace: "second", cursor: null, has_more: false });
+  assert.deepEqual(keys.warnings, ["first page notice", "second page notice"]);
+  assert.deepEqual(requests.map((request) => request.query), [
+    { include_revoked: "true" }, { cursor: "second-page", include_revoked: "true" },
+  ]);
+
+  // A bounded aggregation must still hand the caller its continuation.
+  requests.length = 0;
+  reply = () => ({ data: { items: [], next_cursor: `page-${requests.length}` } });
+  const bounded = document(await run(["keys", "list", "--json"]));
+  assert.equal(requests.length, 50);
+  assert.deepEqual(bounded.meta, { cursor: "page-50", has_more: true });
+
+  const person = { user_id: id, name: "Reader", work_email: null, role: "member",
+    role_name: "Member", role_id: null, agents: [], mail_access: { read: true, send: false } };
+  for (const canInvite of [false, true]) {
+    // --time selects the structured delegate; the readable form shares the
+    // same JSON contract even though it doesn't ask for timing.
+    for (const timing of [[], ["--time"]]) {
+      const members = await wire(["members", "list", "--query", "reader", "--limit", "1", "--cursor", "previous", ...timing],
+        { method: "GET", path: "/v1/organization/members", query: { query: "reader", limit: "1", cursor: "previous" } },
+        { data: { items: [person], cursor: "next-member", can_invite: canInvite }, meta: { trace: "retained" }, warnings: ["member notice"] }, undefined, [person]);
+      assert.deepEqual(members.data, [person]);
+      assert.equal(members.meta.cursor, "next-member");
+      assert.equal(members.meta.can_invite, canInvite);
+      assert.equal(members.meta.trace, "retained");
+      assert.deepEqual(members.warnings, ["member notice"]);
+      if (timing.length) {
+        assert(members.cli_warnings.some((warning) => warning.includes("[time:")));
+      }
+    }
+  }
+  const emptyMembers = await wire(["members", "list"],
+    { method: "GET", path: "/v1/organization/members", query: {} },
+    { data: { items: [], cursor: null, can_invite: false } }, undefined, []);
+  assert.deepEqual(emptyMembers.meta, { cursor: null, can_invite: false });
+
+  for (const meta of [undefined, { trace: "retained", cursor: "opaque" }]) {
+    const endpoints = await wire(["endpoints", "list"],
+      { method: "GET", path: "/v1/endpoints", query: {} }, { data: [{ id }], meta, warnings: ["endpoint notice"] });
+    assert.deepEqual(endpoints.meta, meta ?? {});
+    assert.deepEqual(endpoints.warnings, ["endpoint notice"]);
+  }
+
+  const classification = { id, vocabulary: "v1", classified_at: "2026-11-01T12:00:00Z",
+    facts: { is_invoice: { value: true, confidence: 0.9 } } };
+  for (const argument of [[id], ["--id", id]]) {
+    requests.length = 0;
+    reply = () => ({ data: { understanding: { status: "ready", classification_id: id,
+      vocabulary: classification.vocabulary, classified_at: classification.classified_at, facts: classification.facts } } });
+    const facts = document(await run(["emails", "facts", ...argument, "--json"]));
+    assert.deepEqual(facts, { success: true, data: classification, meta: {} });
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].path, `/v1/emails/${id}`);
+  }
+  for (const understanding of [undefined, { status: "pending" }, { status: "unavailable" }]) {
+    reply = () => ({ data: { understanding } });
+    assert.deepEqual(document(await run(["emails", "facts", id, "--json"])),
+      { success: true, data: null, meta: {} });
+  }
+  reply = () => ({ data: { understanding: { status: "pending" } },
+    warnings: ["classification pending"], meta: { trace: "retained" } });
+  assert.deepEqual(document(await run(["emails", "facts", id, "--json"])),
+    { success: true, data: null, meta: { trace: "retained" }, warnings: ["classification pending"] });
+  for (const args of [["keys", "list"], ["keys", "list", "--cursor", "next"],
+    ["members", "list"], ["members", "list", "--time"], ["endpoints", "list"], ["emails", "facts", id]]) {
+    reply = () => ({ status: 403, error: { code: "forbidden", message: "Fixture refusal" } });
+    const error = document(await run([...args, "--json"]), 1);
+    assert.equal(error.error.code, "forbidden");
+    assert.equal(error.exit_code, 1);
+  }
+  requests.length = 0;
+  reply = () => requests.length === 1
+    ? { data: { items: [{ id }], next_cursor: "next" } }
+    : { status: 403, error: { code: "forbidden", message: "Fixture later-page refusal" } };
+  const failedKeys = document(await run(["keys", "list", "--json"]), 1);
+  assert.equal(failedKeys.error.code, "forbidden");
+  assert.equal(failedKeys.data, undefined);
+
+  const beforeHelp = requests.length;
+  for (const parent of ["keys", "members", "endpoints", "emails"]) {
+    for (const suffix of [[], ["--help"]]) {
+      const help = await run([parent, ...suffix]);
+      assert.equal(help.code, 0, help.stdout + help.stderr);
+      assert.match(help.stdout + help.stderr, /USAGE|COMMANDS/);
+    }
+  }
+  assert.equal(requests.length, beforeHelp);
 
   for (const args of [
     ["wake", "schedules", "create", "--from", "clock@example.com", "--raw-body", JSON.stringify(wakeBody)],

@@ -968,6 +968,12 @@ for (const [oldId, target] of Object.entries(COMMAND_PAIR_RENAMES)) {
   if (!taskEntry) throw new Error(`Missing task command for ${oldId}`);
   const combined = combineCommandPair(taskEntry[1], request, {
     storedRedeploy: oldId === "functions:redeploy-function",
+    listPage:
+      oldId === "credentials:list-keys"
+        ? "keys"
+        : oldId === "projects:list-organization-people"
+          ? "members"
+          : undefined,
   });
   for (const id of Object.keys(rawCommands)) {
     if (canonicalCommandId(id) === target) rawCommands[id] = combined;

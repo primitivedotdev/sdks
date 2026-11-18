@@ -2472,6 +2472,8 @@ export function createOperationCommand(
         // travels, and stderr stays empty, so a merged stream parses as one
         // document.
         const jsonOutput = parsedFlags.json === true;
+        if (jsonOutput && operation.sdkName === "listEndpoints" && envelope)
+          envelope.meta ??= {};
         writeFocusLine(focus, jsonOutput);
         const cursor = envelope?.meta?.cursor;
         if (cursor && !jsonOutput) {

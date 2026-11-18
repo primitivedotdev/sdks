@@ -64,7 +64,7 @@ function delegateArgv(
 export function combineCommandPair(
   task: typeof Command,
   request: typeof Command,
-  options: { storedRedeploy?: boolean } = {},
+  options: { storedRedeploy?: boolean; listPage?: "keys" | "members" } = {},
 ): typeof Command {
   ignoreArgumentStdin(task);
   ignoreArgumentStdin(request);
@@ -255,6 +255,30 @@ export function combineCommandPair(
             : { data: value };
         if (!("error" in document) && document.success === undefined)
           document.success = true;
+        if (options.listPage && !("error" in document)) {
+          const page = document.data;
+          if (
+            page !== null &&
+            typeof page === "object" &&
+            !Array.isArray(page)
+          ) {
+            const fields = page as Record<string, unknown>;
+            if (Array.isArray(fields.items)) {
+              const cursor =
+                options.listPage === "keys"
+                  ? fields.next_cursor
+                  : fields.cursor;
+              document.data = fields.items;
+              document.meta = {
+                ...(document.meta as Record<string, unknown> | undefined),
+                cursor: cursor ?? null,
+                ...(options.listPage === "keys"
+                  ? { has_more: Boolean(cursor) }
+                  : { can_invite: fields.can_invite }),
+              };
+            }
+          }
+        }
         if (Array.isArray(document.data) && document.meta === undefined)
           document.meta = {};
         this.log(JSON.stringify(document));

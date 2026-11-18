@@ -55,6 +55,7 @@ async function runRead<T>(
   ) => Promise<ReadResult>,
   format: (data: T) => string,
   after?: (data: T) => void,
+  keepEnvelope = false,
 ): Promise<void> {
   const { apiClient, auth, baseUrlOverridden } =
     await createAuthenticatedCliApiClient({
@@ -76,7 +77,11 @@ async function runRead<T>(
     return;
   }
   const data = (result.data as { data?: T } | undefined)?.data as T;
-  command.log(flags.json ? JSON.stringify(data, null, 2) : format(data));
+  command.log(
+    flags.json
+      ? JSON.stringify(keepEnvelope ? result.data : data, null, 2)
+      : format(data),
+  );
   if (!flags.json) after?.(data);
 }
 
@@ -194,7 +199,7 @@ export class RolesListCommand extends Command {
 
 export class RolesMembersCommand extends Command {
   static description =
-    "List the organization's members with their roles: name, work email, role, user id, how many directory agents each has, and what their access lets them do with mail (read, send, both or none), where you can see it. Use it to see each member's role before you ask someone for something, for example before sending an email rule request. With --json, prints the response data, including each member's role key, role id, agents and the next page's cursor.";
+    "List the organization's members with their roles: name, work email, role, user id, how many directory agents each has, and what their access lets them do with mail (read, send, both or none), where you can see it. Use it to see each member's role before you ask someone for something, for example before sending an email rule request. With --json, data is the members array, including each member's role key, role id and agents; meta.cursor continues the listing and meta.can_invite says whether you can invite members.";
 
   static summary = "List members and their roles";
 
@@ -217,7 +222,7 @@ export class RolesMembersCommand extends Command {
     }),
     cursor: Flags.string({
       description:
-        "The next page's cursor: printed on stderr as `next cursor: <value>`, or `cursor` with --json.",
+        "The next page's cursor: printed on stderr as `next cursor: <value>`, or `meta.cursor` with --json.",
     }),
   };
 
@@ -237,6 +242,7 @@ export class RolesMembersCommand extends Command {
       (list) => {
         if (list.cursor) process.stderr.write(`next cursor: ${list.cursor}\n`);
       },
+      true,
     );
   }
 }
