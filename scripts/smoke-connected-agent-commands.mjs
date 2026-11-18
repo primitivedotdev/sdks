@@ -60,25 +60,25 @@ async function run(args, options={}) {
 }
 const api=args=>run([...args,'--api-base-url',base,'--api-key',['fixture','key'].join('-')]);
 try {
-  for (const route of [['contacts'],['agent'],['agent','contacts'],['agent','connect'],['agent-connections','claim-agent-connection'],['listen'],...['list','get','add','update','remove','request','accept','wait'].map(x=>['contacts',x]),...['list','add','update','remove'].map(x=>['agent','contacts',x])]) await run([...route,'--help']);
+  for (const route of [['contacts'],['agent'],['agent','contacts'],['agent','connect'],['listen'],...['list','get','create','update','delete','request','accept','wait'].map(x=>['contacts',x]),...['list','create','update','delete'].map(x=>['agent','contacts',x])]) await run([...route,'--help']);
   for (const route of [['contacts'],['agent'],['agent','contacts']]) { const result=await run(route);assert.match(result.stdout+result.stderr,/COMMANDS|USAGE/i); }
   const setupHelp=await run(['agent','connect','--help']);
   assert.match(setupHelp.stdout,/api\.primitive-staging-1\.com/);
   assert.match(setupHelp.stdout,/piped stdin/);
   assert.match(setupHelp.stdout,/fail-open Stop hook/);
   assert.match((await run(['whoami','--help-full'])).stdout,/identity offline/);
-  await api(['contacts','add',peer,'--name','Peer','--json']);
+  await api(["contacts", "create",peer,'--name','Peer','--json']);
   await api(['contacts','list','--json']);
   assert.equal(JSON.parse((await api(['contacts','get',peer,'--json'])).stdout).address,peer);
   const defaultContact=await api(['contacts','get',peer]);
   assert.deepEqual(JSON.parse(defaultContact.stdout),JSON.parse((await api(['contacts','get',peer,'--json'])).stdout),'explicit JSON preserves the default output');
   await api(['contacts','update',peer,'--name','Renamed','--json']);
-  await api(['agent','contacts','add',peer,'--agent',agent,'--notify','--json']);
+  await api(["agent", "contacts", "create",peer,'--agent',agent,'--notify','--json']);
   assert.equal(contact.display_name,'Renamed');assert.equal(member.notify,true);
   await api(['agent','contacts','list','--agent',agent,'--json']);
   await api(['agent','contacts','update',peer,'--agent',agent,'--no-notify','--json']);assert.equal(member.notify,false);
-  await api(['agent','contacts','remove',peer,'--agent',agent,'--json']);
-  await api(['contacts','remove',peer,'--json']);assert.equal(contact,undefined);assert.equal(member,undefined);
+  await api(["agent", "contacts", "delete",peer,'--agent',agent,'--json']);
+  await api(["contacts", "delete",peer,'--json']);assert.equal(contact,undefined);assert.equal(member,undefined);
   const session=version;
   for(const args of [['--contact-requests'],['--notify-session',session,'--contact-requests'],['--notify-session',session,'--contacts','--contact-requests','--sender',peer],['--notify-session',session,'--contacts','--sender',peer],['--notify-session',session,'--contacts','--status']]) await run(['listen',...args],{exit:2});
   const token=['inert','invitation','x'.repeat(48)].join('_');
@@ -143,7 +143,7 @@ try {
   const explicitNotification=await run(['listen','--status','--notify-session',session,'--json'],{preload:deny,env:{PRIMITIVE_AGENT_PROFILE:'work',PRIMITIVE_API_HEADERS:'invalid ambient JSON'}});
   assert.deepEqual(JSON.parse(explicitNotification.stdout),JSON.parse(notification.stdout),'explicit JSON preserves listener status shape');
   assert.ok(!(explicitNotification.stdout+explicitNotification.stderr).includes(credential));
-  const rejected=await run(['agent-connections','claim-agent-connection','--profile','other','--token',token],{preload:deny,exit:2});
+  const rejected=await run(["agent", "connect",'--profile','other','--token',token],{preload:deny,exit:2});
   assert.ok(!(rejected.stdout+rejected.stderr).includes(token)&&!(rejected.stdout+rejected.stderr).includes(credential));
   assert.equal(hits,before);
   const profile=JSON.parse(await readFile(join(config,'agent-connections','profiles','work','connection.json'),'utf8'));assert.equal(profile.api_key,credential);

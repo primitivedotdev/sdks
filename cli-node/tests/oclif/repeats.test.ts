@@ -132,8 +132,8 @@ describe("repeat command registration", () => {
       "repeats:pause",
       "repeats:resume",
       "repeats:cancel",
-      "repeating-sends:stop-repeat-from-email",
-      "repeating-sends:delete-repeating-send",
+      "repeating-sends:stop-from-email",
+      "repeating-sends:delete",
     ])
       expect(COMMANDS[id]).toBeDefined();
     expect(

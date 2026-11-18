@@ -398,7 +398,7 @@ export function deleteCliCredentials(configDir: string): void {
 
 // Turn a server-issued AgentSignupVerifyResult into stored CLI
 // credentials. Lives here (not in commands/signup.ts) because the
-// auto-generated `agent verify-agent-signup` post-success hook also
+// auto-generated `agent verify-signup` post-success hook also
 // needs it, and a cross-import between api-command.ts and signup.ts
 // would form a cycle. Both callers reduce to the same on-disk format
 // the rest of auth.ts already speaks.

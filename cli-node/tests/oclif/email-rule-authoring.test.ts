@@ -396,11 +396,9 @@ function answer(data: unknown): void {
   responder = () => jsonResponse(200, { success: true, data });
 }
 
-describe("email-rules test-email-rule: expectations from flags", () => {
+describe("email-rules test: expectations from flags", () => {
   it("adds --expect-match, --expect-no-match and --expect-file", () => {
-    const flags = (
-      COMMANDS["email-rules:test-email-rule"] as unknown as Runnable
-    ).flags;
+    const flags = (COMMANDS["email-rules:test"] as unknown as Runnable).flags;
     expect(flags["expect-match"]).toMatchObject({
       type: "option",
       multiple: true,
@@ -419,7 +417,7 @@ describe("email-rules test-email-rule: expectations from flags", () => {
 
   it("says in --help-full that expect has flags, and what the exit codes mean", () => {
     const description = (
-      COMMANDS["email-rules:test-email-rule"] as unknown as {
+      COMMANDS["email-rules:test"] as unknown as {
         description: string;
       }
     ).description;
@@ -435,10 +433,7 @@ describe("email-rules test-email-rule: expectations from flags", () => {
       "error.code is expectations_failed or expectations_undecided",
     ])
       expect(description).toContain(text);
-    for (const id of [
-      "email-rules:create-email-rule",
-      "email-rules:update-email-rule",
-    ]) {
+    for (const id of ["email-rules:create", "email-rules:update"]) {
       const text = (COMMANDS[id] as unknown as { description: string })
         .description;
       expect(text, id).not.toMatch(/^ {2,3}expectations\b/m);
@@ -453,19 +448,18 @@ describe("email-rules test-email-rule: expectations from flags", () => {
         }
       ).flags;
     for (const flag of ["expect-match", "expect-no-match"]) {
-      const text =
-        flags("email-rules:test-email-rule")[flag]?.description ?? "";
+      const text = flags("email-rules:test")[flag]?.description ?? "";
       expect(text, flag).toContain(
         "Replaces any expect in --body-file or --raw-body.",
       );
     }
     expect(
-      flags("email-rules:create-email-rule")["expectations-file"]?.description,
+      flags("email-rules:create")["expectations-file"]?.description,
     ).toContain(
       "A create judges them before saving only for a do_not_share rule created active, in expectations_check (passed, failed, undecided)",
     );
     expect(
-      flags("email-rules:update-email-rule")["expectations-file"]?.description,
+      flags("email-rules:update")["expectations-file"]?.description,
     ).toContain(
       "refused if one fails or, for a grant rule, cannot be decided; a do_not_share rule is saved with undecided ones",
     );
@@ -473,7 +467,7 @@ describe("email-rules test-email-rule: expectations from flags", () => {
 
   it("builds expect from repeated and comma-listed ids, without repeats", async () => {
     answer(testResult());
-    const result = await run("email-rules:test-email-rule", [
+    const result = await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--expect-match",
@@ -496,7 +490,7 @@ describe("email-rules test-email-rule: expectations from flags", () => {
   it("replaces expect in --raw-body and keeps its other fields", async () => {
     answer(testResult());
     const tree = { version: 1, vocabulary: "v1", when: { all: [] } };
-    await run("email-rules:test-email-rule", [
+    await run("email-rules:test", [
       "--raw-body",
       JSON.stringify({ tree, expect: { match: [E] } }),
       "--expect-no-match",
@@ -515,7 +509,7 @@ describe("email-rules test-email-rule: expectations from flags", () => {
       "expect.json",
       JSON.stringify({ match: [A], no_match: [B] }),
     );
-    const result = await run("email-rules:test-email-rule", [
+    const result = await run("email-rules:test", [
       "--body-file",
       bodyFile,
       "--expect-file",
@@ -531,7 +525,7 @@ describe("email-rules test-email-rule: expectations from flags", () => {
 
   it("refuses --expect-file with --expect-match before any request", async () => {
     const expectFile = tempFile("expect.json", JSON.stringify({ match: [A] }));
-    const result = await run("email-rules:test-email-rule", [
+    const result = await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--expect-file",
@@ -547,11 +541,7 @@ describe("email-rules test-email-rule: expectations from flags", () => {
   it.each([
     [["--expect-match", " , "], "--expect-match needs at least one email id"],
   ])("refuses %j with exit 2 and sends nothing", async (argv, message) => {
-    const result = await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-      ...argv,
-    ]);
+    const result = await run("email-rules:test", ["--rule-id", RULE, ...argv]);
     expect(result.exitCode).toBe(2);
     expect(result.stderr).toContain(message);
     expect(calls).toEqual([]);
@@ -562,7 +552,7 @@ describe("email-rules test-email-rule: expectations from flags", () => {
       ["[]", "must hold a JSON object"],
       [JSON.stringify({ samples: [] }), "--expect-samples-file"],
     ] as const) {
-      const result = await run("email-rules:test-email-rule", [
+      const result = await run("email-rules:test", [
         "--rule-id",
         RULE,
         "--expect-file",
@@ -573,7 +563,7 @@ describe("email-rules test-email-rule: expectations from flags", () => {
     }
     expect(calls).toEqual([]);
     answer(testResult());
-    await run("email-rules:test-email-rule", [
+    await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--expect-file",
@@ -590,7 +580,7 @@ describe("email-rules test-email-rule: expectations from flags", () => {
       [join(tempHome, "missing.json"), "Could not read --expect-file"],
       [tempFile("bad.json", "{"), "is not valid JSON"],
     ] as const) {
-      const result = await run("email-rules:test-email-rule", [
+      const result = await run("email-rules:test", [
         "--rule-id",
         RULE,
         "--expect-file",
@@ -603,7 +593,7 @@ describe("email-rules test-email-rule: expectations from flags", () => {
   });
 
   it("names the expectation flag when --raw-body is not an object", async () => {
-    const result = await run("email-rules:test-email-rule", [
+    const result = await run("email-rules:test", [
       "--raw-body",
       "[]",
       "--expect-match",
@@ -617,11 +607,11 @@ describe("email-rules test-email-rule: expectations from flags", () => {
   });
 });
 
-describe("email-rules test-email-rule: exit codes and the stderr report", () => {
+describe("email-rules test: exit codes and the stderr report", () => {
   it("exits 1 when an expectation failed and prints the report after the JSON", async () => {
     const data = testResult(FAILED_EXPECTATIONS);
     answer(data);
-    const result = await run("email-rules:test-email-rule", [
+    const result = await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--expect-match",
@@ -659,10 +649,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
   it("says how many decided emails the conditions held on together", async () => {
     const data = testResult();
     answer({ ...data, summary: { ...data.summary, conditions_held: 2 } });
-    const result = await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-    ]);
+    const result = await run("email-rules:test", ["--rule-id", RULE]);
     expect(stderrLines(result)).toContain(
       "Conditions (3 decided; together they held on 2):",
     );
@@ -670,7 +657,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
 
   it("exits 3 when nothing failed but an expectation is undecided", async () => {
     answer(testResult(UNDECIDED_EXPECTATIONS));
-    const result = await run("email-rules:test-email-rule", [
+    const result = await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--expect-match",
@@ -707,12 +694,12 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     });
     answer(data);
     const argv = ["--rule-id", RULE, "--expect-match", `${A},${E}`];
-    const result = await run("email-rules:test-email-rule", argv);
+    const result = await run("email-rules:test", argv);
     expect(result.exitCode).toBe(1);
     expect(stderrLines(result)).toContain(
       `  undecided: ${E} expected match, got not_found (not_found; testing again will not decide it)`,
     );
-    const json = await run("email-rules:test-email-rule", [...argv, "--json"]);
+    const json = await run("email-rules:test", [...argv, "--json"]);
     expect(json.exitCode).toBe(1);
     expect(json.stderr).toBe("");
     expect(JSON.parse(json.merged)).toMatchObject({
@@ -739,7 +726,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
       ),
     };
     answer(data);
-    const result = await run("email-rules:test-email-rule", [
+    const result = await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--expect-no-match",
@@ -752,11 +739,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
         `  ${D} unclassified (not_classifiable)`,
       ]),
     );
-    const json = await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-      "--json",
-    ]);
+    const json = await run("email-rules:test", ["--rule-id", RULE, "--json"]);
     expect(json.exitCode).toBe(1);
     expect(JSON.parse(json.merged).error).toEqual({
       code: "expectations_undecided",
@@ -785,7 +768,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     );
     answer(data);
     const argv = ["--rule-id", RULE, "--expect-match", E];
-    const result = await run("email-rules:test-email-rule", argv);
+    const result = await run("email-rules:test", argv);
     expect(result.exitCode).toBe(1);
     expect(stderrLines(result)).toEqual(
       expect.arrayContaining([
@@ -793,7 +776,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
         `  ${E} skipped (unparsed)`,
       ]),
     );
-    const json = await run("email-rules:test-email-rule", [...argv, "--json"]);
+    const json = await run("email-rules:test", [...argv, "--json"]);
     expect(json.exitCode).toBe(1);
     expect(JSON.parse(json.merged).error).toEqual({
       code: "expectations_undecided",
@@ -837,10 +820,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
       ),
     };
     answer(data);
-    const result = await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-    ]);
+    const result = await run("email-rules:test", ["--rule-id", RULE]);
     expect(result.exitCode).toBe(3);
     expect(stderrLines(result)).toEqual(
       expect.arrayContaining([
@@ -849,11 +829,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
         `  ${D} unclassified (classifier_unavailable)`,
       ]),
     );
-    const json = await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-      "--json",
-    ]);
+    const json = await run("email-rules:test", ["--rule-id", RULE, "--json"]);
     expect(json.exitCode).toBe(3);
     expect(JSON.parse(json.merged).error).toEqual({
       code: "expectations_undecided",
@@ -884,11 +860,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
         ],
       }),
     );
-    const result = await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-      "--json",
-    ]);
+    const result = await run("email-rules:test", ["--rule-id", RULE, "--json"]);
     expect(result.exitCode).toBe(1);
     expect(JSON.parse(result.merged).error).toEqual({
       code: "expectations_failed",
@@ -898,10 +870,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
 
   it("follows a saved rule's saved expectations when no expect is sent", async () => {
     answer(testResult(FAILED_EXPECTATIONS));
-    const result = await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-    ]);
+    const result = await run("email-rules:test", ["--rule-id", RULE]);
     expect(calls[0]?.body).toEqual({ rule_id: RULE });
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain(
@@ -920,10 +889,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
         },
       ],
     });
-    const result = await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-    ]);
+    const result = await run("email-rules:test", ["--rule-id", RULE]);
     expect(result.exitCode).toBe(0);
     expect(stderrLines(result)).toContain(
       `  ${B} no_match: is_cold_outreach: null`,
@@ -941,10 +907,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     try {
       const data = testResult(FAILED_EXPECTATIONS);
       answer(data);
-      const result = await run("email-rules:test-email-rule", [
-        "--rule-id",
-        RULE,
-      ]);
+      const result = await run("email-rules:test", ["--rule-id", RULE]);
       // Fails closed: the expectations did not pass, so it still exits 1.
       expect(result.exitCode).toBe(1);
       expect(JSON.parse(result.stdout)).toEqual(data);
@@ -952,11 +915,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
         "Warning: testEmailRule succeeded but its report could not be built (bad answer). The JSON above is the full answer; read it rather than the exit code.",
         "The answer's expectations were not all shown to pass, so the command exits 1.",
       ]);
-      const json = await run("email-rules:test-email-rule", [
-        "--rule-id",
-        RULE,
-        "--json",
-      ]);
+      const json = await run("email-rules:test", ["--rule-id", RULE, "--json"]);
       expect(json.stderr).toBe("");
       expect(json.exitCode).toBe(1);
       expect(JSON.parse(json.merged)).toEqual({
@@ -972,10 +931,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
       });
       // An answer whose expectations passed keeps exit 0 when the report breaks.
       answer(testResult(PASSED_EXPECTATIONS));
-      const passed = await run("email-rules:test-email-rule", [
-        "--rule-id",
-        RULE,
-      ]);
+      const passed = await run("email-rules:test", ["--rule-id", RULE]);
       expect(passed.exitCode).toBe(0);
     } finally {
       extension.report = report;
@@ -984,7 +940,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
 
   it("exits 0 when every expectation passed, and without expectations", async () => {
     answer(testResult(PASSED_EXPECTATIONS));
-    const passed = await run("email-rules:test-email-rule", [
+    const passed = await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--expect-match",
@@ -995,7 +951,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
     expect(passed.exitCode).toBe(0);
     expect(passed.stderr).toContain("Expectations: all 2 passed.");
     answer(testResult());
-    const none = await run("email-rules:test-email-rule", ["--rule-id", RULE]);
+    const none = await run("email-rules:test", ["--rule-id", RULE]);
     expect(none.exitCode).toBe(0);
     expect(none.stderr).not.toContain("Expectations");
     expect(none.stderr).toContain("Not matched (3):");
@@ -1038,7 +994,7 @@ describe("email-rules test-email-rule: exit codes and the stderr report", () => 
   });
 });
 
-describe("email-rules test-email-rule: which mail was tested (--same-emails-as)", () => {
+describe("email-rules test: which mail was tested (--same-emails-as)", () => {
   const windowed = (mode: "recent" | "ids") => ({
     ...testResult(),
     window: {
@@ -1053,10 +1009,7 @@ describe("email-rules test-email-rule: which mail was tested (--same-emails-as)"
   it("says first which mail a test covered, and only that", async () => {
     for (const mode of ["recent", "ids"] as const) {
       answer(windowed(mode));
-      const result = await run("email-rules:test-email-rule", [
-        "--rule-id",
-        RULE,
-      ]);
+      const result = await run("email-rules:test", ["--rule-id", RULE]);
       expect(stderrLines(result)[0]).toBe(
         "Tested 4 emails received 2026-11-12 08:53 UTC to 2026-11-13 10:13 UTC.",
       );
@@ -1071,7 +1024,7 @@ describe("email-rules test-email-rule: which mail was tested (--same-emails-as)"
     ] as const) {
       calls.length = 0;
       answer(saved);
-      const result = await run("email-rules:test-email-rule", [
+      const result = await run("email-rules:test", [
         "--rule-id",
         RULE,
         "--same-emails-as",
@@ -1086,17 +1039,14 @@ describe("email-rules test-email-rule: which mail was tested (--same-emails-as)"
 
   it("says nothing of the span without one, and leaves emails not found out of the count", async () => {
     answer(testResult());
-    const plain = await run("email-rules:test-email-rule", ["--rule-id", RULE]);
+    const plain = await run("email-rules:test", ["--rule-id", RULE]);
     expect(stderrLines(plain)[0]).not.toMatch(/^Tested /);
     const withMissing = windowed("recent");
     answer({
       ...withMissing,
       counts: { ...withMissing.counts, emails: 5, not_found: 2 },
     });
-    const missing = await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-    ]);
+    const missing = await run("email-rules:test", ["--rule-id", RULE]);
     expect(stderrLines(missing)[0]).toMatch(/^Tested 3 emails received /);
   });
 
@@ -1104,7 +1054,7 @@ describe("email-rules test-email-rule: which mail was tested (--same-emails-as)"
     calls.length = 0;
     answer(windowed("ids"));
     const upper = A.toUpperCase();
-    const result = await run("email-rules:test-email-rule", [
+    const result = await run("email-rules:test", [
       "--body-file",
       tempFile("body.json", JSON.stringify({ rule_id: RULE, email_ids: [C] })),
       "--same-emails-as",
@@ -1129,7 +1079,7 @@ describe("email-rules test-email-rule: which mail was tested (--same-emails-as)"
 
   it("refuses a saved answer that names no emails", async () => {
     calls.length = 0;
-    const none = await run("email-rules:test-email-rule", [
+    const none = await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--same-emails-as",
@@ -1142,7 +1092,7 @@ describe("email-rules test-email-rule: which mail was tested (--same-emails-as)"
 
   it("refuses a file that is not a saved answer, sending nothing", async () => {
     calls.length = 0;
-    const result = await run("email-rules:test-email-rule", [
+    const result = await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--same-emails-as",
@@ -1150,13 +1100,13 @@ describe("email-rules test-email-rule: which mail was tested (--same-emails-as)"
     ]);
     expect(result.exitCode).toBe(2);
     expect(result.stderr).toContain(
-      "is not a saved test-email-rule answer: it has no results",
+      "is not a saved test answer: it has no results",
     );
     expect(calls).toEqual([]);
   });
 });
 
-describe("email-rules test-email-rule: the matched emails and their attachments", () => {
+describe("email-rules test: the matched emails and their attachments", () => {
   it("lists each matched email with its sender, subject and file names, and a near miss's file names", async () => {
     const data = testResult();
     answer({
@@ -1183,10 +1133,7 @@ describe("email-rules test-email-rule: the matched emails and their attachments"
           ),
       ],
     });
-    const result = await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-    ]);
+    const result = await run("email-rules:test", ["--rule-id", RULE]);
     const lines = stderrLines(result);
     const at = lines.indexOf("Matched (1):");
     expect(lines.slice(at, at + 3)).toEqual([
@@ -1198,11 +1145,11 @@ describe("email-rules test-email-rule: the matched emails and their attachments"
   });
 });
 
-describe("email-rules test-email-rule --json", () => {
+describe("email-rules test --json", () => {
   it("keeps the exit code and states why in one document, with nothing on stderr", async () => {
     const data = testResult(FAILED_EXPECTATIONS);
     answer(data);
-    const failed = await run("email-rules:test-email-rule", [
+    const failed = await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--expect-match",
@@ -1222,7 +1169,7 @@ describe("email-rules test-email-rule --json", () => {
     });
 
     answer(testResult(UNDECIDED_EXPECTATIONS));
-    const undecided = await run("email-rules:test-email-rule", [
+    const undecided = await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--expect-no-match",
@@ -1245,11 +1192,7 @@ describe("email-rules test-email-rule --json", () => {
   it("prints the response body when the exit code is 0", async () => {
     const data = testResult(PASSED_EXPECTATIONS);
     answer(data);
-    const result = await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-      "--json",
-    ]);
+    const result = await run("email-rules:test", ["--rule-id", RULE, "--json"]);
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
     expect(JSON.parse(result.merged)).toEqual({ success: true, data });
@@ -1288,7 +1231,7 @@ describe("email-rules test-email-rule --json", () => {
   });
 });
 
-describe("email-rules create-email-rule and update-email-rule --expectations-file", () => {
+describe("email-rules create and update --expectations-file", () => {
   const written = {
     id: RULE,
     name: "Cold outreach",
@@ -1316,7 +1259,7 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
       "expectations.json",
       JSON.stringify({ match: [A], no_match: [B] }),
     );
-    const result = await run("email-rules:create-email-rule", [
+    const result = await run("email-rules:create", [
       "--raw-body",
       JSON.stringify({ tree, kind: "grant", expectations: { match: [E] } }),
       "--name",
@@ -1340,7 +1283,7 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
 
   it("clears saved expectations on update with a null file", async () => {
     answer(written);
-    const result = await run("email-rules:update-email-rule", [
+    const result = await run("email-rules:update", [
       RULE,
       "--expectations-file",
       tempFile("null.json", "null"),
@@ -1364,7 +1307,7 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
       },
     };
     answer(data);
-    const result = await run("email-rules:update-email-rule", [
+    const result = await run("email-rules:update", [
       RULE,
       "--expectations-file",
       tempFile("e.json", JSON.stringify({ match: [B] })),
@@ -1376,16 +1319,15 @@ describe("email-rules create-email-rule and update-email-rule --expectations-fil
   });
 
   it("generates --if-revision, and no --if-version or --explanation, on rule writes", () => {
-    const update = (
-      COMMANDS["email-rules:update-email-rule"] as unknown as Runnable
-    ).flags;
+    const update = (COMMANDS["email-rules:update"] as unknown as Runnable)
+      .flags;
     expect(update["if-revision"]?.type).toBe("option");
     expect(update["if-version"]).toBeUndefined();
     for (const id of [
-      "email-rules:create-email-rule",
-      "email-rules:update-email-rule",
-      "email-rules:create-email-rule-request",
-      "email-rules:accept-email-rule-request",
+      "email-rules:create",
+      "email-rules:update",
+      "email-rules:create-request",
+      "email-rules:accept-request",
     ])
       expect(
         (COMMANDS[id] as unknown as Runnable).flags.explanation,
@@ -1421,27 +1363,21 @@ describe("email-rules samples files and --pick", () => {
 
   it("adds the flags, each samples file flag beside --pick", () => {
     const flags = (id: string) => (COMMANDS[id] as unknown as Runnable).flags;
-    expect(flags("email-rules:create-email-rule")).toHaveProperty(
-      "expectation-samples-file",
-    );
-    expect(flags("email-rules:create-email-rule").pick?.description).toContain(
+    expect(flags("email-rules:create")).toHaveProperty("samples-file");
+    expect(flags("email-rules:create").pick?.description).toContain(
       "by their numbers from 1 as generate-look-alikes printed them",
     );
-    const update = flags("email-rules:update-email-rule");
-    expect(update["expectation-samples-file"]?.exclusive).toEqual([
-      "add-expectation-samples-file",
-    ]);
-    expect(update["add-expectation-samples-file"]?.exclusive).toEqual([
-      "expectation-samples-file",
-    ]);
+    const update = flags("email-rules:update");
+    expect(update["samples-file"]?.exclusive).toEqual(["add-samples-file"]);
+    expect(update["add-samples-file"]?.exclusive).toEqual(["samples-file"]);
     expect(
-      flags("email-rules:test-email-rule")["expect-samples-file"]?.exclusive,
+      flags("email-rules:test")["expect-samples-file"]?.exclusive,
     ).toBeUndefined();
   });
 
   it("sets the picked samples on create, in the order --pick names them", async () => {
     answer(written);
-    const result = await run("email-rules:create-email-rule", [
+    const result = await run("email-rules:create", [
       "--raw-body",
       JSON.stringify({
         tree,
@@ -1452,7 +1388,7 @@ describe("email-rules samples files and --pick", () => {
       "Bills",
       "--english",
       "bills",
-      "--expectation-samples-file",
+      "--samples-file",
       tempFile("samples.json", JSON.stringify(samples)),
       "--pick",
       "3,1",
@@ -1467,21 +1403,21 @@ describe("email-rules samples files and --pick", () => {
     });
   });
 
-  it("adds on update with --add-expectation-samples-file, and replaces with --expectation-samples-file", async () => {
+  it("adds on update with --add-samples-file, and replaces with --samples-file", async () => {
     answer(written);
     const file = tempFile("samples.json", JSON.stringify(samples));
-    const added = await run("email-rules:update-email-rule", [
+    const added = await run("email-rules:update", [
       RULE,
-      "--add-expectation-samples-file",
+      "--add-samples-file",
       file,
       "--pick",
       "2",
     ]);
     expect(added.exitCode, added.stderr).toBe(0);
     expect(calls[0]?.body).toEqual({ add_expectation_samples: [samples[1]] });
-    const removed = await run("email-rules:update-email-rule", [
+    const removed = await run("email-rules:update", [
       RULE,
-      "--expectation-samples-file",
+      "--samples-file",
       tempFile("empty.json", "[]"),
     ]);
     expect(removed.exitCode, removed.stderr).toBe(0);
@@ -1490,18 +1426,18 @@ describe("email-rules samples files and --pick", () => {
 
   it("refuses a --pick number the file does not hold, and --pick without a file, sending nothing", async () => {
     const file = tempFile("samples.json", JSON.stringify(samples));
-    const out = await run("email-rules:update-email-rule", [
+    const out = await run("email-rules:update", [
       RULE,
-      "--add-expectation-samples-file",
+      "--add-samples-file",
       file,
       "--pick",
       "2,4",
     ]);
     expect(out.exitCode).toBe(2);
     expect(out.stderr).toContain(
-      `--pick 2,4: 4 is not a sample number; --add-expectation-samples-file ${file} holds samples 1 to 3.`,
+      `--pick 2,4: 4 is not a sample number; --add-samples-file ${file} holds samples 1 to 3.`,
     );
-    const alone = await run("email-rules:create-email-rule", [
+    const alone = await run("email-rules:create", [
       "--raw-body",
       JSON.stringify({ tree, name: "n", english: "e" }),
       "--pick",
@@ -1509,13 +1445,13 @@ describe("email-rules samples files and --pick", () => {
     ]);
     expect(alone.exitCode).toBe(2);
     expect(alone.stderr).toContain(
-      "--pick chooses from a samples file: pass it with --expectation-samples-file.",
+      "--pick chooses from a samples file: pass it with --samples-file.",
     );
-    const both = await run("email-rules:update-email-rule", [
+    const both = await run("email-rules:update", [
       RULE,
-      "--add-expectation-samples-file",
+      "--add-samples-file",
       file,
-      "--expectation-samples-file",
+      "--samples-file",
       file,
     ]);
     expect(both.exitCode).toBe(2);
@@ -1524,7 +1460,7 @@ describe("email-rules samples files and --pick", () => {
 
   it("tests the picked samples with --expect-samples-file, beside --expect-match", async () => {
     answer(testResult());
-    const result = await run("email-rules:test-email-rule", [
+    const result = await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--expect-match",
@@ -1540,7 +1476,7 @@ describe("email-rules samples files and --pick", () => {
     });
     expect(result.stderr).not.toContain("--pick");
     // Beside --expect-file too: the file's emails by id, and the samples.
-    await run("email-rules:test-email-rule", [
+    await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--expect-file",
@@ -1554,7 +1490,7 @@ describe("email-rules samples files and --pick", () => {
       expect: { no_match: [B], samples: [samples[1]] },
     });
     // An expect file with samples in it points to the samples flag.
-    const inFile = await run("email-rules:test-email-rule", [
+    const inFile = await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--expect-file",
@@ -1564,17 +1500,15 @@ describe("email-rules samples files and --pick", () => {
     expect(inFile.stderr).toContain(
       "takes emails by id only; give made-up emails with --expect-samples-file.",
     );
-    const rule = await run("email-rules:update-email-rule", [
+    const rule = await run("email-rules:update", [
       RULE,
       "--expectations-file",
       tempFile("expectations.json", JSON.stringify({ samples })),
     ]);
-    expect(rule.stderr).toContain(
-      "give made-up emails with --expectation-samples-file.",
-    );
+    expect(rule.stderr).toContain("give made-up emails with --samples-file.");
     expect(calls).toHaveLength(2);
     // Alone, the samples are the whole of expect.
-    await run("email-rules:test-email-rule", [
+    await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--expect-samples-file",
@@ -1628,9 +1562,9 @@ describe("email-rules generate-look-alikes", () => {
     ]);
     const saved = tempFile("look-alikes.json", result.stdout);
     answer({ id: RULE, name: "Bills", state: "observe", current_version: 2 });
-    await run("email-rules:update-email-rule", [
+    await run("email-rules:update", [
       RULE,
-      "--add-expectation-samples-file",
+      "--add-samples-file",
       saved,
       "--pick",
       "1",
@@ -1654,7 +1588,7 @@ describe("email-rules generate-look-alikes", () => {
   });
 });
 
-describe("email-rules accept-email-rule-request --expectation-samples-file", () => {
+describe("email-rules accept-request --samples-file", () => {
   const REQUEST = "00000000-0000-4000-8000-0000000000ee";
   const sample = (subject: string) => ({
     expected: "no_match",
@@ -1670,9 +1604,9 @@ describe("email-rules accept-email-rule-request --expectation-samples-file", () 
 
   it("keeps the picked samples on the rule the accept writes", async () => {
     answer({ request: { id: REQUEST }, rule: { id: RULE }, share: {} });
-    const result = await run("email-rules:accept-email-rule-request", [
+    const result = await run("email-rules:accept-request", [
       REQUEST,
-      "--expectation-samples-file",
+      "--samples-file",
       tempFile("samples.json", JSON.stringify(samples)),
       "--pick",
       "3,1",
@@ -1689,7 +1623,7 @@ describe("email-rules accept-email-rule-request --expectation-samples-file", () 
   it("refuses a text field over the API's limit before sending it, from a flag or --body-file", async () => {
     calls.length = 0;
     const long = `${"x".repeat(612)}  `;
-    const declined = await run("email-rules:decline-email-rule-request", [
+    const declined = await run("email-rules:decline-request", [
       REQUEST,
       "--reason",
       long,
@@ -1698,16 +1632,13 @@ describe("email-rules accept-email-rule-request --expectation-samples-file", () 
     expect(declined.stderr).toContain(
       "reason is 612 characters; the API takes at most 500. Nothing was sent.",
     );
-    const objected = await run(
-      "email-rule-oversight:create-email-rule-objection",
-      [
-        "--body-file",
-        tempFile(
-          "objection.json",
-          JSON.stringify({ rule_id: RULE, message: long }),
-        ),
-      ],
-    );
+    const objected = await run("email-rule-oversight:create-objection", [
+      "--body-file",
+      tempFile(
+        "objection.json",
+        JSON.stringify({ rule_id: RULE, message: long }),
+      ),
+    ]);
     expect(objected.exitCode).toBe(2);
     expect(objected.stderr).toContain("message is 612 characters");
     expect(calls).toEqual([]);
@@ -1735,7 +1666,7 @@ describe("email-rules accept-email-rule-request --expectation-samples-file", () 
     ).toBeUndefined();
     // At the limit, with spaces the server trims around it, it is sent.
     answer({ id: REQUEST, status: "declined" });
-    const atLimit = await run("email-rules:decline-email-rule-request", [
+    const atLimit = await run("email-rules:decline-request", [
       REQUEST,
       "--reason",
       ` ${"x".repeat(500)} `,
@@ -1760,16 +1691,16 @@ describe("email-rules accept-email-rule-request --expectation-samples-file", () 
   });
 
   it("refuses an empty file and a number it does not hold, sending nothing", async () => {
-    const empty = await run("email-rules:accept-email-rule-request", [
+    const empty = await run("email-rules:accept-request", [
       REQUEST,
-      "--expectation-samples-file",
+      "--samples-file",
       tempFile("empty.json", "[]"),
     ]);
     expect(empty.exitCode).toBe(2);
     expect(empty.stderr).toContain("holds no samples");
-    const out = await run("email-rules:accept-email-rule-request", [
+    const out = await run("email-rules:accept-request", [
       REQUEST,
-      "--expectation-samples-file",
+      "--samples-file",
       tempFile("samples.json", JSON.stringify(samples)),
       "--pick",
       "4",
@@ -1846,7 +1777,7 @@ describe("email-rules made-up emails in test and write reports", () => {
         ),
       ),
     );
-    const result = await run("email-rules:test-email-rule", [
+    const result = await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--expect-samples-file",
@@ -1879,11 +1810,7 @@ describe("email-rules made-up emails in test and write reports", () => {
         ),
       ),
     );
-    const later = await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-      "--json",
-    ]);
+    const later = await run("email-rules:test", ["--rule-id", RULE, "--json"]);
     expect(later.exitCode).toBe(3);
     expect(JSON.parse(later.merged).error).toEqual({
       code: "expectations_undecided",
@@ -1906,15 +1833,12 @@ describe("email-rules made-up emails in test and write reports", () => {
         ),
       ),
     );
-    const unanswered = await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-    ]);
+    const unanswered = await run("email-rules:test", ["--rule-id", RULE]);
     expect(unanswered.exitCode).toBe(3);
     expect(lines(unanswered)).toContain(
       '  undecided: sample 3 ("medical: three") expected no_match, got near_miss (unanswered; test again later)',
     );
-    const unansweredJson = await run("email-rules:test-email-rule", [
+    const unansweredJson = await run("email-rules:test", [
       "--rule-id",
       RULE,
       "--json",
@@ -1937,18 +1861,12 @@ describe("email-rules made-up emails in test and write reports", () => {
         ),
       ),
     );
-    const may = await run("email-rules:test-email-rule", ["--rule-id", RULE]);
+    const may = await run("email-rules:test", ["--rule-id", RULE]);
     expect(may.exitCode).toBe(1);
     // Judged as the rule's own: numbered as it keeps them.
     expect(
       JSON.parse(
-        (
-          await run("email-rules:test-email-rule", [
-            "--rule-id",
-            RULE,
-            "--json",
-          ])
-        ).merged,
+        (await run("email-rules:test", ["--rule-id", RULE, "--json"])).merged,
       ).error.message,
     ).toContain("testing again will not decide this one");
     expect(lines(may)).toContain(
@@ -2077,13 +1995,50 @@ describe("formatFact", () => {
 describe("an empty rule request list", () => {
   it("says once on stderr what the list leaves out by default, and nothing under --json", async () => {
     answer([]);
-    const empty = await run("email-rules:list-email-rule-requests", []);
+    const empty = await run("email-rules:list-requests", []);
     expect(empty.exitCode).toBe(0);
     expect(stderrLines(empty)).toEqual([
       "(no results) No rule requests match. Without --box and --status only pending requests made to you are listed; `--box all --status any` lists every one you can see.",
     ]);
-    const quiet = await run("email-rules:list-email-rule-requests", ["--json"]);
+    const quiet = await run("email-rules:list-requests", ["--json"]);
     expect(quiet.stderr).toBe("");
+  });
+});
+
+describe("canonical saved sample flags", () => {
+  it("removes old spellings while preserving the temporary expectations flag", () => {
+    for (const id of [
+      "email-rules:create",
+      "email-rules:update",
+      "email-rules:accept-request",
+    ]) {
+      const command = COMMANDS[id] as unknown as Runnable;
+      expect(command.flags["samples-file"], id).toBeDefined();
+      expect(command.flags["expectation-samples-file"], id).toBeUndefined();
+      expect(command.flags["add-expectation-samples-file"], id).toBeUndefined();
+    }
+    const update = COMMANDS["email-rules:update"] as unknown as Runnable;
+    expect(update.flags["add-samples-file"]?.exclusive).toContain(
+      "samples-file",
+    );
+    expect(update.flags["samples-file"]?.exclusive).toContain(
+      "add-samples-file",
+    );
+    const test = COMMANDS["email-rules:test"] as unknown as Runnable;
+    expect(test.flags["expect-samples-file"]).toBeDefined();
+  });
+
+  it("rejects retired saved sample flags before reading a file or sending a request", async () => {
+    for (const [id, flag] of [
+      ["email-rules:create", "--expectation-samples-file"],
+      ["email-rules:update", "--add-expectation-samples-file"],
+      ["email-rules:accept-request", "--expectation-samples-file"],
+    ]) {
+      const result = await run(id, [flag, "/no-such-samples.json"]);
+      expect(result.exitCode, id).not.toBe(0);
+      expect(result.stderr, id).toContain(flag.slice(2));
+    }
+    expect(calls).toEqual([]);
   });
 });
 
@@ -2101,12 +2056,12 @@ describe("--scope-address and --scope-domain", () => {
   };
   const tree = { version: 1, vocabulary: "v1", when: { all: [] } };
   const SCOPE_COMMANDS = [
-    "email-rules:create-email-rule",
-    "email-rules:update-email-rule",
-    "email-rules:test-email-rule",
-    "email-rules:test-email-rule-on-sample",
+    "email-rules:create",
+    "email-rules:update",
+    "email-rules:test",
+    "email-rules:test-sample",
     "email-rules:generate-look-alikes",
-    "email-rules:compile-email-rule",
+    "email-rules:compile",
   ];
 
   it("are on every email-rules command whose request takes evaluation_scope, and take scope_selection out of the --raw-body list", () => {
@@ -2120,17 +2075,27 @@ describe("--scope-address and --scope-domain", () => {
           multiple: true,
         });
         expect(command.flags[flag]?.description, `${id} --${flag}`).toContain(
-          "Sends evaluation_scope selected unless --evaluation-scope or the body gives a scope.",
+          "Sends evaluation_scope selected unless --scope or the body gives a scope.",
         );
       }
-      expect(command.flags["evaluation-scope"], id).toBeDefined();
+      expect(command.flags.scope, id).toBeDefined();
+      expect(command.flags["evaluation-scope"], id).toBeUndefined();
       expect(command.description, id).not.toMatch(/^ {2,3}scope_selection\b/m);
     }
   });
 
+  it("rejects the retired scope flag before making a request", async () => {
+    for (const id of SCOPE_COMMANDS) {
+      const result = await run(id, ["--evaluation-scope", "author"]);
+      expect(result.exitCode, id).not.toBe(0);
+      expect(result.stderr, id).toContain("evaluation-scope");
+    }
+    expect(calls).toEqual([]);
+  });
+
   it("build scope_selection from repeated and comma-listed values, without repeats", async () => {
     answer(written);
-    const result = await run("email-rules:create-email-rule", [
+    const result = await run("email-rules:create", [
       "--raw-body",
       JSON.stringify({
         tree,
@@ -2138,7 +2103,7 @@ describe("--scope-address and --scope-domain", () => {
         name: "Support mail",
         english: "support mail",
       }),
-      "--evaluation-scope",
+      "--scope",
       "selected",
       "--scope-address",
       "support@example.com, billing@example.com",
@@ -2166,8 +2131,8 @@ describe("--scope-address and --scope-domain", () => {
 
   it("send the list not given as empty, and keep a rule id given after them as the argument", async () => {
     answer(written);
-    const result = await run("email-rules:update-email-rule", [
-      "--evaluation-scope",
+    const result = await run("email-rules:update", [
+      "--scope",
       "selected",
       "--scope-domain",
       "example.org",
@@ -2185,7 +2150,7 @@ describe("--scope-address and --scope-domain", () => {
 
   it("replace a scope_selection in --raw-body, which may carry evaluation_scope", async () => {
     answer(testResult());
-    const result = await run("email-rules:test-email-rule", [
+    const result = await run("email-rules:test", [
       "--raw-body",
       JSON.stringify({
         tree,
@@ -2200,19 +2165,19 @@ describe("--scope-address and --scope-domain", () => {
       evaluation_scope: "selected",
       scope_selection: { addresses: ["new@example.com"], domains: [] },
     });
-    expect(result.stderr).not.toContain("--evaluation-scope selected");
+    expect(result.stderr).not.toContain("--scope selected");
   });
 
-  it("set scope_selection on test-email-rule-on-sample and generate-look-alikes", async () => {
+  it("set scope_selection on test-sample and generate-look-alikes", async () => {
     for (const id of [
-      "email-rules:test-email-rule-on-sample",
+      "email-rules:test-sample",
       "email-rules:generate-look-alikes",
     ]) {
       calls = [];
       const input = {
         tree,
         kind: "grant",
-        ...(id.endsWith("on-sample")
+        ...(id.endsWith("test-sample")
           ? {
               email: {
                 from: { address: "sender@example.com" },
@@ -2226,7 +2191,7 @@ describe("--scope-address and --scope-domain", () => {
       await run(id, [
         "--raw-body",
         JSON.stringify(input),
-        "--evaluation-scope",
+        "--scope",
         "selected",
         "--scope-address",
         "support@example.com",
@@ -2241,7 +2206,7 @@ describe("--scope-address and --scope-domain", () => {
 
   it("send evaluation_scope selected when no scope is given, and any scope given as it is", async () => {
     answer(written);
-    const alone = await run("email-rules:update-email-rule", [
+    const alone = await run("email-rules:update", [
       RULE,
       "--scope-address",
       "support@example.com",
@@ -2252,9 +2217,9 @@ describe("--scope-address and --scope-domain", () => {
       scope_selection: { addresses: ["support@example.com"], domains: [] },
     });
     calls = [];
-    const other = await run("email-rules:update-email-rule", [
+    const other = await run("email-rules:update", [
       RULE,
-      "--evaluation-scope",
+      "--scope",
       "author",
       "--scope-address",
       "support@example.com",
@@ -2266,7 +2231,7 @@ describe("--scope-address and --scope-domain", () => {
     });
   });
 
-  it("read evaluation_scope from --raw-body or --body-file when --evaluation-scope is not given, and let the flag win", async () => {
+  it("read evaluation_scope from --raw-body or --body-file when --scope is not given, and let the flag win", async () => {
     answer(written);
     for (const [argv, scope] of [
       [["--raw-body", JSON.stringify({ tree, name: "n" })], "selected"],
@@ -2295,7 +2260,7 @@ describe("--scope-address and --scope-domain", () => {
       ],
     ] as const) {
       calls = [];
-      const result = await run("email-rules:create-email-rule", [
+      const result = await run("email-rules:create", [
         ...argv,
         "--name",
         "Scope rule",
@@ -2311,7 +2276,7 @@ describe("--scope-address and --scope-domain", () => {
     }
     calls = [];
     // A body that is not an object is refused for what it is.
-    const array = await run("email-rules:create-email-rule", [
+    const array = await run("email-rules:create", [
       "--raw-body",
       "[]",
       "--scope-address",
@@ -2333,7 +2298,7 @@ describe("--scope-address and --scope-domain", () => {
         evaluation_scope: "selected",
       }),
     );
-    const fromFile = await run("email-rules:create-email-rule", [
+    const fromFile = await run("email-rules:create", [
       "--body-file",
       file,
       "--scope-domain",
@@ -2350,7 +2315,7 @@ describe("--scope-address and --scope-domain", () => {
     });
 
     calls = [];
-    const overridden = await run("email-rules:create-email-rule", [
+    const overridden = await run("email-rules:create", [
       "--raw-body",
       JSON.stringify({
         tree,
@@ -2359,7 +2324,7 @@ describe("--scope-address and --scope-domain", () => {
         english: "scope rule",
         evaluation_scope: "author",
       }),
-      "--evaluation-scope",
+      "--scope",
       "selected",
       "--scope-domain",
       "example.org",
@@ -2372,7 +2337,7 @@ describe("--scope-address and --scope-domain", () => {
   });
 
   it("refuse an empty value, and leave the address and domain forms to the API", async () => {
-    const empty = await run("email-rules:update-email-rule", [
+    const empty = await run("email-rules:update", [
       RULE,
       "--scope-address",
       " , ",
@@ -2381,7 +2346,7 @@ describe("--scope-address and --scope-domain", () => {
     expect(empty.stderr).toContain("--scope-address needs a value.");
     expect(calls).toEqual([]);
     answer(written);
-    const domain = await run("email-rules:update-email-rule", [
+    const domain = await run("email-rules:update", [
       RULE,
       "--scope-address",
       "example.org",
@@ -2556,17 +2521,17 @@ describe("the notes printer on a rules answer", () => {
       note: "A note from the server.",
       warnings: ["A warning."],
     });
-    const plain = await run("email-rules:get-email-rule", [RULE]);
+    const plain = await run("email-rules:get", [RULE]);
     expect(plain.exitCode).toBe(0);
     expect(stderrLines(plain)).toEqual([
       "Warning: A warning.",
       "A note from the server.",
     ]);
-    const json = await run("email-rules:get-email-rule", [RULE, "--json"]);
+    const json = await run("email-rules:get", [RULE, "--json"]);
     expect(json.stderr).toBe("");
     expect(json.merged).not.toContain("Warning: A warning.");
     answer([{ id: RULE, note: "On a row." }]);
-    const listed = await run("email-rules:list-email-rules", []);
+    const listed = await run("email-rules:list", []);
     expect(listed.stderr).not.toContain("On a row.");
   });
 });
@@ -2598,10 +2563,7 @@ describe("the test report prints server text safely", () => {
         },
       ],
     });
-    const result = await run("email-rules:test-email-rule", [
-      "--rule-id",
-      RULE,
-    ]);
+    const result = await run("email-rules:test", ["--rule-id", RULE]);
     expect(result.stderr).toContain("0. Sender is known: held on 1");
     expect(result.stderr).toContain(`${B} no_match: topic: billing at 0.50`);
     for (const control of ["\u001b", "\u0007", "\u202e"])
@@ -2614,7 +2576,7 @@ describe("a saved compile answer as a write body", () => {
     const tree = { version: 1, vocabulary: "v1", when: { all: [] } };
     const rule = { english: "bills", kind: "grant", tree };
     answer({ rule, explanation: "Bills.", assumptions: [], warnings: [] });
-    const compiled = await run("email-rules:compile-email-rule", [
+    const compiled = await run("email-rules:compile", [
       "--raw-body",
       JSON.stringify({ english: "bills" }),
       "--json",
@@ -2625,7 +2587,7 @@ describe("a saved compile answer as a write body", () => {
     );
     calls = [];
     answer({ id: RULE, name: "Bills" });
-    const created = await run("email-rules:create-email-rule", [
+    const created = await run("email-rules:create", [
       "--body-file",
       file,
       "--name",
@@ -2644,14 +2606,10 @@ describe("a refused rule write", () => {
       details: { retryable: true },
     };
     responder = () => jsonResponse(409, { success: false, error });
-    const plain = await run("email-rules:update-email-rule", [
-      RULE,
-      "--state",
-      "active",
-    ]);
+    const plain = await run("email-rules:update", [RULE, "--state", "active"]);
     expect(plain.exitCode).toBe(1);
     expect(plain.stderr).not.toContain("Hint:");
-    const json = await run("email-rules:update-email-rule", [
+    const json = await run("email-rules:update", [
       RULE,
       "--state",
       "active",
@@ -2662,10 +2620,10 @@ describe("a refused rule write", () => {
   });
 });
 
-describe("update-email-rule numbers", () => {
+describe("update numbers", () => {
   it("sends --if-revision and --restore-version as numbers", async () => {
     answer({ id: RULE, name: "Bills", state: "observe", current_version: 3 });
-    await run("email-rules:update-email-rule", [
+    await run("email-rules:update", [
       RULE,
       "--restore-version",
       "3",

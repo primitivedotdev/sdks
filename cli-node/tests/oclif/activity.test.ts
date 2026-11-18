@@ -76,7 +76,7 @@ describe("activity tables print other members' text safely", () => {
 describe("activity created", () => {
   it("is registered beside the generated operation", () => {
     expect(COMMANDS["activity:created"]).toBeDefined();
-    expect(COMMANDS["activity:list-activity-objects"]).toBeDefined();
+    expect(COMMANDS["activity:list"]).toBeDefined();
   });
 
   it("prints one row per object, with what each came through for a person", () => {
@@ -576,7 +576,7 @@ describe("activity concerning command", () => {
 
   it("never reads an empty listing as no rule covering you: it says where to look now", async () => {
     const empty =
-      "No coverage notices to show. `primitive email-rule-oversight list-email-rules-covering-me` shows what covers you now.";
+      "No coverage notices to show. `primitive email-rule-oversight list-covering-me` shows what covers you now.";
     expect(formatConcerningRows([])).toBe(empty);
     const urls = useApi([
       {

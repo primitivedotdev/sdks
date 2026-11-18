@@ -412,7 +412,7 @@ export default {
       // threading headers, and the in_reply_to_email_id foreign key
       // automatically. The FK is what populates the inbound's
       // \`replies\` array on GET /emails/{id}; without it,
-      // \`primitive functions:test-function --show-sends\` would report
+      // \`primitive functions:test --show-sends\` would report
       // no outbound emails for this handler because the join would
       // miss. It is used instead of client.reply because the reply
       // carries AUTO_REPLY_HEADERS (the endpoint accepts Auto-Submitted,
@@ -576,12 +576,12 @@ runtime but unreachable, and \`functions test\` will refuse to send
 (returns 422 \`no_endpoint\`).
 
 \`\`\`
-primitive functions route-set --id "$PRIMITIVE_FUNCTION_ID" --domain <domain-id>
+primitive functions set-route --id "$PRIMITIVE_FUNCTION_ID" --domain <domain-id>
 \`\`\`
 
 Use \`--fallback\` instead of \`--domain\` to bind the Function as the
 org-wide fallback for any active domain that has no scoped binding.
-Run \`primitive functions route-get --id "$PRIMITIVE_FUNCTION_ID"\` to
+Run \`primitive functions get-route --id "$PRIMITIVE_FUNCTION_ID"\` to
 inspect the current binding, or \`primitive functions routing-topology\`
 for the org-wide view of which domain points at which Function.
 

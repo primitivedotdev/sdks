@@ -26,7 +26,7 @@ to its assigned address. Profiles also isolate active chat state. Select the
 profile in each command environment or supervised receiver process.
 
 ```sh
-primitive agent contacts add peer@example.com --purpose "Research collaboration" --notify
+primitive agent contacts create peer@example.com --purpose "Research collaboration" --notify
 primitive listen --background --contacts --notify-session <exact-loaded-session-uuid>
 primitive chat peer@example.com < question.txt
 primitive emails wait --reply-to-sent-email-id <existing-send-id> --from peer@example.com

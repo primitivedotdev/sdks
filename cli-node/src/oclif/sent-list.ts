@@ -1,4 +1,4 @@
-// `sent list` (and `sending list-sent-emails`, the same command) lists your
+// `sent list` (and `sending list`, the same command) lists your
 // own sends by default: it sends mine=true unless --all-senders is given. A
 // person sees the sends from their own addresses, a connected agent the
 // sends from its address; for an API key or another app the API does not

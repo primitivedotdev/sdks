@@ -50,9 +50,9 @@ try {
   const generatedRetryId = JSON.parse(described.stdout).requestSchema.properties.request_id["x-primitive-retry-id"] === true;
   const parent = await run(["organizations"]);
   assert.equal(parent.code, 0, parent.stderr);
-  assert.match(parent.stdout, /invite-organization-member/);
+  assert.match(parent.stdout, /invite-member/);
   for (const mode of ["--help", "--help-full"]) {
-    const invite = await run(["organizations", "invite-organization-member", mode]);
+    const invite = await run(["organizations", "invite-member", mode]);
     assert.equal(invite.code, 0, invite.stderr);
     assert(invite.stdout.indexOf("REQUIRED INPUTS") < invite.stdout.indexOf("COMMAND OPTIONS"));
     assert(invite.stdout.indexOf("COMMAND OPTIONS") < invite.stdout.indexOf("COMMON FLAGS"));
@@ -61,7 +61,7 @@ try {
     assert.match(group(invite.stdout, "COMMAND OPTIONS"), /--role/);
     for (const flag of ["--raw-body", "--idempotency-key", "--step-up-token"])
       assert(group(invite.stdout, "COMMON FLAGS").includes(flag));
-    const note = await run(["address-notes", "put-address-note", mode]);
+    const note = await run(["address-notes", "set", mode]);
     assert.equal(note.code, 0, note.stderr);
     assert.match(group(note.stdout, "REQUIRED INPUTS"), /\$\.value/);
     const send = await run(["send", mode]);
@@ -74,7 +74,7 @@ try {
   assert(Buffer.byteLength(short.stdout) <= 3000);
   for (const line of short.stdout.split("\n")) assert(line.length <= 100);
   assert.equal(requests, 0, "help must not send API requests");
-  const ignoredFile = await run(["organizations", "invite-organization-member", "--body-file", join(config, "absent.json"), "--help"]);
+  const ignoredFile = await run(["organizations", "invite-member", "--body-file", join(config, "absent.json"), "--help"]);
   assert.equal(ignoredFile.code, 0, ignoredFile.stderr);
   assert.equal(requests, 0);
   acceptInvitation = true;
@@ -85,7 +85,7 @@ try {
     ["--raw-body", JSON.stringify({ request_id: requestId, email: "member@example.com" })],
     ["--body-file", bodyFile, "--email", "member@example.com"],
   ]) {
-    const result = await run(["organizations", "invite-organization-member", ...args, "--json"]);
+    const result = await run(["organizations", "invite-member", ...args, "--json"]);
     assert.equal(result.code, 0, result.stdout + result.stderr);
     assert.equal(result.stderr, "");
     assert.equal(JSON.parse(result.stdout).data.id, "invitation");

@@ -258,11 +258,9 @@ describe("commands that would prompt, run without a terminal", () => {
     });
   });
 
-  describe("email-rules delete-email-rule", () => {
+  describe("email-rules delete", () => {
     const RULE = "00000000-0000-4000-8000-0000000000aa";
-    const DeleteEmailRule = COMMANDS[
-      "email-rules:delete-email-rule"
-    ] as unknown as {
+    const DeleteEmailRule = COMMANDS["email-rules:delete"] as unknown as {
       run: (argv: string[], opts: { root: string }) => Promise<unknown>;
     };
 

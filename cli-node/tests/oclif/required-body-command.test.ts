@@ -154,9 +154,10 @@ describe("required bodies through generated commands", () => {
 
   it("keeps optional request bodies optional", async () => {
     await expect(
-      (
-        COMMANDS["email-rules:accept-email-rule-request"] as unknown as Runnable
-      ).run(["--id", requestId], { root }),
+      (COMMANDS["email-rules:accept-request"] as unknown as Runnable).run(
+        ["--id", requestId],
+        { root },
+      ),
     ).rejects.toThrow("Reached authentication");
     expect(auth.create).toHaveBeenCalledOnce();
   });

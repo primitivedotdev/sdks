@@ -69,12 +69,8 @@ describe("search command registration", () => {
     expect(flags.envelope).toBeUndefined();
   });
 
-  it("keeps the old topic-nested form callable for back-compat", () => {
-    // `prim search semantic-search` used to be the only way to reach
-    // semantic. Keep it routed to the same handler as the root
-    // `prim semantic-search` so old scripts do not break.
-    expect(COMMANDS["search:semantic-search"]).toBe(
-      COMMANDS["semantic-search"],
-    );
+  it("removes the retired topic-nested spelling", () => {
+    expect(COMMANDS["search:semantic-search"]).toBeUndefined();
+    expect(COMMANDS["semantic-search"]).toBeDefined();
   });
 });

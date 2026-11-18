@@ -11,7 +11,7 @@ import {
 } from "../api-command.js";
 import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
-// `primitive routes remove <id>` deletes a recipient route. Mail to its pattern
+// `primitive routes delete <id>` deletes a recipient route. Mail to its pattern
 // then falls back to the domain/org default destination.
 
 class RoutesRemoveCommand extends Command {
@@ -20,7 +20,7 @@ class RoutesRemoveCommand extends Command {
 
   static summary = "Remove a recipient route";
 
-  static examples = ["<%= config.bin %> routes remove <route-id>"];
+  static examples = ["<%= config.bin %> routes delete <route-id>"];
 
   static args = {
     id: Args.string({

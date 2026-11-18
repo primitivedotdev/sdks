@@ -13,7 +13,7 @@ import { COMMANDS } from "../../src/oclif/index.js";
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
 const API_BASE_URL = "https://api.delete-email-rule.test/v1";
 const RULE = "00000000-0000-4000-8000-0000000000aa";
-const COMMAND = "email-rules:delete-email-rule";
+const COMMAND = "email-rules:delete";
 
 type Runnable = {
   run(argv: string[], options: { root: string }): Promise<unknown>;
@@ -152,7 +152,7 @@ async function run(
 
 const deletes = () => calls.filter((call) => call.method === "DELETE");
 
-describe("delete-email-rule", () => {
+describe("delete", () => {
   it("deletes without asking, in a terminal or not, and refuses --yes", async () => {
     for (const terminal of [false, true]) {
       setTerminals(terminal);
@@ -168,7 +168,7 @@ describe("delete-email-rule", () => {
   });
 });
 
-describe("delete-email-rule prints the answer as it came", () => {
+describe("delete prints the answer as it came", () => {
   it("prints the answer and no report of its own, with or without --json", async () => {
     answer = { deleted: true };
     const plain = await run([RULE]);

@@ -16,14 +16,14 @@ function command(id: string): Described {
 describe("where the help points a reader of email rules", () => {
   it("says --body-file takes the rule of a saved compile answer on the writes that take one", () => {
     for (const [id, sdkName] of [
-      ["email-rules:create-email-rule", "createEmailRule"],
-      ["email-rules:update-email-rule", "updateEmailRule"],
-      ["email-rules:create-email-rule-request", "createEmailRuleRequest"],
-      ["email-rules:accept-email-rule-request", "acceptEmailRuleRequest"],
+      ["email-rules:create", "createEmailRule"],
+      ["email-rules:update", "updateEmailRule"],
+      ["email-rules:create-request", "createEmailRuleRequest"],
+      ["email-rules:accept-request", "acceptEmailRuleRequest"],
     ] as const) {
       const help = command(id).flags?.["body-file"]?.description ?? "";
       expect(help, id).toContain(
-        "the `rule` of a saved compile answer: `compile-email-rule ... --json | jq .data.rule > rule.json`",
+        "the `rule` of a saved compile answer: `compile ... --json | jq .data.rule > rule.json`",
       );
       expect(help, id).toContain(BODY_FILE_HELP[sdkName]);
     }
@@ -35,19 +35,16 @@ describe("where the help points a reader of email rules", () => {
       "acceptEmailRuleRequest",
     ] as const)
       expect(BODY_FILE_HELP[sdkName]).toContain(
-        "compiled without a scope (--evaluation-scope, --scope-address or --scope-domain)",
+        "compiled without a scope (--scope, --scope-address or --scope-domain)",
       );
     // Any other command keeps the plain help.
     expect(
-      command("email-rules:test-email-rule").flags?.["body-file"]?.description,
-    ).not.toContain("compile-email-rule");
+      command("email-rules:test").flags?.["body-file"]?.description,
+    ).not.toContain("compile");
   });
 
   it("has no --fail-on-expectations on create or update", () => {
-    for (const id of [
-      "email-rules:create-email-rule",
-      "email-rules:update-email-rule",
-    ])
+    for (const id of ["email-rules:create", "email-rules:update"])
       expect(command(id).flags?.["fail-on-expectations"]).toBeUndefined();
   });
 });

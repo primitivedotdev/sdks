@@ -3,6 +3,8 @@ import {
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
 
+import { canonicalOperation } from "./cli-command-names.js";
+
 // Operation ids (`tag:command`) the CLI offers no generated command for.
 // Creating, rotating and changing an API key can need the person to approve
 // the request in the browser, and revoking from the CLI covers API keys only,
@@ -42,10 +44,14 @@ export const CLI_OMITTED_OPERATION_IDS: ReadonlySet<string> = new Set([
 ]);
 
 /** The operations the CLI generates commands for: the manifest without CLI_OMITTED_OPERATION_IDS. */
-export const cliOperationManifest: PrimitiveOperationManifest[] =
+export const rawCliOperationManifest: PrimitiveOperationManifest[] =
   operationManifest.filter(
     (operation) =>
       !CLI_OMITTED_OPERATION_IDS.has(
         `${operation.tagCommand}:${operation.command}`,
       ),
   );
+
+/** CLI presentation names; the SDK manifest above retains its API identity. */
+export const cliOperationManifest: PrimitiveOperationManifest[] =
+  rawCliOperationManifest.map(canonicalOperation);

@@ -4,8 +4,8 @@
 // report numbers them, so --pick picks what the report showed.
 //
 //   primitive email-rules generate-look-alikes --rule-id <id> --json > la.json
-//   primitive email-rules update-email-rule <id> \
-//     --add-expectation-samples-file la.json --pick 2,4
+//   primitive email-rules update <id> \
+//     --add-samples-file la.json --pick 2,4
 //
 // This module does not import email-rule-authoring.ts, which imports it.
 
@@ -244,8 +244,8 @@ export function pickSamples(
 }
 
 /** The samples file flags: replace (create and update), add (update), and test. */
-export const SAMPLES_FILE_FLAG = "expectation-samples-file";
-export const ADD_SAMPLES_FILE_FLAG = "add-expectation-samples-file";
+export const SAMPLES_FILE_FLAG = "samples-file";
+export const ADD_SAMPLES_FILE_FLAG = "add-samples-file";
 export const EXPECT_SAMPLES_FILE_FLAG = "expect-samples-file";
 export const PICK_FLAG = "pick";
 
@@ -274,8 +274,8 @@ function givenSamplesFlag(
 }
 
 /**
- * The body fields a samples file sets on create-email-rule and
- * update-email-rule: expectation_samples (on update it replaces them) or, on
+ * The body fields a samples file sets on create and
+ * update: expectation_samples (on update it replaces them) or, on
  * update, add_expectation_samples. With --pick, only the samples it names.
  * Each is sent as savedSample gives it, without a look-alike's group.
  */
@@ -308,7 +308,7 @@ export function samplesBodyFields(
 }
 
 /**
- * The samples test-email-rule expects, from --expect-samples-file (only
+ * The samples test expects, from --expect-samples-file (only
  * those --pick chooses if given), or null without the flag. They go in
  * expect.samples, each look-alike keeping its group, which the answer counts
  * samples by.

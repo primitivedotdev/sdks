@@ -20,9 +20,7 @@ class OrgSecretsRemoveCommand extends Command {
 
   static summary = "Delete a global secret";
 
-  static aliases = ["org:secrets:delete"];
-
-  static examples = ["<%= config.bin %> org secrets remove --key MY_API_KEY"];
+  static examples = ["<%= config.bin %> org secrets delete --key MY_API_KEY"];
 
   static flags = {
     json: JSON_OUTPUT_FLAG,

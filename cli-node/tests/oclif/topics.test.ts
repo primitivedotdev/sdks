@@ -52,8 +52,8 @@ describe("oclif topics", () => {
       (tag) => tag.name,
     );
 
-    // A tag whose every operation the CLI leaves out (cli-operations.ts) has
-    // no commands, so no topic.
+    // Tags with no generated commands below them need no visible topic.
+    // semantic-search is offered at the root; its API tag remains Search.
     const offered = new Set(cliOperationManifest.map((op) => op.tagCommand));
     const unoffered = new Set(
       operationManifest
@@ -67,7 +67,7 @@ describe("oclif topics", () => {
       .filter((normalizedTag) => !topicKeys.includes(normalizedTag));
 
     expect(missing).toEqual([]);
-    expect([...unoffered]).toEqual(["email-notifications"]);
+    expect([...unoffered]).toEqual(["email-notifications", "search"]);
     expect(topicKeys).not.toContain("email-notifications");
   });
 

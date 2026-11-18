@@ -215,7 +215,7 @@ describe("listEmailRulesErrorHint", () => {
   });
 });
 
-describe("email-rules list-email-rules", () => {
+describe("email-rules list", () => {
   it("takes --all as a switch and --kind and --state as fixed values", () => {
     const flags = command("listEmailRules").flags;
     expect(flags.all?.type).toBe("boolean");

@@ -2,14 +2,14 @@
 // on the email-rules commands whose request takes evaluation_scope. They set
 // scope_selection, an object the generated per-field flags cannot express:
 //
-//   primitive email-rules create-email-rule ... \
+//   primitive email-rules create ... \
 //     --scope-address support@example.com --scope-domain example.org
 //
 // They set scope_selection as a whole, over any in --raw-body or --body-file,
 // like the other flags that set a body field. When only one of the two flags
 // is given, the other list is sent empty. scope_selection goes with
 // evaluation_scope selected, so they also send that when neither
-// --evaluation-scope nor the body gives a scope. A scope given otherwise is
+// --scope nor the body gives a scope. A scope given otherwise is
 // sent as it is, for the API to judge.
 //
 // This module does not import api-command.ts.
@@ -20,7 +20,7 @@ import type { ExtensionBodyField } from "./operation-extension.js";
 export const SCOPE_ADDRESS_FLAG = "scope-address";
 export const SCOPE_DOMAIN_FLAG = "scope-domain";
 
-const SCOPE_FLAG_NOTE = `Sends evaluation_scope selected unless --evaluation-scope or the body gives a scope. --${SCOPE_ADDRESS_FLAG} and --${SCOPE_DOMAIN_FLAG} set scope_selection as a whole, over any in --raw-body or --body-file, and a list not given is sent empty.`;
+const SCOPE_FLAG_NOTE = `Sends evaluation_scope selected unless --scope or the body gives a scope. --${SCOPE_ADDRESS_FLAG} and --${SCOPE_DOMAIN_FLAG} set scope_selection as a whole, over any in --raw-body or --body-file, and a list not given is sent empty.`;
 
 /**
  * The two flags, made anew for each command. Each value is its own flag
@@ -71,7 +71,7 @@ function scopeList(values: unknown, flag: string): string[] | undefined {
 /**
  * scope_selection from --scope-address and --scope-domain, or nothing when
  * neither was given, with evaluation_scope selected when neither
- * --evaluation-scope nor `base` (the body --raw-body or --body-file gave)
+ * --scope nor `base` (the body --raw-body or --body-file gave)
  * gives a scope.
  */
 export function scopeSelectionBodyFields(
@@ -96,7 +96,7 @@ export function scopeSelectionBodyFields(
     base !== null && typeof base === "object" && !Array.isArray(base)
       ? (base as Record<string, unknown>).evaluation_scope
       : undefined;
-  if (flags["evaluation-scope"] === undefined && baseScope === undefined)
+  if (flags.scope === undefined && baseScope === undefined)
     fields.push({
       flag: given,
       property: "evaluation_scope",

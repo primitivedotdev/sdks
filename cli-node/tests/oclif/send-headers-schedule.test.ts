@@ -520,15 +520,13 @@ describe("generated operations: declared request headers", () => {
   const flagsOf = (id: string) =>
     (COMMANDS[id] as unknown as { flags: FlagMap }).flags;
 
-  it("adds --idempotency-key to sending send-email from the spec", () => {
-    expect(flagsOf("sending:send-email")["idempotency-key"]).toBeDefined();
-    expect(flagsOf("sending:send-email")["idempotency-key"]?.required).toBe(
-      false,
-    );
+  it("adds --idempotency-key to sending send from the spec", () => {
+    expect(flagsOf("sending:send")["idempotency-key"]).toBeDefined();
+    expect(flagsOf("sending:send")["idempotency-key"]?.required).toBe(false);
   });
 
   it("sends --idempotency-key as the Idempotency-Key request header", async () => {
-    const result = await run("sending:send-email", [
+    const result = await run("sending:send", [
       "--to",
       "alice@example.com",
       "--from",
@@ -547,7 +545,7 @@ describe("generated operations: declared request headers", () => {
   });
 
   it("sends no headers when no header flag is passed", async () => {
-    await run("sending:send-email", [
+    await run("sending:send", [
       "--to",
       "alice@example.com",
       "--from",
@@ -561,7 +559,7 @@ describe("generated operations: declared request headers", () => {
   });
 
   it("refuses an empty header value before the request", async () => {
-    const result = await run("sending:send-email", [
+    const result = await run("sending:send", [
       "--raw-body",
       "{}",
       "--idempotency-key",

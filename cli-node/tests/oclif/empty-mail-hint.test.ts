@@ -92,7 +92,7 @@ describe("emptyEmailListHint", () => {
         }),
       ),
     ).toBe(
-      `(no results) No mail this key's rules granted is readable now. This key reads only mail its 2 email rules granted. A rule grants an email it matches when the email is evaluated, shortly after it arrives, while the rule is active, and the key reads that mail only while the rule stays active. Each id (${RULE} and ${RULE2}) is an email rule or a rule shared with the key's holder: a rule's author, signed in as themselves, can check it with \`primitive email-rules get-email-rule --id <id>\`, and a share's holder with \`primitive email-rules get-email-rule-share --id <id>\`.`,
+      `(no results) No mail this key's rules granted is readable now. This key reads only mail its 2 email rules granted. A rule grants an email it matches when the email is evaluated, shortly after it arrives, while the rule is active, and the key reads that mail only while the rule stays active. Each id (${RULE} and ${RULE2}) is an email rule or a rule shared with the key's holder: a rule's author, signed in as themselves, can check it with \`primitive email-rules get --id <id>\`, and a share's holder with \`primitive email-rules get-share --id <id>\`.`,
     );
   });
 
@@ -120,7 +120,7 @@ describe("emptyEmailListHint", () => {
     const empty = person({ addresses: [], domains: [], depth: "raw" });
     expect(empty).not.toContain("reads no mail:");
     expect(empty).toContain(
-      "This login reads no mailbox through its grant, only mail from email rules colleagues shared with you (`primitive email-rules list-email-rule-shares` lists them).",
+      "This login reads no mailbox through its grant, only mail from email rules colleagues shared with you (`primitive email-rules list-shares` lists them).",
     );
     expect(
       person({ addresses: ["me@x.test"], domains: [], depth: "raw" }),

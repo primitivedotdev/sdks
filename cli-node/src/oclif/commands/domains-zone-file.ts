@@ -94,11 +94,11 @@ class DomainsZoneFileCommand extends Command {
     }),
     domain: Flags.string({
       description:
-        "Domain name to look up before downloading its zone file. Prefer --id when you have the domain id from `primitive domains add`.",
+        "Domain name to look up before downloading its zone file. Prefer --id when you have the domain id from `primitive domains create`.",
     }),
     id: Flags.string({
       description:
-        "Domain id returned by `primitive domains add` or `primitive domains list`.",
+        "Domain id returned by `primitive domains create` or `primitive domains list`.",
     }),
     output: Flags.string({
       char: "o",

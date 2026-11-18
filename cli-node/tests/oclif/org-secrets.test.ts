@@ -121,6 +121,6 @@ describe("org secrets command registration", () => {
   it("registers list/set/remove under the org:secrets topic", () => {
     expect(COMMANDS["org:secrets:list"]).toBeDefined();
     expect(COMMANDS["org:secrets:set"]).toBeDefined();
-    expect(COMMANDS["org:secrets:remove"]).toBeDefined();
+    expect(COMMANDS["org:secrets:delete"]).toBeDefined();
   });
 });

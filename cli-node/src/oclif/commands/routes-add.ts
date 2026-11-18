@@ -12,7 +12,7 @@ import {
 } from "../api-command.js";
 import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
-// `primitive routes add` creates a recipient route. Pass --function to route an
+// `primitive routes create` creates a recipient route. Pass --function to route an
 // address to a function (its dedicated route-target endpoint is minted in the
 // same call, enabling per-address function routing like alice@d -> functionA),
 // or --endpoint to target an existing endpoint. Inbound mail resolves to a
@@ -45,9 +45,9 @@ class RoutesAddCommand extends Command {
   static summary = "Add a recipient route";
 
   static examples = [
-    "<%= config.bin %> routes add alice@acme.com --function <fn-id>",
-    "<%= config.bin %> routes add 'support+*@acme.com' --match wildcard --function <fn-id>",
-    "<%= config.bin %> routes add billing@acme.com --endpoint <endpoint-id> --priority 10",
+    "<%= config.bin %> routes create alice@acme.com --function <fn-id>",
+    "<%= config.bin %> routes create 'support+*@acme.com' --match wildcard --function <fn-id>",
+    "<%= config.bin %> routes create billing@acme.com --endpoint <endpoint-id> --priority 10",
   ];
 
   static args = {

@@ -106,7 +106,7 @@ describe("renderHandler", () => {
     // uses the SDK rather than raw fetch against /v1/send-mail.
     // The reply endpoint specifically (not send) so the server-side
     // in_reply_to_email_id FK gets set, which is what makes the
-    // inbound's `replies` array populate and `functions:test-function
+    // inbound's `replies` array populate and `functions:test
     // --show-sends` surface this handler's outbound. The generated
     // replyToEmail operation is used because it forwards `headers`.
     const handler = renderHandler();

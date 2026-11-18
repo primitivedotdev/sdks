@@ -182,10 +182,10 @@ beforeEach(() => {
 
 describe("templates command registration", () => {
   it.each([
-    "templates:list-templates",
-    "templates:get-template",
-    "templates:install-template",
-    "templates:get-template-install",
+    "templates:list",
+    "templates:get",
+    "templates:install",
+    "templates:get-install",
   ])("registers %s", (id) => {
     expect(COMMANDS[id]).toBeDefined();
   });
@@ -194,7 +194,7 @@ describe("templates command registration", () => {
 describe("templates black-box command invocation", () => {
   it("runs list/get/install/status with the user-facing command shapes", async () => {
     await expect(
-      runTemplateCommand(templateCommand("templates:list-templates"), [
+      runTemplateCommand(templateCommand("templates:list"), [
         "--q",
         "reply",
         "--tag",
@@ -218,7 +218,7 @@ describe("templates black-box command invocation", () => {
     );
 
     await expect(
-      runTemplateCommand(templateCommand("templates:get-template"), [
+      runTemplateCommand(templateCommand("templates:get"), [
         "--id",
         TEMPLATE_SLUG,
       ]),
@@ -231,7 +231,7 @@ describe("templates black-box command invocation", () => {
     );
 
     await expect(
-      runTemplateCommand(templateCommand("templates:install-template"), [
+      runTemplateCommand(templateCommand("templates:install"), [
         "--id",
         TEMPLATE_SLUG,
         "--address",
@@ -259,7 +259,7 @@ describe("templates black-box command invocation", () => {
     );
 
     await expect(
-      runTemplateCommand(templateCommand("templates:get-template-install"), [
+      runTemplateCommand(templateCommand("templates:get-install"), [
         "--id",
         INSTALL_ID,
       ]),

@@ -306,7 +306,7 @@ describe("generated emails list / search with --automated", () => {
   });
 
   it("adds --automated to both generated commands", () => {
-    for (const id of ["emails:list-emails", "emails:search-emails"]) {
+    for (const id of ["emails:list", "emails:search"]) {
       const flags = (
         COMMANDS[id] as unknown as {
           flags: Record<string, { options?: string[] }>;
@@ -320,7 +320,7 @@ describe("generated emails list / search with --automated", () => {
     mocks.listEmails.mockResolvedValue({
       data: { success: true, data: [row()], meta: { cursor: null } },
     });
-    const result = await runCommand(COMMANDS["emails:list-emails"], [
+    const result = await runCommand(COMMANDS["emails:list"], [
       "--automated",
       "false",
     ]);
@@ -333,7 +333,7 @@ describe("generated emails list / search with --automated", () => {
     mocks.listEmails.mockResolvedValue({
       data: { success: true, data: [oldRow()], meta: { cursor: null } },
     });
-    const result = await runCommand(COMMANDS["emails:list-emails"], [
+    const result = await runCommand(COMMANDS["emails:list"], [
       "--automated",
       "false",
     ]);
@@ -352,7 +352,7 @@ describe("generated emails list / search with --automated", () => {
         meta: { cursor: null },
       },
     });
-    const result = await runCommand(COMMANDS["emails:search-emails"], [
+    const result = await runCommand(COMMANDS["emails:search"], [
       "--automated",
       "false",
     ]);
@@ -368,7 +368,7 @@ describe("generated emails list / search with --automated", () => {
         meta: { cursor: null },
       },
     });
-    const result = await runCommand(COMMANDS["emails:search-emails"], [
+    const result = await runCommand(COMMANDS["emails:search"], [
       "--q",
       "automated:false",
     ]);
@@ -385,7 +385,7 @@ describe("generated emails list / search with --automated", () => {
       .mockResolvedValueOnce({
         data: { success: true, data: [oldRow()], meta: { cursor: null } },
       });
-    const result = await runCommand(COMMANDS["emails:search-emails"], [
+    const result = await runCommand(COMMANDS["emails:search"], [
       "--automated",
       "true",
     ]);
@@ -395,7 +395,7 @@ describe("generated emails list / search with --automated", () => {
 
   it("explains a rejected filter", async () => {
     mocks.listEmails.mockResolvedValue(REJECTED);
-    const result = await runCommand(COMMANDS["emails:list-emails"], [
+    const result = await runCommand(COMMANDS["emails:list"], [
       "--automated",
       "true",
     ]);

@@ -5,10 +5,10 @@ The organization directory stores shared addresses and display names. Each agent
 ```sh
 primitive contacts list --limit 50
 primitive contacts get peer@example.com
-primitive contacts add peer@example.com --name "Project collaborator"
+primitive contacts create peer@example.com --name "Project collaborator"
 primitive contacts update peer@example.com --name "New display name"
 primitive contacts update peer@example.com --clear-name
-primitive contacts remove peer@example.com
+primitive contacts delete peer@example.com
 ```
 
 `add` uses `if_absent` and never overwrites a shared label. Adding an existing address without `--name` returns the existing contact unchanged. A conflicting supplied name produces an error; use `update` to change it. Connected-agent credentials can create address-only directory entries but cannot change shared names or remove directory entries.
@@ -21,11 +21,11 @@ With a selected connected-agent profile, `--agent` defaults to that profile's ow
 
 ```sh
 primitive agent contacts list --agent agent@example.com
-primitive agent contacts add peer@example.com --agent agent@example.com --purpose "Project questions"
+primitive agent contacts create peer@example.com --agent agent@example.com --purpose "Project questions"
 primitive agent contacts update peer@example.com --agent agent@example.com --notify
 primitive agent contacts update peer@example.com --agent agent@example.com --no-notify
 primitive agent contacts update peer@example.com --agent agent@example.com --clear-purpose
-primitive agent contacts remove peer@example.com --agent agent@example.com
+primitive agent contacts delete peer@example.com --agent agent@example.com
 ```
 
 Agent `add` ensures an address-only directory entry exists, preserving its shared label, then creates an absent membership. If membership creation fails, the directory entry remains available and the command reports the partial outcome. It does not report a saved membership or roll back the directory entry.
@@ -42,7 +42,7 @@ For automation, pass the exact `version` from a prior response with `--if-versio
 
 ```sh
 primitive agent contacts update peer@example.com --agent agent@example.com --notify --if-version "$CONTACT_VERSION"
-primitive contacts remove peer@example.com --if-version "$CONTACT_VERSION"
+primitive contacts delete peer@example.com --if-version "$CONTACT_VERSION"
 ```
 
 The bare `primitive contacts` and `primitive agent contacts` commands show help.

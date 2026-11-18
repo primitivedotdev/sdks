@@ -58,7 +58,10 @@ export class OrgsCommand extends Command {
 
   static summary = "List your organizations and CLI availability";
 
-  static examples = ["<%= config.bin %> orgs", "<%= config.bin %> orgs --json"];
+  static examples = [
+    "<%= config.bin %> org list",
+    "<%= config.bin %> org list --json",
+  ];
 
   static flags = {
     "api-base-url": API_BASE_URL_FLAG,
@@ -128,7 +131,7 @@ export class OrgsCommand extends Command {
 
 export class OrgUseCommand extends Command {
   static description =
-    `Switch the CLI to another of your organizations without logging in again. Matches an organization id or an exact name from \`primitive orgs\`.
+    `Switch the CLI to another of your organizations without logging in again. Matches an organization id or an exact name from \`primitive org list\`.
 
   Later commands act in that organization. To act in another organization for one command only, pass --org <org> to it instead.`;
 

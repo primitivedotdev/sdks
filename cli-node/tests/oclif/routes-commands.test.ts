@@ -19,12 +19,12 @@ describe("routes commands: registration", () => {
   // listed there is unreachable ("command not found") despite existing. Guard
   // every routes verb so an unregistered command can never ship again.
   it.each([
-    "routes:add",
+    "routes:create",
     "routes:list",
     "routes:test",
     "routes:update",
     "routes:reorder",
-    "routes:remove",
+    "routes:delete",
   ])("registers %s in the COMMANDS map", (key) => {
     expect(COMMANDS[key]).toBeDefined();
   });

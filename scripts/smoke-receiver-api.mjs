@@ -151,7 +151,7 @@ const policy = createWakePolicy({
   recipient: binding.address,
   contactRequests: binding.contactRequests,
   readContactPolicy: (signal) =>
-    cli(["contacts", "get-agent-contact-policy", "--agent-address", binding.address], signal),
+    cli(["contacts", "get-agent-policy", "--agent-address", binding.address], signal),
   async readContactPage(cursor, signal) {
     const page = parsePage(
       await cli(
@@ -165,7 +165,7 @@ const policy = createWakePolicy({
   async readNetworkAdmission(emailId, sender, signal): Promise<NetworkAdmission> {
     return parseDecision(
       await cli(
-        ["agent-networks", "check-default-network-contact-admission",
+        ["agent-networks", "check-contact-admission",
           "--email-id", emailId, "--sender-address", sender],
         signal,
       ),

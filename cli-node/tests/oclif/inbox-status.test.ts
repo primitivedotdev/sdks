@@ -67,7 +67,7 @@ function makeStatus(overrides: Record<string, unknown> = {}) {
 describe("inbox status command registration", () => {
   it("registers the human shortcut and generated operation id", () => {
     expect(COMMANDS["inbox:status"]).toBe(InboxStatusCommand);
-    expect(COMMANDS["inbox:get-inbox-status"]).toBe(InboxStatusCommand);
+    expect(COMMANDS["inbox:status"]).toBe(InboxStatusCommand);
   });
 
   it("exposes --domain and --json flags", () => {

@@ -11,9 +11,9 @@ import {
 } from "../api-command.js";
 import { JSON_OUTPUT_FLAG } from "../json-output.js";
 
-// `primitive functions:route-get` returns the endpoint binding for a
+// `primitive functions:get-route` returns the endpoint binding for a
 // function, or null when no route is currently bound. Pair with
-// `functions:route-set` / `functions:route-unset` to manage bindings,
+// `functions:set-route` / `functions:unset-route` to manage bindings,
 // and with `functions:routing-topology` for the org-wide view.
 
 class FunctionsRouteGetCommand extends Command {
@@ -22,7 +22,7 @@ class FunctionsRouteGetCommand extends Command {
 
   static summary = "Show a function's current route binding";
 
-  static examples = ["<%= config.bin %> functions route-get --id <fn-id>"];
+  static examples = ["<%= config.bin %> functions get-route --id <fn-id>"];
 
   static flags = {
     json: JSON_OUTPUT_FLAG,

@@ -10,6 +10,18 @@ Release notes for the packages in this repository:
 From 3.0.0 all four share one version, because all four are generated from
 the same OpenAPI spec. See `RELEASE.md`.
 
+## 3.0.0-preview.21 (unreleased)
+
+- CLI command paths use shorter names, such as `primitive email-rules create`,
+  `primitive account get`, and `primitive org list`. Removed spellings fail
+  with a suggestion for the replacement. Help, discovery, and completion use
+  the canonical paths.
+- Email rule commands take `--scope`, `--samples-file`, and
+  `--add-samples-file` in place of `--evaluation-scope`,
+  `--expectation-samples-file`, and `--add-expectation-samples-file`.
+  The temporary `--expect-samples-file` flag is unchanged.
+- API operation names, routes, request fields, and SDK methods are unchanged.
+
 ## 3.0.0
 
 `openapi/primitive-api.yaml` is now produced by `make openapi-sync` from the

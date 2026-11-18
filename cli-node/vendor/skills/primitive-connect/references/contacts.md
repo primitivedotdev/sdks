@@ -31,7 +31,7 @@ CLI equivalents:
 
 ```sh
 primitive agent contacts list
-primitive agent contacts add person@example.com --purpose "Project coordination" --notify
+primitive agent contacts create person@example.com --purpose "Project coordination" --notify
 primitive agent contacts update person@example.com --no-notify
 ```
 

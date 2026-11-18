@@ -90,7 +90,7 @@ afterEach(() => {
 async function runAdd(
   argv: string[],
 ): Promise<{ exitCode: number; stderr: string; stdout: string }> {
-  const command = COMMANDS["domains:add-domain"] as unknown as Runnable;
+  const command = COMMANDS["domains:create"] as unknown as Runnable;
   const stdout: string[] = [];
   const stderr: string[] = [];
   const spies = [
@@ -118,9 +118,9 @@ async function runAdd(
   return { exitCode, stderr: stderr.join(""), stdout: stdout.join("") };
 }
 
-describe("domains add --mail-relay", () => {
+describe("domains create --mail-relay", () => {
   it("registers a boolean --mail-relay flag with the relay help text", () => {
-    const command = COMMANDS["domains:add-domain"] as unknown as Runnable;
+    const command = COMMANDS["domains:create"] as unknown as Runnable;
     const flag = command.flags["mail-relay"];
     expect(flag?.type).toBe("boolean");
     expect(flag?.description).toBe(MAIL_RELAY_FLAG_DESCRIPTION);
@@ -130,8 +130,9 @@ describe("domains add --mail-relay", () => {
     expect(MAIL_RELAY_FLAG_DESCRIPTION).toContain("Google Workspace only");
   });
 
-  it("is reachable through the domains:add alias", () => {
-    expect(COMMANDS["domains:add"]).toBe(COMMANDS["domains:add-domain"]);
+  it("uses domains:create without retaining the old spelling", () => {
+    expect(COMMANDS["domains:create"]).toBeDefined();
+    expect(COMMANDS["domains:add-domain"]).toBeUndefined();
   });
 
   it("sends mail_relay: true when the flag is passed", async () => {
@@ -188,7 +189,7 @@ describe("domains add --mail-relay", () => {
   });
 });
 
-describe("domains add --mail-relay --json", () => {
+describe("domains create --mail-relay --json", () => {
   it.each([
     [
       403,

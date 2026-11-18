@@ -411,7 +411,7 @@ describe("contact command parsing", () => {
     },
   );
   it.each([[], ["--notify"], ["--no-notify"]].map((flags) => ({ flags })))(
-    "parses agent contacts add %j without defaulting omitted notify",
+    "parses agent contacts create %j without defaulting omitted notify",
     async ({ flags }) => {
       const f = fixture(ok(contact), ok(member));
       configured(f);

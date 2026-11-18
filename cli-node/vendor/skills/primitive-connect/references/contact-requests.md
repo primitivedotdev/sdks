@@ -145,10 +145,10 @@ email interactions; no separate interaction endpoint is required.
 The organization owner can manage broader rules through their normal CLI login:
 
 ```sh
-primitive contacts get-contact-policy
-primitive contacts put-contact-policy --body-file <policy-file>
-primitive contacts get-agent-contact-policy --agent-address agent@example.com
-primitive contacts put-agent-contact-policy --agent-address agent@example.com --body-file <policy-file>
+primitive contacts get-policy
+primitive contacts set-policy --body-file <policy-file>
+primitive contacts get-agent-policy --agent-address agent@example.com
+primitive contacts set-agent-policy --agent-address agent@example.com --body-file <policy-file>
 ```
 
 Writes replace the document's `rules` and `allow_contact_requests`, with exactly

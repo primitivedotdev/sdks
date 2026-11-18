@@ -32,7 +32,7 @@ import {
 } from "../secret-flags.js";
 
 // `primitive functions:redeploy` is the agent-grade shortcut for
-// `functions:update-function`. Same file-reading ergonomic as
+// `functions:update`. Same file-reading ergonomic as
 // functions:deploy but for an existing function. Use this to push a
 // new bundle, OR to refresh secret bindings: passing the
 // previously-deployed bundle (or any equivalent file) re-runs the
@@ -41,7 +41,7 @@ import {
 //
 // Secret source flags are the one-call shortcut for "write secrets
 // AND redeploy in the same command." Secrets are written FIRST so a
-// single update-function call picks up every new binding; this is the
+// single update call picks up every new binding; this is the
 // inverse order of functions:deploy where the function must exist
 // before secrets can be written.
 
@@ -92,7 +92,7 @@ export type RunRedeployWithSecretsResult =
       succeededKeys: string[];
     };
 
-// Pure-ish orchestration of (optional secrets +) update-function.
+// Pure-ish orchestration of (optional secrets +) update.
 // Writes every secret first, then re-deploys with the new bundle so
 // a single updateFunction call refreshes every binding the user
 // wrote. Pulled out as a named export so the unit test can drive
@@ -185,7 +185,7 @@ export async function runRedeployWithSecrets(
 
 class FunctionsRedeployCommand extends Command {
   static description =
-    `Update or redeploy a function from a bundled handler file. Agent-grade shortcut for functions:update-function.
+    `Update or redeploy a function from a bundled handler file. Agent-grade shortcut for functions:update.
 
   Use to push a new bundle OR to refresh secret bindings into the
   running handler. The same file is fine for both: the deploy reads
@@ -193,11 +193,11 @@ class FunctionsRedeployCommand extends Command {
   bundle picks up any secret writes since the last deploy.
 
   Pass secret source flags to write secrets BEFORE the redeploy fires;
-  one update-function call then refreshes every new binding. Keys must
+  one update call then refreshes every new binding. Keys must
   match \`^[A-Z_][A-Z0-9_]*$\` (uppercase letters, digits, underscores;
   first character is a letter or underscore). With one or more secrets
   the redeploy fans out to multiple API calls (set-secret per pair,
-  then update-function). ${SECRET_SOURCE_FLAGS_DESCRIPTION}`;
+  then update). ${SECRET_SOURCE_FLAGS_DESCRIPTION}`;
 
   static summary = "Redeploy a function from a bundled handler file";
 
@@ -236,7 +236,7 @@ class FunctionsRedeployCommand extends Command {
         "Optional path to a source map for the bundle. Used to symbolicate stack traces in the function's logs.",
     }),
     secret: Flags.string({
-      description: `Secret KEY=VALUE to write on the function before the redeploy fires. Repeatable. KEY must match \`^[A-Z_][A-Z0-9_]*$\`; VALUE may contain \`=\` (only the first \`=\` is treated as a delimiter). Each KEY may only appear once per command. Passing one or more --secret flags fans out to set-secret per pair then a single update-function call so the new bindings land in the same redeploy. ${SECRET_FLAG_SECURITY_NOTE}`,
+      description: `Secret KEY=VALUE to write on the function before the redeploy fires. Repeatable. KEY must match \`^[A-Z_][A-Z0-9_]*$\`; VALUE may contain \`=\` (only the first \`=\` is treated as a delimiter). Each KEY may only appear once per command. Passing one or more --secret flags fans out to set-secret per pair then a single update call so the new bindings land in the same redeploy. ${SECRET_FLAG_SECURITY_NOTE}`,
       multiple: true,
     }),
     "secret-from-env": Flags.string({

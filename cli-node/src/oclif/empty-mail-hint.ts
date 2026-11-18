@@ -207,7 +207,7 @@ const GRANT_POINTER =
  * holder, which its holder checks as a share.
  */
 function rulesSentence(rules: string[]): string {
-  return `A rule grants an email it matches when the email is evaluated, shortly after it arrives, while the rule is active, and the key reads that mail only while the rule stays active. Each id (${named(rules)}) is an email rule or a rule shared with the key's holder: a rule's author, signed in as themselves, can check it with \`primitive email-rules get-email-rule --id <id>\`, and a share's holder with \`primitive email-rules get-email-rule-share --id <id>\`.`;
+  return `A rule grants an email it matches when the email is evaluated, shortly after it arrives, while the rule is active, and the key reads that mail only while the rule stays active. Each id (${named(rules)}) is an email rule or a rule shared with the key's holder: a rule's author, signed in as themselves, can check it with \`primitive email-rules get --id <id>\`, and a share's holder with \`primitive email-rules get-share --id <id>\`.`;
 }
 
 /** Who holds the credential, which decides what else it reads beside its grant. */
@@ -228,7 +228,7 @@ const NOUN: Record<Holder, string> = {
 
 /** A person also reads mail through rules colleagues shared with them, which sit beside the grant, not in it. */
 const SHARED =
-  "mail from email rules colleagues shared with you (`primitive email-rules list-email-rule-shares` lists them)";
+  "mail from email rules colleagues shared with you (`primitive email-rules list-shares` lists them)";
 
 /** A connection key also reads member mailboxes its owner gave it, asked for by name. */
 const GIVEN =

@@ -122,7 +122,7 @@ async function membershipVersion(
     }
     if (next === null)
       throw new Error(
-        "Agent contact not found. Use agent contacts add to create it.",
+        "Agent contact not found. Use agent contacts create to create it.",
       );
     if (seen.has(next))
       throw new Error(

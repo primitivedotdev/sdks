@@ -1,10 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import {
-  operationManifest,
-  type PrimitiveOperationManifest,
-} from "@primitivedotdev/api-core";
+import type { PrimitiveOperationManifest } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const workers = vi.hoisted(() => [] as Record<string, string>[]);
@@ -37,6 +34,8 @@ import {
   readWorkingLease,
   startWorkingLease,
 } from "../../src/oclif/auto-signals.js";
+import { operationCommandId } from "../../src/oclif/cli-command-names.js";
+import { cliOperationManifest as operationManifest } from "../../src/oclif/cli-operations.js";
 import {
   agentProfileDirectory,
   saveConnectedAgentProfile,
@@ -231,7 +230,6 @@ const jsonCommandIds = Object.entries(COMMANDS)
 // would wait on stdin or a local session, or would retry the fixture's 503
 // until a long default timeout.
 const FAILURE_ARGV: Record<string, string[]> = {
-  "agent-connections:claim-agent-connection": ["--status", "--json"],
   "agent:connect": ["--status", "--json"],
   wait: ["--json", "--timeout", "1"],
 };
@@ -496,7 +494,7 @@ describe("--json prints one document on a merged stream", () => {
       "wake:dispatches:list",
       "wake:schedules:list",
       "wake:schedules:get",
-      "functions:route-get",
+      "functions:get-route",
       "functions:routing-topology",
       "memories:get",
       "memories:search",
@@ -531,8 +529,8 @@ describe("--json prints one document on a merged stream", () => {
 // suites, which run through the same registry.
 const SUCCESS_ARGV: Record<string, string[]> = {
   "agent:contacts:list": [],
-  "agent:contacts:add": ["peer@example.com"],
-  "agent:contacts:remove": ["peer@example.com"],
+  "agent:contacts:create": ["peer@example.com"],
+  "agent:contacts:delete": ["peer@example.com"],
   "agent:contacts:update": ["peer@example.com"],
   "agent:disconnect": ["--profile", "work"],
   "agent:notes:delete": ["AGENT_INFO"],
@@ -542,10 +540,10 @@ const SUCCESS_ARGV: Record<string, string[]> = {
   config: [],
   "config:list": [],
   "contacts:accept": ["--id", "00000000-0000-4000-8000-000000000001"],
-  "contacts:add": ["peer@example.com"],
+  "contacts:create": ["peer@example.com"],
   "contacts:get": ["peer@example.com"],
   "contacts:list": [],
-  "contacts:remove": ["peer@example.com"],
+  "contacts:delete": ["peer@example.com"],
   "contacts:request": ["peer@example.com", "--reason", "a question"],
   "contacts:update": ["peer@example.com"],
   "credits:balance": [],
@@ -678,14 +676,14 @@ function operationArgv(operation: PrimitiveOperationManifest): string[] {
 
 // Operation ids a hand-written command serves, with its own --json document.
 const HAND_WRITTEN_OPERATION_IDS = new Set([
-  "agent-connections:claim-agent-connection",
-  "cli:list-cli-orgs",
-  "credits:redeem-credit-code",
-  "search:semantic-search",
+  "agent:connect",
+  "org:list",
+  "credits:redeem",
+  "semantic-search",
 ]);
 
 const generatedJsonOperations = operationManifest.filter((operation) => {
-  const id = `${operation.tagCommand}:${operation.command}`;
+  const id = operationCommandId(operation);
   const command = COMMANDS[id] as Runnable | undefined;
   return (
     !HAND_WRITTEN_OPERATION_IDS.has(id) &&
@@ -699,8 +697,7 @@ const generatedJsonOperations = operationManifest.filter((operation) => {
 describe("generated commands with --json", () => {
   it.each(
     generatedJsonOperations.map(
-      (operation) =>
-        [`${operation.tagCommand}:${operation.command}`, operation] as const,
+      (operation) => [operationCommandId(operation), operation] as const,
     ),
   )(
     "%s prints the response body as one document with empty stderr",
@@ -783,7 +780,7 @@ describe("generated commands with --json", () => {
       );
       // A key cannot read rules, so the hint names the rule and who can check it.
       expect(result.stderr).toContain(
-        `Each id (${RULE}) is an email rule or a rule shared with the key's holder: a rule's author, signed in as themselves, can check it with \`primitive email-rules get-email-rule --id <id>\``,
+        `Each id (${RULE}) is an email rule or a rule shared with the key's holder: a rule's author, signed in as themselves, can check it with \`primitive email-rules get --id <id>\``,
       );
       // Read from the endpoint any credential may ask about itself.
       expect(fetchCalls.map((c) => c.url.pathname)).toEqual([
@@ -807,7 +804,7 @@ describe("generated commands with --json", () => {
       );
       const result = await runMerged("emails:list", []);
       expect(result.stderr).toContain(
-        "(no results) No inbound emails yet in the mail this login reads. This login reads a@example.test and any address at ops.example.test, and mail from email rules colleagues shared with you (`primitive email-rules list-email-rule-shares` lists them); other mail is not listed.",
+        "(no results) No inbound emails yet in the mail this login reads. This login reads a@example.test and any address at ops.example.test, and mail from email rules colleagues shared with you (`primitive email-rules list-shares` lists them); other mail is not listed.",
       );
     });
 
@@ -1002,7 +999,7 @@ describe("generated commands with --json", () => {
     const MEMBER_WARNING =
       'Warning: the role "Member" reads all of this organization\'s mail while this organization uses whole-organization access';
     const invite = () =>
-      runMerged("organizations:invite-organization-member", [
+      runMerged("organizations:invite-member", [
         "--request-id",
         "00000000-0000-4000-8000-0000000000dd",
         "--email",
@@ -1192,12 +1189,12 @@ describe("generated commands with --json", () => {
     });
   });
 
-  it("takes the email id of list-email-rule-results as --email-id, and --id still works", async () => {
+  it("takes the email id of list-results as --email-id, and --id still works", async () => {
     responder = () => jsonResponse(200, { success: true, data: { rules: [] } });
     const email = "00000000-0000-4000-8000-0000000000e1";
     for (const flag of ["--email-id", "--id"]) {
       fetchCalls = [];
-      const result = await runMerged("email-rules:list-email-rule-results", [
+      const result = await runMerged("email-rules:list-results", [
         flag,
         email,
         "--json",
@@ -1207,9 +1204,8 @@ describe("generated commands with --json", () => {
         `/v1/emails/${email}/rule-results`,
       ]);
     }
-    const flags = (
-      COMMANDS["email-rules:list-email-rule-results"] as unknown as Runnable
-    ).flags as Record<string, { description?: string; aliases?: string[] }>;
+    const flags = (COMMANDS["email-rules:list-results"] as unknown as Runnable)
+      .flags as Record<string, { description?: string; aliases?: string[] }>;
     expect(flags["email-id"]?.aliases).toEqual(["id"]);
     expect(flags["email-id"]?.description).toContain("not a rule id");
   });
@@ -1227,9 +1223,8 @@ describe("generated commands with --json", () => {
       "with --json it is meta.cursor",
     );
     // A list that returns its cursor in the data keeps the spec's text.
-    const templates = (
-      COMMANDS["templates:list-templates"] as unknown as Runnable
-    ).flags as Record<string, { description?: string }>;
+    const templates = (COMMANDS["templates:list"] as unknown as Runnable)
+      .flags as Record<string, { description?: string }>;
     expect(templates.cursor?.description).not.toContain(
       "meta.cursor in the document",
     );
@@ -1239,7 +1234,7 @@ describe("generated commands with --json", () => {
     const bad = join(tempHome, "bad-body.json");
     writeFileSync(bad, "{");
     for (const file of [bad, join(tempHome, "missing-body.json")]) {
-      const result = await runMerged("email-rules:create-email-rule", [
+      const result = await runMerged("email-rules:create", [
         "--body-file",
         file,
         "--json",
@@ -1259,13 +1254,10 @@ describe("generated commands with --json", () => {
     const rule = "00000000-0000-4000-8000-0000000000aa";
     for (const [id, argv] of [
       [
-        "email-rules:create-email-rule",
+        "email-rules:create",
         ["--name", "n", "--expectations-file", join(tempHome, "missing.json")],
       ],
-      [
-        "email-rules:test-email-rule",
-        ["--rule-id", rule, "--expect-samples-file", bad],
-      ],
+      ["email-rules:test", ["--rule-id", rule, "--expect-samples-file", bad]],
     ] as const) {
       const result = await runMerged(id, [...argv, "--json"]);
       expect(result.exitCode, result.merged).toBe(2);
@@ -1285,16 +1277,13 @@ describe("generated commands with --json", () => {
       jsonResponse(200, { success: true, data: { id: ruleId } });
     for (const argv of [[ruleId], ["--id", ruleId], [ruleId, "--id", ruleId]]) {
       fetchCalls = [];
-      const result = await runMerged("email-rules:get-email-rule", [
-        ...argv,
-        "--json",
-      ]);
+      const result = await runMerged("email-rules:get", [...argv, "--json"]);
       expect(result.exitCode, result.merged).toBe(0);
       expect(fetchCalls.map((call) => call.url.pathname)).toEqual([
         `/v1/email-rules/${ruleId}`,
       ]);
     }
-    const both = await runMerged("email-rules:get-email-rule", [
+    const both = await runMerged("email-rules:get", [
       ruleId,
       "--id",
       "00000000-0000-4000-8000-0000000000bb",
@@ -1304,7 +1293,7 @@ describe("generated commands with --json", () => {
     expect(
       (parseOne(both.merged) as { error: { message: string } }).error.message,
     ).toContain("not both with different values");
-    const none = await runMerged("email-rules:get-email-rule", ["--json"]);
+    const none = await runMerged("email-rules:get", ["--json"]);
     expect(none.exitCode).toBe(2);
     expect(parseOne(none.merged)).toMatchObject({
       error: {
@@ -1314,9 +1303,7 @@ describe("generated commands with --json", () => {
       exit_code: 2,
     });
     // A renamed path flag names its argument the same way.
-    const results = COMMANDS[
-      "email-rules:list-email-rule-results"
-    ] as unknown as {
+    const results = COMMANDS["email-rules:list-results"] as unknown as {
       args: Record<string, unknown>;
     };
     expect(Object.keys(results.args)).toEqual(["email-id"]);
@@ -1588,9 +1575,9 @@ describe("generated commands with --json", () => {
         (p) => p.name === "Primitive-Step-Up",
       );
       if (!declared) continue;
-      const command = COMMANDS[
-        `${operation.tagCommand}:${operation.command}`
-      ] as unknown as Runnable | undefined;
+      const command = COMMANDS[operationCommandId(operation)] as unknown as
+        | Runnable
+        | undefined;
       if (!command) continue;
       const flags = command.flags as Record<string, { aliases?: string[] }>;
       expect(flags["step-up-token"]?.aliases, operation.sdkName).toEqual([
@@ -1598,6 +1585,14 @@ describe("generated commands with --json", () => {
       ]);
       expect(flags.browser, operation.sdkName).toBeDefined();
     }
+  });
+
+  it("prints the canonical setup command after an empty domains list", async () => {
+    responder = () => jsonResponse(200, { success: true, data: [] });
+    const result = await runMerged("domains:list", []);
+    expect(result.exitCode, result.merged).toBe(0);
+    expect(result.stderr).toContain("primitive domains create");
+    expect(result.stderr).not.toContain("primitive domains add");
   });
 
   it("keeps the data-only output and stderr cursor without --json", async () => {

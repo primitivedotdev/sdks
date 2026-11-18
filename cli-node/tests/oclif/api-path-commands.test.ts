@@ -14,13 +14,13 @@ const EMAIL = "0f0e0d0c-0b0a-4908-8706-050403020100";
 describe("API routes named in server messages", () => {
   it("names the command that calls a route, by template or concrete path", () => {
     expect(commandForRoute("GET", "/v1/email-rule-scope-options")).toBe(
-      "primitive email-rules list-email-rule-scope-options",
+      "primitive email-rules list-scope-options",
     );
     expect(commandForRoute("get", `/v1/emails/${EMAIL}/rule-results`)).toBe(
-      "primitive email-rules list-email-rule-results",
+      "primitive email-rules list-results",
     );
     expect(commandForRoute("GET", "/v1/emails/{id}/rule-results")).toBe(
-      "primitive email-rules list-email-rule-results",
+      "primitive email-rules list-results",
     );
     // A short name wins where the CLI has one.
     expect(commandForRoute("GET", `/v1/emails/${EMAIL}`)).toBe(
@@ -45,9 +45,9 @@ describe("API routes named in server messages", () => {
       "primitive keys revoke",
     );
     expect(commandForRoute("PUT", `/v1/functions/${EMAIL}/route`)).toBe(
-      "primitive functions route-set",
+      "primitive functions set-route",
     );
-    // An alias kept for an older id in another topic is not taken as a short name.
+    // The canonical leave operation belongs to the roles and members topic.
     expect(commandForRoute("POST", "/v1/organization/leave")).not.toContain(
       "primitive account",
     );
@@ -66,7 +66,7 @@ describe("API routes named in server messages", () => {
     const message =
       "This organization receives no mail at gmail.com, so gmail.com names nothing the rule can decide. Check the spelling, or see GET /v1/email-rule-scope-options for what you can name.";
     expect(withCliCommands(message)).toBe(
-      "This organization receives no mail at gmail.com, so gmail.com names nothing the rule can decide. Check the spelling, or see GET /v1/email-rule-scope-options (primitive email-rules list-email-rule-scope-options) for what you can name.",
+      "This organization receives no mail at gmail.com, so gmail.com names nothing the rule can decide. Check the spelling, or see GET /v1/email-rule-scope-options (primitive email-rules list-scope-options) for what you can name.",
     );
     expect(withCliCommands("Nothing to see here.")).toBe(
       "Nothing to see here.",
@@ -90,7 +90,7 @@ describe("API routes named in server messages", () => {
         ],
       })[0],
     ).toContain(
-      "GET /v1/email-rule-scope-options (primitive email-rules list-email-rule-scope-options)",
+      "GET /v1/email-rule-scope-options (primitive email-rules list-scope-options)",
     );
   });
 
@@ -100,7 +100,7 @@ describe("API routes named in server messages", () => {
         "Read GET /v1/email-rule-scope-options, then GET /v1/email-rule-scope-options again.",
       ),
     ).toEqual([
-      "Hint: in the CLI, GET /v1/email-rule-scope-options is `primitive email-rules list-email-rule-scope-options`.",
+      "Hint: in the CLI, GET /v1/email-rule-scope-options is `primitive email-rules list-scope-options`.",
     ]);
     const writes: string[] = [];
     const spy = vi
@@ -118,7 +118,7 @@ describe("API routes named in server messages", () => {
       spy.mockRestore();
     }
     expect(writes.join("")).toContain(
-      "Hint: in the CLI, GET /v1/email-rule-scope-options is `primitive email-rules list-email-rule-scope-options`.",
+      "Hint: in the CLI, GET /v1/email-rule-scope-options is `primitive email-rules list-scope-options`.",
     );
   });
 });

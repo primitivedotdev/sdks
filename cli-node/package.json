@@ -98,7 +98,7 @@
         "description": "Check inbound email setup and readiness, and work through mail awaiting your reply. Prefer `primitive inbox setup` for a guided setup path, `primitive inbox status` for the readiness table, and `primitive inbox next` for the oldest email awaiting your reply."
       },
       "emails": {
-        "description": "List, inspect, and wait for received emails, and see what the classifier read from one. Prefer task aliases like `primitive emails list`, `primitive emails get`, `primitive emails latest`, `primitive emails facts`, `primitive emails wait`, and `primitive emails watch`; generated API names remain available for compatibility. For a one-line-per-email table, `primitive emails latest --limit 100`."
+        "description": "List, inspect, and wait for received emails, and see what the classifier read from one. Prefer task aliases like `primitive emails list`, `primitive emails get`, `primitive emails latest`, `primitive emails facts`, `primitive emails wait`, and `primitive emails watch`. For a one-line-per-email table, `primitive emails latest --limit 100`."
       },
       "search": {
         "description": "Cross-corpus semantic search. Prefer `primitive search <query>` for lexical inbound search and `primitive semantic-search <query>` for meaning-aware ranking across inbound and outbound.",
@@ -120,7 +120,7 @@
         "description": "Short aliases for outbound sent-email history: `primitive sent list`, `primitive sent get`, and `primitive sent delete --id <id>`. Deleting sender history does not recall delivery."
       },
       "threads": {
-        "description": "Inspect conversation threads spanning received and sent emails. Prefer `primitive threads get --id <thread-id>`; generated API name `primitive threads get-thread --id <thread-id>` remains available."
+        "description": "Inspect conversation threads spanning received and sent emails. Prefer `primitive threads get --id <thread-id>`."
       },
       "endpoints": {
         "description": "Manage webhook endpoints that receive email events"
@@ -135,25 +135,25 @@
         "description": "Short aliases for webhook delivery attempts: `primitive deliveries list` and `primitive deliveries replay`."
       },
       "functions": {
-        "description": "Deploy JavaScript handlers that run on inbound mail. Prefer `primitive functions templates`, `primitive functions init`, `primitive functions deploy`, `primitive functions redeploy`, `primitive functions list`, `primitive functions get`, `primitive functions logs`, and `primitive functions set-secret`; generated API names remain available for compatibility."
+        "description": "Deploy JavaScript handlers that run on inbound mail. Prefer `primitive functions templates`, `primitive functions init`, `primitive functions deploy`, `primitive functions redeploy`, `primitive functions list`, `primitive functions get`, `primitive functions logs`, and `primitive functions set-secret`."
       },
       "memories": {
         "description": "Store durable JSON memories by key. Use `primitive memories set|get|delete|search`; pass `--function <function-id>` for function-scoped memories."
       },
       "templates": {
-        "description": "Browse and install Function templates. Use `primitive templates list-templates`, `primitive templates get-template`, `primitive templates install-template`, and `primitive templates get-template-install`."
+        "description": "Browse and install Function templates. Use `primitive templates list`, `primitive templates get`, `primitive templates install`, and `primitive templates get-install`."
       },
       "org": {
-        "description": "Switch the CLI between your organizations (`primitive org use <org>`, list them with `primitive orgs`), manage org-level (global) resources shared across functions, or leave the organization"
+        "description": "Switch the CLI between your organizations (`primitive org use <org>`, list them with `primitive org list`), manage org-level (global) resources shared across functions, or leave the organization"
       },
       "org:secrets": {
-        "description": "Global secrets shared across every function. Use `primitive org secrets list|set|remove`. Changes land in a function on its next redeploy; a function secret of the same name overrides the global."
+        "description": "Global secrets shared across every function. Use `primitive org secrets list|set|delete`. Changes land in a function on its next redeploy; a function secret of the same name overrides the global."
       },
       "keys": {
         "description": "Organization API keys: list and show them (metadata only, never secrets), create, rotate and change them (with browser approval where your organization requires it), and revoke them."
       },
       "roles": {
-        "description": "Read roles, members, groups, mailbox access and the access mode. Use `primitive roles list|members|groups|mailbox-access|access-mode`; generated API names remain available."
+        "description": "Read roles, members, groups, mailbox access and the access mode. Use `primitive roles list|members|groups|mailbox-access|access-mode`."
       },
       "projects": {
         "description": "Organization people, shared projects and project invitations"
@@ -198,7 +198,7 @@
         "description": "The email rules that reach your own mailboxes, whoever wrote them, read-only, and objections asking a rule's author to turn it off"
       },
       "routes": {
-        "description": "Manage recipient routes. Bind an address pattern to an endpoint or function: `primitive routes add alice@d --function <id>`, `primitive routes list`, `primitive routes test <recipient>`, `primitive routes remove <id>`."
+        "description": "Manage recipient routes. Bind an address pattern to an endpoint or function: `primitive routes create alice@d --function <id>`, `primitive routes list`, `primitive routes test <recipient>`, `primitive routes delete <id>`."
       },
       "repeat": {
         "description": "Act on a message that repeats to you. Use `primitive repeat stop --id <email-id>` when it is no longer needed."
@@ -219,7 +219,7 @@
         "description": "Receive events locally as JSONL with JSON status responses by default; --json is accepted explicitly. Use --exec or --forward-to, or deliver external mail events as tool output, never user messages, to an exact loaded native session using --notify-session with --contacts or approved --sender addresses. Add --email-id to --status to explain one received email. Add --contact-requests for owner-enabled structured first-contact intake. Use --background for independent receiving, --status --notify-session for current receiver health and durable receipts, or --stop --notify-session to stop only that receiver. Verified presence controls use no model turns and do not consume --once or --number."
       },
       "contacts": {
-        "description": "Shared organization contacts plus structured request, accept, and wait commands for connected agents. Directory list, get, add, update, and remove use conditional versions. Commands return JSON by default and accept explicit --json."
+        "description": "Shared organization contacts plus structured request, accept, and wait commands for connected agents. Directory list, get, create, update, and delete use conditional versions. Commands return JSON by default and accept explicit --json."
       },
       "agent:contacts": {
         "description": "Contacts and notification preferences for one agent address. Connected profiles default to their own address. Commands return JSON by default and accept explicit --json."

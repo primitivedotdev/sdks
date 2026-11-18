@@ -55,7 +55,7 @@ import {
 } from "../send-outcome.js";
 
 // `primitive send` is the agent-grade shortcut for the most common
-// case: send a fresh outbound email. It wraps `sending:send-email`
+// case: send a fresh outbound email. It wraps `sending:send`
 // with two ergonomic defaults that the underlying operation can't
 // express through manifest-driven flag generation alone:
 //
@@ -74,11 +74,11 @@ import {
 //      (capped). Empty subjects get spam-scored, so we always emit
 //      something. Callers who want full control pass --subject.
 //
-// `--body` here is the message body (text). The full `send-email`
+// `--body` here is the message body (text). The full `send`
 // operation distinguishes `body_text` and `body_html`; this
 // shortcut keeps it simple by exposing `--body` for text and
 // `--html` for the HTML alternative. Users who need both can pass
-// both flags or fall back to `sending:send-email` for the full
+// both flags or fall back to `sending:send` for the full
 // flag list.
 //
 // `--attachment` reads file bytes and sends them as MIME attachments.

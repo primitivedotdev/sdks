@@ -107,9 +107,9 @@ describe("command registration", () => {
     expect(COMMANDS["sent:cancel"]).toBe(SentCancelCommand);
     for (const id of [
       "changes:list",
-      "changes:list-changes",
-      "sending:cancel-sent-email",
-      "sending:cancel-sent-email-by-idempotency-key",
+      "changes:list",
+      "sending:cancel",
+      "sending:cancel-by-key",
     ])
       expect(COMMANDS[id], id).toBeDefined();
     expect(

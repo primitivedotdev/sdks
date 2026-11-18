@@ -38,8 +38,8 @@ import { isBuiltInRoleKey } from "../user-grant.js";
 // --json keeps the full account payload available for explicit scripting.
 //
 // The managed inbox line answers "where do I send mail TO this account?",
-// a question the API surfaces nowhere else right now (`account show` does
-// not include it). For agents that just completed `verify-agent-signup`,
+// a question the API surfaces nowhere else right now (`account get` does
+// not include it). For agents that just completed `verify-signup`,
 // it removes the post-signup hunt for the assigned *.primitive.email
 // domain that drove the original AGX pain.
 

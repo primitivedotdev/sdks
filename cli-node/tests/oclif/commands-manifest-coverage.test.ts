@@ -4,11 +4,17 @@ import { openapiDocument, operationManifest } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
 import { OPERATION_EXTENSIONS } from "../../src/oclif/api-command.js";
 import {
+  COMMAND_RENAMES,
+  canonicalCommandId,
+  operationCommandId,
+} from "../../src/oclif/cli-command-names.js";
+import {
   CLI_OMITTED_OPERATION_IDS,
   CREDENTIAL_HEADER_OPERATION_IDS,
   cliOperationManifest,
   KEY_WRITE_OPERATION_IDS,
   NOT_YET_OFFERED_OPERATION_IDS,
+  rawCliOperationManifest,
 } from "../../src/oclif/cli-operations.js";
 import {
   CANONICAL_OPERATION_ALIASES,
@@ -51,6 +57,32 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("removes every retired command spelling and keeps each replacement registered", () => {
+    for (const [oldId, newId] of Object.entries(COMMAND_RENAMES)) {
+      expect(COMMANDS[oldId], oldId).toBeUndefined();
+      expect(COMMANDS[newId], newId).toBeDefined();
+    }
+    expect(COMMANDS.org).toBeUndefined();
+    expect(COMMANDS["org:list"]).toBeDefined();
+  });
+
+  it("preserves API descriptors while projecting executable command names", () => {
+    for (const raw of rawCliOperationManifest) {
+      const projected = cliOperationManifest.find(
+        (op) => op.operationId === raw.operationId,
+      );
+      expect(projected).toBeDefined();
+      expect(
+        projected && {
+          ...projected,
+          tagCommand: raw.tagCommand,
+          command: raw.command,
+          description: raw.description,
+        },
+      ).toEqual(raw);
+    }
+  });
+
   it("requires flag metadata before an extension starts supplying a required body property", () => {
     function requiredProperties(schema: unknown): string[] {
       if (!schema || typeof schema !== "object" || Array.isArray(schema))
@@ -93,14 +125,14 @@ describe("COMMANDS / manifest coverage", () => {
     ])
       expect(COMMANDS[name]).toBeDefined();
     for (const name of [
-      "list-agent-networks",
-      "list-default-network-members",
-      "list-default-network-agents",
-      "get-default-network-agent",
-      "add-default-network-member",
-      "remove-default-network-member",
-      "update-default-network-member",
-      "check-default-network-contact-admission",
+      "list",
+      "list-members",
+      "list-agents",
+      "get-agent",
+      "add-member",
+      "delete-member",
+      "update-member",
+      "check-contact-admission",
     ])
       expect(COMMANDS[`agent-networks:${name}`]).toBeDefined();
     const admission = operationManifest.find(
@@ -204,15 +236,15 @@ describe("COMMANDS / manifest coverage", () => {
     for (const action of [
       "list",
       "get",
-      "add",
+      "create",
       "update",
-      "remove",
+      "delete",
       "request",
       "accept",
       "wait",
     ])
       expect(COMMANDS[`contacts:${action}`]).toBeDefined();
-    for (const action of ["list", "add", "update", "remove"])
+    for (const action of ["list", "create", "update", "delete"])
       expect(COMMANDS[`agent:contacts:${action}`]).toBeDefined();
     expect(readCliPackageJson().oclif?.topics?.contacts).toBeDefined();
     expect(
@@ -249,14 +281,14 @@ describe("COMMANDS / manifest coverage", () => {
       ...[
         "list",
         "get",
-        "add",
+        "create",
         "update",
-        "remove",
+        "delete",
         "request",
         "accept",
         "wait",
       ].map((action) => `contacts:${action}`),
-      ...["list", "add", "update", "remove"].map(
+      ...["list", "create", "update", "delete"].map(
         (action) => `agent:contacts:${action}`,
       ),
     ]) {
@@ -273,14 +305,14 @@ describe("COMMANDS / manifest coverage", () => {
   });
   it("exposes the four owner policy operations with explicit JSON replacement bodies", () => {
     for (const name of [
-      "get-contact-policy",
-      "put-contact-policy",
-      "get-agent-contact-policy",
-      "put-agent-contact-policy",
+      "get-policy",
+      "set-policy",
+      "get-agent-policy",
+      "set-agent-policy",
     ]) {
       expect(COMMANDS[`contacts:${name}`]).toBeDefined();
     }
-    for (const name of ["put-contact-policy", "put-agent-contact-policy"]) {
+    for (const name of ["set-policy", "set-agent-policy"]) {
       const command = COMMANDS[`contacts:${name}`] as unknown as {
         flags: Record<string, unknown>;
       };
@@ -313,11 +345,11 @@ describe("COMMANDS / manifest coverage", () => {
     };
     expect(wait.flags["request-id"].exclusive).toContain("id");
   });
-  it("routes both invitation claim names through private stdin setup", () => {
+  it("routes the canonical invitation claim command through private stdin setup", () => {
     expect(COMMANDS["agent:connect"]).toBeDefined();
-    expect(COMMANDS["agent-connections:claim-agent-connection"]).toBe(
-      COMMANDS["agent:connect"],
-    );
+    expect(
+      COMMANDS["agent-connections:claim-agent-connection"],
+    ).toBeUndefined();
     const setup = COMMANDS["agent:connect"] as unknown as {
       description: string;
       flags: Record<string, unknown>;
@@ -337,43 +369,43 @@ describe("COMMANDS / manifest coverage", () => {
     const expected = [
       [
         "createAgentConnection",
-        "agent-connections:create-agent-connection",
+        "agent-connections:create",
         "POST",
         "/agent-connections",
       ],
       [
         "listAgentConnections",
-        "agent-connections:list-agent-connections",
+        "agent-connections:list",
         "GET",
         "/agent-connections",
       ],
       [
         "inviteAgentConnection",
-        "agent-connections:invite-agent-connection",
+        "agent-connections:invite",
         "POST",
         "/agent-connections/{address}/invitation",
       ],
       [
         "revokeAgentConnection",
-        "agent-connections:revoke-agent-connection",
+        "agent-connections:revoke",
         "DELETE",
         "/agent-connections/{address}",
       ],
       [
         "removeAgentConnection",
-        "agent-connections:remove-agent-connection",
+        "agent-connections:delete",
         "POST",
         "/agent-connections/{address}/remove",
       ],
       [
         "claimAgentConnection",
-        "agent-connections:claim-agent-connection",
+        "agent:connect",
         "POST",
         "/agent-connections/claim",
       ],
       [
         "agentConnectionSetup",
-        "agent-connections:agent-connection-setup",
+        "agent-connections:setup",
         "GET",
         "/agent-connections/setup",
       ],
@@ -466,7 +498,7 @@ describe("COMMANDS / manifest coverage", () => {
     expect(disconnect.flags["api-key"]).toBeUndefined();
     expect(disconnect.flags["api-base-url"]).toBeUndefined();
     expect(disconnect.description).toContain("pinned Primitive origin");
-    expect(COMMANDS["agent-connections:remove-agent-connection"]).toBeDefined();
+    expect(COMMANDS["agent-connections:delete"]).toBeDefined();
   });
   it("registers trusted-machine session enrollment without an invitation argument", () => {
     const enroll = COMMANDS["agent:enroll"] as unknown as {
@@ -562,10 +594,10 @@ describe("COMMANDS / manifest coverage", () => {
     );
     expect(COMMANDS["chat:reply"]).toBeDefined();
   });
-  it("registers mailbox deletion operations and the sent alias", () => {
-    expect(COMMANDS["sending:delete-sent-email"]).toBeDefined();
-    expect(COMMANDS["agent-connections:remove-agent-connection"]).toBeDefined();
-    expect(COMMANDS["sent:delete"]).toBe(COMMANDS["sending:delete-sent-email"]);
+  it("registers canonical mailbox deletion operations", () => {
+    expect(COMMANDS["sent:delete"]).toBeDefined();
+    expect(COMMANDS["agent-connections:delete"]).toBeDefined();
+    expect(COMMANDS["sending:delete-sent-email"]).toBeUndefined();
     expect(
       operationManifest.find((op) => op.operationId === "deleteSentEmail"),
     ).toMatchObject({ method: "DELETE", path: "/sent-emails/{id}" });
@@ -580,8 +612,8 @@ describe("COMMANDS / manifest coverage", () => {
   });
   it("registers binary attachment part commands and metadata-index flags", () => {
     for (const id of [
-      "emails:download-email-attachment-part",
-      "sending:download-sent-attachment-part",
+      "emails:download-attachment-part",
+      "sending:download-attachment-part",
     ]) {
       const command = COMMANDS[id] as unknown as {
         flags: Record<string, unknown>;
@@ -590,8 +622,8 @@ describe("COMMANDS / manifest coverage", () => {
       expect(command.flags["part-index"]).toBeDefined();
       expect(command.flags.output).toBeDefined();
       expect(command.flags.json).toBeUndefined();
-      const operation = operationManifest.find(
-        (op) => `${op.tagCommand}:${op.command}` === id,
+      const operation = cliOperationManifest.find(
+        (op) => operationCommandId(op) === id,
       );
       expect(operation?.binaryResponse).toBe(true);
       expect(
@@ -602,13 +634,21 @@ describe("COMMANDS / manifest coverage", () => {
     }
   });
   it("registers generated pull and completion operations", () => {
-    expect(COMMANDS["endpoints:pull-webhook-event"]).toBeDefined();
-    expect(COMMANDS["endpoints:complete-webhook-event"]).toBeDefined();
+    expect(COMMANDS["endpoints:pull-event"]).toBeDefined();
+    expect(COMMANDS["endpoints:complete-event"]).toBeDefined();
   });
-  it("registers a command for every operation in the manifest except those cli-operations.ts leaves out", () => {
+  it("registers every projected operation and omits only the documented API operations", () => {
+    for (const operation of cliOperationManifest)
+      expect(
+        COMMANDS[operationCommandId(operation)],
+        operation.operationId,
+      ).toBeDefined();
+    const offered = new Set(
+      rawCliOperationManifest.map((op) => op.operationId),
+    );
     const missing = operationManifest
-      .map((op) => `${op.tagCommand}:${op.command}`)
-      .filter((id) => !(id in COMMANDS));
+      .filter((op) => !offered.has(op.operationId))
+      .map((op) => `${op.tagCommand}:${op.command}`);
 
     expect(missing.sort()).toEqual([...CLI_OMITTED_OPERATION_IDS].sort());
     expect([...CLI_OMITTED_OPERATION_IDS].sort()).toEqual(
@@ -670,20 +710,22 @@ describe("COMMANDS / manifest coverage", () => {
     expect(prepack).not.toMatch(/oclif\s+manifest/);
   });
 
-  it("has a runtime entry specifically for functions:list-function-logs", () => {
+  it("has a runtime entry specifically for functions:list-logs", () => {
     // Named regression: an AGX agent ran `primitive list-operations`,
-    // saw `functions:list-function-logs`, and then got "command not
+    // saw `functions:list-logs`, and then got "command not
     // found" when invoking it. The root cause was a stale shipped
     // oclif.manifest.json; the runtime COMMANDS map always had the
     // entry. Keeping this assertion separate from the bulk coverage
     // check above makes the named-regression failure mode obvious.
-    expect(COMMANDS["functions:list-function-logs"]).toBeDefined();
+    expect(COMMANDS["functions:list-logs"]).toBeDefined();
   });
 
   it("registers canonical task aliases for generated API operations", () => {
     for (const [alias, target] of Object.entries(CANONICAL_OPERATION_ALIASES)) {
-      expect(COMMANDS[target]).toBeDefined();
-      expect(COMMANDS[alias]).toBe(COMMANDS[target]);
+      expect(COMMANDS[canonicalCommandId(target)]).toBeDefined();
+      expect(COMMANDS[canonicalCommandId(alias)]).toBe(
+        COMMANDS[canonicalCommandId(target)],
+      );
     }
   });
 
@@ -691,14 +733,8 @@ describe("COMMANDS / manifest coverage", () => {
     const domainsListCommand = COMMANDS["domains:list"] as unknown as {
       flags: Record<string, unknown>;
     };
-    const rawDomainsListCommand = COMMANDS[
-      "domains:list-domains"
-    ] as unknown as {
-      flags: Record<string, unknown>;
-    };
-
     expect(domainsListCommand.flags.json).toBeDefined();
-    expect(rawDomainsListCommand.flags.json).toBeDefined();
+    expect(COMMANDS["domains:list-domains"]).toBeUndefined();
   });
 
   it("registers the top-level reply shortcut", () => {
@@ -723,23 +759,14 @@ describe("COMMANDS / manifest coverage", () => {
     expect(chatReplyCommand.flags["strict-only"]).toBeDefined();
   });
 
-  it("registers friendly thread command aliases", () => {
-    expect(COMMANDS["threads:get-thread"]).toBeDefined();
-    expect(COMMANDS["threads:get"]).toBe(COMMANDS["threads:get-thread"]);
+  it("registers the canonical thread command", () => {
+    expect(COMMANDS["threads:get"]).toBeDefined();
+    expect(COMMANDS["threads:get-thread"]).toBeUndefined();
   });
 
-  it("registers friendly agent account command aliases", () => {
-    expect(COMMANDS["agent:create-agent-account"]).toBeDefined();
-    expect(COMMANDS["agent:create"]).toBe(
-      COMMANDS["agent:create-agent-account"],
-    );
-    expect(COMMANDS["agent:claim"]).toBe(COMMANDS["agent:start-agent-claim"]);
-    expect(COMMANDS["agent:claim-verify"]).toBe(
-      COMMANDS["agent:verify-agent-claim"],
-    );
-    expect(COMMANDS["agent:claim-link"]).toBe(
-      COMMANDS["agent:create-agent-claim-link"],
-    );
+  it("registers canonical agent account commands", () => {
+    for (const name of ["create", "claim", "claim-verify", "claim-link"])
+      expect(COMMANDS[`agent:${name}`]).toBeDefined();
   });
 
   it("keeps top-level send registered with attachment support", () => {
@@ -769,9 +796,7 @@ describe("COMMANDS / manifest coverage", () => {
 
   it("registers domain zone-file commands", () => {
     expect(COMMANDS["domains:zone-file"]).toBeDefined();
-    expect(COMMANDS["domains:download-domain-zone-file"]).toBe(
-      COMMANDS["domains:zone-file"],
-    );
+    expect(COMMANDS["domains:download-domain-zone-file"]).toBeUndefined();
     const zoneFileCommand = COMMANDS["domains:zone-file"] as unknown as {
       flags: Record<string, unknown>;
     };
@@ -839,7 +864,7 @@ describe("COMMANDS / manifest coverage", () => {
   it("registers inbox status commands", () => {
     expect(COMMANDS["inbox:setup"]).toBeDefined();
     expect(COMMANDS["inbox:status"]).toBeDefined();
-    expect(COMMANDS["inbox:get-inbox-status"]).toBe(COMMANDS["inbox:status"]);
+    expect(COMMANDS["inbox:get-inbox-status"]).toBeUndefined();
     const inboxSetupCommand = COMMANDS["inbox:setup"] as unknown as {
       flags: Record<string, unknown>;
     };
@@ -869,10 +894,10 @@ describe("COMMANDS / manifest coverage", () => {
 
   it("registers template API operations", () => {
     for (const id of [
-      "templates:list-templates",
-      "templates:get-template",
-      "templates:install-template",
-      "templates:get-template-install",
+      "templates:list",
+      "templates:get",
+      "templates:install",
+      "templates:get-install",
     ]) {
       expect(COMMANDS[id]).toBeDefined();
     }
@@ -941,10 +966,9 @@ describe("COMMANDS / manifest coverage", () => {
     expect(replyCommand.flags["wait-timeout-ms"]).toBeUndefined();
   });
 
-  it("registers the normal function test alias", () => {
-    expect(COMMANDS["functions:test"]).toBe(
-      COMMANDS["functions:test-function"],
-    );
+  it("registers the canonical function test command", () => {
+    expect(COMMANDS["functions:test"]).toBeDefined();
+    expect(COMMANDS["functions:test-function"]).toBeUndefined();
   });
 
   it("registers config environment commands", () => {
@@ -989,8 +1013,8 @@ describe("COMMANDS / manifest coverage", () => {
     const description = packageJson.oclif?.topics?.templates?.description ?? "";
 
     expect(packageJson.oclif?.topicSeparator).toBe(" ");
-    expect(description).toContain("primitive templates list-templates");
-    expect(description).toContain("primitive templates install-template");
+    expect(description).toContain("primitive templates list");
+    expect(description).toContain("primitive templates install");
   });
 
   it("documents active chat replies in root help", () => {

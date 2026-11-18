@@ -128,13 +128,13 @@ async function run(args,{code=0,stdin='',profile=true,errorPattern,extraEnv={}}=
 }
 try{
   await run(['agent','connect','--profile','smoke','--json'],{profile:false,stdin:JSON.stringify({token:['inert','invite','x'.repeat(48)].join('_')})});
-  await run(['contacts','get-agent-contact-policy','--agent-address',agent]);
-  await run(['contacts','get-contact-policy'],{code:1});
+  await run(["contacts", "get-agent-policy",'--agent-address',agent]);
+  await run(["contacts", "get-policy"],{code:1});
   const policyFile=join(root,'policy.json');await writeFile(policyFile,JSON.stringify({if_absent:true,rules:[{pattern:'*@peer.example',effect:'allow'}],allow_contact_requests:true}));
-  await run(['contacts','put-contact-policy','--body-file',policyFile],{code:1});
-  await run(['contacts','put-agent-contact-policy','--agent-address',agent,'--body-file',policyFile],{code:1});
+  await run(["contacts", "set-policy",'--body-file',policyFile],{code:1});
+  await run(["contacts", "set-agent-policy",'--agent-address',agent,'--body-file',policyFile],{code:1});
   await writeFile(policyFile,JSON.stringify({if_version:version,rules:[],allow_contact_requests:null}));
-  await run(['contacts','put-agent-contact-policy','--agent-address',agent,'--body-file',policyFile],{code:1});
+  await run(["contacts", "set-agent-policy",'--agent-address',agent,'--body-file',policyFile],{code:1});
   directoryFailureStatus=429;
   await run(['contacts','request',peer,'--reason','Directory failure fixture','--wait','--timeout','5','--json'],{code:1,errorPattern:/No contact email was sent/});
   assert.equal(posts,0,'directory failure cannot submit email');assert.equal(directoryAttempts,1,'directory failure is not automatically retried');assert.equal(member,undefined);

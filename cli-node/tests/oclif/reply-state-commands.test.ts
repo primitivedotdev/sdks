@@ -429,7 +429,7 @@ describe("search --awaiting", () => {
 
 describe("generated emails list / search with --awaiting", () => {
   it("adds --awaiting to both generated commands", () => {
-    for (const id of ["emails:list-emails", "emails:search-emails"]) {
+    for (const id of ["emails:list", "emails:search"]) {
       const flags = (
         COMMANDS[id] as unknown as {
           flags: Record<string, { options?: string[] }>;
@@ -443,7 +443,7 @@ describe("generated emails list / search with --awaiting", () => {
     mocks.listEmails.mockResolvedValue({
       data: { success: true, data: [oldRow()], meta: { cursor: null } },
     });
-    const result = await runCommand(COMMANDS["emails:list-emails"], [
+    const result = await runCommand(COMMANDS["emails:list"], [
       "--awaiting",
       "you",
     ]);
@@ -460,7 +460,7 @@ describe("generated emails list / search with --awaiting", () => {
       .mockResolvedValueOnce({
         data: { success: true, data: [oldRow()], meta: { cursor: null } },
       });
-    const result = await runCommand(COMMANDS["emails:search-emails"], [
+    const result = await runCommand(COMMANDS["emails:search"], [
       "--awaiting",
       "you",
     ]);
@@ -470,7 +470,7 @@ describe("generated emails list / search with --awaiting", () => {
 
   it("explains a rejected filter", async () => {
     mocks.searchEmails.mockResolvedValue(REJECTED);
-    const result = await runCommand(COMMANDS["emails:search-emails"], [
+    const result = await runCommand(COMMANDS["emails:search"], [
       "--awaiting",
       "you",
     ]);
@@ -486,7 +486,7 @@ describe("generated emails list / search with --awaiting", () => {
         meta: { cursor: null },
       },
     });
-    const result = await runCommand(COMMANDS["emails:list-emails"], [
+    const result = await runCommand(COMMANDS["emails:list"], [
       "--awaiting",
       "you",
     ]);
@@ -499,7 +499,7 @@ describe("generated emails list / search with --awaiting", () => {
     mocks.listEmails.mockResolvedValue({
       data: { success: true, data: [row()], meta: { cursor: null } },
     });
-    const result = await runCommand(COMMANDS["emails:list-emails"], [
+    const result = await runCommand(COMMANDS["emails:list"], [
       "--awaiting",
       "you",
     ]);

@@ -101,20 +101,20 @@ the readiness message: `primitive endpoints delete --id DESTINATION_ID`.
 
 ### Low-level delivery API
 
-The generated `endpoints pull-webhook-event` and `endpoints complete-webhook-event`
+The generated `endpoints pull-event` and `endpoints complete-event`
 commands expose the local-delivery API when enabled on your API host. These are
 single API calls; a receive loop must retain the destination identity and report
 each attempt's outcome. Use `--help-full` to inspect the request fields:
 
 ```sh
-primitive endpoints pull-webhook-event --help-full
-primitive endpoints complete-webhook-event --help-full
+primitive endpoints pull-event --help-full
+primitive endpoints complete-event --help-full
 ```
 
 Completion uses a mode-specific JSON body. For a successful process handler:
 
 ```sh
-primitive endpoints complete-webhook-event --id ENDPOINT_ID --raw-body '{"queue_id":"QUEUE_ID","delivery_id":"DELIVERY_ID","lease_token":"LEASE_TOKEN","mode":"exec","exit_code":0,"duration_ms":12}'
+primitive endpoints complete-event --id ENDPOINT_ID --raw-body '{"queue_id":"QUEUE_ID","delivery_id":"DELIVERY_ID","lease_token":"LEASE_TOKEN","mode":"exec","exit_code":0,"duration_ms":12}'
 ```
 
 Use the IDs and lease token returned by pull. HTTP forwarding reports
@@ -234,12 +234,12 @@ Use `primitive signup <email>` for new account creation, then `primitive signup 
 Where the server supports it, browser login (`primitive login` with no email) logs you in as yourself rather than into one organization. The organization you choose in the browser becomes the current one, and you can switch without logging in again:
 
 ```bash
-primitive orgs                 # your organizations, your role, and whether the CLI may be used there
+primitive org list                 # your organizations, your role, and whether the CLI may be used there
 primitive org use acme         # switch by name or id
 primitive emails list --org beta   # act in another organization for one command
 ```
 
-`--org` works on every command (set `PRIMITIVE_CLI_ORG` for the same effect; `primitive memories` keeps its own `--org` flag for organization-scoped memories). Each organization decides who may use the CLI there; when it refuses, `primitive orgs` and `primitive org use` show the reason (`not_a_member`, `cli_access_disabled_by_org`, `role_insufficient` or `cli_access_revoked`). The CLI keeps a short-lived access token per organization and gets a new one when it expires or is rejected. `primitive logout` signs you out of every organization.
+`--org` works on every command (set `PRIMITIVE_CLI_ORG` for the same effect; `primitive memories` keeps its own `--org` flag for organization-scoped memories). Each organization decides who may use the CLI there; when it refuses, `primitive org list` and `primitive org use` show the reason (`not_a_member`, `cli_access_disabled_by_org`, `role_insufficient` or `cli_access_revoked`). The CLI keeps a short-lived access token per organization and gets a new one when it expires or is rejected. `primitive logout` signs you out of every organization.
 
 Against a server without organization switching, and for logins saved by earlier CLI versions, the login stays bound to one organization and works as before. `--org` naming a different organization is refused for such a login, for an API key and for a connected agent profile.
 
@@ -388,7 +388,7 @@ primitive memories get thread:latest
 primitive deliveries replay --id <delivery-id>
 ```
 
-Generated API commands remain available for compatibility and full schema parity, for example `primitive emails:list-emails` and `primitive sending:reply-to-email`.
+Use canonical CLI names and the documented command-specific input/output forms, for example `primitive emails:list` and `primitive sending:reply`.
 
 ## Send outcomes and exit codes
 
@@ -583,7 +583,7 @@ checking the agent in the app before retrying. Foreground or external runtime
 hooks are not managed by this command.
 
 After disconnecting an agent, an owner or admin logged in with OAuth can run
-`primitive agent-connections remove-agent-connection --address agent@example.com`.
+`primitive agent-connections delete --address agent@example.com`.
 This removes the revoked connection record while preserving mail, notes and the
 external runtime. Active connections return 409; missing records return 404.
 Organization API keys cannot remove connections.
@@ -691,7 +691,7 @@ primitive sent cancel --idempotency-key standup-2026-10-09
 ```
 
 Generated operation commands also expose the request headers the spec declares,
-for example `primitive sending send-email --idempotency-key <key>`.
+for example `primitive sending send --idempotency-key <key>`.
 
 ## Recipient routing
 
@@ -701,13 +701,13 @@ endpoint is created in the same call, enabling per-address routing like
 `alice@acme.com -> functionA`), or `--endpoint` for an existing endpoint.
 
 ```bash
-primitive routes add alice@acme.com --function <function-id>
-primitive routes add 'support+*@acme.com' --match wildcard --endpoint <endpoint-id>
+primitive routes create alice@acme.com --function <function-id>
+primitive routes create 'support+*@acme.com' --match wildcard --endpoint <endpoint-id>
 primitive routes list
 primitive routes test alice@acme.com          # preview where an address resolves, with the rule trace
 primitive routes update <route-id> --priority 5
 primitive routes reorder --set <route-id>=10 --set <other-id>=20
-primitive routes remove <route-id>
+primitive routes delete <route-id>
 ```
 
 Recipient routing is gated by an organization entitlement; routes are inert
@@ -745,9 +745,9 @@ The three readers call the API as the connected address. Each returns the
 
 | Reader | API operation | CLI command |
 | --- | --- | --- |
-| `readContactPolicy` | `getAgentContactPolicy` | `primitive contacts get-agent-contact-policy` |
+| `readContactPolicy` | `getAgentContactPolicy` | `primitive contacts get-agent-policy` |
 | `readContactPage` | `listAgentContacts`, 100 rows per page, with the next `cursor` or `null` | `primitive agent contacts list` |
-| `readNetworkAdmission` | `checkDefaultNetworkContactAdmission` | `primitive agent-networks check-default-network-contact-admission` |
+| `readNetworkAdmission` | `checkDefaultNetworkContactAdmission` | `primitive agent-networks check-contact-admission` |
 
 `admit` returns one of three decisions for an email:
 

@@ -34,7 +34,7 @@ import {
 
 // `primitive emails:latest` is the agent-grade shortcut for "show me
 // the most recent inbound emails as something I can read at a glance."
-// `emails:list-emails` returns the full JSON envelope which is great
+// `emails:list` returns the full JSON envelope which is great
 // for piping but blows out the screen for a quick triage. The AGX
 // walkthrough flagged that an agent doing inbox triage had no compact
 // view to reach for; `latest` is that view.
@@ -42,7 +42,7 @@ import {
 // Output is a fixed-width text table: short-id, received timestamp,
 // from address, to address, and subject. Subject is truncated for
 // display only; the underlying JSON is unchanged. For machine-readable
-// output, callers should use `emails:list-emails` and pipe to jq.
+// output, callers should use `emails:list` and pipe to jq.
 
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 100;
@@ -126,7 +126,7 @@ class EmailsLatestCommand extends Command {
   static description =
     `Print the N most recent inbound emails as a one-line-per-row text table. Designed for quick triage and visual scanning. For programmatic access, use \`primitive emails list\` (full JSON envelope, cursor pagination, filters) or pass \`--json\` here for the same raw shape without pagination/filters.
 
-  ID display is TTY-aware. When STDOUT is a terminal, the table truncates each row's id to the first ${ID_DISPLAY_WIDTH_SHORT} characters for readability. When STDOUT is piped or redirected (the row stream is being consumed by another command), the full UUID is printed so the id can be fed straight back into \`emails:get-email\`, \`emails:delete-email\`, etc. without a separate \`--json\` round-trip.
+  ID display is TTY-aware. When STDOUT is a terminal, the table truncates each row's id to the first ${ID_DISPLAY_WIDTH_SHORT} characters for readability. When STDOUT is piped or redirected (the row stream is being consumed by another command), the full UUID is printed so the id can be fed straight back into \`emails:get\`, \`emails:delete\`, etc. without a separate \`--json\` round-trip.
 
   Reply state: the AWAITING column is whose turn it is in the email's thread (\`you\` = the latest message is inbound and waits on your reply, \`them\` = you replied last) and REPLIES is how many replies to this email went out or are queued or scheduled. Pass \`--awaiting you\` to list only mail still waiting on you. For one email at a time with its whole conversation, use \`primitive inbox next\`.
 
@@ -263,7 +263,7 @@ class EmailsLatestCommand extends Command {
           : null;
 
       if (flags.json) {
-        // Raw envelope on stdout. Mirrors the shape `emails:list-emails`
+        // Raw envelope on stdout. Mirrors the shape `emails:list`
         // emits so callers can swap one for the other when they want
         // table vs json without remembering different command names.
         const document = withFocusMeta(envelope ?? null, focus);

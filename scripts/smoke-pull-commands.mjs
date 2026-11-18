@@ -39,14 +39,14 @@ async function run(args) {
   });
 }
 try {
-  for (const args of [["endpoints"], ["endpoints", "pull-webhook-event", "--help"], ["endpoints", "complete-webhook-event", "--help"]]) {
+  for (const args of [["endpoints"], ["endpoints", "pull-event", "--help"], ["endpoints", "complete-event", "--help"]]) {
     const result = await run(args);
     assert.equal(result.code, 0, result.output);
-    assert.match(result.output, /pull-webhook-event|complete-webhook-event/);
+    assert.match(result.output, /pull-event|complete-event/);
   }
   const create = await run(["endpoints", "create", "--kind", "pull", "--name", "local-agent", "--api-base-url", base]);
   assert.equal(create.code, 0, create.output);
-  const pull = await run(["endpoints", "pull-webhook-event", "--id", id, "--wait-seconds", "0", "--api-base-url", base]);
+  const pull = await run(["endpoints", "pull-event", "--id", id, "--wait-seconds", "0", "--api-base-url", base]);
   assert.equal(pull.code, 0, pull.output);
   const bodies = [
     { queue_id: id, delivery_id: id, lease_token: id, mode: "stdout", write_succeeded: true, duration_ms: 1 },
@@ -54,7 +54,7 @@ try {
     { queue_id: id, delivery_id: id, lease_token: id, mode: "http", status_code: 204, confirmed: false, duration_ms: 1 },
   ];
   for (const body of bodies) {
-    const complete = await run(["endpoints", "complete-webhook-event", "--id", id, "--raw-body", JSON.stringify(body), "--api-base-url", base]);
+    const complete = await run(["endpoints", "complete-event", "--id", id, "--raw-body", JSON.stringify(body), "--api-base-url", base]);
     assert.equal(complete.code, 0, complete.output);
   }
   assert.deepEqual(requests, [

@@ -74,7 +74,11 @@ async function run(id: string, argv: string[]): Promise<RunResult> {
         : 0
       : ((thrown as { oclif?: { exit?: number } }).oclif?.exit ?? 1);
   process.exitCode = previousExitCode;
-  const errorText = thrown instanceof Error ? `${thrown.message}\n` : "";
+  const errorText =
+    thrown instanceof Error &&
+    !(thrown as { skipOclifErrorHandling?: boolean }).skipOclifErrorHandling
+      ? `${thrown.message}\n`
+      : "";
   return {
     exitCode,
     stderr: (stderr.join("") + errorText)
@@ -203,6 +207,73 @@ describe("unknown flags", () => {
     expect(suggestFlag("--query", ["from", "to"])).toBeNull();
   });
 
+  it("suggests renamed and distinct sample flags only when the target is available", () => {
+    for (const [input, target] of [
+      ["evaluation-scope", "scope"],
+      ["expectation-samples-file", "samples-file"],
+      ["add-expectation-samples-file", "add-samples-file"],
+      ["samples-file", "expect-samples-file"],
+      ["expect-samples-file", "samples-file"],
+    ]) {
+      expect(suggestFlag(`--${input}`, [target]), input).toBe(target);
+      expect(suggestFlag(`--${input}`, ["id", "json"]), input).toBeNull();
+    }
+    expect(
+      suggestFlag("--samples-file", ["samples-file", "expect-samples-file"]),
+    ).toBe("samples-file");
+    expect(
+      suggestFlag("--expect-samples-file", [
+        "samples-file",
+        "expect-samples-file",
+      ]),
+    ).toBe("expect-samples-file");
+  });
+
+  it("rejects repaired flags and prints the available replacement in parser JSON", async () => {
+    for (const [id, input, value, target, meaning] of [
+      ["email-rules:create", "evaluation-scope", "author", "scope", ""],
+      [
+        "email-rules:create",
+        "expectation-samples-file",
+        "absent.json",
+        "samples-file",
+        "samples saved on the rule",
+      ],
+      [
+        "email-rules:update",
+        "add-expectation-samples-file",
+        "absent.json",
+        "add-samples-file",
+        "",
+      ],
+      [
+        "email-rules:test",
+        "samples-file",
+        "absent.json",
+        "expect-samples-file",
+        "one-off test samples",
+      ],
+      [
+        "email-rules:create",
+        "expect-samples-file",
+        "absent.json",
+        "samples-file",
+        "samples saved on the rule",
+      ],
+    ]) {
+      const result = await run(id, [`--${input}`, value, "--json"]);
+      expect(result.exitCode, id).toBe(2);
+      expect(result.stderr, id).toBe("");
+      const document = JSON.parse(result.stdout);
+      expect(document.error.message, id).toContain(
+        `Nonexistent flag: --${input}`,
+      );
+      expect(document.error.message, id).toContain(`did you mean --${target}`);
+      if (meaning) expect(document.error.message, id).toContain(meaning);
+    }
+    expect(fetchCalls).toEqual([]);
+  });
+
   it("leaves other errors unchanged", () => {
     const error = new Error("Missing required flag id");
     expect(withFlagSuggestion(error, ["id"])).toBe(error);
@@ -235,7 +306,7 @@ describe("sent list", () => {
     responder = () => answer(true);
     await run("sent:list", []);
     await run("sent:list", ["--all-senders"]);
-    await run("sending:list-sent-emails", ["--mine", "false"]);
+    await run("sending:list", ["--mine", "false"]);
     expect(fetchCalls.map((url) => url.searchParams.get("mine"))).toEqual([
       "true",
       null,
