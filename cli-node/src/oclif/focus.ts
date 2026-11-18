@@ -318,6 +318,9 @@ export async function readDomainsOrRefusal(
   }
 }
 
+/** The most characters of the server's refusal shown. */
+const REFUSAL_MAX = 400;
+
 /**
  * A refusal asking again will not change, from an error answer: a 403 with a
  * code and message. Null for anything else, which may pass next time or has
@@ -334,8 +337,13 @@ function refusalOf(
     typeof body?.code === "string" && /^[a-z0-9_]{1,80}$/.test(body.code)
       ? body.code
       : null;
-  const message =
+  // One line, at most REFUSAL_MAX characters: it is the server's text.
+  const shown =
     typeof body?.message === "string" ? shownLine(body.message).trim() : "";
+  const message =
+    shown.length > REFUSAL_MAX
+      ? `${shown.slice(0, REFUSAL_MAX - 3)}...`
+      : shown;
   return code && message ? { code, message } : null;
 }
 
@@ -555,9 +563,6 @@ export async function resolveFocus(
 
   if (asked?.source === "env" && readable && readable.domains.length <= 1)
     return NO_FOCUS;
-  // Nor for a credential the server will not list any domain for: it reads
-  // none, so the session's focus does not apply to it.
-  if (asked?.source === "env" && !readable && refusal) return NO_FOCUS;
   if (asked && "all" in asked) {
     return {
       ...NO_FOCUS,
@@ -572,9 +577,15 @@ export async function resolveFocus(
   }
   if (asked) {
     // Refused for good: say so in the server's words, never suggest a retry.
+    // From the session's variable, it names where the names came from and how
+    // to list without them: a refusal never widens a listing on its own.
     if (!readable && refusal) {
+      const fromEnv =
+        asked.source === "env"
+          ? ` The names come from ${FOCUS_ENV}: unset it, or pass --all-domains.`
+          : "";
       throw focusError(
-        `Cannot look up ${joinNames(asked.names)}: ${refusal.message.replace(/\.?$/, ".")}`,
+        `Cannot look up ${joinNames(asked.names)}: ${refusal.message.replace(/\.?$/, ".")}${fromEnv}`,
         refusal.code,
         1,
       );

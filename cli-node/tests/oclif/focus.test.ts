@@ -355,13 +355,36 @@ describe("a credential the server will not list domains for", () => {
     });
   });
 
-  it("ignores the session's focus for a credential it lists no domain for", async () => {
+  it("never widens a session's focus it cannot apply: it says where the names came from", async () => {
     domainsAnswer = refused;
     process.env[FOCUS_ENV] = "support.example.com";
     const listed = await run("emails:list", []);
-    expect(listed.thrown).toBeUndefined();
-    expect(emailCalls()).toHaveLength(1);
-    expect(emailCalls()[0]?.query.get("domain_ids")).toBeNull();
+    expect(listed.thrown).toMatchObject({
+      code: "grant_forbidden",
+      oclif: { exit: 1 },
+    });
+    expect((listed.thrown as Error).message).toBe(
+      `Cannot look up support.example.com: ${RULES_ONLY} The names come from ${FOCUS_ENV}: unset it, or pass --all-domains.`,
+    );
+    expect(emailCalls()).toHaveLength(0);
+  });
+
+  it("shows at most 400 characters of the server's refusal", async () => {
+    domainsAnswer = () =>
+      Response.json(
+        {
+          success: false,
+          error: { code: "grant_forbidden", message: "x".repeat(2000) },
+        },
+        { status: 403 },
+      );
+    const latest = await run("emails:list", [
+      "--domain",
+      "support.example.com",
+    ]);
+    const message = (latest.thrown as Error).message;
+    expect(message.length).toBeLessThan(460);
+    expect(message.endsWith("x...")).toBe(true);
   });
 
   it("keeps the retry hint for a lookup that may pass next time", async () => {

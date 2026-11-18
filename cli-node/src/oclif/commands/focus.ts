@@ -172,8 +172,12 @@ export class FocusCommand extends Command {
       );
       return;
     }
-    // Refused for good: there is nothing to choose, so only why.
+    // Refused for good: nothing can be chosen, so why, and any focus still saved.
     if (state.refusal) {
+      if (choice)
+        this.log(
+          `Focus for ${profileLabel(state.profile)}: ${describeChoice(choice)}.`,
+        );
       this.log(state.refusal.message.replace(/\.?$/, "."));
       return;
     }
