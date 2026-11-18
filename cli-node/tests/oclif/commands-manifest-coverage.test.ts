@@ -1083,4 +1083,9 @@ describe("COMMANDS / manifest coverage", () => {
     expect(updateWarning?.frequencyUnit).toBe("days");
     expect(updateWarning?.message).toContain("npm install -g primitive@latest");
   });
+
+  it("keeps the focus read at the bare parent command", () => {
+    expect(COMMANDS.focus).toBeDefined();
+    expect(COMMANDS["focus:get"]).toBeUndefined();
+  });
 });

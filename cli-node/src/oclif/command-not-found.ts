@@ -165,6 +165,19 @@ export function commandNotFoundMessage(
 ): CommandNotFound {
   const parts = id.split(":");
   const typed = `primitive ${parts.join(" ")}`;
+  // The read is the parent command. Suggest it without registering an alias
+  // or turning a mistaken read into the nearby mutating `focus set` command.
+  if (
+    id === "focus:get" &&
+    lookup.visible?.includes("focus") &&
+    lookup.find("focus")
+  )
+    return unknown(
+      typed,
+      ["focus"],
+      'Run "primitive focus --help" to see its options.',
+      lookup,
+    );
   // A retired spelling is a repair hint, never an executable alias. Visibility
   // still applies, so migration hints cannot reveal hidden commands.
   const replacement = Object.hasOwn(COMMAND_RENAMES, id)
