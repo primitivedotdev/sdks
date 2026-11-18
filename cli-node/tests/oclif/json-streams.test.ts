@@ -58,6 +58,7 @@ const CLI_ROOT = resolve(import.meta.dirname, "../..");
 const API_BASE_URL = "https://api.json-streams.test/v1";
 
 type Runnable = {
+  pairedCommand?: boolean;
   enableJsonFlag?: boolean;
   flags?: Record<string, unknown>;
   run(argv: string[], options: { root: string }): Promise<unknown>;
@@ -687,6 +688,7 @@ const generatedJsonOperations = operationManifest.filter((operation) => {
   const command = COMMANDS[id] as Runnable | undefined;
   return (
     !HAND_WRITTEN_OPERATION_IDS.has(id) &&
+    !command?.pairedCommand &&
     command !== undefined &&
     !operation.binaryResponse &&
     command.flags !== undefined &&
@@ -2182,10 +2184,12 @@ describe("collaboration commands with --json", () => {
     // The API answers 404 for the mute route, as a server without thread
     // mutes does, so the mute is local and the note is a warning.
     expect(expectOneDocument(muted)).toMatchObject({
-      thread_id: threadId,
-      muted: true,
-      already_muted: false,
-      stored: "local",
+      data: {
+        thread_id: threadId,
+        muted: true,
+        already_muted: false,
+        stored: "local",
+      },
       warnings: [expect.stringContaining("stored locally")],
     });
     const listed = await runMerged("threads:muted", ["--json"]);
@@ -2200,9 +2204,7 @@ describe("collaboration commands with --json", () => {
     ]);
     expect(unmuted.exitCode).toBe(0);
     expect(expectOneDocument(unmuted)).toMatchObject({
-      thread_id: threadId,
-      removed: true,
-      muted: false,
+      data: { thread_id: threadId, removed: true, muted: false },
     });
     const invalid = await runMerged("threads:mute", [
       "--id",
@@ -2235,12 +2237,15 @@ describe("collaboration commands with --json", () => {
     const muted = await runMerged("threads:mute", ["--id", threadId, "--json"]);
     expect(muted.exitCode).toBe(0);
     expect(expectOneDocument(muted)).toEqual({
-      thread_id: threadId,
-      muted: true,
-      scope: "address",
-      stored: "server",
-      address: self,
-      muted_at: "2026-10-01T00:00:00.000Z",
+      success: true,
+      data: {
+        thread_id: threadId,
+        muted: true,
+        scope: "address",
+        stored: "server",
+        address: self,
+        muted_at: "2026-10-01T00:00:00.000Z",
+      },
     });
   });
 

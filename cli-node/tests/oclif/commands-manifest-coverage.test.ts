@@ -888,20 +888,15 @@ describe("COMMANDS / manifest coverage", () => {
     expect(inboxStatusCommand.flags.json).toBeDefined();
   });
 
-  it("registers memories generated operations and friendly commands", () => {
-    for (const id of [
-      "memories:set-memory",
-      "memories:get-memory",
-      "memories:delete-memory",
-      "memories:search-memories",
-      "memories:set",
-      "memories:get",
-      "memories:delete",
-      "memories:search",
-    ]) {
-      expect(COMMANDS[id]).toBeDefined();
+  it("folds memory API and readable inputs into the canonical commands", () => {
+    for (const verb of ["set", "get", "delete", "search"]) {
+      expect(COMMANDS[`memories:${verb}`]).toHaveProperty(
+        "pairedCommand",
+        true,
+      );
+      const old = verb === "search" ? "search-memories" : `${verb}-memory`;
+      expect(COMMANDS[`memories:${old}`]).toBeUndefined();
     }
-    expect(COMMANDS["memories:set"]).not.toBe(COMMANDS["memories:set-memory"]);
   });
 
   it("registers template API operations", () => {

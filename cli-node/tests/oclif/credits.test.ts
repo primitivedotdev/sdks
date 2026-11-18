@@ -112,14 +112,11 @@ beforeEach(() => {
 });
 
 describe("credits command registration", () => {
-  it("registers friendly and operation-shaped ids", () => {
+  it("registers one canonical balance command", () => {
     expect(COMMANDS["credits:redeem"]).toBe(CreditsRedeemCommand);
     expect(COMMANDS["credits:redeem"]).toBe(CreditsRedeemCommand);
-    expect(COMMANDS["credits:balance"]).toBe(CreditsBalanceCommand);
-    expect(COMMANDS["credits:get-credit-balance"]).toBeDefined();
-    expect(COMMANDS["credits:get-credit-balance"]).not.toBe(
-      CreditsBalanceCommand,
-    );
+    expect(COMMANDS["credits:balance"]).toHaveProperty("pairedCommand", true);
+    expect(COMMANDS["credits:get-credit-balance"]).toBeUndefined();
   });
 
   it("generates both operations from the spec", () => {

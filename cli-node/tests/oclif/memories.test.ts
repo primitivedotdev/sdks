@@ -129,26 +129,17 @@ beforeEach(() => {
 });
 
 describe("memories command registration", () => {
-  it.each([
-    "memories:set",
-    "memories:get",
-    "memories:delete",
-    "memories:search",
-    "memories:set-memory",
-    "memories:get-memory",
-    "memories:delete-memory",
-    "memories:search-memories",
-  ])("registers %s", (key) => {
-    expect(COMMANDS[key]).toBeDefined();
-  });
-
-  it("keeps friendly commands hand-rolled", () => {
-    expect(COMMANDS["memories:set"]).toBe(MemoriesSetCommand);
-    expect(COMMANDS["memories:get"]).toBe(MemoriesGetCommand);
-    expect(COMMANDS["memories:delete"]).toBe(MemoriesDeleteCommand);
-    expect(COMMANDS["memories:search"]).toBe(MemoriesSearchCommand);
-    expect(COMMANDS["memories:set"]).not.toBe(COMMANDS["memories:set-memory"]);
-  });
+  it.each(["set", "get", "delete", "search"])(
+    "registers one canonical %s command",
+    (verb) => {
+      expect(COMMANDS[`memories:${verb}`]).toHaveProperty(
+        "pairedCommand",
+        true,
+      );
+      const old = verb === "search" ? "search-memories" : `${verb}-memory`;
+      expect(COMMANDS[`memories:${old}`]).toBeUndefined();
+    },
+  );
 
   it("declares the memories parent topic", () => {
     const packageJsonPath = fileURLToPath(

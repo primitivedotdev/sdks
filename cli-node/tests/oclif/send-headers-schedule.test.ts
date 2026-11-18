@@ -571,7 +571,7 @@ describe("generated operations: declared request headers", () => {
 
   it("covers every declared header, not only Idempotency-Key", async () => {
     const functionId = "22222222-2222-4222-8222-222222222222";
-    const result = await run("memories:set-memory", [
+    const result = await run("memories:set", [
       "--key",
       "k",
       "--raw-body",

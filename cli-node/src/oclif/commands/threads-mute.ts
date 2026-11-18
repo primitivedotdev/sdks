@@ -33,6 +33,55 @@ const sessionOnlyFlag = Flags.boolean({
 const jsonFlag = Flags.boolean({
   description: "Print JSON (already the default)",
 });
+const serverFlags = {
+  "api-key": Flags.string({
+    description: "Primitive API key override",
+    env: "PRIMITIVE_API_KEY",
+  }),
+  "api-base-url": Flags.string({
+    description: "Override the API base URL",
+    env: "PRIMITIVE_API_BASE_URL",
+    hidden: true,
+  }),
+  address: Flags.string({
+    description:
+      "Address whose thread mute changes. Defaults to the connected agent's address; required for other credentials.",
+  }),
+};
+
+type ServerFlags = {
+  "api-key"?: string;
+  "api-base-url"?: string;
+  address?: string;
+};
+
+function localProfile(
+  command: Command,
+  flags: ServerFlags,
+): string | undefined {
+  const agent = resolveCliAuth({
+    configDir: command.config.configDir,
+    apiKey: flags["api-key"],
+    apiBaseUrl: flags["api-base-url"],
+  }).connectedAgent;
+  if (
+    flags.address !== undefined &&
+    flags.address.toLowerCase() !== agent?.agentAddress.toLowerCase()
+  )
+    return undefined;
+  return agent?.profileName;
+}
+
+function requireLocalProfile(
+  command: Command,
+  profile: string | undefined,
+): string {
+  if (!profile)
+    command.error(
+      "Local thread mutes require a connected agent profile for the requested address. Set PRIMITIVE_AGENT_PROFILE to that profile.",
+    );
+  return profile;
+}
 
 function profileName(command: Command): string {
   const name = resolveCliAuth({ configDir: command.config.configDir })
@@ -96,11 +145,13 @@ async function callMuteApi(
   client: Client,
   method: "put" | "delete",
   id: string,
+  address?: string,
 ): Promise<ServerResult> {
   const response = await client[method]({
     security,
     url: "/threads/{id}/mute",
     path: { id },
+    ...(address === undefined ? {} : { query: { address } }),
     responseStyle: "fields",
   });
   if (response.error === undefined)
@@ -114,9 +165,14 @@ async function callMuteApi(
   return { kind: "error", payload: response.error };
 }
 
-async function apiClient(command: Command): Promise<Client> {
+async function apiClient(
+  command: Command,
+  flags: ServerFlags = {},
+): Promise<Client> {
   const { apiClient } = await createAuthenticatedCliApiClient({
     configDir: command.config.configDir,
+    apiKey: flags["api-key"],
+    apiBaseUrl: flags["api-base-url"],
   });
   return apiClient.client;
 }
@@ -132,12 +188,14 @@ const UNSUPPORTED_NOTE =
 export class ThreadsMuteCommand extends Command {
   static summary = "Stop wakes for one thread";
   static description =
-    "Mutes the thread for this connected agent's address on the server, so no session or runtime using the address is woken by it. Mail in it is still received and readable, reads report it as muted, and its delivery event is completed so it is not redelivered. With --session-only the mute is stored locally and applies only to the current Claude Code or Codex session. A server without thread mutes gets a local mute instead: the current runtime session's, or with --all-sessions (or outside a session) every session on the profile.";
+    "Mutes the thread for --address on the server, defaulting to the connected agent's address, so no session or runtime using the address is woken by it. Other credentials must provide --address. Mail in it is still received and readable, reads report it as muted, and its delivery event is completed so it is not redelivered. With --session-only the mute is stored locally and applies only to the current Claude Code or Codex session. A server without thread mutes gets a local mute instead: the current runtime session's, or with --all-sessions (or outside a session) every session on the profile. Local mutes require the requested address's connected profile.";
   static examples = [
     "PRIMITIVE_AGENT_PROFILE=work <%= config.bin %> threads mute --id <thread-id>",
     "PRIMITIVE_AGENT_PROFILE=work <%= config.bin %> threads mute --id <thread-id> --session-only",
+    "<%= config.bin %> threads mute --id <thread-id> --address member@example.com",
   ];
   static flags = {
+    ...serverFlags,
     id: idFlag,
     "session-only": sessionOnlyFlag,
     "all-sessions": allSessionsFlag,
@@ -147,9 +205,15 @@ export class ThreadsMuteCommand extends Command {
   async run(): Promise<void> {
     const { flags } = await this.parse(ThreadsMuteCommand);
     const id = threadId(this, flags.id);
-    const profile = profileName(this);
+    const profile = localProfile(this, flags);
+    if (flags["session-only"]) requireLocalProfile(this, profile);
     if (!flags["session-only"]) {
-      const result = await callMuteApi(await apiClient(this), "put", id);
+      const result = await callMuteApi(
+        await apiClient(this, flags),
+        "put",
+        id,
+        flags.address,
+      );
       if (result.kind === "ok") {
         const data = record(result.data);
         this.log(
@@ -170,6 +234,7 @@ export class ThreadsMuteCommand extends Command {
         return;
       }
       if (result.kind !== "unsupported") return failWith(result.payload);
+      requireLocalProfile(this, profile);
       process.stderr.write(`${UNSUPPORTED_NOTE}\n`);
     }
     const session = flags["session-only"]
@@ -177,7 +242,7 @@ export class ThreadsMuteCommand extends Command {
       : muteSession(flags["all-sessions"]);
     const { mute, changed } = await muteThread(
       this.config.configDir,
-      profile,
+      requireLocalProfile(this, profile),
       id,
       session,
     );
@@ -201,11 +266,12 @@ export class ThreadsMuteCommand extends Command {
 export class ThreadsUnmuteCommand extends Command {
   static summary = "Resume wakes for one muted thread";
   static description =
-    "Removes the server mute for this address and this session's local mute for the thread, or every local mute on the profile with --all-sessions (also the default outside a runtime session). With --session-only only this session's local mute is removed. Reports any local mute that still applies.";
+    "Removes the server mute for --address, defaulting to the connected agent's address. Other credentials must provide --address. For that address's connected profile, also removes this session's local mute for the thread, or every local mute with --all-sessions (also the default outside a runtime session). With --session-only only this session's local mute is removed. Reports any local mute that still applies.";
   static examples = [
     "PRIMITIVE_AGENT_PROFILE=work <%= config.bin %> threads unmute --id <thread-id>",
   ];
   static flags = {
+    ...serverFlags,
     id: idFlag,
     "session-only": sessionOnlyFlag,
     "all-sessions": allSessionsFlag,
@@ -215,11 +281,25 @@ export class ThreadsUnmuteCommand extends Command {
   async run(): Promise<void> {
     const { flags } = await this.parse(ThreadsUnmuteCommand);
     const id = threadId(this, flags.id);
-    const profile = profileName(this);
+    const profile = localProfile(this, flags);
+    if (flags["session-only"]) requireLocalProfile(this, profile);
     let server: "unmuted" | "unsupported" | "not_found" | null = null;
     if (!flags["session-only"]) {
-      const result = await callMuteApi(await apiClient(this), "delete", id);
+      const result = await callMuteApi(
+        await apiClient(this, flags),
+        "delete",
+        id,
+        flags.address,
+      );
       if (result.kind === "error") return failWith(result.payload);
+      if (!profile) {
+        if (result.kind === "ok") {
+          this.log(JSON.stringify(result.data, null, 2));
+          return;
+        }
+        if (result.kind === "thread_not_found") return failWith(result.payload);
+        requireLocalProfile(this, profile);
+      }
       server =
         result.kind === "ok"
           ? "unmuted"
@@ -233,7 +313,7 @@ export class ThreadsUnmuteCommand extends Command {
     // Without a session scope, every local mute on the profile goes.
     const { removed, remaining } = await unmuteThread(
       this.config.configDir,
-      profile,
+      requireLocalProfile(this, profile),
       id,
       session,
       { allScopes: session === null },

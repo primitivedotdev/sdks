@@ -24,15 +24,9 @@ import {
   SINGLE_SECRET_VALUE_SOURCE_DESCRIPTION,
 } from "../secret-flags.js";
 
-// `primitive functions:set-secret` is the agent-grade shortcut for
-// writing a function secret and (optionally) pushing it live in the
-// same call. The underlying `functions:set-function-secret` /
-// `functions:create-secret` operations only do the secret
-// upsert; making the new value visible to the running handler
-// requires a separate `functions:redeploy` (or `functions:update-
-// function`) call with the existing bundle. AGX walkthrough flagged
-// the two-step dance as tedious: passing `--redeploy` here collapses
-// it into one command.
+// `primitive functions set-secret` writes a secret and can redeploy the
+// current bundle in the same call. Without --redeploy, the new value becomes
+// visible to the running handler on its next deployment.
 //
 // Shape:
 //   primitive functions:set-secret --id <fn-id> --key <KEY> --value <value>
@@ -40,9 +34,7 @@ import {
 //   primitive functions:set-secret --id <fn-id> --key <KEY> --value-from-env-file .env.local --redeploy
 //   printf '%s' "$VALUE" | primitive functions:set-secret --id <fn-id> --key <KEY> --stdin --redeploy
 //
-// The raw `functions:set-function-secret` and `functions:create-
-// function-secret` operations stay available for callers that want
-// the unsugared form.
+// Structured request inputs share the same canonical command.
 //
 // Source map behavior for --redeploy: the redeploy step pulls the
 // function's current live code via getFunction and re-uploads it
@@ -188,7 +180,7 @@ export async function runSetSecret(
 
 class FunctionsSetSecretCommand extends Command {
   static description =
-    `Write a function secret and optionally redeploy so the new value lands in the running handler. Agent-grade shortcut for functions set-function-secret + functions redeploy.
+    `Write a function secret and optionally redeploy so the new value lands in the running handler.
 
   Without --redeploy this is a plain secret upsert: the value is
   encrypted at rest but is NOT visible to the running handler until
