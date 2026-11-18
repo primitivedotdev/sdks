@@ -150,6 +150,24 @@ try {
     assert.equal(metadata.meta.count, 2);
     assert.deepEqual(metadata.warnings, ["first page warning", "last page warning"]);
   }
+  for (const command of ["latest", "list"]) {
+    for (const [first, last] of [
+      [{ total: 50, total_capped: false }, { total_unavailable: true }],
+      [{ total_unavailable: true }, { total: 50, total_capped: false }],
+      [{ total: 50, total_capped: true }, {}],
+    ]) {
+      requests.length = 0;
+      page = (_query, n) => ({ data: [row(n)], meta: { ...(n === 1 ? first : last), cursor: n === 1 ? "next" : null } });
+      const result = await run(["emails", command, "--all-domains", "--limit", "200", "--json"]);
+      assert.equal(result.code, 0, result.stdout);
+      assert.equal(result.stderr, "");
+      const meta = JSON.parse(result.stdout).meta;
+      for (const key of ["total", "total_capped", "total_unavailable"])
+        assert.equal(Object.hasOwn(meta, key), Object.hasOwn(last, key));
+      for (const [key, value] of Object.entries(last)) assert.equal(meta[key], value);
+      assert.equal(requests.length, 2);
+    }
+  }
   requests.length = 0;
   page = () => ({ data: [row(0)], meta: { cursor: "next" } });
   const single = await run(["emails", "list", "--all-domains", "--limit", "10", "--json"]);

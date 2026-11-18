@@ -25,10 +25,15 @@ export async function fetchBoundedPages<
     const envelope = result.data as PageEnvelope | undefined;
     rows.push(...(Array.isArray(envelope?.data) ? envelope.data : []));
     const previousWarnings = merged.warnings;
+    // Count availability is a snapshot: omitted fields must not survive a page.
+    const previousMeta = { ...merged.meta };
+    delete previousMeta.total;
+    delete previousMeta.total_capped;
+    delete previousMeta.total_unavailable;
     merged = {
       ...merged,
       ...envelope,
-      meta: { ...merged.meta, ...envelope?.meta },
+      meta: { ...previousMeta, ...envelope?.meta },
     };
     if (Array.isArray(previousWarnings) && Array.isArray(envelope?.warnings))
       merged.warnings = [...previousWarnings, ...envelope.warnings];

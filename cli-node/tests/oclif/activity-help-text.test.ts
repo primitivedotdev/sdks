@@ -50,8 +50,9 @@ describe("where the activity and emails help points a reader", () => {
 
   it("points emails list to the one-line table", () => {
     expect(topics.emails?.description).toContain(
-      "`primitive emails latest --limit 100`",
+      "`primitive emails latest --limit 200`",
     );
+    expect(topics.emails?.description).toContain("`--cursor <cursor>`");
     expect(OPERATION_HINTS.listEmails).toContain(
       "`primitive emails latest --limit 100`",
     );
