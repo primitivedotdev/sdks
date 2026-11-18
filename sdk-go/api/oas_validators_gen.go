@@ -30047,9 +30047,9 @@ func (s ErrorResponseErrorCode) Validate() error {
 		return nil
 	case "email_rule_request_limit":
 		return nil
-	case "email_rule_request_not_pending":
+	case "email_rule_request_not_deletable":
 		return nil
-	case "email_rule_request_not_withdrawn":
+	case "email_rule_request_not_pending":
 		return nil
 	case "email_rule_request_party_left":
 		return nil
@@ -86847,9 +86847,9 @@ func (s ErrorResponseErrorCode) validateKnown() error {
 		return nil
 	case "email_rule_request_limit":
 		return nil
-	case "email_rule_request_not_pending":
+	case "email_rule_request_not_deletable":
 		return nil
-	case "email_rule_request_not_withdrawn":
+	case "email_rule_request_not_pending":
 		return nil
 	case "email_rule_request_party_left":
 		return nil

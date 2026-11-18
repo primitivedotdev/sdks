@@ -26,7 +26,8 @@ class EmailRuleCoveringAuthor:
         Attributes:
             user_id (UUID):
             name (None | str): Their name; null when they have none set.
-            email (None | str): Sign-in email; null unless you can list member emails or this is you.
+            email (None | str): Sign-in email: a rule over your mail always names who wrote it. Null only when they have
+                none.
      """
 
     user_id: UUID

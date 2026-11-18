@@ -23,7 +23,8 @@ T = TypeVar("T", bound="EmailRuleShareRuleType0")
 
 @_attrs_define
 class EmailRuleShareRuleType0:
-    """ The rule's name, state and description; null once the share is not live, except for the member sharing their mail.
+    """ The rule's name, state and description; null once the share is not live, except for the member sharing their mail,
+    and once the rule is deleted.
 
         Attributes:
             name (str):

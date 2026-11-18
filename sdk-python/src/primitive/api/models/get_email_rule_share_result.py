@@ -19,6 +19,7 @@ if TYPE_CHECKING:
   from ..models.email_rule_share_activity import EmailRuleShareActivity
   from ..models.email_rule_share_beneficiary import EmailRuleShareBeneficiary
   from ..models.email_rule_share_granter import EmailRuleShareGranter
+  from ..models.get_email_rule_share_result_accept_changes_type_0 import GetEmailRuleShareResultAcceptChangesType0
   from ..models.get_email_rule_share_result_rule_type_0 import GetEmailRuleShareResultRuleType0
 
 
@@ -39,12 +40,15 @@ class GetEmailRuleShareResult:
             ended_at (datetime.datetime | None):
             end_reason (GetEmailRuleShareResultEndReasonType1 | GetEmailRuleShareResultEndReasonType2Type1 |
                 GetEmailRuleShareResultEndReasonType3Type1 | None): Why it ended, once it has: stopped_by_granter,
-                removed_by_beneficiary, stopped_by_admin or rule_deleted (the rule was deleted; the share keeps its record, and
-                the rule is no longer shown). Null while it has not.
+                removed_by_beneficiary, stopped_by_admin or rule_deleted (the rule was deleted; the share keeps its record and
+                rule_name, and the rule is no longer shown). Null while it has not.
             accepted_rule_version (int): The version of the rule that was accepted. A later version keeps the share: what
                 each version matches is shared from when it is saved.
             edited_on_accept (bool): Whether the member who accepted changed the rule's English or tree before accepting (a
                 new name does not count).
+            accept_changes (GetEmailRuleShareResultAcceptChangesType0 | None): When edited_on_accept, for the member sharing
+                their mail and the member it is shared with, live or not: what was asked for beside what was accepted. Null
+                otherwise, and for anyone else.
             live (bool): Not ended, and both people are still members under the memberships that were recorded.
             delivery_paused (bool | None): True when the rule is active and the share live but new email is not being shared
                 now (what was shared stays visible); false when new email is shared. Null when it does not apply (share not
@@ -56,8 +60,13 @@ class GetEmailRuleShareResult:
             is_beneficiary (bool): Whether you are the member it is shared with.
             granter (EmailRuleShareGranter):
             beneficiary (EmailRuleShareBeneficiary):
+            rule_name (None | str): The rule's name, for anyone who can see the share. While the share is live, its current
+                name; once it has ended, its name when it ended (a later rename is not shown), also after the rule is deleted.
+                Null when the share is not live and no name was recorded as it ended (it ended before names were recorded, or
+                one of its people is no longer a member), except for the member sharing their mail, who is told its current
+                name.
             rule (GetEmailRuleShareResultRuleType0 | None): The rule's name, state and description; null once the share is
-                not live, except for the member sharing their mail.
+                not live, except for the member sharing their mail, and once the rule is deleted.
             rule_id (None | UUID): The rule itself. Only for the member sharing their mail; null for anyone else. The member
                 it is shared with lists this share's id in a key's grant.rules instead (from the dashboard), and their own
                 webhooks receive what it shares.
@@ -70,6 +79,7 @@ class GetEmailRuleShareResult:
     end_reason: GetEmailRuleShareResultEndReasonType1 | GetEmailRuleShareResultEndReasonType2Type1 | GetEmailRuleShareResultEndReasonType3Type1 | None
     accepted_rule_version: int
     edited_on_accept: bool
+    accept_changes: GetEmailRuleShareResultAcceptChangesType0 | None
     live: bool
     delivery_paused: bool | None
     activity: EmailRuleShareActivity | None
@@ -77,6 +87,7 @@ class GetEmailRuleShareResult:
     is_beneficiary: bool
     granter: EmailRuleShareGranter
     beneficiary: EmailRuleShareBeneficiary
+    rule_name: None | str
     rule: GetEmailRuleShareResultRuleType0 | None
     rule_id: None | UUID
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -89,6 +100,7 @@ class GetEmailRuleShareResult:
         from ..models.email_rule_share_activity import EmailRuleShareActivity # noqa: PLC0415
         from ..models.email_rule_share_beneficiary import EmailRuleShareBeneficiary # noqa: PLC0415
         from ..models.email_rule_share_granter import EmailRuleShareGranter # noqa: PLC0415
+        from ..models.get_email_rule_share_result_accept_changes_type_0 import GetEmailRuleShareResultAcceptChangesType0 # noqa: PLC0415
         from ..models.get_email_rule_share_result_rule_type_0 import GetEmailRuleShareResultRuleType0 # noqa: PLC0415
         id = str(self.id)
 
@@ -116,6 +128,12 @@ class GetEmailRuleShareResult:
 
         edited_on_accept = self.edited_on_accept
 
+        accept_changes: dict[str, Any] | None
+        if isinstance(self.accept_changes, GetEmailRuleShareResultAcceptChangesType0):
+            accept_changes = self.accept_changes.to_dict()
+        else:
+            accept_changes = self.accept_changes
+
         live = self.live
 
         delivery_paused: bool | None
@@ -134,6 +152,9 @@ class GetEmailRuleShareResult:
         granter = self.granter.to_dict()
 
         beneficiary = self.beneficiary.to_dict()
+
+        rule_name: None | str
+        rule_name = self.rule_name
 
         rule: dict[str, Any] | None
         if isinstance(self.rule, GetEmailRuleShareResultRuleType0):
@@ -158,6 +179,7 @@ class GetEmailRuleShareResult:
             "end_reason": end_reason,
             "accepted_rule_version": accepted_rule_version,
             "edited_on_accept": edited_on_accept,
+            "accept_changes": accept_changes,
             "live": live,
             "delivery_paused": delivery_paused,
             "activity": activity,
@@ -165,6 +187,7 @@ class GetEmailRuleShareResult:
             "is_beneficiary": is_beneficiary,
             "granter": granter,
             "beneficiary": beneficiary,
+            "rule_name": rule_name,
             "rule": rule,
             "rule_id": rule_id,
         })
@@ -178,6 +201,7 @@ class GetEmailRuleShareResult:
         from ..models.email_rule_share_activity import EmailRuleShareActivity # noqa: PLC0415
         from ..models.email_rule_share_beneficiary import EmailRuleShareBeneficiary # noqa: PLC0415
         from ..models.email_rule_share_granter import EmailRuleShareGranter # noqa: PLC0415
+        from ..models.get_email_rule_share_result_accept_changes_type_0 import GetEmailRuleShareResultAcceptChangesType0 # noqa: PLC0415
         from ..models.get_email_rule_share_result_rule_type_0 import GetEmailRuleShareResultRuleType0 # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
@@ -255,6 +279,24 @@ class GetEmailRuleShareResult:
 
         edited_on_accept = d.pop("edited_on_accept")
 
+        def _parse_accept_changes(data: object) -> GetEmailRuleShareResultAcceptChangesType0 | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                accept_changes_type_0 = GetEmailRuleShareResultAcceptChangesType0.from_dict(data)
+
+
+
+                return accept_changes_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(GetEmailRuleShareResultAcceptChangesType0 | None, data)
+
+        accept_changes = _parse_accept_changes(d.pop("accept_changes"))
+
+
         live = d.pop("live")
 
         def _parse_delivery_paused(data: object) -> bool | None:
@@ -295,6 +337,14 @@ class GetEmailRuleShareResult:
         beneficiary = EmailRuleShareBeneficiary.from_dict(d.pop("beneficiary"))
 
 
+
+
+        def _parse_rule_name(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        rule_name = _parse_rule_name(d.pop("rule_name"))
 
 
         def _parse_rule(data: object) -> GetEmailRuleShareResultRuleType0 | None:
@@ -341,6 +391,7 @@ class GetEmailRuleShareResult:
             end_reason=end_reason,
             accepted_rule_version=accepted_rule_version,
             edited_on_accept=edited_on_accept,
+            accept_changes=accept_changes,
             live=live,
             delivery_paused=delivery_paused,
             activity=activity,
@@ -348,6 +399,7 @@ class GetEmailRuleShareResult:
             is_beneficiary=is_beneficiary,
             granter=granter,
             beneficiary=beneficiary,
+            rule_name=rule_name,
             rule=rule,
             rule_id=rule_id,
         )

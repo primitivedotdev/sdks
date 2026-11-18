@@ -774,8 +774,9 @@ type Invoker interface {
 	DeleteEmail(ctx context.Context, params DeleteEmailParams) (DeleteEmailRes, error)
 	// DeleteEmailRule invokes deleteEmailRule operation.
 	//
-	// Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
-	// (end_reason rule_deleted), and the member who shared can still list what it handed over. The
+	// Deletes a rule: it is kept only as deleted, a rule nothing reads or changes again that grants no
+	// access and is listed only in its author's activity, and its decisions go with it. A share of it
+	// ends (end_reason rule_deleted), and the member who shared can still list what it handed over. The
 	// answer lists the shares it ended (ended_shares), and lists the unrevoked keys that still list it,
 	// which now read nothing through it (keys, other_keys; left out when they could not be read). The
 	// author or a reader of all the organization's mail may delete it; while it is shared, only the
@@ -786,8 +787,9 @@ type Invoker interface {
 	DeleteEmailRule(ctx context.Context, params DeleteEmailRuleParams) (DeleteEmailRuleRes, error)
 	// DeleteEmailRuleRequest invokes deleteEmailRuleRequest operation.
 	//
-	// Deletes a request you withdrew, for everyone who could see it. Needs mail:read, the email rules
-	// feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+	// Deletes a request you made that you withdrew or that was declined, for everyone who could see it.
+	// An accepted request stays: it is the record of who agreed to share. Needs mail:read, the email
+	// rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 	//
 	// DELETE /email-rule-requests/{id}
 	DeleteEmailRuleRequest(ctx context.Context, params DeleteEmailRuleRequestParams) (DeleteEmailRuleRequestRes, error)
@@ -1386,8 +1388,8 @@ type Invoker interface {
 	// the site), the other inboxes and domains its scope names, or its saved expectations. For what
 	// happened to one email of yours, every rule's decision on it and, for another member's rule
 	// covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules
-	// list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
-	// member's own full-access credential (no API key, agent key or narrowed token).
+	// list-results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own
+	// full-access credential (no API key, agent key or narrowed token).
 	//
 	// GET /email-rules/covering-me/{id}
 	GetEmailRuleCoveringMe(ctx context.Context, params GetEmailRuleCoveringMeParams) (GetEmailRuleCoveringMeRes, error)
@@ -1970,13 +1972,14 @@ type Invoker interface {
 	// requests made to them, and the objections to rules they wrote, under their current membership,
 	// each naming the member who asked or objected in created_through. A key, an app or an agent has
 	// none, and gets both kinds in withheld. With relation=concerning it lists instead what other
-	// members did that concerns the person's own mail: each time a rule started covering one of their
-	// mailboxes, saved a new version while covering it, or stopped covering it, named as the rule was
-	// then, naming its author in created_through, under their current membership; only on the dashboard
-	// or the Primitive CLI. A key, an app or an agent has none, and gets email_rule_coverage in withheld.
-	//  A notice never reads as ended. Notices are written by a periodic job and can lag, a held new
-	// version by up to about 15 minutes; GET /v1/email-rules/covering-me is the live view. For what
-	// covers you now, read GET /email-rules/covering-me.
+	// members did that concerns the person's own mail: each time a rule in observe or active started
+	// covering one of their mailboxes, turned active after they were told of it in observe, saved a new
+	// version while covering it, or stopped covering it, named as the rule was then, naming its author
+	// in created_through, under their current membership; only on the dashboard or the Primitive CLI. A
+	// key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads
+	// as ended. Notices are written by a periodic job and can lag, a held new version by up to about 15
+	// minutes; GET /v1/email-rules/covering-me is the live view. For what covers you now, read GET
+	// /email-rules/covering-me.
 	//
 	// GET /activity/objects
 	ListActivityObjects(ctx context.Context, params ListActivityObjectsParams) (ListActivityObjectsRes, error)
@@ -2332,8 +2335,8 @@ type Invoker interface {
 	// a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null.
 	// For what happened to one email of yours, every rule's decision on it and, for another member's
 	// rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive
-	// email-rules list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules
-	// feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+	// email-rules list-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
+	// member's own full-access credential (no API key, agent key or narrowed token).
 	//
 	// GET /email-rules/covering-me
 	ListEmailRulesCoveringMe(ctx context.Context, params ListEmailRulesCoveringMeParams) (ListEmailRulesCoveringMeRes, error)
@@ -12014,8 +12017,9 @@ func (c *Client) sendDeleteEmail(ctx context.Context, params DeleteEmailParams) 
 
 // DeleteEmailRule invokes deleteEmailRule operation.
 //
-// Deletes a rule with its versions, its decisions and the access it granted. A share of it ends
-// (end_reason rule_deleted), and the member who shared can still list what it handed over. The
+// Deletes a rule: it is kept only as deleted, a rule nothing reads or changes again that grants no
+// access and is listed only in its author's activity, and its decisions go with it. A share of it
+// ends (end_reason rule_deleted), and the member who shared can still list what it handed over. The
 // answer lists the shares it ended (ended_shares), and lists the unrevoked keys that still list it,
 // which now read nothing through it (keys, other_keys; left out when they could not be read). The
 // author or a reader of all the organization's mail may delete it; while it is shared, only the
@@ -12146,8 +12150,9 @@ func (c *Client) sendDeleteEmailRule(ctx context.Context, params DeleteEmailRule
 
 // DeleteEmailRuleRequest invokes deleteEmailRuleRequest operation.
 //
-// Deletes a request you withdrew, for everyone who could see it. Needs mail:read, the email rules
-// feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+// Deletes a request you made that you withdrew or that was declined, for everyone who could see it.
+// An accepted request stays: it is the record of who agreed to share. Needs mail:read, the email
+// rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).
 //
 // DELETE /email-rule-requests/{id}
 func (c *Client) DeleteEmailRuleRequest(ctx context.Context, params DeleteEmailRuleRequestParams) (DeleteEmailRuleRequestRes, error) {
@@ -18897,8 +18902,8 @@ func (c *Client) sendGetEmailRule(ctx context.Context, params GetEmailRuleParams
 // the site), the other inboxes and domains its scope names, or its saved expectations. For what
 // happened to one email of yours, every rule's decision on it and, for another member's rule
 // covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules
-// list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
-// member's own full-access credential (no API key, agent key or narrowed token).
+// list-results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own
+// full-access credential (no API key, agent key or narrowed token).
 //
 // GET /email-rules/covering-me/{id}
 func (c *Client) GetEmailRuleCoveringMe(ctx context.Context, params GetEmailRuleCoveringMeParams) (GetEmailRuleCoveringMeRes, error) {
@@ -26004,15 +26009,14 @@ func (c *Client) sendLeaveOrganization(ctx context.Context, params LeaveOrganiza
 // requests made to them, and the objections to rules they wrote, under their current membership,
 // each naming the member who asked or objected in created_through. A key, an app or an agent has
 // none, and gets both kinds in withheld. With relation=concerning it lists instead what other
-// members did that concerns the person's own mail: each time a rule started covering one of their
-// mailboxes, saved a new version while covering it, or stopped covering it, named as the rule was
-// then, naming its author in created_through, under their current membership; only on the dashboard
-// or the Primitive CLI. A key, an app or an agent has none, and gets email_rule_coverage in withheld.
-//
-//	A notice never reads as ended. Notices are written by a periodic job and can lag, a held new
-//
-// version by up to about 15 minutes; GET /v1/email-rules/covering-me is the live view. For what
-// covers you now, read GET /email-rules/covering-me.
+// members did that concerns the person's own mail: each time a rule in observe or active started
+// covering one of their mailboxes, turned active after they were told of it in observe, saved a new
+// version while covering it, or stopped covering it, named as the rule was then, naming its author
+// in created_through, under their current membership; only on the dashboard or the Primitive CLI. A
+// key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads
+// as ended. Notices are written by a periodic job and can lag, a held new version by up to about 15
+// minutes; GET /v1/email-rules/covering-me is the live view. For what covers you now, read GET
+// /email-rules/covering-me.
 //
 // GET /activity/objects
 func (c *Client) ListActivityObjects(ctx context.Context, params ListActivityObjectsParams) (ListActivityObjectsRes, error) {
@@ -30942,8 +30946,8 @@ func (c *Client) sendListEmailRules(ctx context.Context, params ListEmailRulesPa
 // a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null.
 // For what happened to one email of yours, every rule's decision on it and, for another member's
 // rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive
-// email-rules list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules
-// feature, and a member's own full-access credential (no API key, agent key or narrowed token).
+// email-rules list-results --email-id <email-id>). Needs mail:read, the email rules feature, and a
+// member's own full-access credential (no API key, agent key or narrowed token).
 //
 // GET /email-rules/covering-me
 func (c *Client) ListEmailRulesCoveringMe(ctx context.Context, params ListEmailRulesCoveringMeParams) (ListEmailRulesCoveringMeRes, error) {

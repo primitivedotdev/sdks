@@ -1071,7 +1071,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-activity-objects",
-    "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules, rule requests and objections to rules over their mail (objections only on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it lists instead what other members asked of the person, open or answered: the rule requests made to them, and the objections to rules they wrote, under their current membership, each naming the member who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in withheld. With relation=concerning it lists instead what other members did that concerns the person's own mail: each time a rule started covering one of their mailboxes, saved a new version while covering it, or stopped covering it, named as the rule was then, naming its author in created_through, under their current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a periodic job and can lag, a held new version by up to about 15 minutes; GET /v1/email-rules/covering-me is the live view. For what covers you now, read GET /email-rules/covering-me.",
+    "description": "The objects the caller created, newest first, each with where it stands now, including ones since disabled, deleted or revoked where the object keeps a row: Functions, endpoints, Function triggers, pull subscriptions, recipient routes, filters, wake schedules, repeating sends and scheduled sends. An API key, an app or an agent sees what it created itself; a webhook given to an API key lists under that key. A person (a dashboard session, or their own Primitive CLI or app login) sees what they created through any credential of theirs, each item naming it, and also their API keys, personal agents, email rules, rule requests and objections to rules over their mail (objections only on the dashboard or the Primitive CLI). Each kind is listed only if the caller could list it through that kind's own route; a kind it could not is named in withheld, with no count. Ids, names and states only: never a webhook URL or mail content. Needs activity:read_self. With relation=asked it lists instead what other members asked of the person, open or answered: the rule requests made to them, and the objections to rules they wrote, under their current membership, each naming the member who asked or objected in created_through. A key, an app or an agent has none, and gets both kinds in withheld. With relation=concerning it lists instead what other members did that concerns the person's own mail: each time a rule in observe or active started covering one of their mailboxes, turned active after they were told of it in observe, saved a new version while covering it, or stopped covering it, named as the rule was then, naming its author in created_through, under their current membership; only on the dashboard or the Primitive CLI. A key, an app or an agent has none, and gets email_rule_coverage in withheld. A notice never reads as ended. Notices are written by a periodic job and can lag, a held new version by up to about 15 minutes; GET /v1/email-rules/covering-me is the live view. For what covers you now, read GET /email-rules/covering-me.",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listActivityObjects",
@@ -1161,7 +1161,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "state": {
                 "type": "string",
-                "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe or active (email rules), pending, accepted, declined or withdrawn (rule requests and objections; an objection may also be amended or closed), and for a coverage notice what it told: started (a rule was made or turned active over your mailboxes, or an active rule came to reach you; once per rule, not per mailbox), new_version, stopped (it no longer covers you, why in stop_reason), or baseline (it already covered you when notices began)."
+                "description": "Where it stands now: enabled, disabled, deleted or replaced (endpoints and routes), enabled or disabled (filters, wake schedules), live, suspended or deleted (Functions), active, paused or ended (repeating sends), scheduled (scheduled sends), active, suspended, expired or revoked (API keys), pending, claimed, connected or revoked (agents), draft, observe, active or deleted (email rules), pending, accepted, declined or withdrawn (rule requests and objections; an objection may also be amended or closed), and for a coverage notice what it told: started (a rule in observe or active came to cover your mailboxes: made, turned on, or reaching you; once per rule, not per mailbox), activated (a rule you were told of while it was being tested in observe is now active), new_version, stopped (it no longer covers you, why in stop_reason), or baseline (it already covered you when notices began)."
               },
               "created_at": {
                 "type": "string",
@@ -1217,7 +1217,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "format": "uuid"
               },
               "stop_reason": {
-                "description": "For a stopped notice: deleted, turned_off (no longer active), or no_longer_covers (active, reaching none of your mailboxes now).",
+                "description": "For a stopped notice: deleted, turned_off (set to draft), or no_longer_covers (in observe or active, reaching none of your mailboxes now). A rule moved from active back to observe still covers you and is not stopped.",
                 "type": "string",
                 "enum": [
                   "deleted",
@@ -18234,7 +18234,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email-rule-covering-me",
-    "description": "One rule that covers one of your own mailboxes, read-only, with its current version; or one that no longer does but decided on mail at your own mailbox (covers_now false), shown as the version that last decided on your mail, without its current name. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. For what happened to one email of yours, every rule's decision on it and, for another member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+    "description": "One rule that covers one of your own mailboxes, read-only, with its current version; or one that no longer does but decided on mail at your own mailbox (covers_now false), shown as the version that last decided on your mail, without its current name. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. For what happened to one email of yours, every rule's decision on it and, for another member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmailRuleCoveringMe",
@@ -18301,7 +18301,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "email": {
-              "description": "Sign-in email; null unless you can list member emails or this is you.",
+              "description": "Sign-in email: a rule over your mail always names who wrote it. Null only when they have none.",
               "type": [
                 "string",
                 "null"
@@ -19379,7 +19379,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-email-rules-covering-me",
-    "description": "Every email rule that covers one of your own mailboxes now, yours included, newest first, in any state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your member mailbox, or a personal agent's address), and covers.via says how: author_reach, it runs over everything its author can read, which includes your mail (an author who reads the organization's mail or holds an access entry for your mailbox); selected, it names your mailbox or its domain; own_mailboxes, it is your own rule over your own mail. Another member's own_mailboxes rule never covers you. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. Each listed rule carries its current version's english and Primitive's reading of it (explanation); its tree is on GET /v1/email-rules/covering-me/{id}. A page can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. For what happened to one email of yours, every rule's decision on it and, for another member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+    "description": "Every email rule that covers one of your own mailboxes now, yours included, newest first, in any state. A rule covers you when the scope it runs with now reaches one of your own mailboxes (your member mailbox, or a personal agent's address), and covers.via says how: author_reach, it runs over everything its author can read, which includes your mail (an author who reads the organization's mail or holds an access entry for your mailbox); selected, it names your mailbox or its domain; own_mailboxes, it is your own rule over your own mail. Another member's own_mailboxes rule never covers you. You see its name, wording, current tree, state, kind and author, and which of your own mailboxes it reaches. Its wording and tree are shown as written, so they can name other addresses (a condition on who an email is from or to). While it covers you, you also see who receives what it matches (receivers): how many API keys, webhooks and shares, the member each belongs to (or the organization), and the sites the webhooks deliver to. You do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the site), the other inboxes and domains its scope names, or its saved expectations. Each listed rule carries its current version's english and Primitive's reading of it (explanation); its tree is on GET /v1/email-rules/covering-me/{id}. A page can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded number of rules): keep reading until meta.cursor is null. For what happened to one email of yours, every rule's decision on it and, for another member's rule covering you, who receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmailRulesCoveringMe",
@@ -19454,7 +19454,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ]
               },
               "email": {
-                "description": "Sign-in email; null unless you can list member emails or this is you.",
+                "description": "Sign-in email: a rule over your mail always names who wrote it. Null only when they have none.",
                 "type": [
                   "string",
                   "null"
@@ -20615,7 +20615,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "rule_deleted",
                 null
               ],
-              "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not."
+              "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin or rule_deleted (the rule was deleted; the share keeps its record and rule_name, and the rule is no longer shown). Null while it has not."
             },
             "accepted_rule_version": {
               "type": "integer",
@@ -20624,6 +20624,28 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "edited_on_accept": {
               "type": "boolean",
               "description": "Whether the member who accepted changed the rule's English or tree before accepting (a new name does not count)."
+            },
+            "accept_changes": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "requested_english": {
+                  "type": "string",
+                  "description": "The English the member who asked asked for."
+                },
+                "accepted_english": {
+                  "type": "string",
+                  "description": "The English that was accepted. Can match requested_english when only the tree changed."
+                }
+              },
+              "required": [
+                "requested_english",
+                "accepted_english"
+              ],
+              "default": null,
+              "description": "When edited_on_accept, for the member sharing their mail and the member it is shared with, live or not: what was asked for beside what was accepted. Null otherwise, and for anyone else."
             },
             "live": {
               "type": "boolean",
@@ -20687,7 +20709,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   ]
                 },
                 "email": {
-                  "description": "Sign-in email; null unless you can list member emails, this is you, or this is a live share with you.",
+                  "description": "Sign-in email; null unless you can list member emails, this is you, or the share is with you (live or not).",
                   "type": [
                     "string",
                     "null"
@@ -20737,6 +20759,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "active"
               ]
             },
+            "rule_name": {
+              "description": "The rule's name, for anyone who can see the share. While the share is live, its current name; once it has ended, its name when it ended (a later rename is not shown), also after the rule is deleted. Null when the share is not live and no name was recorded as it ended (it ended before names were recorded, or one of its people is no longer a member), except for the member sharing their mail, who is told its current name.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "rule": {
               "type": [
                 "object",
@@ -20778,7 +20807,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "english",
                 "updated_at"
               ],
-              "description": "The rule's name, state and description; null once the share is not live, except for the member sharing their mail."
+              "description": "The rule's name, state and description; null once the share is not live, except for the member sharing their mail, and once the rule is deleted."
             },
             "rule_id": {
               "type": [
@@ -20797,6 +20826,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "end_reason",
             "accepted_rule_version",
             "edited_on_accept",
+            "accept_changes",
             "live",
             "delivery_paused",
             "activity",
@@ -20804,6 +20834,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "is_beneficiary",
             "granter",
             "beneficiary",
+            "rule_name",
             "rule",
             "rule_id"
           ]
@@ -22514,6 +22545,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ]
         },
+        "accepted_english": {
+          "default": null,
+          "description": "When it was accepted with changes, for the member who asked and the member asked: the English that was accepted, beside english, which stays what was asked for. Null otherwise, and from a core-api release that predates the field. (The accepted English can match english when only the tree changed.)",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "existing": {
           "description": "Present, as true, when the create carried an Idempotency-Key and you already had a pending request to this member asking exactly this (name, english, tree and message, naming the member the same way): that request is returned (200), and no second one is made or sent.",
           "type": "boolean",
@@ -22539,7 +22578,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "share_id",
         "message",
         "decline_reason",
-        "share_terms"
+        "share_terms",
+        "accepted_english"
       ]
     },
     "sdkName": "createEmailRuleRequest",
@@ -22788,6 +22828,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "string",
             "null"
           ]
+        },
+        "accepted_english": {
+          "default": null,
+          "description": "When it was accepted with changes, for the member who asked and the member asked: the English that was accepted, beside english, which stays what was asked for. Null otherwise, and from a core-api release that predates the field. (The accepted English can match english when only the tree changed.)",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
@@ -22809,7 +22857,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "share_id",
         "message",
         "decline_reason",
-        "share_terms"
+        "share_terms",
+        "accepted_english"
       ]
     },
     "sdkName": "declineEmailRuleRequest",
@@ -22821,7 +22870,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "delete-email-rule",
-    "description": "Deletes a rule with its versions, its decisions and the access it granted. A share of it ends (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer lists the shares it ended (ended_shares), and lists the unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out when they could not be read). The author or a reader of all the organization's mail may delete it; while it is shared, only the author or someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+    "description": "Deletes a rule: it is kept only as deleted, a rule nothing reads or changes again that grants no access and is listed only in its author's activity, and its decisions go with it. A share of it ends (end_reason rule_deleted), and the member who shared can still list what it handed over. The answer lists the shares it ended (ended_shares), and lists the unrevoked keys that still list it, which now read nothing through it (keys, other_keys; left out when they could not be read). The author or a reader of all the organization's mail may delete it; while it is shared, only the author or someone who manages members from the dashboard. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "DELETE",
     "operationId": "deleteEmailRule",
@@ -22902,7 +22951,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "delete-email-rule-request",
-    "description": "Deletes a request you withdrew, for everyone who could see it. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
+    "description": "Deletes a request you made that you withdrew or that was declined, for everyone who could see it. An accepted request stays: it is the record of who agreed to share. Needs mail:read, the email rules feature, and a member's own full-access credential (no API key, agent key or narrowed token).",
     "hasJsonBody": false,
     "method": "DELETE",
     "operationId": "deleteEmailRuleRequest",
@@ -22935,7 +22984,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ]
     },
     "sdkName": "deleteEmailRuleRequest",
-    "summary": "Delete a withdrawn rule request",
+    "summary": "Delete a withdrawn or declined rule request",
     "tag": "Email Rules",
     "tagCommand": "email-rules"
   },
@@ -24322,6 +24371,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "string",
             "null"
           ]
+        },
+        "accepted_english": {
+          "default": null,
+          "description": "When it was accepted with changes, for the member who asked and the member asked: the English that was accepted, beside english, which stays what was asked for. Null otherwise, and from a core-api release that predates the field. (The accepted English can match english when only the tree changed.)",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
@@ -24343,7 +24400,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "share_id",
         "message",
         "decline_reason",
-        "share_terms"
+        "share_terms",
+        "accepted_english"
       ]
     },
     "sdkName": "getEmailRuleRequest",
@@ -24586,7 +24644,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "rule_deleted",
             null
           ],
-          "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not."
+          "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin or rule_deleted (the rule was deleted; the share keeps its record and rule_name, and the rule is no longer shown). Null while it has not."
         },
         "accepted_rule_version": {
           "type": "integer",
@@ -24595,6 +24653,28 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "edited_on_accept": {
           "type": "boolean",
           "description": "Whether the member who accepted changed the rule's English or tree before accepting (a new name does not count)."
+        },
+        "accept_changes": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "requested_english": {
+              "type": "string",
+              "description": "The English the member who asked asked for."
+            },
+            "accepted_english": {
+              "type": "string",
+              "description": "The English that was accepted. Can match requested_english when only the tree changed."
+            }
+          },
+          "required": [
+            "requested_english",
+            "accepted_english"
+          ],
+          "default": null,
+          "description": "When edited_on_accept, for the member sharing their mail and the member it is shared with, live or not: what was asked for beside what was accepted. Null otherwise, and for anyone else."
         },
         "live": {
           "type": "boolean",
@@ -24658,7 +24738,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "email": {
-              "description": "Sign-in email; null unless you can list member emails, this is you, or this is a live share with you.",
+              "description": "Sign-in email; null unless you can list member emails, this is you, or the share is with you (live or not).",
               "type": [
                 "string",
                 "null"
@@ -24708,6 +24788,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "active"
           ]
         },
+        "rule_name": {
+          "description": "The rule's name, for anyone who can see the share. While the share is live, its current name; once it has ended, its name when it ended (a later rename is not shown), also after the rule is deleted. Null when the share is not live and no name was recorded as it ended (it ended before names were recorded, or one of its people is no longer a member), except for the member sharing their mail, who is told its current name.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "rule": {
           "type": [
             "object",
@@ -24749,7 +24836,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "english",
             "updated_at"
           ],
-          "description": "The rule's name, state and description; null once the share is not live, except for the member sharing their mail."
+          "description": "The rule's name, state and description; null once the share is not live, except for the member sharing their mail, and once the rule is deleted."
         },
         "rule_id": {
           "type": [
@@ -24768,6 +24855,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "end_reason",
         "accepted_rule_version",
         "edited_on_accept",
+        "accept_changes",
         "live",
         "delivery_paused",
         "activity",
@@ -24775,6 +24863,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "is_beneficiary",
         "granter",
         "beneficiary",
+        "rule_name",
         "rule",
         "rule_id"
       ]
@@ -25417,6 +25506,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "string",
               "null"
             ]
+          },
+          "accepted_english": {
+            "default": null,
+            "description": "When it was accepted with changes, for the member who asked and the member asked: the English that was accepted, beside english, which stays what was asked for. Null otherwise, and from a core-api release that predates the field. (The accepted English can match english when only the tree changed.)",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -25438,7 +25535,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "share_id",
           "message",
           "decline_reason",
-          "share_terms"
+          "share_terms",
+          "accepted_english"
         ]
       }
     },
@@ -25707,7 +25805,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                     ]
                   },
                   "email": {
-                    "description": "Sign-in email; null unless you can list member emails or this is you.",
+                    "description": "Sign-in email: a rule over your mail always names who wrote it. Null only when they have none.",
                     "type": [
                       "string",
                       "null"
@@ -26696,7 +26794,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "rule_deleted",
               null
             ],
-            "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not."
+            "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin or rule_deleted (the rule was deleted; the share keeps its record and rule_name, and the rule is no longer shown). Null while it has not."
           },
           "accepted_rule_version": {
             "type": "integer",
@@ -26705,6 +26803,28 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "edited_on_accept": {
             "type": "boolean",
             "description": "Whether the member who accepted changed the rule's English or tree before accepting (a new name does not count)."
+          },
+          "accept_changes": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "requested_english": {
+                "type": "string",
+                "description": "The English the member who asked asked for."
+              },
+              "accepted_english": {
+                "type": "string",
+                "description": "The English that was accepted. Can match requested_english when only the tree changed."
+              }
+            },
+            "required": [
+              "requested_english",
+              "accepted_english"
+            ],
+            "default": null,
+            "description": "When edited_on_accept, for the member sharing their mail and the member it is shared with, live or not: what was asked for beside what was accepted. Null otherwise, and for anyone else."
           },
           "live": {
             "type": "boolean",
@@ -26768,7 +26888,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ]
               },
               "email": {
-                "description": "Sign-in email; null unless you can list member emails, this is you, or this is a live share with you.",
+                "description": "Sign-in email; null unless you can list member emails, this is you, or the share is with you (live or not).",
                 "type": [
                   "string",
                   "null"
@@ -26818,6 +26938,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "active"
             ]
           },
+          "rule_name": {
+            "description": "The rule's name, for anyone who can see the share. While the share is live, its current name; once it has ended, its name when it ended (a later rename is not shown), also after the rule is deleted. Null when the share is not live and no name was recorded as it ended (it ended before names were recorded, or one of its people is no longer a member), except for the member sharing their mail, who is told its current name.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "rule": {
             "type": [
               "object",
@@ -26859,7 +26986,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "english",
               "updated_at"
             ],
-            "description": "The rule's name, state and description; null once the share is not live, except for the member sharing their mail."
+            "description": "The rule's name, state and description; null once the share is not live, except for the member sharing their mail, and once the rule is deleted."
           },
           "rule_id": {
             "type": [
@@ -26878,6 +27005,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "end_reason",
           "accepted_rule_version",
           "edited_on_accept",
+          "accept_changes",
           "live",
           "delivery_paused",
           "activity",
@@ -26885,6 +27013,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "is_beneficiary",
           "granter",
           "beneficiary",
+          "rule_name",
           "rule",
           "rule_id"
         ]
@@ -27545,7 +27674,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "rule_deleted",
               null
             ],
-            "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin or rule_deleted (the rule was deleted; the share keeps its record, and the rule is no longer shown). Null while it has not."
+            "description": "Why it ended, once it has: stopped_by_granter, removed_by_beneficiary, stopped_by_admin or rule_deleted (the rule was deleted; the share keeps its record and rule_name, and the rule is no longer shown). Null while it has not."
           },
           "accepted_rule_version": {
             "type": "integer",
@@ -27554,6 +27683,28 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "edited_on_accept": {
             "type": "boolean",
             "description": "Whether the member who accepted changed the rule's English or tree before accepting (a new name does not count)."
+          },
+          "accept_changes": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "requested_english": {
+                "type": "string",
+                "description": "The English the member who asked asked for."
+              },
+              "accepted_english": {
+                "type": "string",
+                "description": "The English that was accepted. Can match requested_english when only the tree changed."
+              }
+            },
+            "required": [
+              "requested_english",
+              "accepted_english"
+            ],
+            "default": null,
+            "description": "When edited_on_accept, for the member sharing their mail and the member it is shared with, live or not: what was asked for beside what was accepted. Null otherwise, and for anyone else."
           },
           "live": {
             "type": "boolean",
@@ -27617,7 +27768,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ]
               },
               "email": {
-                "description": "Sign-in email; null unless you can list member emails, this is you, or this is a live share with you.",
+                "description": "Sign-in email; null unless you can list member emails, this is you, or the share is with you (live or not).",
                 "type": [
                   "string",
                   "null"
@@ -27667,6 +27818,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "active"
             ]
           },
+          "rule_name": {
+            "description": "The rule's name, for anyone who can see the share. While the share is live, its current name; once it has ended, its name when it ended (a later rename is not shown), also after the rule is deleted. Null when the share is not live and no name was recorded as it ended (it ended before names were recorded, or one of its people is no longer a member), except for the member sharing their mail, who is told its current name.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "rule": {
             "type": [
               "object",
@@ -27708,7 +27866,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "english",
               "updated_at"
             ],
-            "description": "The rule's name, state and description; null once the share is not live, except for the member sharing their mail."
+            "description": "The rule's name, state and description; null once the share is not live, except for the member sharing their mail, and once the rule is deleted."
           },
           "rule_id": {
             "type": [
@@ -27727,6 +27885,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "end_reason",
           "accepted_rule_version",
           "edited_on_accept",
+          "accept_changes",
           "live",
           "delivery_paused",
           "activity",
@@ -27734,6 +27893,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "is_beneficiary",
           "granter",
           "beneficiary",
+          "rule_name",
           "rule",
           "rule_id"
         ]
@@ -30964,6 +31124,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "string",
             "null"
           ]
+        },
+        "accepted_english": {
+          "default": null,
+          "description": "When it was accepted with changes, for the member who asked and the member asked: the English that was accepted, beside english, which stays what was asked for. Null otherwise, and from a core-api release that predates the field. (The accepted English can match english when only the tree changed.)",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
@@ -30985,7 +31153,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "share_id",
         "message",
         "decline_reason",
-        "share_terms"
+        "share_terms",
+        "accepted_english"
       ]
     },
     "sdkName": "withdrawEmailRuleRequest",
@@ -33932,7 +34101,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "description": "Domain ids, comma-separated or with the key repeated, at most 50: only mail received at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.",
+        "description": "Domain ids, comma-separated or with the key repeated, at most 50: only mail received at one of them. A domain is matched by name within your organization: mail stored under an earlier record of a domain that was deleted and added again is included. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.",
         "enum": null,
         "name": "domain_ids",
         "required": false,
@@ -34980,7 +35149,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "description": "Domain ids, comma-separated or with the key repeated, at most 50: received mail at one of them, and with `direction` `outbound` or `any`, sent mail from an address at one of them. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.",
+        "description": "Domain ids, comma-separated or with the key repeated, at most 50: received mail at one of them, and with `direction` `outbound` or `any`, sent mail from an address at one of them. A domain is matched by name within your organization: mail stored under an earlier record of a domain that was deleted and added again is included. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.",
         "enum": null,
         "name": "domain_ids",
         "required": false,
@@ -55868,7 +56037,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "minItems": 1,
           "maxItems": 50,
-          "description": "Domain ids, at most 50: only received mail at one of them, tested on the ranked candidates, so a page can hold fewer than `limit` results. Received mail only: refused with corpus `outbound`, and the default corpus becomes `inbound`. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given."
+          "description": "Domain ids, at most 50: only received mail at one of them, tested on the ranked candidates, so a page can hold fewer than `limit` results. Received mail only: refused with corpus `outbound`, and the default corpus becomes `inbound`. A domain is matched by name within your organization: mail stored under an earlier record of a domain that was deleted and added again is included. Only narrows: an id you cannot read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given."
         }
       }
     },

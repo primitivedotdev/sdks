@@ -508,7 +508,7 @@ describe("activity concerning command", () => {
     expect(out).toMatch(
       /^stopped {2,}.*Gone\s+Sam Rivera\s+3b0f6a1e-6c7a-4f43-9d8e-2a1b5c4d3e2f {2}rule deleted$/m,
     );
-    expect(out).toMatch(/Off\s+.*turned off$/m);
+    expect(out).toMatch(/Off\s+.*set to draft$/m);
     expect(out).toMatch(/Moved\s+.*no longer reaches your mailboxes$/m);
     expect(out).toMatch(/^started {2,}.*Other/m);
     // An older server, or a reason this CLI does not know: the state alone.

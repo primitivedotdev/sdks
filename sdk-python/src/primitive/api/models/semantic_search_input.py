@@ -53,8 +53,10 @@ class SemanticSearchInput:
             cursor (str | Unset): Opaque pagination cursor from a prior response's `meta.cursor`.
             domain_ids (list[UUID] | Unset): Domain ids, at most 50: only received mail at one of them, tested on the ranked
                 candidates, so a page can hold fewer than `limit` results. Received mail only: refused with corpus `outbound`,
-                and the default corpus becomes `inbound`. Only narrows: an id you cannot read, or of another organization,
-                matches no mail and is not reported as unknown. `meta.domain_ids` echoes the list as given.
+                and the default corpus becomes `inbound`. A domain is matched by name within your organization: mail stored
+                under an earlier record of a domain that was deleted and added again is included. Only narrows: an id you cannot
+                read, or of another organization, matches no mail and is not reported as unknown. `meta.domain_ids` echoes the
+                list as given.
      """
 
     query: str | Unset = UNSET

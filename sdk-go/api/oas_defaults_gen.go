@@ -18,6 +18,13 @@ func (s *CompleteWebhookHttpInput) setDefaults() {
 }
 
 // setDefaults set default value of fields.
+func (s *CreateEmailRuleRequestResult) setDefaults() {
+	{
+		s.AcceptedEnglish.Null = true
+	}
+}
+
+// setDefaults set default value of fields.
 func (s *CreateEndpointInput) setDefaults() {
 	{
 		val := CreateEndpointInputKind("http")
@@ -30,6 +37,13 @@ func (s *CreateWakeScheduleInput) setDefaults() {
 	{
 		val := string("UTC")
 		s.Timezone.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *EmailRuleRequest) setDefaults() {
+	{
+		s.AcceptedEnglish.Null = true
 	}
 }
 

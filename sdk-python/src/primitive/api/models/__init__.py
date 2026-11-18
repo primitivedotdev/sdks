@@ -614,6 +614,7 @@ from .email_rule_scope_warning import EmailRuleScopeWarning
 from .email_rule_scope_warning_kind import EmailRuleScopeWarningKind
 from .email_rule_scope_warning_reason import EmailRuleScopeWarningReason
 from .email_rule_share import EmailRuleShare
+from .email_rule_share_accept_changes_type_0 import EmailRuleShareAcceptChangesType0
 from .email_rule_share_activity import EmailRuleShareActivity
 from .email_rule_share_beneficiary import EmailRuleShareBeneficiary
 from .email_rule_share_end_reason_type_1 import EmailRuleShareEndReasonType1
@@ -829,6 +830,7 @@ from .get_email_rule_scope_result_evaluation_scope import GetEmailRuleScopeResul
 from .get_email_rule_settings_response_200 import GetEmailRuleSettingsResponse200
 from .get_email_rule_share_response_200 import GetEmailRuleShareResponse200
 from .get_email_rule_share_result import GetEmailRuleShareResult
+from .get_email_rule_share_result_accept_changes_type_0 import GetEmailRuleShareResultAcceptChangesType0
 from .get_email_rule_share_result_end_reason_type_1 import GetEmailRuleShareResultEndReasonType1
 from .get_email_rule_share_result_end_reason_type_2_type_1 import GetEmailRuleShareResultEndReasonType2Type1
 from .get_email_rule_share_result_end_reason_type_3_type_1 import GetEmailRuleShareResultEndReasonType3Type1
@@ -2571,6 +2573,7 @@ __all__ = (
     "EmailRuleScopeWarningKind",
     "EmailRuleScopeWarningReason",
     "EmailRuleShare",
+    "EmailRuleShareAcceptChangesType0",
     "EmailRuleShareActivity",
     "EmailRuleShareBeneficiary",
     "EmailRuleShareEndReasonType1",
@@ -2786,6 +2789,7 @@ __all__ = (
     "GetEmailRuleSettingsResponse200",
     "GetEmailRuleShareResponse200",
     "GetEmailRuleShareResult",
+    "GetEmailRuleShareResultAcceptChangesType0",
     "GetEmailRuleShareResultEndReasonType1",
     "GetEmailRuleShareResultEndReasonType2Type1",
     "GetEmailRuleShareResultEndReasonType3Type1",

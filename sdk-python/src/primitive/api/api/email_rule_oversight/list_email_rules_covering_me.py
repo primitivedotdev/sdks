@@ -123,9 +123,9 @@ def sync_detailed(
     can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded
     number of rules): keep reading until meta.cursor is null. For what happened to one email of yours,
     every rule's decision on it and, for another member's rule covering you, who receives what it
-    shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id
-    <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no
-    API key, agent key or narrowed token).
+    shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-results --email-id <email-id>).
+    Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+    agent key or narrowed token).
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -178,9 +178,9 @@ def sync(
     can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded
     number of rules): keep reading until meta.cursor is null. For what happened to one email of yours,
     every rule's decision on it and, for another member's rule covering you, who receives what it
-    shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id
-    <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no
-    API key, agent key or narrowed token).
+    shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-results --email-id <email-id>).
+    Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+    agent key or narrowed token).
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -228,9 +228,9 @@ async def asyncio_detailed(
     can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded
     number of rules): keep reading until meta.cursor is null. For what happened to one email of yours,
     every rule's decision on it and, for another member's rule covering you, who receives what it
-    shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id
-    <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no
-    API key, agent key or narrowed token).
+    shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-results --email-id <email-id>).
+    Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+    agent key or narrowed token).
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -283,9 +283,9 @@ async def asyncio(
     can hold fewer rules than limit, or none, and still carry a cursor (one request reads a bounded
     number of rules): keep reading until meta.cursor is null. For what happened to one email of yours,
     every rule's decision on it and, for another member's rule covering you, who receives what it
-    shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-results --email-id
-    <email-id>). Needs mail:read, the email rules feature, and a member's own full-access credential (no
-    API key, agent key or narrowed token).
+    shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-results --email-id <email-id>).
+    Needs mail:read, the email rules feature, and a member's own full-access credential (no API key,
+    agent key or narrowed token).
 
     Args:
         limit (int | Unset):  Default: 50.

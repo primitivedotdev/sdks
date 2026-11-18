@@ -104,9 +104,9 @@ def sync_detailed(
     do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the
     site), the other inboxes and domains its scope names, or its saved expectations. For what happened
     to one email of yours, every rule's decision on it and, for another member's rule covering you, who
-    receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-
-    results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-
-    access credential (no API key, agent key or narrowed token).
+    receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-results
+    --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-access
+    credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -149,9 +149,9 @@ def sync(
     do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the
     site), the other inboxes and domains its scope names, or its saved expectations. For what happened
     to one email of yours, every rule's decision on it and, for another member's rule covering you, who
-    receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-
-    results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-
-    access credential (no API key, agent key or narrowed token).
+    receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-results
+    --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-access
+    credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -189,9 +189,9 @@ async def asyncio_detailed(
     do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the
     site), the other inboxes and domains its scope names, or its saved expectations. For what happened
     to one email of yours, every rule's decision on it and, for another member's rule covering you, who
-    receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-
-    results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-
-    access credential (no API key, agent key or narrowed token).
+    receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-results
+    --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-access
+    credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):
@@ -234,9 +234,9 @@ async def asyncio(
     do not see which keys, webhooks or shares they are (no ids, names, prefixes, or URLs beyond the
     site), the other inboxes and domains its scope names, or its saved expectations. For what happened
     to one email of yours, every rule's decision on it and, for another member's rule covering you, who
-    receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-email-rule-
-    results --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-
-    access credential (no API key, agent key or narrowed token).
+    receives what it shares: GET /v1/emails/{id}/rule-results (primitive email-rules list-results
+    --email-id <email-id>). Needs mail:read, the email rules feature, and a member's own full-access
+    credential (no API key, agent key or narrowed token).
 
     Args:
         id (UUID):

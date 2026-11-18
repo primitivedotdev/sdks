@@ -21,6 +21,17 @@ the same OpenAPI spec. See `RELEASE.md`.
   `--expectation-samples-file`, and `--add-expectation-samples-file`.
   The temporary `--expect-samples-file` flag is unchanged.
 - API operation names, routes, request fields, and SDK methods are unchanged.
+- The spec and clients follow the served API: an email rule share carries
+  `rule_name` and `accept_changes`, and keeps `granter.email` for the member
+  it is shared with after it ends; a rule request carries
+  `accepted_english`; a rule covering your mail shows its author's email
+  (null only when they have none); activity lists deleted email rules and
+  the coverage notice `activated`; deleting a rule request takes a withdrawn
+  or declined request, and the error code `email_rule_request_not_withdrawn`
+  is replaced by `email_rule_request_not_deletable`; the `domain_ids` filter
+  on received mail matches a domain by name within the organization.
+- `primitive activity concerning` describes the `activated` notice and
+  notices for rules in observe, and shows `turned_off` as set to draft.
 
 ## 3.0.0
 
