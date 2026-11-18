@@ -2475,6 +2475,24 @@ describe("keys commands", () => {
     expect(revoked.stdout).toContain(`Revoked key ${KEY_ID}.`);
   });
 
+  it("names the confirmation flag in JSON mode before authentication or HTTP", async () => {
+    const requests = useServer(() =>
+      Response.json({ success: true, data: {} }),
+    );
+    const refused = await run(KeysRevokeCommand, [KEY_ID, "--json"]);
+    expect(refused.error).toMatchObject({
+      code: "usage_error",
+      oclif: { exit: 2 },
+      details: { reason: "confirmation_required", required_flags: ["--yes"] },
+    });
+    expect(String(refused.error)).toContain(
+      "--json and non-interactive mode never prompt",
+    );
+    expect(String(refused.error)).not.toContain("no terminal");
+    expect(mocks.createAuthenticatedCliApiClient).not.toHaveBeenCalled();
+    expect(requests).toHaveLength(0);
+  });
+
   it("revoke says what still acts and delivers for each item, and the keys it replaced", async () => {
     useServer(() =>
       Response.json({

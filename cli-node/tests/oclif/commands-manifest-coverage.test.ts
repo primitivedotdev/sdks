@@ -1077,4 +1077,14 @@ describe("COMMANDS / manifest coverage", () => {
     expect(updateWarning?.frequencyUnit).toBe("days");
     expect(updateWarning?.message).toContain("npm install -g primitive@latest");
   });
+
+  it("points activity help at its real views", () => {
+    const description =
+      readCliPackageJson().oclif?.topics?.activity?.description ?? "";
+    for (const view of ["asked", "concerning", "created"])
+      expect(description).toContain(`primitive activity ${view}`);
+    expect(description).not.toContain("primitive doctor");
+    expect(COMMANDS.focus).toBeDefined();
+    expect(COMMANDS["focus:get"]).toBeUndefined();
+  });
 });

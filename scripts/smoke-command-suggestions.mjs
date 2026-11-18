@@ -10,10 +10,23 @@ const binary = resolve(process.argv[2] ?? "cli-node/bin/run.js");
 const config = await mkdtemp(join(tmpdir(), "primitive-command-suggestions-"));
 let requests = 0;
 let allowLiteralSearch = false;
+let allowGuidance = false;
+const guidanceKey = "0f0e0d0c-0b0a-4908-8706-050403020100";
 const literalQueries = [];
-const server = createServer((request, response) => {
+const server = createServer(async (request, response) => {
   requests += 1;
   const url = new URL(request.url, "http://127.0.0.1");
+  if (allowGuidance && url.pathname === "/v1/domains" && request.method === "GET") {
+    response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ success: true, data: [{ id: guidanceKey, org_id: guidanceKey, domain: "guide.example", verified: true }] }));
+    return;
+  }
+  if (allowGuidance && url.pathname === "/v1/credentials/revoke" && request.method === "POST") {
+    let text = "";
+    for await (const chunk of request) text += chunk;
+    assert.deepEqual(JSON.parse(text), { kind: "org_key", id: guidanceKey });
+    response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ success: true, data: { revoked: 1, kind: "org_key", id: guidanceKey, standing_objects: [] } }));
+    return;
+  }
   if (allowLiteralSearch && url.pathname === "/v1/emails/search") {
     literalQueries.push(url.searchParams.get("q"));
     response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ success: true, data: [], meta: {} }));
@@ -50,7 +63,7 @@ function run(args) {
 }
 
 try {
-  for (const parent of ["webhook-deliveries", "org", "emails", "agent"]) {
+  for (const parent of ["webhook-deliveries", "org", "emails", "agent", "activity", "keys"]) {
     const result = await run([parent]);
     assert.equal(result.code, 0, result.stderr);
     assert.match(result.stdout, /COMMANDS|USAGE/);
@@ -62,6 +75,8 @@ try {
     [["serach"], "primitive search"],
     [["emails", "lsit"], "primitive emails list"],
     [["agent", "contcts", "list"], "primitive agent contacts --help"],
+    [["focus", "get"], "primitive focus"],
+    [["focus:get"], "primitive focus"],
   ]) {
     const result = await run([...args, "--json"]);
     assert.equal(result.code, 2, result.stdout + result.stderr);
@@ -150,6 +165,22 @@ try {
   assert.equal(hidden.code, 2);
   assert.equal(hidden.stderr, "");
   assert.equal(JSON.parse(hidden.stdout).error.details?.suggestions, undefined);
+  const focusMistake = await run(["focus", "get"]);
+  assert.equal(focusMistake.code, 2);
+  assert.match(focusMistake.stderr, /Did you mean "primitive focus"/);
+  assert.doesNotMatch(focusMistake.stderr, /primitive focus set/);
+  for (const flag of ["--help", "--help-full"]) {
+    const activity = await run(["activity", flag]);
+    assert.equal(activity.code, 0, activity.stdout + activity.stderr);
+    assert.doesNotMatch(activity.stdout, /primitive doctor/);
+    for (const view of ["asked", "concerning", "created"]) assert(activity.stdout.includes(view));
+  }
+  const confirmation = await run(["keys", "revoke", guidanceKey, "--json"]);
+  assert.equal(confirmation.code, 2, confirmation.stdout + confirmation.stderr);
+  assert.equal(confirmation.stderr, "");
+  assert.deepEqual(JSON.parse(confirmation.stdout).error.details, { reason: "confirmation_required", required_flags: ["--yes"] });
+  assert.equal(JSON.parse(confirmation.stdout).error.code, "usage_error");
+  assert.match(JSON.parse(confirmation.stdout).error.message, /--json.*never prompt/);
   assert.equal(requests, 0, "command mistakes and help must not send requests");
   allowLiteralSearch = true;
   const literal = await run(["search", "--all-domains", "--json", "--", "semantic-search"]);
@@ -158,7 +189,23 @@ try {
   assert.equal(JSON.parse(literal.stdout).success, true);
   assert.deepEqual(literalQueries, ["semantic-search"]);
   assert.equal(requests, 1, "only the explicit literal search may send a request");
-  console.log(`Command suggestions: ${retired.length} retired spellings, renamed flags, help, and suggestions sent no requests; explicit literal search passed.`);
+  allowGuidance = true;
+  const set = await run(["focus", "set", "guide.example"]);
+  assert.equal(set.code, 0, set.stdout + set.stderr);
+  assert.match(set.stdout, /the current login/);
+  assert.doesNotMatch(set.stdout, /the member login/);
+  for (const args of [["focus"], ["focus", "clear"]]) {
+    const result = await run([...args, "--json"]);
+    assert.equal(result.code, 0, result.stdout + result.stderr);
+    assert.equal(result.stderr, "");
+    assert.equal(JSON.parse(result.stdout).profile, "the current login");
+  }
+  const revoked = await run(["keys", "revoke", guidanceKey, "--yes", "--json"]);
+  assert.equal(revoked.code, 0, revoked.stdout + revoked.stderr);
+  assert.equal(revoked.stderr, "");
+  assert.equal(JSON.parse(revoked.stdout).revoked, 1);
+  assert.equal(requests, 5, "only explicit focus reads and confirmed revocation follow the search");
+  console.log(`Command suggestions: ${retired.length} retired spellings, renamed flags, help, and suggestions sent no requests; explicit literal search, focus guidance and confirmed JSON revocation passed.`);
 } finally {
   server.closeAllConnections();
   await new Promise((done) => server.close(done));

@@ -21,6 +21,23 @@ const lookup: CommandLookup = {
 };
 
 describe("command not found", () => {
+  it("suggests the bare focus read without registering a get alias", () => {
+    const focusLookup: CommandLookup = {
+      find: (id) => (COMMANDS[id] ? { takesArguments: false } : undefined),
+      hasSubcommands: (id) => id === "focus",
+      visible: ["focus", "focus:set", "focus:clear"],
+    };
+    expect(COMMANDS["focus:get"]).toBeUndefined();
+    expect(commandNotFoundMessage("focus:get", focusLookup)).toMatchObject({
+      code: "command_not_found",
+      details: { suggestions: ["primitive focus"] },
+    });
+    expect(
+      commandNotFoundMessage("focus:get", { ...focusLookup, visible: [] })
+        .details,
+    ).toBeUndefined();
+  });
+
   it("names the argument a command does not take, not a joined command id", () => {
     expect(commandNotFoundMessage("emails:list:abc", lookup)).toEqual({
       code: "unexpected_argument",

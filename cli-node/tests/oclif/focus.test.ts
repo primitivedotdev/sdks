@@ -297,11 +297,15 @@ describe("persistence", () => {
     const set = await run("focus:set", ["Support.Example.com"]);
     expect(set.thrown).toBeUndefined();
     expect(set.stdout).toContain("only support.example.com");
+    expect(set.stdout).toContain("the current login");
+    expect(set.stdout).not.toContain("the member login");
     expect(loadSavedFocus(memberProfile(), ORG)?.choice).toEqual({
       domains: [SUPPORT],
     });
     expect(memberProfile().path).toBe(join(configDir, "focus.json"));
     expect(existsSync(join(configDir, "credentials.json"))).toBe(false);
+    const shown = await run("focus", ["--json"]);
+    expect(JSON.parse(shown.stdout).profile).toBe("the current login");
 
     const listed = await run("emails:list", []);
     expect(emailCalls()[0]?.query.get("domain_ids")).toBe(SUPPORT.id);
