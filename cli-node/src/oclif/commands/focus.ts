@@ -41,7 +41,7 @@ type CommonFlags = {
 
 const FOCUS_DESCRIPTION = `Which domains mail listings and searches show.
 
-On a credential that reads mail on more than one domain, listings and searches are refused until a focus is chosen: \`primitive focus set <domain...>\` to see only those domains, or \`primitive focus set --all\` to see every domain. The choice is saved for this profile (the member login, or the connected agent selected by PRIMITIVE_AGENT_PROFILE), never in a credential file.
+On a credential that reads mail on more than one domain, listings and searches are refused until a focus is chosen: \`primitive focus set <domain...>\` to see only those domains, or \`primitive focus set --all\` to see every domain. The choice is saved for this profile (the current login, or the connected agent selected by PRIMITIVE_AGENT_PROFILE), never in a credential file.
 
 A focus applies to \`emails list\`, \`emails latest\`, \`emails search\`, \`search\`, \`emails watch\`, \`inbox next\`, \`sent list\` and \`semantic-search\`. Every focused command says so on stderr, and under --json in \`meta.focus\`. It never applies to reads by id or to notifications (\`listen\`, \`wait\`, \`emails wait\`, \`agent check-mail\`).
 
@@ -119,7 +119,7 @@ async function readState(
 function profileLabel(profile: FocusProfile): string {
   return profile.kind === "agent"
     ? `agent profile ${profile.name}`
-    : "the member login";
+    : "the current login";
 }
 
 function describeChoice(choice: FocusChoice | null): string {

@@ -5,6 +5,7 @@ import { ignoreArgumentStdin } from "./command-stdin.js";
 import { withFlagSuggestion } from "./flag-suggestions.js";
 import type { HelpInputs } from "./help-inputs.js";
 import { captureOutput, JSON_OUTPUT_FLAG } from "./json-output.js";
+import { displayedRoleKey } from "./user-grant.js";
 
 type FlagDefinition = {
   type?: string;
@@ -278,6 +279,15 @@ export function combineCommandPair(
               };
             }
           }
+        }
+        if (options.listPage === "members" && Array.isArray(document.data)) {
+          document.data = document.data.map((person: unknown) => {
+            if (person === null || typeof person !== "object") return person;
+            const row = person as Record<string, unknown>;
+            return typeof row.role === "string"
+              ? { ...row, role: displayedRoleKey(row.role) }
+              : row;
+          });
         }
         if (Array.isArray(document.data) && document.meta === undefined)
           document.meta = {};

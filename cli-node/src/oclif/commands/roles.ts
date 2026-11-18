@@ -18,6 +18,7 @@ import {
   surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "../api-command.js";
+import { roleKeyLabel } from "../user-grant.js";
 
 // Read-only views of roles, groups, mailbox access and the access mode.
 // Changing any of them stays in the dashboard. A server where roles are not
@@ -157,14 +158,16 @@ export function formatMembers(
   if (list.items.length === 0) return "No members.";
   return list.items
     .map((person) => {
-      // role_name is the label the dashboard shows ("Admin", or a template
-      // or custom role such as "Finance reviewer (custom)").
-      const role = printable(person.role_name || person.role);
+      const role = printable(roleKeyLabel(person.role));
+      const assigned =
+        person.role_id && person.role_name
+          ? `  assigned role: ${printable(person.role_name)}`
+          : "";
       const agents =
         person.agents.length > 0
           ? `  ${person.agents.length} agent${person.agents.length === 1 ? "" : "s"}`
           : "";
-      return `${printable(person.name)}  ${person.work_email ?? "no work email"}  ${role}  ${person.user_id}${agents}${mailAccessText(person)}`;
+      return `${printable(person.name)}  ${person.work_email ?? "no work email"}  ${role}${assigned}  ${person.user_id}${agents}${mailAccessText(person)}`;
     })
     .join("\n");
 }
@@ -199,7 +202,7 @@ export class RolesListCommand extends Command {
 
 export class RolesMembersCommand extends Command {
   static description =
-    "List the organization's members with their roles: name, work email, role, user id, how many directory agents each has, and what their access lets them do with mail (read, send, both or none), where you can see it. Use it to see each member's role before you ask someone for something, for example before sending an email rule request. With --json, data is the members array, including each member's role key, role id and agents; meta.cursor continues the listing and meta.can_invite says whether you can invite members.";
+    "List the organization's members with their built-in role, using the same name as whoami and org list. An assigned template or custom role is labeled separately. The built-in label does not grant permissions; mail access shows what they can read or send where you can see it. Rows include name, work email, user id and directory agents. With --json, data is the members array: role is the displayed built-in key; role_name and role_id keep the assigned role's metadata. meta.cursor continues the listing and meta.can_invite says whether you can invite members.";
 
   static summary = "List members and their roles";
 

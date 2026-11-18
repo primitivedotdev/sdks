@@ -190,7 +190,7 @@
         "description": "Received and sent mail per hour, and how webhook deliveries ended"
       },
       "activity": {
-        "description": "Where you learn what others asked of you and did to your mail: `primitive activity asked` (rule requests for your mail and objections to your rules), `primitive activity concerning` (other members' rules that started covering your mail or changed), and `primitive activity created` (what you created, including your requests and how they were decided). `primitive doctor` sums up what is waiting for you."
+        "description": "Where you learn what others asked of you and did to your mail: `primitive activity asked` (rule requests for your mail and objections to your rules), `primitive activity concerning` (other members' rules that started covering your mail or changed), and `primitive activity created` (what you created, including your requests and how they were decided)."
       },
       "email-rules": {
         "description": "Rules written in plain English that pick out received mail"

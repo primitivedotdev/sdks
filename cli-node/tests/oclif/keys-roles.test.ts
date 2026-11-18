@@ -2475,6 +2475,24 @@ describe("keys commands", () => {
     expect(revoked.stdout).toContain(`Revoked key ${KEY_ID}.`);
   });
 
+  it("names the confirmation flag in JSON mode before authentication or HTTP", async () => {
+    const requests = useServer(() =>
+      Response.json({ success: true, data: {} }),
+    );
+    const refused = await run(KeysRevokeCommand, [KEY_ID, "--json"]);
+    expect(refused.error).toMatchObject({
+      code: "usage_error",
+      oclif: { exit: 2 },
+      details: { reason: "confirmation_required", required_flags: ["--yes"] },
+    });
+    expect(String(refused.error)).toContain(
+      "--json and non-interactive mode never prompt",
+    );
+    expect(String(refused.error)).not.toContain("no terminal");
+    expect(mocks.createAuthenticatedCliApiClient).not.toHaveBeenCalled();
+    expect(requests).toHaveLength(0);
+  });
+
   it("revoke says what still acts and delivers for each item, and the keys it replaced", async () => {
     useServer(() =>
       Response.json({
@@ -2807,8 +2825,8 @@ describe("roles commands", () => {
     };
     expect(formatMembers(page as never)).toBe(
       [
-        "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  1 agent",
-        "Bob [2J fake line  no work email  Admin  33333333-3333-4333-8333-333333333333",
+        "Alice  alice@example.com  built-in role member  assigned role: Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  1 agent",
+        "Bob [2J fake line  no work email  built-in role admin  33333333-3333-4333-8333-333333333333",
       ].join("\n"),
     );
     const requests = useServer(() =>
@@ -2863,12 +2881,12 @@ describe("roles commands", () => {
         can_invite: false,
       } as never).split("\n"),
     ).toEqual([
-      "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  mail: read and send",
-      "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  mail: read only",
-      "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  mail: send only",
-      "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  mail: none",
-      "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111",
-      "Alice  alice@example.com  Finance reviewer (custom)  11111111-1111-4111-8111-111111111111",
+      "Alice  alice@example.com  built-in role member  assigned role: Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  mail: read and send",
+      "Alice  alice@example.com  built-in role member  assigned role: Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  mail: read only",
+      "Alice  alice@example.com  built-in role member  assigned role: Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  mail: send only",
+      "Alice  alice@example.com  built-in role member  assigned role: Finance reviewer (custom)  11111111-1111-4111-8111-111111111111  mail: none",
+      "Alice  alice@example.com  built-in role member  assigned role: Finance reviewer (custom)  11111111-1111-4111-8111-111111111111",
+      "Alice  alice@example.com  built-in role member  assigned role: Finance reviewer (custom)  11111111-1111-4111-8111-111111111111",
     ]);
     expect(COMMANDS["members:list"]).toHaveProperty("pairedCommand", true);
     expect(COMMANDS["roles:members"]).toBeUndefined();

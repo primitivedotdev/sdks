@@ -91,6 +91,12 @@ describe("COMMANDS / manifest coverage", () => {
       "meta.cursor",
     );
     expect(COMMANDS["members:list"]?.description).toContain("meta.can_invite");
+    expect(COMMANDS["members:list"]?.description).toContain(
+      "role is the displayed built-in key",
+    );
+    expect(COMMANDS["members:list"]?.description).toContain(
+      "role_name and role_id keep the assigned role's metadata",
+    );
     expect(COMMANDS["members:list"]?.flags.cursor.description).toContain(
       "meta.cursor",
     );
@@ -1076,5 +1082,10 @@ describe("COMMANDS / manifest coverage", () => {
     expect(updateWarning?.frequency).toBe(1);
     expect(updateWarning?.frequencyUnit).toBe("days");
     expect(updateWarning?.message).toContain("npm install -g primitive@latest");
+  });
+
+  it("keeps the focus read at the bare parent command", () => {
+    expect(COMMANDS.focus).toBeDefined();
+    expect(COMMANDS["focus:get"]).toBeUndefined();
   });
 });

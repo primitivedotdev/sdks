@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Args, Command, Flags } from "@oclif/core";
+import { Args, Command, Errors, Flags } from "@oclif/core";
 import {
   type CredentialsCreateKeyInput,
   type CredentialsCreateKeyResult,
@@ -1568,13 +1568,14 @@ export class KeysRevokeCommand extends Command {
   static description =
     `Revoke an API key. It stops working at once. What the organization owns keeps working; what the key itself owns, such as its own webhooks, keeps working only while someone can still act for it, such as a key of the same rotation that still works. What it set up or owns is listed for review, each with whether anything still acts for it and, for a webhook, whether it still delivers received mail. Keys it replaced that are still in their rotation overlap are revoked with it, except any you may not revoke; the output counts both, and names them and the key acting for each item when you may read the organization's keys.
 
-  Asks for confirmation first; pass --yes to skip the prompt in scripts. Revoking runs directly. If your organization requires approval, the command prints the approval link, opens it where it can and waits for the one-time token; in a script, approve and run it again with --step-up-token.`;
+  Asks for confirmation first; pass --yes to confirm in scripts. JSON and non-interactive mode never prompt, so use --yes --json for scripted JSON output. Revoking runs directly. If your organization requires approval, the command prints the approval link, opens it where it can and waits for the one-time token; in a script, approve and run it again with --step-up-token.`;
 
   static summary = "Revoke an API key";
 
   static examples = [
     "<%= config.bin %> keys revoke 0f0e0d0c-0b0a-4908-8706-050403020100",
     "<%= config.bin %> keys revoke 0f0e0d0c-0b0a-4908-8706-050403020100 --yes",
+    "<%= config.bin %> keys revoke 0f0e0d0c-0b0a-4908-8706-050403020100 --yes --json",
   ];
 
   static args = {
@@ -1597,9 +1598,18 @@ export class KeysRevokeCommand extends Command {
     const { args, flags } = await this.parse(KeysRevokeCommand);
     if (!flags.yes) {
       if (flags.json || !(process.stdin.isTTY && process.stderr.isTTY)) {
-        this.error(
-          "Not revoking: no terminal to confirm in. Pass --yes to revoke without a prompt.",
-          { exit: 2 },
+        throw Object.assign(
+          new Errors.CLIError(
+            "Confirmation required: pass --yes to revoke without a prompt. --json and non-interactive mode never prompt.",
+            { exit: 2 },
+          ),
+          {
+            code: "usage_error",
+            details: {
+              reason: "confirmation_required",
+              required_flags: ["--yes"],
+            },
+          },
         );
       }
       const answer = await promptLine(
