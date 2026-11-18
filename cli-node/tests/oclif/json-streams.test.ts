@@ -1595,7 +1595,7 @@ describe("generated commands with --json", () => {
     expect(result.stderr).not.toContain("primitive domains add");
   });
 
-  it("keeps the data-only output and stderr cursor without --json", async () => {
+  it("prints a sent-mail table on stdout and the cursor on stderr without --json", async () => {
     responder = () =>
       jsonResponse(200, {
         success: true,
@@ -1604,9 +1604,10 @@ describe("generated commands with --json", () => {
       });
     const result = await runMerged("sent:list", []);
     expect(result.exitCode).toBe(0);
-    expect(JSON.parse(result.stdout)).toEqual([{ id: "sent-1" }]);
-    expect(result.stderr.startsWith("next cursor: cursor-2\n")).toBe(true);
-    expect(result.stderr).toMatch(/^FROM\s+TO\s+STATUS/m);
+    expect(result.stdout).toMatch(/^FROM\s+TO\s+STATUS/m);
+    expect(result.stdout).toContain("sent-1");
+    expect(() => JSON.parse(result.stdout)).toThrow();
+    expect(result.stderr).toBe("next cursor: cursor-2\n");
   });
 });
 

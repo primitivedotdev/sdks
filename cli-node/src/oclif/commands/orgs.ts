@@ -6,6 +6,7 @@ import { requireDefaultLoginProfile } from "../connected-agent-profile.js";
 import {
   type CliOrgEntry,
   CliOrgRefusedError,
+  displayedRoleKey,
   fetchCliOrgs,
   RESTRICTED_ROLE_NOTE,
   roleKeyLabel,
@@ -45,7 +46,9 @@ export function formatOrgRows(rows: readonly OrgRow[]): string {
     return `${marker} ${name} (${row.id})${role}, ${status}`;
   });
   if (rows.some((row) => row.role === "restricted")) {
-    lines.push(`role restricted: no role at all, or ${RESTRICTED_ROLE_NOTE}.`);
+    lines.push(
+      `Built-in role member can also mean no role at all, or ${RESTRICTED_ROLE_NOTE}. The label does not grant member permissions.`,
+    );
   }
   return lines.join("\n");
 }
@@ -115,7 +118,10 @@ export class OrgsCommand extends Command {
         JSON.stringify(
           {
             login: "user",
-            orgs: rows,
+            orgs: rows.map((row) => ({
+              ...row,
+              role: row.role ? displayedRoleKey(row.role) : row.role,
+            })),
             user: list.user,
             user_grant_id: list.user_grant_id,
           },
@@ -187,7 +193,11 @@ export class OrgUseCommand extends Command {
       if (flags.json) {
         this.log(
           JSON.stringify(
-            { org_id: org.org_id, org_name: org.org_name, role: org.role },
+            {
+              org_id: org.org_id,
+              org_name: org.org_name,
+              role: org.role ? displayedRoleKey(org.role) : org.role,
+            },
             null,
             2,
           ),

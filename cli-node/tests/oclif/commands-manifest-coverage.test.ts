@@ -57,6 +57,14 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("never consumes stdin as a positional argument", () => {
+    for (const [id, command] of Object.entries(COMMANDS)) {
+      for (const [name, argument] of Object.entries(command.args ?? {})) {
+        expect(argument.ignoreStdin, `${id} ${name}`).toBe(true);
+      }
+    }
+  });
+
   it("removes every retired command spelling and keeps each replacement registered", () => {
     for (const [oldId, newId] of Object.entries(COMMAND_RENAMES)) {
       expect(COMMANDS[oldId], oldId).toBeUndefined();

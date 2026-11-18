@@ -955,6 +955,14 @@ const rawCommands: Record<string, typeof Command> = {
 
 export const COMMANDS = canonicalCommands(rawCommands);
 
+// Positional arguments come from argv. Commands that accept a piped body,
+// secret or hook input read stdin themselves, after parsing their options.
+for (const command of new Set(Object.values(COMMANDS))) {
+  for (const argument of Object.values(command.args ?? {})) {
+    argument.ignoreStdin = true;
+  }
+}
+
 // Server messages that name an API route get the command that calls it.
 setKnownCommands(Object.keys(COMMANDS), CANONICAL_OPERATION_ALIASES);
 

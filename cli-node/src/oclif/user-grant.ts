@@ -62,15 +62,23 @@ export function isBuiltInRoleKey(role: string): boolean {
 export const RESTRICTED_ROLE_NOTE =
   "a template or custom role that does not fully include member, because it lacks some member permission (as Operator does) or reaches only some mailboxes";
 
-/** A stored role key, labelled for what it is: "built-in role admin", "role restricted". */
+/** The built-in role /whoami reports for a stored role key. Display only. */
+export function displayedRoleKey(role: string): string {
+  return role === "restricted" ? "member" : role;
+}
+
+/** A stored role key, using the same built-in name as /whoami. */
 export function roleKeyLabel(role: string): string {
-  return isBuiltInRoleKey(role) ? `built-in role ${role}` : `role ${role}`;
+  const displayed = displayedRoleKey(role);
+  return isBuiltInRoleKey(displayed)
+    ? `built-in role ${displayed}`
+    : `role ${displayed}`;
 }
 
 /** A stored role key for a sentence, saying what `restricted` stands for. */
 export function roleKeyText(role: string): string {
   return role === "restricted"
-    ? `role restricted (${RESTRICTED_ROLE_NOTE})`
+    ? `built-in role member (${RESTRICTED_ROLE_NOTE}; this label does not grant member permissions)`
     : roleKeyLabel(role);
 }
 

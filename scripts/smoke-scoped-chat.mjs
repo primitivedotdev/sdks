@@ -1,6 +1,26 @@
 import assert from "node:assert/strict";
 import { scopedMailFixture } from "./scoped-mail-smoke-fixture.mjs";
 
+// Keep stdin cases separate from the recovery sequence's journal and receipts.
+const piped = await scopedMailFixture(process.argv[2]);
+try {
+  for (const [args, body] of [
+    [["chat", piped.peer, "--from", piped.owner, "--json", "--timeout", "3"], "  piped chat\nsecond line\n"],
+    [["chat", "reply", "--json", "--timeout", "3"], "  piped reply\nsecond line\n"],
+  ]) {
+    const result = await piped.run(args, body);
+    assert.equal(result.code, 0, result.stdout + result.stderr);
+    const sent = piped.requests.findLast((request) => request.method === "POST" &&
+      (request.url.pathname === "/v1/send-mail" || /^\/v1\/emails\/[^/]+\/reply$/.test(request.url.pathname)));
+    assert(sent);
+    assert.equal(JSON.parse(sent.body).body_text, body);
+    assert.equal(JSON.parse(result.stdout).reply.body_text, "The answer");
+  }
+  assert.deepEqual(piped.failures, []);
+} finally {
+  await piped.close();
+}
+
 const f = await scopedMailFixture(process.argv[2]);
 const flags = ["--json", "--timeout", "3"];
 const repliedIds = [];

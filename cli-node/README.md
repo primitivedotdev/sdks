@@ -535,6 +535,11 @@ and stderr stays empty. Output merged with `2>&1` therefore still parses:
   `summary` (such as an empty-result hint). Read a list as `.data[]` and an
   object's fields as `.data.<field>`. Without `--json`, stdout is the data
   payload and the `next cursor: <cursor>` line goes to stderr.
+  `sent list` prints a human-readable table instead; use `--json` for its data.
+- `activity created|asked|concerning --json` returns `{data, meta}`: the rows
+  are in `data`, with `covers`, `withheld` and the next page's `cursor` in `meta`.
+- Positional arguments are read only from the command line. Piped stdin is
+  ignored unless the command explicitly accepts a body, secret or hook input.
 - Hand-written commands whose `--json` output is a bare array keep that shape.
 - `primitive listen` streams JSONL and is not covered by this rule.
 

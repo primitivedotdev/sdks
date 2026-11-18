@@ -1247,8 +1247,7 @@ function buildFlags(operation: PrimitiveOperationManifest): {
 
   if (!operation.binaryResponse) {
     flags.json = Flags.boolean({
-      description:
-        "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr: the API's response body (data, and meta with meta.cursor where the route sends it) plus the CLI's own summary, warnings, error and exit_code. Without --json, stdout is the data payload, and notes and the next cursor go to stderr.",
+      description: `Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr: the API's response body (data, and meta with meta.cursor where the route sends it) plus the CLI's own summary, warnings, error and exit_code. Without --json, stdout is ${operation.sdkName === "listSentEmails" ? "a table" : "the data payload"}, and notes and the next cursor go to stderr.`,
     });
   }
 
@@ -2667,7 +2666,14 @@ export function createOperationCommand(
         ) {
           printed = { ...printed, error: report.error };
         }
-        this.log(JSON.stringify(printed, null, 2));
+        if (operation.sdkName === "listSentEmails" && !jsonOutput) {
+          const lines = sentListLines(envelope);
+          this.log(
+            lines.length > 0 ? lines.join("\n") : "No sent emails to show.",
+          );
+        } else {
+          this.log(JSON.stringify(printed, null, 2));
+        }
         if (reportError !== undefined) {
           process.stderr.write(
             `Warning: ${operation.sdkName} succeeded but its report could not be built (${reportError}). The JSON above is the full answer; read it rather than the exit code.\n`,
@@ -2675,10 +2681,6 @@ export function createOperationCommand(
         }
         if (report && !jsonOutput) {
           for (const line of report.lines) process.stderr.write(`${line}\n`);
-        }
-        if (operation.sdkName === "listSentEmails" && !jsonOutput) {
-          for (const line of sentListLines(envelope))
-            process.stderr.write(`${line}\n`);
         }
         if (reportError !== undefined && report?.exitCode && !jsonOutput) {
           process.stderr.write(

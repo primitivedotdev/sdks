@@ -912,11 +912,16 @@ describe("CLI login as the person, against a mock server", () => {
       OrgsCommand.run(["--json"], { root: CLI_ROOT }),
     );
     expect(JSON.parse(json.stdout).orgs).toHaveLength(Object.keys(ORGS).length);
+    expect(
+      JSON.parse(json.stdout).orgs.find(
+        (org: { id: string }) => org.id === OPERATOR_ORG,
+      ).role,
+    ).toBe("member");
     expect(listed.stdout).toContain(
-      `  Ops (${OPERATOR_ORG}) role restricted, available`,
+      `  Ops (${OPERATOR_ORG}) built-in role member, available`,
     );
     expect(listed.stdout).toContain(
-      "role restricted: no role at all, or a template or custom role that does not fully include member, because it lacks some member permission (as Operator does) or reaches only some mailboxes.",
+      "Built-in role member can also mean no role at all, or a template or custom role that does not fully include member, because it lacks some member permission (as Operator does) or reaches only some mailboxes. The label does not grant member permissions.",
     );
 
     const operator = await capture(() =>
@@ -924,7 +929,15 @@ describe("CLI login as the person, against a mock server", () => {
     );
     expect(operator.error).toBeNull();
     expect(operator.stdout).toContain(
-      `Now using Ops (${OPERATOR_ORG}), role restricted (a template or custom role that does not fully include member, because it lacks some member permission (as Operator does) or reaches only some mailboxes).`,
+      `Now using Ops (${OPERATOR_ORG}), built-in role member (a template or custom role that does not fully include member, because it lacks some member permission (as Operator does) or reaches only some mailboxes; this label does not grant member permissions).`,
+    );
+    const operatorJson = await capture(() =>
+      OrgUseCommand.run(["Ops", "--json"], { root: CLI_ROOT }),
+    );
+    expect(operatorJson.error).toBeNull();
+    expect(JSON.parse(operatorJson.stdout).role).toBe("member");
+    expect(loadCliCredentials(configDir)?.user_grant?.org_role).toBe(
+      "restricted",
     );
 
     const used = await capture(() =>
@@ -959,10 +972,10 @@ describe("CLI login as the person, against a mock server", () => {
 
   it("says what the restricted role key means and leaves built-in keys alone", () => {
     expect(roleKeyText("restricted")).toBe(
-      "role restricted (a template or custom role that does not fully include member, because it lacks some member permission (as Operator does) or reaches only some mailboxes)",
+      "built-in role member (a template or custom role that does not fully include member, because it lacks some member permission (as Operator does) or reaches only some mailboxes; this label does not grant member permissions)",
     );
     expect(roleKeyText("admin")).toBe("built-in role admin");
-    expect(roleKeyLabel("restricted")).toBe("role restricted");
+    expect(roleKeyLabel("restricted")).toBe("built-in role member");
     expect(roleKeyLabel("owner")).toBe("built-in role owner");
   });
 
