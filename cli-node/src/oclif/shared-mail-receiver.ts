@@ -66,13 +66,16 @@ export async function openSharedMailReceiver(options: {
   let failure: unknown;
   let cleanupFailure: unknown;
   let active: Promise<void> | undefined;
+  let owned: ReturnType<typeof tryOwnSharedMail> = null;
   function ensureOwner() {
     signal.throwIfAborted();
     if (failure !== undefined) throw failure;
+    if (owned) return owned.status();
     const current = readSharedMailOwner(store);
     if (current?.alive || active) return current;
     const owner = tryOwnSharedMail(store);
     if (!owner) return readSharedMailOwner(store);
+    owned = owner;
     active = runSharedMailTransport({
       apiClient: options.apiClient,
       subscription: store.subscriptionName,
@@ -101,10 +104,11 @@ export async function openSharedMailReceiver(options: {
           cleanupFailure = error;
           failure ??= error;
         } finally {
+          owned = null;
           active = undefined;
         }
       });
-    return readSharedMailOwner(store);
+    return owner.status();
   }
   function watch(deadline?: number | null) {
     const stop = new AbortController();
@@ -122,7 +126,7 @@ export async function openSharedMailReceiver(options: {
   return {
     store,
     signal,
-    status: () => readSharedMailOwner(store),
+    status: () => (owned ? owned.status() : readSharedMailOwner(store)),
     async ready(deadline?: number | null) {
       while (deadline == null || Date.now() < deadline) {
         const watching = watch(deadline);

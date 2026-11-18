@@ -108,6 +108,25 @@ export function tryOwnSharedMail(store: Pick<SharedMailStore, "directory">) {
     lastMailCheckAt: null,
   };
   let closed = false;
+  const status = (): SharedMailOwner | null => {
+    if (closed) return null;
+    const raw = readMailJson(path);
+    if (raw === null) throw invalidSharedMail();
+    const saved = ownerRecord(raw);
+    if (
+      saved.generation !== current.generation ||
+      saved.pid !== current.pid ||
+      saved.identity !== current.identity ||
+      saved.ready !== current.ready ||
+      saved.gapCount !== current.gapCount ||
+      saved.lastGapReason !== current.lastGapReason ||
+      saved.lastMailCheckAt !== current.lastMailCheckAt
+    )
+      throw invalidSharedMail();
+    // This live handle owns this generation; no OS subprocess is needed to
+    // prove its own liveness. Other processes still verify the saved identity.
+    return { ...current, alive: true };
+  };
   try {
     writeMailJson(path, current);
   } catch (error) {
@@ -134,6 +153,7 @@ export function tryOwnSharedMail(store: Pick<SharedMailStore, "directory">) {
   };
   return {
     generation: current.generation,
+    status,
     markReady(
       status: { gapCount?: number; lastGapReason?: string | null } = {},
     ) {
