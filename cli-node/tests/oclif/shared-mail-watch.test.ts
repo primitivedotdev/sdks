@@ -121,6 +121,47 @@ describe("shared mail stream ownership and local change hints", () => {
     const next = own();
     expect(next.generation).not.toBe(first.generation);
   });
+  it("reports local readiness only while the handle owns its unchanged generation", () => {
+    const first = own();
+    expect(first.status()).toMatchObject({ alive: true, ready: false });
+    first.markReady();
+    expect(first.status()).toMatchObject({ alive: true, ready: true });
+    first.markStatus({
+      ready: false,
+      gapCount: 1,
+      lastGapReason: "disconnect",
+    });
+    expect(first.status()).toMatchObject({ ready: false, gapCount: 1 });
+    first.close();
+    expect(first.status()).toBeNull();
+    const next = own();
+    next.markReady();
+    expect(first.status()).toBeNull();
+    expect(next.status()?.ready).toBe(true);
+  });
+  it.each(["generation", "pid", "identity", "ready"] as const)(
+    "rejects a local ownership handle after its saved %s changes",
+    (field) => {
+      const first = own();
+      first.markReady();
+      const path = join(store.directory, "owner.json");
+      const saved = JSON.parse(fs.readFileSync(path, "utf8")) as Record<
+        string,
+        unknown
+      >;
+      const changed = {
+        ...saved,
+        [field]: {
+          generation: randomUUID(),
+          pid: process.pid + 1,
+          identity: "different-process",
+          ready: false,
+        }[field],
+      };
+      writeFileSync(path, JSON.stringify(changed));
+      expect(() => first.status()).toThrow("inconsistent");
+    },
+  );
   it("observes state written after watcher installation, then cleans up on cancellation", async () => {
     const controller = new AbortController(),
       changed = waitForSharedMailChange(store, {
