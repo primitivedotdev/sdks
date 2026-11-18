@@ -10,36 +10,106 @@ Release notes for the packages in this repository:
 From 3.0.0 all four share one version, because all four are generated from
 the same OpenAPI spec. See `RELEASE.md`.
 
-## 3.0.0-preview.21 (unreleased)
-
-- CLI command paths use shorter names, such as `primitive email-rules create`,
-  `primitive account get`, and `primitive org list`. Removed spellings fail
-  with a suggestion for the replacement. Help, discovery, and completion use
-  the canonical paths.
-- Email rule commands take `--scope`, `--samples-file`, and
-  `--add-samples-file` in place of `--evaluation-scope`,
-  `--expectation-samples-file`, and `--add-expectation-samples-file`.
-  The temporary `--expect-samples-file` flag is unchanged.
-- API operation names, routes, request fields, and SDK methods are unchanged.
-- The spec and clients follow the served API: an email rule share carries
-  `rule_name` and `accept_changes`, and keeps `granter.email` for the member
-  it is shared with after it ends; a rule request carries
-  `accepted_english`; a rule covering your mail shows its author's email
-  (null only when they have none); activity lists deleted email rules and
-  the coverage notice `activated`; deleting a rule request takes a withdrawn
-  or declined request, and the error code `email_rule_request_not_withdrawn`
-  is replaced by `email_rule_request_not_deletable`; the `domain_ids` filter
-  on received mail matches a domain by name within the organization.
-- `primitive activity concerning` describes the `activated` notice and
-  notices for rules in observe, and shows `turned_off` as set to draft.
-
 ## 3.0.0
 
 `openapi/primitive-api.yaml` is now produced by `make openapi-sync` from the
 OpenAPI document the API serves, and every client is regenerated from it. Most
 of the changes below follow from that document.
 
-Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.20` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.20`), and `3.0.0rc20` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.19` (`3.0.0rc19`), which added the CLI domain focus and the `domain_ids` mail filter and limited email rules to mail on the mail relay domains, `3.0.0-preview.18` (`3.0.0rc18`), which printed the API's response body under `--json`, gave CLI errors a code, reshaped the compile answer into the body rule writes take, put one expectations gate on rule writes, dropped the prose notes from rule answers, listed your own sends by default in `sent list`, required event types on a new webhook and added `primitive skills install`, `3.0.0-preview.17` (`3.0.0rc17`), which set the email rule and key fields and stopped promising `receivers_changed` notices, `3.0.0-preview.16` (`3.0.0rc16`), which kept a rule's share across a new version and added attachment names on rule tests, compile scope warnings, labelled sample details on judged writes, `stopped` coverage notices, the mail a rule test covered and the emails it matched, `--same-emails-as`, text length checks before sending and the API's message on a refused send, and printed webhook URLs as stored again, `3.0.0-preview.15` (`3.0.0rc15`), which added `rule_deliveries` on email reads, protection on sample tests, tests of a pending rule request, the test window's scope and compile's breadth scope, `existing` on an idempotent rule request, the successor's details on key rotation, `outside_scope` as a reason a rule did not run, `do_not_share_note` on grant rules and `rule_now` on coverage notices, `3.0.0-preview.14` (`3.0.0rc14`), which added email notification settings in the SDKs, `receivers_changed` coverage notices with their totals, webhook URL query strings hidden in endpoint output and activity read retries, `3.0.0-preview.13` (`3.0.0rc13`), which added email detail attachments, attachment names on made-up emails, compile scope, rule share and objection notices, objection box `mine` and the mail import operations, `3.0.0-preview.12` (`3.0.0rc12`), which added imported mail, pending coverage rows, endpoint and key warnings and the default check of writes to rules that keys or webhooks read, `3.0.0-preview.11` (`3.0.0rc11`), which added server notes on rule requests, rule receivers, `activity concerning` and the rule objection webhook events, `3.0.0-preview.10` (`3.0.0rc10`), which added email rule objections, the email rule scope flags and true or false on boolean flags, `3.0.0-preview.9` (`3.0.0rc9`), which added email rule oversight and look-alikes that carry `expected`, and changed what `hidden` counts on rule results, `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
+Previous versions: Node SDK, Python SDK and Go SDK 2.7.1; CLI 1.75.0. The preview of this release is `3.0.0-preview.21` for `primitive` and `@primitivedotdev/sdk` (npm `preview` dist-tag) and for the Go module (`sdk-go/v3.0.0-preview.21`), and `3.0.0rc21` for `primitivedotdev` on PyPI. It follows `3.0.0-preview.20` (`3.0.0rc20`), which put `decided_at` on rule decisions, added close calls, look-alike groups, version changes on rule tests, webhook request headers and URL warnings, the attachment reading setting and the `listEmailRules` filters, and stopped a CLI command missing a required request field before any request, `3.0.0-preview.19` (`3.0.0rc19`), which added the CLI domain focus and the `domain_ids` mail filter and limited email rules to mail on the mail relay domains, `3.0.0-preview.18` (`3.0.0rc18`), which printed the API's response body under `--json`, gave CLI errors a code, reshaped the compile answer into the body rule writes take, put one expectations gate on rule writes, dropped the prose notes from rule answers, listed your own sends by default in `sent list`, required event types on a new webhook and added `primitive skills install`, `3.0.0-preview.17` (`3.0.0rc17`), which set the email rule and key fields and stopped promising `receivers_changed` notices, `3.0.0-preview.16` (`3.0.0rc16`), which kept a rule's share across a new version and added attachment names on rule tests, compile scope warnings, labelled sample details on judged writes, `stopped` coverage notices, the mail a rule test covered and the emails it matched, `--same-emails-as`, text length checks before sending and the API's message on a refused send, and printed webhook URLs as stored again, `3.0.0-preview.15` (`3.0.0rc15`), which added `rule_deliveries` on email reads, protection on sample tests, tests of a pending rule request, the test window's scope and compile's breadth scope, `existing` on an idempotent rule request, the successor's details on key rotation, `outside_scope` as a reason a rule did not run, `do_not_share_note` on grant rules and `rule_now` on coverage notices, `3.0.0-preview.14` (`3.0.0rc14`), which added email notification settings in the SDKs, `receivers_changed` coverage notices with their totals, webhook URL query strings hidden in endpoint output and activity read retries, `3.0.0-preview.13` (`3.0.0rc13`), which added email detail attachments, attachment names on made-up emails, compile scope, rule share and objection notices, objection box `mine` and the mail import operations, `3.0.0-preview.12` (`3.0.0rc12`), which added imported mail, pending coverage rows, endpoint and key warnings and the default check of writes to rules that keys or webhooks read, `3.0.0-preview.11` (`3.0.0rc11`), which added server notes on rule requests, rule receivers, `activity concerning` and the rule objection webhook events, `3.0.0-preview.10` (`3.0.0rc10`), which added email rule objections, the email rule scope flags and true or false on boolean flags, `3.0.0-preview.9` (`3.0.0rc9`), which added email rule oversight and look-alikes that carry `expected`, and changed what `hidden` counts on rule results, `3.0.0-preview.8` (`3.0.0rc8`), which added look-alikes, made-up emails kept as a rule's expectations and do-not-share rules created active, `3.0.0-preview.7` (`3.0.0rc7`), which had the server refuse a failing rule update and added rule revisions, reach and breadth, `3.0.0-preview.6` (`3.0.0rc6`), which added key expiry and rule changes to `keys update` and the email rule request webhook events, `3.0.0-preview.5` (`3.0.0rc5`), which took send's default From from the API and added `primitive activity created`, `3.0.0-preview.4` (`3.0.0rc4`), which added expectations to email rule authoring, `3.0.0-preview.3` (`3.0.0rc3`), `3.0.0-preview.2` (`3.0.0rc2`) and `3.0.0-preview.1` (`3.0.0rc1`).
+
+What `3.0.0-preview.21` (`3.0.0rc21`) changes from `3.0.0-preview.20`:
+
+API and SDKs, breaking:
+
+- These fields are now required in the generated types, each nullable:
+  `rule_name` and `accept_changes` on a rule share, and `accepted_english`
+  on a rule request and on the results of `createEmailRuleRequest`,
+  `getEmailRuleRequest`, `declineEmailRuleRequest` and
+  `withdrawEmailRuleRequest`. In Python, models built with positional
+  arguments see the new fields in their spec order.
+- The error code `email_rule_request_not_withdrawn` is replaced by
+  `email_rule_request_not_deletable`: `deleteEmailRuleRequest` answers it
+  for a request that is pending (withdraw it first) or accepted
+  (`details.status`).
+
+API and SDKs, added:
+
+- A rule share carries `rule_name`: the rule's current name while the share
+  is live, and its name when the share ended once it has, also after the
+  rule is deleted. It carries `accept_changes` (`requested_english` and
+  `accepted_english`) when the rule was edited on accept, for the member
+  sharing their mail and the member it is shared with.
+- The member a rule share is with keeps seeing `granter.email` after the
+  share ends.
+- A rule request carries `accepted_english`, the English that was accepted
+  when it was accepted with changes, for the member who asked and the
+  member asked. `english` stays what was asked for.
+- A rule covering your mail (`listEmailRulesCoveringMe`,
+  `getEmailRuleCoveringMe`) names its author's `email`, null only when they
+  have none.
+- `deleteEmailRuleRequest` deletes a declined request as well as a
+  withdrawn one.
+- `listActivityObjects` lists deleted email rules, and with
+  `relation=concerning` the coverage notice `activated`: a rule you were
+  told of while it was in observe is now active. A `started` notice now
+  comes for a rule in observe as well as an active one; only a draft rule
+  is not told of. A `stopped` notice's `turned_off` means the rule was set
+  to draft, and a rule moved from active back to observe still covers you
+  and is not stopped.
+- `deleteEmailRule` keeps the rule only as deleted: nothing reads or
+  changes it again, it grants no access, and it is listed only in its
+  author's activity. A share's `rule` is null once the rule is deleted,
+  and `rule_name` stays.
+- The `domain_ids` filter of `listEmails`, `searchEmails` and
+  `semanticSearch` matches a domain by name within the organization, so
+  mail stored under an earlier record of a domain that was deleted and
+  added again is included.
+
+CLI, breaking:
+
+- Command paths use shorter names, such as `primitive email-rules create`
+  (was `email-rules create-email-rule`), `primitive account get` (was
+  `account get-account`) and `primitive org list` (was `orgs`). Verbs are
+  the same across commands: `routes add` and `routes remove` are
+  `routes create` and `routes delete`, `contacts add` and
+  `contacts remove` (also under `agent contacts`) are `create` and
+  `delete`, `org secrets remove` is `org secrets delete`, `domains add` is
+  `domains create`, `account show` is `account get`, `functions
+  route-get`, `route-set` and `route-unset` are `get-route`, `set-route`
+  and `unset-route`, `search semantic-search` is `semantic-search`, and
+  `sending delete-sent-email` is `sent delete`. A removed
+  spelling does not run: it exits 2 with error code `command_not_found` and
+  names its replacement, in `error.details.suggestions` under `--json`.
+  Help, discovery and completion use the new paths. API operation names,
+  routes, request fields and SDK methods are unchanged.
+- Email rule commands take `--scope`, `--samples-file` and
+  `--add-samples-file` in place of `--evaluation-scope`,
+  `--expectation-samples-file` and `--add-expectation-samples-file`. An
+  old flag is refused with the new one as its suggestion.
+  `--expect-samples-file` is unchanged.
+- Positional arguments are read only from the command line. Piped stdin no
+  longer fills in a missing argument such as an id; only a command that
+  takes a body, secret or hook input from stdin reads it.
+- `activity created`, `asked` and `concerning` with `--json` print
+  `{data, meta}`: the rows in `data`, and `covers`, `withheld` and the next
+  page's `cursor` in `meta`. They printed `covers`, `items`, `withheld` and
+  `next_cursor` at the top level.
+- Without `--json`, `sent list` and `sending list` print a table on
+  stdout. Before, stdout had the JSON and the table followed on stderr.
+  `--json` output is unchanged.
+- `org list`, `org use` and `login` show a `restricted` role as `built-in
+  role member`, with a note that the label can also mean a template or
+  custom role that does not fully include member (and, in `org list`, no
+  role at all), and that it does not grant member permissions. `org list --json` and
+  `org use --json` report that `role` as `member`.
+
+CLI, added:
+
+- `primitive activity concerning` describes the `activated` notice and
+  notices for rules in observe, and shows `turned_off` as set to draft.
+- `email-rules delete-request` help says it takes a withdrawn or declined
+  request.
 
 What `3.0.0-preview.20` (`3.0.0rc20`) changes from `3.0.0-preview.19`:
 
@@ -550,7 +620,7 @@ What `3.0.0-preview.17` (`3.0.0rc17`) changes from `3.0.0-preview.16`:
   CLI moves from 1.75.0.
 - The Go module path is `github.com/primitivedotdev/sdks/sdk-go/v3`. Update
   imports from `.../sdk-go/v2` and `.../sdk-go/v2/api`.
-- `primitive functions init` scaffolds projects on `^3.0.0-preview.20` of both
+- `primitive functions init` scaffolds projects on `^3.0.0-preview.21` of both
   `@primitivedotdev/sdk` and `primitive`.
 
 #### Removed code
@@ -650,6 +720,10 @@ no longer `UNSET` in Python, plain or `Nil*` fields rather than `Opt*` in Go):
   `EmailDetailAttachment` in Python and Go; in Go `EmailDetail.Attachments`
   is `[]EmailDetailAttachment`.
 - A rule share's `activity`: `checked`.
+- A rule share: `rule_name` and `accept_changes`, both nullable.
+- A rule request, and the results of `createEmailRuleRequest`,
+  `getEmailRuleRequest`, `declineEmailRuleRequest` and
+  `withdrawEmailRuleRequest`: `accepted_english`, nullable.
 
 #### Nullable values
 
@@ -953,6 +1027,28 @@ Go (package `api`):
   `json_path`). An `--event-types` value that cannot be used is refused
   before authentication.
 
+#### CLI command names
+
+- Command paths use shorter names, such as `primitive emails list` (was
+  `emails list-emails`), `primitive email-rules create` (was
+  `email-rules create-email-rule`), `primitive account get` (was
+  `account get-account`), `primitive sending list` (was
+  `sending list-sent-emails`) and `primitive org list` (was `orgs`). Verbs
+  are the same across commands, so `routes add` is `routes create`,
+  `routes remove` is `routes delete` and `functions route-set` is
+  `functions set-route`. A
+  removed spelling, including a 1.x generated command name, does not run:
+  it exits 2 with error code `command_not_found` and names its
+  replacement. API operation names, routes, request fields and SDK methods
+  are unchanged. Command names elsewhere in these notes are those of the
+  preview that introduced them.
+- Email rule commands take `--scope`, `--samples-file` and
+  `--add-samples-file` in place of `--evaluation-scope`,
+  `--expectation-samples-file` and `--add-expectation-samples-file`.
+- Positional arguments are read only from the command line. Piped stdin no
+  longer fills in a missing argument such as an id; only a command that
+  takes a body, secret or hook input from stdin reads it.
+
 #### CLI `--json` output
 
 - `--json` on every generated command prints the API's response body
@@ -960,14 +1056,18 @@ Go (package `api`):
   CLI's own `summary`, `warnings`, `error` and `exit_code`, where 1.x printed
   the data payload alone. Read a list as `.data[]` and an object's fields as
   `.data.<field>`, and page with `meta.cursor`. Without `--json`, stdout is
-  still the data payload.
+  still the data payload, except for `sent list` and `sending list`, which
+  print a table.
+- `activity created`, `asked` and `concerning` with `--json` print
+  `{data, meta}`: the rows in `data`, and `covers`, `withheld` and the
+  next page's `cursor` in `meta`.
 - `--envelope` is removed from every command that had it.
 - The CLI's own notes go in `warnings`, or in `cli_warnings` when the
   document already has a `warnings` of its own.
 
 #### CLI sent list default
 
-- `sent list` (and `sending list-sent-emails`) lists your own sends: it
+- `sent list` (and `sending list`) lists your own sends: it
   sends `mine=true` unless `--all-senders` or `--mine` is given.
 
 #### Endpoint event types
@@ -1026,10 +1126,11 @@ Go (package `api`):
   `Built-in role:`. A script that reads the email should use `whoami --json`
   and its `email` field, which is unchanged. API keys and other credentials
   that are not a person's login no longer print a role line; read `role`
-  from `whoami --json --grant`. `orgs` rows read `built-in role <key>` or
-  `role restricted`, followed by a `role restricted:` note line when a row
-  is restricted, `org use` labels the role the same way, and `roles groups`
-  rows read `role id`.
+  from `whoami --json --grant`. `org list` rows read `built-in role <key>`,
+  a `restricted` role reading `built-in role member` followed by a note
+  line saying what else that label can mean, `org use` labels the role the
+  same way, `org list --json` and `org use --json` report a `restricted`
+  role as `member`, and `roles groups` rows read `role id`.
 - For an API key, the `Grant:` line of `primitive whoami` names the key id.
   For a key whose scope lists email rules it names them by id (`mail that
   email rule <id> granted, while it stays active`, the first three and how
@@ -1184,9 +1285,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
   a rule that applied to your mail: its current version and each earlier
   one that decided on mail at your own mailboxes, with the wording, tree,
   explanation and assumptions the covering view shows. In the CLI:
-  `email-rule-oversight list-email-rules-covering-me`,
-  `get-email-rule-covering-me`, `list-email-rule-decisions-on-my-mail` and
-  `list-email-rule-versions-covering-me`.
+  `email-rule-oversight list-covering-me`,
+  `get-covering-me`, `list-decisions-on-my-mail` and
+  `list-versions-covering-me`.
   Objections (`/email-rule-objections`, each an `EmailRuleObjection`) ask
   the author of a rule that covers one of your own mailboxes now to turn
   it off: `createEmailRuleObjection` (`rule_id` and an optional `message`),
@@ -1351,9 +1452,9 @@ date-time is kept as null and sorts last. A sync stops with an error after
   key's, carried over unchanged) and `rotated_from`.
 - `listActivityObjects` coverage notices (`email_rule_coverage`) carry
   `rule_id`, the rule each is about.
-  A notice's `started` means a rule was made or turned active over your
-  mailboxes, or an active rule came to reach you, once per rule; a rule in
-  draft or observe gets none.
+  A notice's `started` means a rule in observe or active came to cover your
+  mailboxes: made, turned on, or reaching you, once per rule; a draft rule
+  gets none.
 - A new version of a shared rule keeps its share: what the version matches is
   shared from the next email on. Only the rule's author, on the dashboard or
   the CLI, can save a new version of a shared rule; another app or agent
@@ -1543,7 +1644,14 @@ date-time is kept as null and sorts last. A sync stops with an error after
     `PERMISSIONS` list gains `mail:share_own`. `createRole` and
     `updateRole` refuse a permission whose prerequisite is not in the same
     role, with `400` and `details.reason` `unmet_requirement`.
-  - New error code: `email_rule_request_not_withdrawn`.
+  - New error code: `email_rule_request_not_deletable`, for deleting a
+    rule request that is pending or accepted. `deleteEmailRuleRequest`
+    deletes a withdrawn or declined one.
+  - A rule share carries `rule_name`, kept after the share ends and after
+    the rule is deleted, and `accept_changes` when the rule was edited on
+    accept; the member it is shared with keeps seeing `granter.email`
+    after it ends. A rule request carries `accepted_english`. A rule
+    covering your mail names its author's `email`.
 - Endpoints:
   - Webhook signing: a webhook made as a person's own, or by an API key
     limited to some mailboxes, a third-party app or an agent delegate for
@@ -1654,7 +1762,10 @@ date-time is kept as null and sorts last. A sync stops with an error after
   instead.
 - `listActivityObjects` with `relation=concerning` declares the `stopped`
   coverage notice and its `stop_reason` (`deleted`, `turned_off` or
-  `no_longer_covers`).
+  `no_longer_covers`), and the `activated` notice, for a rule you were
+  told of in observe that is now active. It lists deleted email rules.
+- The `domain_ids` filter of `listEmails`, `searchEmails` and
+  `semanticSearch` matches a domain by name within the organization.
 - The `rules` of a key's grant (`createKey`, `updateKey`,
   `decideSuspension`) say which addresses beside them are refused, with
   `details.reason` `rules_beside_domain` or
@@ -1753,7 +1864,7 @@ date-time is kept as null and sorts last. A sync stops with an error after
 - `primitive login` with no email asks for a login as the person
   (`login_kind: "user"`). A server that refuses the field gets the
   organization-bound login instead.
-- `primitive orgs` lists your organizations and whether the CLI may be used
+- `primitive org list` lists your organizations and whether the CLI may be used
   there. `primitive org use <org>` switches, and `--org <org>` (or
   `PRIMITIVE_CLI_ORG`) applies to one command.
 - `primitive login --permission <permission>` asks for a narrowed login. A
@@ -2155,15 +2266,16 @@ parsers.
   per email.
 - `primitive activity concerning` lists what other members' rules did to
   your own mail, newest first: each coverage notice (`started`,
-  `new_version`, `stopped` or `baseline`), when, the rule's name then and
+  `activated`, `new_version`, `stopped` or `baseline`), when, the rule's
+  name then and
   its author. A `stopped` notice, a rule that no longer covers you, shows
-  why in a CHANGE column (rule deleted, turned off, or no longer reaching
+  why in a CHANGE column (rule deleted, set to draft, or no longer reaching
   your mailboxes), and a `baseline:` line explains a baseline notice.
   It takes `--limit`, `--cursor`, `--all` and `--json`. Its `RULE ID`
   column is each notice's `rule_id`, which `email-rule-oversight
-  get-email-rule-covering-me` and `create-email-rule-objection --rule-id`
+  get-covering-me` and `create-objection --rule-id`
   take, and its help and empty listing say notices can lag and point to
-  `list-email-rules-covering-me` for what covers you now.
+  `list-covering-me` for what covers you now.
 - When the API lists no address and no domain a credential can send from,
   send's error no longer suggests `--from`, which cannot help then.
 - `primitive activity created` lists what you created, newest first, with
@@ -2178,7 +2290,7 @@ parsers.
 - More commands take `--json`, which prints exactly one JSON document on
   stdout, failures included: `routes` (all of them), `org secrets`, `wake
   authorizations`, `wake dispatches` and `wake schedules`, `functions
-  route-get`, `route-set`, `route-unset`, `routing-topology` and
+  get-route`, `set-route`, `unset-route`, `routing-topology` and
   `set-secret`, `memories`, `describe` and `list-operations`. `functions
   logs` keeps `--jsonl`.
 - `email-rules list-email-rule-results` takes the email's id as `--email-id`,
@@ -2230,7 +2342,7 @@ parsers.
   only mail received after it started.
 - A generated command with exactly one path parameter takes it as its first
   argument too, so `primitive emails get <id>` and `primitive email-rules
-  get-email-rule <id>` work; the flag (`--id`, `--email-id`) keeps working.
+  get <id>` work; the flag (`--id`, `--email-id`) keeps working.
 - A word after a command that takes no arguments is reported as an
   unexpected argument for that command, and a mistyped subcommand as an
   unknown command, instead of as an unknown command with the word joined
@@ -2246,9 +2358,9 @@ parsers.
   `--limit`, `--cursor` and `--json`.
 - `primitive endpoints get <id>` reads one webhook endpoint, and
   `primitive email-rules vocabulary` prints the column catalog a hand-written
-  rule tree is checked against. `email-rules delete-email-rule-request`
-  deletes a request you made and withdrew, `email-rules
-  check-email-rule-request-target` says whether a member can accept a request
+  rule tree is checked against. `email-rules delete-request`
+  deletes a request you made that you withdrew or that was declined,
+  `email-rules check-request-target` says whether a member can accept a request
   before you send it.
 - `endpoints signing-secret <id>` (`get-endpoint-signing-secret`) prints the
   secret a webhook whose `signed_with` is `own_secret` signs with, and
@@ -2285,7 +2397,7 @@ parsers.
   code that builds manifest objects by hand must now set it.
 - Without `--json`, the CLI reads out a few answers people otherwise dig out
   of the JSON, on stderr after it:
-  - `routes add`, `routes update`, `routes create-route` and
+  - `routes create`, `routes update`, `routes create-route` and
     `routes update-route` print each of the route's `warnings`.
   - `webhook-deliveries get-delivery` lists each attempt with when it was
     made, its status and error code, and what the endpoint answered: the
@@ -2344,16 +2456,15 @@ parsers.
   cover instead, and `importGoogleMailMessage`, which takes a credential
   header.
 - The generated command for `leaveOrganization` is
-  `roles-and-members:leave-organization`, following the operation's tag.
-  `account:leave-organization` keeps working as an alias.
-- Flags for the new parameters, for example `primitive emails:list-emails
+  `roles-and-members leave`, following the operation's tag.
+- Flags for the new parameters, for example `primitive emails list
   --thread-id --exclude-muted --search-regex --search-case-sensitive
   --search-negate --kind --content-discarded --group --include-presence`,
-  `primitive emails:get-conversation --around --before --after --limit
-  --text`, `primitive threads:get-thread --after`, `primitive
-  sending:list-sent-emails --since --wait`, `primitive
-  agent-connections:list-agent-connections --include-hidden` and `primitive
-  account:whoami --include --check --resource`.
+  `primitive emails conversation --around --before --after --limit
+  --text`, `primitive threads get --after`, `primitive
+  sending list --since --wait`, `primitive
+  agent-connections list --include-hidden` and `primitive
+  account whoami --include --check --resource`.
 - `primitive domains verify` reads a failed DNS check from the
   `dns_verification_failed` error and names the records that still need
   work.
@@ -2451,12 +2562,13 @@ parsers.
   built-in role it fully includes, or member when it includes none. It
   prints no role line for an API key or any other credential that is not a
   person's login, and a role value that is not a built-in role prints as
-  `Role key:`. `login`, `org use` and `orgs` print
+  `Role key:`. `login`, `org use` and `org list` print
   the stored role as `built-in role owner`, `built-in role admin` or
-  `built-in role member`, or as `role restricted`, and explain `restricted`:
-  a template or custom role that does not fully include member, because it
-  lacks some member permission (as Operator does) or reaches only some
-  mailboxes (and, in `orgs`, no role at all).
+  `built-in role member`, the name `whoami` uses, and say that for a
+  `restricted` role `built-in role member` means a template or custom
+  role that does not fully include member, because it lacks some member
+  permission (as Operator does) or reaches only some mailboxes (and, in
+  `org list`, no role at all), and does not grant member permissions.
   `roles groups` labels a group's role as `role id`, and `roles list` help
   names Operator as a template, not a built-in role.
 - `primitive agent upgrade` needs a terminal: without one it exits 2 before
