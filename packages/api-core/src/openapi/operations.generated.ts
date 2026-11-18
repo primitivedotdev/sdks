@@ -22547,7 +22547,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "accepted_english": {
           "default": null,
-          "description": "When it was accepted with changes, for the member who asked and the member asked: the English that was accepted, beside english, which stays what was asked for. Null otherwise, and from a core-api release that predates the field. (The accepted English can match english when only the tree changed.)",
+          "description": "When it was accepted with changes, for the member who asked and the member asked: the English that was accepted, beside english, which stays what was asked for. Null otherwise. Older responses may omit this field. (The accepted English can match english when only the tree changed.)",
           "type": [
             "string",
             "null"
@@ -22831,7 +22831,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "accepted_english": {
           "default": null,
-          "description": "When it was accepted with changes, for the member who asked and the member asked: the English that was accepted, beside english, which stays what was asked for. Null otherwise, and from a core-api release that predates the field. (The accepted English can match english when only the tree changed.)",
+          "description": "When it was accepted with changes, for the member who asked and the member asked: the English that was accepted, beside english, which stays what was asked for. Null otherwise. Older responses may omit this field. (The accepted English can match english when only the tree changed.)",
           "type": [
             "string",
             "null"
@@ -24374,7 +24374,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "accepted_english": {
           "default": null,
-          "description": "When it was accepted with changes, for the member who asked and the member asked: the English that was accepted, beside english, which stays what was asked for. Null otherwise, and from a core-api release that predates the field. (The accepted English can match english when only the tree changed.)",
+          "description": "When it was accepted with changes, for the member who asked and the member asked: the English that was accepted, beside english, which stays what was asked for. Null otherwise. Older responses may omit this field. (The accepted English can match english when only the tree changed.)",
           "type": [
             "string",
             "null"
@@ -25509,7 +25509,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "accepted_english": {
             "default": null,
-            "description": "When it was accepted with changes, for the member who asked and the member asked: the English that was accepted, beside english, which stays what was asked for. Null otherwise, and from a core-api release that predates the field. (The accepted English can match english when only the tree changed.)",
+            "description": "When it was accepted with changes, for the member who asked and the member asked: the English that was accepted, beside english, which stays what was asked for. Null otherwise. Older responses may omit this field. (The accepted English can match english when only the tree changed.)",
             "type": [
               "string",
               "null"
@@ -31127,7 +31127,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "accepted_english": {
           "default": null,
-          "description": "When it was accepted with changes, for the member who asked and the member asked: the English that was accepted, beside english, which stays what was asked for. Null otherwise, and from a core-api release that predates the field. (The accepted English can match english when only the tree changed.)",
+          "description": "When it was accepted with changes, for the member who asked and the member asked: the English that was accepted, beside english, which stays what was asked for. Null otherwise. Older responses may omit this field. (The accepted English can match english when only the tree changed.)",
           "type": [
             "string",
             "null"
