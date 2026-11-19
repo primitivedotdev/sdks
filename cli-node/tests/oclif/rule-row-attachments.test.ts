@@ -80,6 +80,20 @@ describe("attachmentsSummary", () => {
     );
   });
 
+  it("quotes a name with any one of those characters, fullwidth ones included, or one that starts with a plus", () => {
+    const shown = (name: string) =>
+      attachmentsSummary({ attachments: [file(name)], attachment_count: 1 });
+    expect(shown("a,b.pdf")).toBe('1 attachment: "a,b.pdf"');
+    expect(shown("a(b.pdf")).toBe('1 attachment: "a(b.pdf"');
+    expect(shown("a)b.pdf")).toBe('1 attachment: "a)b.pdf"');
+    expect(shown('a"b.pdf')).toBe('1 attachment: "a\'b.pdf"');
+    expect(shown("a.pdf\uFF08Signed\uFF09\uFF0C b.exe")).toBe(
+      '1 attachment: "a.pdf(Signed), b.exe"',
+    );
+    expect(shown("+2 more")).toBe('1 attachment: "+2 more"');
+    expect(shown("plain.pdf")).toBe("1 attachment: plain.pdf");
+  });
+
   it("never cuts inside a character", () => {
     const summary =
       attachmentsSummary({

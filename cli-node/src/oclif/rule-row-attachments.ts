@@ -19,9 +19,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-/** Text a sender or a file reader wrote, on one line, cut at `max` characters (never inside one). */
+/**
+ * Text a sender or a file reader wrote, on one line, in compatibility form (so a
+ * fullwidth comma or parenthesis reads as the plain one), cut at `max` code
+ * points.
+ */
 function cut(value: unknown, max: number): string {
-  const chars = Array.from(shownLine(value));
+  const chars = Array.from(shownLine(value).normalize("NFKC"));
   return chars.length > max
     ? `${chars
         .slice(0, max - 3)
@@ -31,13 +35,14 @@ function cut(value: unknown, max: number): string {
 }
 
 /**
- * A file name as the line shows it: in double quotes when it holds a comma or
- * a parenthesis, so a name cannot pass for more files or a description.
+ * A file name as the line shows it: in double quotes when it holds a comma, a
+ * parenthesis or a quote, or starts with a plus, so a name cannot pass for more
+ * files, a description or the count of the rest.
  */
 function fileName(value: unknown): string {
   const name = cut(value, ATTACHMENT_NAME_SHOWN_MAX);
   if (name === "") return "(no name)";
-  return /[,()"]/.test(name) ? `"${name.replaceAll('"', "'")}"` : name;
+  return /[,()"]|^\+/.test(name) ? `"${name.replaceAll('"', "'")}"` : name;
 }
 
 /**
