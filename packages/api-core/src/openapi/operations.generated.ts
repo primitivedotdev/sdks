@@ -19009,7 +19009,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "description"
               ]
             },
-            "description": "The email's named attachments, in order, at most 10 (attachment_count counts them all). An empty list means the email has none. Null when you cannot read the email's content (withheld, awaiting sender authentication, failed to parse, or discarded), or are not shown the email: then whether it has any is not known to you. A part with no file name is not listed or counted."
+            "description": "The email's named attachments, in order, at most 10 (attachment_count counts them all). An empty list means the email has none. Null when you cannot read the email's content (withheld, awaiting sender authentication, not parsed yet, failed to parse, or discarded), or are not shown the email: then whether it has any is not known to you. A part with no file name is not listed or counted."
           },
           "attachment_count": {
             "type": [
@@ -25290,7 +25290,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "description"
               ]
             },
-            "description": "The email's named attachments, in order, at most 10 (attachment_count counts them all). An empty list means the email has none. Null when you cannot read the email's content (withheld, awaiting sender authentication, failed to parse, or discarded), or are not shown the email: then whether it has any is not known to you. A part with no file name is not listed or counted."
+            "description": "The email's named attachments, in order, at most 10 (attachment_count counts them all). An empty list means the email has none. Null when you cannot read the email's content (withheld, awaiting sender authentication, not parsed yet, failed to parse, or discarded), or are not shown the email: then whether it has any is not known to you. A part with no file name is not listed or counted."
           },
           "attachment_count": {
             "type": [
@@ -25672,7 +25672,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "description"
             ]
           },
-          "description": "The email's named attachments, in order, at most 10 (attachment_count counts them all), each with its one-line description where one was read: the email every rule here decided on, so given once rather than on each rule. An empty list means it has none. Null when its content cannot be read (withheld, failed to parse, or discarded)."
+          "description": "The email's named attachments, in order, at most 10 (attachment_count counts them all), each with its one-line description where one was read: the email every rule here decided on, so given once rather than on each rule. An empty list means it has none. Null when its content cannot be read (withheld, not parsed yet, failed to parse, or discarded)."
         },
         "attachment_count": {
           "type": [

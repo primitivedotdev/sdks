@@ -29,7 +29,7 @@ class ListEmailRuleResultsResult:
             attachments (list[EmailRuleRowAttachment] | None): The email's named attachments, in order, at most 10
                 (attachment_count counts them all), each with its one-line description where one was read: the email every rule
                 here decided on, so given once rather than on each rule. An empty list means it has none. Null when its content
-                cannot be read (withheld, failed to parse, or discarded).
+                cannot be read (withheld, not parsed yet, failed to parse, or discarded).
             attachment_count (int | None): How many named attachments the email has in all, listed or not. Null exactly when
                 attachments is.
             rules (list[ListEmailRuleResultsResultRulesItem]): Rules you can see, and read_only ones: matched first, then

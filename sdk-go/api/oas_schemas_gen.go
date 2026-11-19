@@ -37585,8 +37585,8 @@ type EmailRuleDecisionOnMyMail struct {
 	ReceivedAt NilDateTime `json:"received_at"`
 	// The email's named attachments, in order, at most 10 (attachment_count counts them all). An empty
 	// list means the email has none. Null when you cannot read the email's content (withheld, awaiting
-	// sender authentication, failed to parse, or discarded), or are not shown the email: then whether it
-	// has any is not known to you. A part with no file name is not listed or counted.
+	// sender authentication, not parsed yet, failed to parse, or discarded), or are not shown the email:
+	// then whether it has any is not known to you. A part with no file name is not listed or counted.
 	Attachments []EmailRuleRowAttachment `json:"attachments"`
 	// How many named attachments the email has in all, listed or not. Null exactly when attachments is.
 	AttachmentCount NilInt `json:"attachment_count"`
@@ -70250,8 +70250,8 @@ type ListEmailRuleDecisionsResultItem struct {
 	ReceivedAt NilDateTime `json:"received_at"`
 	// The email's named attachments, in order, at most 10 (attachment_count counts them all). An empty
 	// list means the email has none. Null when you cannot read the email's content (withheld, awaiting
-	// sender authentication, failed to parse, or discarded), or are not shown the email: then whether it
-	// has any is not known to you. A part with no file name is not listed or counted.
+	// sender authentication, not parsed yet, failed to parse, or discarded), or are not shown the email:
+	// then whether it has any is not known to you. A part with no file name is not listed or counted.
 	Attachments []EmailRuleRowAttachment `json:"attachments"`
 	// How many named attachments the email has in all, listed or not. Null exactly when attachments is.
 	AttachmentCount NilInt `json:"attachment_count"`
@@ -70804,7 +70804,7 @@ type ListEmailRuleResultsResult struct {
 	// The email's named attachments, in order, at most 10 (attachment_count counts them all), each with
 	// its one-line description where one was read: the email every rule here decided on, so given once
 	// rather than on each rule. An empty list means it has none. Null when its content cannot be read
-	// (withheld, failed to parse, or discarded).
+	// (withheld, not parsed yet, failed to parse, or discarded).
 	Attachments []EmailRuleRowAttachment `json:"attachments"`
 	// How many named attachments the email has in all, listed or not. Null exactly when attachments is.
 	AttachmentCount NilInt `json:"attachment_count"`

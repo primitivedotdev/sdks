@@ -48,8 +48,9 @@ class ListEmailRuleDecisionsResultItem:
                 recipient, when you are not shown the email (it awaits sender authentication).
             attachments (list[EmailRuleRowAttachment] | None): The email's named attachments, in order, at most 10
                 (attachment_count counts them all). An empty list means the email has none. Null when you cannot read the
-                email's content (withheld, awaiting sender authentication, failed to parse, or discarded), or are not shown the
-                email: then whether it has any is not known to you. A part with no file name is not listed or counted.
+                email's content (withheld, awaiting sender authentication, not parsed yet, failed to parse, or discarded), or
+                are not shown the email: then whether it has any is not known to you. A part with no file name is not listed or
+                counted.
             attachment_count (int | None): How many named attachments the email has in all, listed or not. Null exactly when
                 attachments is.
             detail_withheld (bool | Unset): Present, as true, on a decision about an email whose content cannot be read
