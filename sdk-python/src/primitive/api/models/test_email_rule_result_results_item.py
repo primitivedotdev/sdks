@@ -17,6 +17,7 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.email_rule_row_attachment import EmailRuleRowAttachment
   from ..models.test_email_rule_result_results_item_parts_item import TestEmailRuleResultResultsItemPartsItem
   from ..models.test_email_rule_result_results_item_question_answers_item import TestEmailRuleResultResultsItemQuestionAnswersItem
   from ..models.test_email_rule_result_results_item_values import TestEmailRuleResultResultsItemValues
@@ -44,12 +45,12 @@ class TestEmailRuleResultResultsItem:
             recipient (str | Unset): The mailbox this copy of the email was received in, as GET /v1/emails/{id} shows it.
                 Given with received_at, from_address and subject, so absent for not_found.
             subject (None | str | Unset):
-            attachment_names (list[str] | Unset): On matched and near_miss: the file names the email lists, in order, at
-                most 10 (the names its questions are given). Parts with no name are left out; absent when there are none.
-                attachment_descriptions says what each file is, where one was read.
-            attachment_descriptions (list[None | str] | Unset): Given exactly when attachment_names is, aligned with it by
-                position: the one-line description read from each file where the organization has attachment reading on, else
-                null (not read, could not be read, reading off, or an email you cannot open yourself).
+            attachments (list[EmailRuleRowAttachment] | None | Unset): On matched, near_miss and no_match: the email's named
+                attachments, in order, at most 10 (attachment_count counts them all), each with its one-line description where
+                one was read and you can open the email yourself. An empty list means it has none; null means its content could
+                not be read, so whether it has any is not known. Absent on other outcomes.
+            attachment_count (int | None | Unset): Given exactly when attachments is: how many named attachments the email
+                has in all.
             parts (list[TestEmailRuleResultResultsItemPartsItem] | Unset): How each top-level part of the rule decided.
                 Present for matched, near_miss and no_match.
             missing_facts (list[str] | Unset): Facts the rule reads that this email's classification left out, so the rule
@@ -82,8 +83,8 @@ class TestEmailRuleResultResultsItem:
     from_address: None | str | Unset = UNSET
     recipient: str | Unset = UNSET
     subject: None | str | Unset = UNSET
-    attachment_names: list[str] | Unset = UNSET
-    attachment_descriptions: list[None | str] | Unset = UNSET
+    attachments: list[EmailRuleRowAttachment] | None | Unset = UNSET
+    attachment_count: int | None | Unset = UNSET
     parts: list[TestEmailRuleResultResultsItemPartsItem] | Unset = UNSET
     missing_facts: list[str] | Unset = UNSET
     values: TestEmailRuleResultResultsItemValues | Unset = UNSET
@@ -98,6 +99,7 @@ class TestEmailRuleResultResultsItem:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_rule_row_attachment import EmailRuleRowAttachment # noqa: PLC0415
         from ..models.test_email_rule_result_results_item_parts_item import TestEmailRuleResultResultsItemPartsItem # noqa: PLC0415
         from ..models.test_email_rule_result_results_item_question_answers_item import TestEmailRuleResultResultsItemQuestionAnswersItem # noqa: PLC0415
         from ..models.test_email_rule_result_results_item_values import TestEmailRuleResultResultsItemValues # noqa: PLC0415
@@ -123,21 +125,24 @@ class TestEmailRuleResultResultsItem:
         else:
             subject = self.subject
 
-        attachment_names: list[str] | Unset = UNSET
-        if not isinstance(self.attachment_names, Unset):
-            attachment_names = self.attachment_names
+        attachments: list[dict[str, Any]] | None | Unset
+        if isinstance(self.attachments, Unset):
+            attachments = UNSET
+        elif isinstance(self.attachments, list):
+            attachments = []
+            for attachments_type_0_item_data in self.attachments:
+                attachments_type_0_item = attachments_type_0_item_data.to_dict()
+                attachments.append(attachments_type_0_item)
 
 
+        else:
+            attachments = self.attachments
 
-        attachment_descriptions: list[None | str] | Unset = UNSET
-        if not isinstance(self.attachment_descriptions, Unset):
-            attachment_descriptions = []
-            for attachment_descriptions_item_data in self.attachment_descriptions:
-                attachment_descriptions_item: None | str
-                attachment_descriptions_item = attachment_descriptions_item_data
-                attachment_descriptions.append(attachment_descriptions_item)
-
-
+        attachment_count: int | None | Unset
+        if isinstance(self.attachment_count, Unset):
+            attachment_count = UNSET
+        else:
+            attachment_count = self.attachment_count
 
         parts: list[dict[str, Any]] | Unset = UNSET
         if not isinstance(self.parts, Unset):
@@ -197,10 +202,10 @@ class TestEmailRuleResultResultsItem:
             field_dict["recipient"] = recipient
         if subject is not UNSET:
             field_dict["subject"] = subject
-        if attachment_names is not UNSET:
-            field_dict["attachment_names"] = attachment_names
-        if attachment_descriptions is not UNSET:
-            field_dict["attachment_descriptions"] = attachment_descriptions
+        if attachments is not UNSET:
+            field_dict["attachments"] = attachments
+        if attachment_count is not UNSET:
+            field_dict["attachment_count"] = attachment_count
         if parts is not UNSET:
             field_dict["parts"] = parts
         if missing_facts is not UNSET:
@@ -222,6 +227,7 @@ class TestEmailRuleResultResultsItem:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_rule_row_attachment import EmailRuleRowAttachment # noqa: PLC0415
         from ..models.test_email_rule_result_results_item_parts_item import TestEmailRuleResultResultsItemPartsItem # noqa: PLC0415
         from ..models.test_email_rule_result_results_item_question_answers_item import TestEmailRuleResultResultsItemQuestionAnswersItem # noqa: PLC0415
         from ..models.test_email_rule_result_results_item_values import TestEmailRuleResultResultsItemValues # noqa: PLC0415
@@ -268,22 +274,39 @@ class TestEmailRuleResultResultsItem:
         subject = _parse_subject(d.pop("subject", UNSET))
 
 
-        attachment_names = cast(list[str], d.pop("attachment_names", UNSET))
+        def _parse_attachments(data: object) -> list[EmailRuleRowAttachment] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                attachments_type_0 = []
+                _attachments_type_0 = data
+                for attachments_type_0_item_data in (_attachments_type_0):
+                    attachments_type_0_item = EmailRuleRowAttachment.from_dict(attachments_type_0_item_data)
 
 
-        _attachment_descriptions = d.pop("attachment_descriptions", UNSET)
-        attachment_descriptions: list[None | str] | Unset = UNSET
-        if _attachment_descriptions is not UNSET:
-            attachment_descriptions = []
-            for attachment_descriptions_item_data in _attachment_descriptions:
-                def _parse_attachment_descriptions_item(data: object) -> None | str:
-                    if data is None:
-                        return data
-                    return cast(None | str, data)
 
-                attachment_descriptions_item = _parse_attachment_descriptions_item(attachment_descriptions_item_data)
+                    attachments_type_0.append(attachments_type_0_item)
 
-                attachment_descriptions.append(attachment_descriptions_item)
+                return attachments_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[EmailRuleRowAttachment] | None | Unset, data)
+
+        attachments = _parse_attachments(d.pop("attachments", UNSET))
+
+
+        def _parse_attachment_count(data: object) -> int | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(int | None | Unset, data)
+
+        attachment_count = _parse_attachment_count(d.pop("attachment_count", UNSET))
 
 
         _parts = d.pop("parts", UNSET)
@@ -360,8 +383,8 @@ class TestEmailRuleResultResultsItem:
             from_address=from_address,
             recipient=recipient,
             subject=subject,
-            attachment_names=attachment_names,
-            attachment_descriptions=attachment_descriptions,
+            attachments=attachments,
+            attachment_count=attachment_count,
             parts=parts,
             missing_facts=missing_facts,
             values=values,

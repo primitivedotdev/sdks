@@ -591,6 +591,7 @@ from .email_rule_request import EmailRuleRequest
 from .email_rule_request_proposer import EmailRuleRequestProposer
 from .email_rule_request_status import EmailRuleRequestStatus
 from .email_rule_request_target import EmailRuleRequestTarget
+from .email_rule_row_attachment import EmailRuleRowAttachment
 from .email_rule_sample_detail import EmailRuleSampleDetail
 from .email_rule_sample_group_counts import EmailRuleSampleGroupCounts
 from .email_rule_sample_group_counts_must_match import EmailRuleSampleGroupCountsMustMatch
@@ -2550,6 +2551,7 @@ __all__ = (
     "EmailRuleRequestProposer",
     "EmailRuleRequestStatus",
     "EmailRuleRequestTarget",
+    "EmailRuleRowAttachment",
     "EmailRuleSampleDetail",
     "EmailRuleSampleGroupCounts",
     "EmailRuleSampleGroupCountsMustMatch",

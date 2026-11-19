@@ -12,6 +12,8 @@ from typing import cast
 from uuid import UUID
 import datetime
 
+if TYPE_CHECKING:
+  from ..models.email_rule_row_attachment import EmailRuleRowAttachment
 
 
 
@@ -40,6 +42,13 @@ class EmailRuleDecisionOnMyMail:
             recipient (None | str): Which of your mailboxes the email was received in.
             received_at (datetime.datetime | None): When the email arrived. Null, with from_address, subject and recipient,
                 when you are not shown the email (it awaits sender authentication).
+            attachments (list[EmailRuleRowAttachment] | None): The email's named attachments, in order, at most 10
+                (attachment_count counts them all). An empty list means the email has none. Null when you cannot read the
+                email's content (withheld, awaiting sender authentication, not parsed yet, failed to parse, or discarded), or
+                are not shown the email: then whether it has any is not known to you. A part with no file name is not listed or
+                counted.
+            attachment_count (int | None): How many named attachments the email has in all, listed or not. Null exactly when
+                attachments is.
             detail_withheld (bool | Unset): Present, as true, when the email's content cannot be read: matched still says
                 what the rule decided, and parts and question_answers are empty.
      """
@@ -57,6 +66,8 @@ class EmailRuleDecisionOnMyMail:
     subject: None | str
     recipient: None | str
     received_at: datetime.datetime | None
+    attachments: list[EmailRuleRowAttachment] | None
+    attachment_count: int | None
     detail_withheld: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -65,6 +76,7 @@ class EmailRuleDecisionOnMyMail:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_rule_row_attachment import EmailRuleRowAttachment # noqa: PLC0415
         id = str(self.id)
 
         email_id = str(self.email_id)
@@ -102,6 +114,20 @@ class EmailRuleDecisionOnMyMail:
         else:
             received_at = self.received_at
 
+        attachments: list[dict[str, Any]] | None
+        if isinstance(self.attachments, list):
+            attachments = []
+            for attachments_type_0_item_data in self.attachments:
+                attachments_type_0_item = attachments_type_0_item_data.to_dict()
+                attachments.append(attachments_type_0_item)
+
+
+        else:
+            attachments = self.attachments
+
+        attachment_count: int | None
+        attachment_count = self.attachment_count
+
         detail_withheld = self.detail_withheld
 
 
@@ -121,6 +147,8 @@ class EmailRuleDecisionOnMyMail:
             "subject": subject,
             "recipient": recipient,
             "received_at": received_at,
+            "attachments": attachments,
+            "attachment_count": attachment_count,
         })
         if detail_withheld is not UNSET:
             field_dict["detail_withheld"] = detail_withheld
@@ -131,6 +159,7 @@ class EmailRuleDecisionOnMyMail:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_rule_row_attachment import EmailRuleRowAttachment # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -206,6 +235,37 @@ class EmailRuleDecisionOnMyMail:
         received_at = _parse_received_at(d.pop("received_at"))
 
 
+        def _parse_attachments(data: object) -> list[EmailRuleRowAttachment] | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                attachments_type_0 = []
+                _attachments_type_0 = data
+                for attachments_type_0_item_data in (_attachments_type_0):
+                    attachments_type_0_item = EmailRuleRowAttachment.from_dict(attachments_type_0_item_data)
+
+
+
+                    attachments_type_0.append(attachments_type_0_item)
+
+                return attachments_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[EmailRuleRowAttachment] | None, data)
+
+        attachments = _parse_attachments(d.pop("attachments"))
+
+
+        def _parse_attachment_count(data: object) -> int | None:
+            if data is None:
+                return data
+            return cast(int | None, data)
+
+        attachment_count = _parse_attachment_count(d.pop("attachment_count"))
+
+
         detail_withheld = d.pop("detail_withheld", UNSET)
 
         email_rule_decision_on_my_mail = cls(
@@ -222,6 +282,8 @@ class EmailRuleDecisionOnMyMail:
             subject=subject,
             recipient=recipient,
             received_at=received_at,
+            attachments=attachments,
+            attachment_count=attachment_count,
             detail_withheld=detail_withheld,
         )
 

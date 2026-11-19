@@ -127,6 +127,36 @@ def encode_optional_consts_only_when_set(directory: Path) -> None:
     print(f"guarded {changed} optional const field encoder(s)")
 
 
+# ogen decodes a nullable array's null by skipping it, which leaves the field as
+# it was. Decoding into a struct that already held a list (one reused across
+# responses) would then keep the old list where the API said null. A null clears
+# the field instead.
+_NULL_SLICE = re.compile(
+    r"(?P<indent>\t+)case jx\.Null:\n"
+    r"(?P=indent)\tif err := d\.Skip\(\); err != nil \{\n"
+    r"(?P=indent)\t\treturn err\n"
+    r"(?P=indent)\t\}\n"
+    r"(?P=indent)default:\n"
+    r"(?P=indent)\t(?P<target>s\.\w+) = make\("
+)
+
+
+def clear_slices_on_null(directory: Path) -> None:
+    path = directory / "oas_json_gen.go"
+    text = path.read_text()
+    changed = 0
+
+    def clear(match: re.Match[str]) -> str:
+        nonlocal changed
+        changed += 1
+        indent, target = match.group("indent"), match.group("target")
+        head, tail = match.group(0).split(f"{indent}default:\n", 1)
+        return f"{head}{indent}\t{target} = nil\n{indent}default:\n{tail}"
+
+    path.write_text(_NULL_SLICE.sub(clear, text))
+    print(f"cleared {changed} nullable list field(s) on null")
+
+
 def remove_generated_files() -> None:
     TARGET_PATH.mkdir(parents=True, exist_ok=True)
 
@@ -157,6 +187,7 @@ def main() -> None:
             shutil.copy2(source, TARGET_PATH / source.name)
         tolerate_unknown_enum_values(TARGET_PATH)
         encode_optional_consts_only_when_set(TARGET_PATH)
+        clear_slices_on_null(TARGET_PATH)
 
 
 if __name__ == "__main__":

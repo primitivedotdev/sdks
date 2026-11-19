@@ -81516,6 +81516,26 @@ export const openapiDocument: Record<string, unknown> = {
           "scope_selection"
         ]
       },
+      "EmailRuleRowAttachment": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The file name the email gives it, cut at 255 characters."
+          },
+          "description": {
+            "description": "The one-line description read from the file where the organization has attachment reading on, as GET /v1/emails/{id} gives it; null when none was read, it could not be read, reading is off, or you cannot open the email yourself.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ]
+      },
       "EmailRuleScopeWarning": {
         "type": "object",
         "properties": {
@@ -81814,13 +81834,33 @@ export const openapiDocument: Record<string, unknown> = {
                     "null"
                   ],
                   "format": "date-time"
+                },
+                "attachments": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "$ref": "#/components/schemas/EmailRuleRowAttachment"
+                  },
+                  "description": "The email's named attachments, as its row in results gives them: in order, at most 10 (attachment_count counts them all), [] for none, null when its content could not be read."
+                },
+                "attachment_count": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "description": "How many named attachments the email has in all, listed or not. Null exactly when attachments is."
                 }
               },
               "required": [
                 "email_id",
                 "subject",
                 "from",
-                "received_at"
+                "received_at",
+                "attachments",
+                "attachment_count"
               ]
             },
             "description": "Newest first, at most 50; count is the full number."
@@ -82277,22 +82317,23 @@ export const openapiDocument: Record<string, unknown> = {
                     "null"
                   ]
                 },
-                "attachment_names": {
-                  "description": "On matched and near_miss: the file names the email lists, in order, at most 10 (the names its questions are given). Parts with no name are left out; absent when there are none. attachment_descriptions says what each file is, where one was read.",
-                  "type": "array",
+                "attachments": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
                   "items": {
-                    "type": "string"
-                  }
+                    "$ref": "#/components/schemas/EmailRuleRowAttachment"
+                  },
+                  "description": "On matched, near_miss and no_match: the email's named attachments, in order, at most 10 (attachment_count counts them all), each with its one-line description where one was read and you can open the email yourself. An empty list means it has none; null means its content could not be read, so whether it has any is not known. Absent on other outcomes."
                 },
-                "attachment_descriptions": {
-                  "description": "Given exactly when attachment_names is, aligned with it by position: the one-line description read from each file where the organization has attachment reading on, else null (not read, could not be read, reading off, or an email you cannot open yourself).",
-                  "type": "array",
-                  "items": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
+                "attachment_count": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "description": "Given exactly when attachments is: how many named attachments the email has in all."
                 },
                 "parts": {
                   "description": "How each top-level part of the rule decided. Present for matched, near_miss and no_match.",
@@ -84631,6 +84672,24 @@ export const openapiDocument: Record<string, unknown> = {
               ],
               "format": "date-time",
               "description": "When the decided email arrived. Null, with from_address, subject and recipient, when you are not shown the email (it awaits sender authentication)."
+            },
+            "attachments": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/components/schemas/EmailRuleRowAttachment"
+              },
+              "description": "The email's named attachments, in order, at most 10 (attachment_count counts them all). An empty list means the email has none. Null when you cannot read the email's content (withheld, awaiting sender authentication, not parsed yet, failed to parse, or discarded), or are not shown the email: then whether it has any is not known to you. A part with no file name is not listed or counted."
+            },
+            "attachment_count": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "description": "How many named attachments the email has in all, listed or not. Null exactly when attachments is."
             }
           },
           "required": [
@@ -84646,7 +84705,9 @@ export const openapiDocument: Record<string, unknown> = {
             "from_address",
             "subject",
             "recipient",
-            "received_at"
+            "received_at",
+            "attachments",
+            "attachment_count"
           ]
         }
       },
@@ -84681,6 +84742,24 @@ export const openapiDocument: Record<string, unknown> = {
       "ListEmailRuleResultsResult": {
         "type": "object",
         "properties": {
+          "attachments": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmailRuleRowAttachment"
+            },
+            "description": "The email's named attachments, in order, at most 10 (attachment_count counts them all), each with its one-line description where one was read: the email every rule here decided on, so given once rather than on each rule. An empty list means it has none. Null when its content cannot be read (withheld, awaiting sender authentication, not parsed yet, failed to parse, or discarded): then whether it has any is not known to you."
+          },
+          "attachment_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "How many named attachments the email has in all, listed or not. Null exactly when attachments is."
+          },
           "rules": {
             "type": "array",
             "items": {
@@ -84881,6 +84960,8 @@ export const openapiDocument: Record<string, unknown> = {
           }
         },
         "required": [
+          "attachments",
+          "attachment_count",
           "rules",
           "hidden",
           "not_listed"
@@ -86891,6 +86972,24 @@ export const openapiDocument: Record<string, unknown> = {
             ],
             "format": "date-time",
             "description": "When the email arrived. Null, with from_address, subject and recipient, when you are not shown the email (it awaits sender authentication)."
+          },
+          "attachments": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmailRuleRowAttachment"
+            },
+            "description": "The email's named attachments, in order, at most 10 (attachment_count counts them all). An empty list means the email has none. Null when you cannot read the email's content (withheld, awaiting sender authentication, not parsed yet, failed to parse, or discarded), or are not shown the email: then whether it has any is not known to you. A part with no file name is not listed or counted."
+          },
+          "attachment_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "How many named attachments the email has in all, listed or not. Null exactly when attachments is."
           }
         },
         "required": [
@@ -86906,7 +87005,9 @@ export const openapiDocument: Record<string, unknown> = {
           "from_address",
           "subject",
           "recipient",
-          "received_at"
+          "received_at",
+          "attachments",
+          "attachment_count"
         ]
       },
       "ListEmailRuleDecisionsOnMyMailResult": {

@@ -6590,6 +6590,17 @@ export type EmailRuleScopeUsed = {
     } | null;
 };
 
+export type EmailRuleRowAttachment = {
+    /**
+     * The file name the email gives it, cut at 255 characters.
+     */
+    name: string;
+    /**
+     * The one-line description read from the file where the organization has attachment reading on, as GET /v1/emails/{id} gives it; null when none was read, it could not be read, reading is off, or you cannot open the email yourself.
+     */
+    description: string | null;
+};
+
 export type EmailRuleScopeWarning = {
     name: string;
     kind: 'address' | 'domain';
@@ -6679,6 +6690,14 @@ export type EmailRuleChangedEmails = {
         subject: string | null;
         from: string | null;
         received_at: string | null;
+        /**
+         * The email's named attachments, as its row in results gives them: in order, at most 10 (attachment_count counts them all), [] for none, null when its content could not be read.
+         */
+        attachments: Array<EmailRuleRowAttachment> | null;
+        /**
+         * How many named attachments the email has in all, listed or not. Null exactly when attachments is.
+         */
+        attachment_count: number | null;
     }>;
 };
 
@@ -6847,13 +6866,13 @@ export type TestEmailRuleResult = {
         recipient?: string;
         subject?: string | null;
         /**
-         * On matched and near_miss: the file names the email lists, in order, at most 10 (the names its questions are given). Parts with no name are left out; absent when there are none. attachment_descriptions says what each file is, where one was read.
+         * On matched, near_miss and no_match: the email's named attachments, in order, at most 10 (attachment_count counts them all), each with its one-line description where one was read and you can open the email yourself. An empty list means it has none; null means its content could not be read, so whether it has any is not known. Absent on other outcomes.
          */
-        attachment_names?: Array<string>;
+        attachments?: Array<EmailRuleRowAttachment> | null;
         /**
-         * Given exactly when attachment_names is, aligned with it by position: the one-line description read from each file where the organization has attachment reading on, else null (not read, could not be read, reading off, or an email you cannot open yourself).
+         * Given exactly when attachments is: how many named attachments the email has in all.
          */
-        attachment_descriptions?: Array<string | null>;
+        attachment_count?: number | null;
         /**
          * How each top-level part of the rule decided. Present for matched, near_miss and no_match.
          */
@@ -7739,6 +7758,14 @@ export type ListEmailRuleDecisionsResult = Array<{
      * When the decided email arrived. Null, with from_address, subject and recipient, when you are not shown the email (it awaits sender authentication).
      */
     received_at: string | null;
+    /**
+     * The email's named attachments, in order, at most 10 (attachment_count counts them all). An empty list means the email has none. Null when you cannot read the email's content (withheld, awaiting sender authentication, not parsed yet, failed to parse, or discarded), or are not shown the email: then whether it has any is not known to you. A part with no file name is not listed or counted.
+     */
+    attachments: Array<EmailRuleRowAttachment> | null;
+    /**
+     * How many named attachments the email has in all, listed or not. Null exactly when attachments is.
+     */
+    attachment_count: number | null;
 }>;
 
 export type EmailRuleCoveringAuthor = {
@@ -7754,6 +7781,14 @@ export type EmailRuleCoveringAuthor = {
 };
 
 export type ListEmailRuleResultsResult = {
+    /**
+     * The email's named attachments, in order, at most 10 (attachment_count counts them all), each with its one-line description where one was read: the email every rule here decided on, so given once rather than on each rule. An empty list means it has none. Null when its content cannot be read (withheld, awaiting sender authentication, not parsed yet, failed to parse, or discarded): then whether it has any is not known to you.
+     */
+    attachments: Array<EmailRuleRowAttachment> | null;
+    /**
+     * How many named attachments the email has in all, listed or not. Null exactly when attachments is.
+     */
+    attachment_count: number | null;
     /**
      * Rules you can see, and read_only ones: matched first, then not matched, then not run; newest first within each.
      */
@@ -8554,6 +8589,14 @@ export type EmailRuleDecisionOnMyMail = {
      * When the email arrived. Null, with from_address, subject and recipient, when you are not shown the email (it awaits sender authentication).
      */
     received_at: string | null;
+    /**
+     * The email's named attachments, in order, at most 10 (attachment_count counts them all). An empty list means the email has none. Null when you cannot read the email's content (withheld, awaiting sender authentication, not parsed yet, failed to parse, or discarded), or are not shown the email: then whether it has any is not known to you. A part with no file name is not listed or counted.
+     */
+    attachments: Array<EmailRuleRowAttachment> | null;
+    /**
+     * How many named attachments the email has in all, listed or not. Null exactly when attachments is.
+     */
+    attachment_count: number | null;
 };
 
 export type ListEmailRuleDecisionsOnMyMailResult = Array<EmailRuleDecisionOnMyMail>;
