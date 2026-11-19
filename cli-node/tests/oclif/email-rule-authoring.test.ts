@@ -17,6 +17,7 @@ import {
 } from "../../src/oclif/email-rule-authoring.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 import { composeJsonDocument } from "../../src/oclif/json-output.js";
+import { commandFixture } from "./command-fixture.js";
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
 const API_BASE_URL = "https://api.email-rule-authoring.test/v1";
@@ -161,7 +162,7 @@ async function run(id: string, argv: string[]): Promise<RunResult> {
   process.exitCode = undefined;
   let thrown: unknown;
   try {
-    await command.run(argv, { root: CLI_ROOT });
+    await command.run(argv, commandFixture(CLI_ROOT));
   } catch (error) {
     thrown = error;
   } finally {
