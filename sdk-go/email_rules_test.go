@@ -93,7 +93,7 @@ func TestErrorCodeNotInTheSpecStillDecodes(t *testing.T) {
 // readable decision about your own mail re-encodes without detail_withheld,
 // and a withheld one keeps it.
 func TestDecisionOnMyMailReencodesDetailWithheldOnlyWhenSet(t *testing.T) {
-	readable := []byte(`{"id":"3c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e","email_id":"4c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e","rule_version":1,"classification_id":"5c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e","matched":true,"near_miss":false,"parts":[],"question_answers":[],"decided_at":"2026-11-12T00:00:00Z","from_address":"a@b.example","subject":"s","recipient":"me@b.example","received_at":"2026-11-12T00:00:00Z"}`)
+	readable := []byte(`{"id":"3c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e","email_id":"4c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e","rule_version":1,"classification_id":"5c9e7a1b-2d4f-4b6a-8c0e-1f2a3b4c5d6e","matched":true,"near_miss":false,"parts":[],"question_answers":[],"decided_at":"2026-11-12T00:00:00Z","from_address":"a@b.example","subject":"s","recipient":"me@b.example","received_at":"2026-11-12T00:00:00Z","attachments":[{"name":"rates.pdf","description":null}],"attachment_count":1}`)
 	var decision api.EmailRuleDecisionOnMyMail
 	if err := decision.UnmarshalJSON(readable); err != nil {
 		t.Fatal(err)
