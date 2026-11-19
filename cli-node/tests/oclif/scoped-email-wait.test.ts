@@ -43,7 +43,9 @@ vi.mock("../../src/oclif/shared-mail-receiver.js", () => ({
 }));
 
 import EmailsWaitCommand from "../../src/oclif/commands/emails-wait.js";
+import { RUNTIME_SESSION_VARIABLES } from "../../src/oclif/runtime-session.js";
 import { readBeforeDeadline } from "../../src/oclif/scoped-chat.js";
+import { commandFixture } from "./command-fixture.js";
 
 // undici links each copy of a Request to its parent's abort signal through a
 // WeakRef, so a copy nothing else holds can be garbage-collected before the
@@ -235,7 +237,7 @@ async function run(argv: string[]) {
     });
   let failure: unknown;
   try {
-    await EmailsWaitCommand.run(argv, { root: CLI_ROOT });
+    await EmailsWaitCommand.run(argv, commandFixture(CLI_ROOT));
   } catch (error) {
     failure = error;
   }
@@ -253,8 +255,8 @@ async function run(argv: string[]) {
 beforeEach(() => {
   vi.clearAllMocks();
   directory = mkdtempSync(join(tmpdir(), "primitive-scoped-wait-"));
-  vi.stubEnv("CODEX_SESSION_ID", undefined);
-  vi.stubEnv("CODEX_THREAD_ID", undefined);
+  for (const name of Object.values(RUNTIME_SESSION_VARIABLES).flat())
+    vi.stubEnv(name, undefined);
   vi.stubEnv("PRIMITIVE_CONFIG_DIR", join(directory, "primitive"));
   previousConfig = process.env.XDG_CONFIG_HOME;
   process.env.XDG_CONFIG_HOME = directory;
@@ -314,13 +316,6 @@ describe("connected emails wait", () => {
       "/v1/emails/22222222-2222-4222-8222-222222222222",
     ]);
     expect(fixture.requests[1]?.searchParams.has("date_from")).toBe(false);
-  });
-  it("follows the returned conversation only when this invocation supplies an exact runtime session", async () => {
-    const session = "44444444-4444-4444-8444-444444444444";
-    vi.stubEnv("CODEX_SESSION_ID", session);
-    setup();
-    const result = await run(args);
-    expect(result.failure).toBeUndefined();
     expect(
       readConversationFollow(
         {
@@ -330,7 +325,58 @@ describe("connected emails wait", () => {
         },
         "33333333-3333-4333-8333-333333333333",
       ),
-    ).toMatchObject({ sessionKey: `codex:${session}`, peer, recipient: owner });
+    ).toBeNull();
+  });
+  it.each([
+    ["CODEX_SESSION_ID", "codex"],
+    ["CODEX_THREAD_ID", "codex"],
+    ["CLAUDE_CODE_SESSION_ID", "claude"],
+  ])(
+    "follows the returned conversation for an exact %s session",
+    async (variable, runtime) => {
+      const session = "44444444-4444-4444-8444-444444444444";
+      vi.stubEnv(variable, session);
+      setup();
+      const result = await run(args);
+      expect(result.failure).toBeUndefined();
+      expect(
+        readConversationFollow(
+          {
+            configDir: join(directory, "primitive"),
+            scope: "scoped-wait-test",
+            recipient: owner,
+          },
+          "33333333-3333-4333-8333-333333333333",
+        ),
+      ).toMatchObject({
+        sessionKey: `${runtime}:${session}`,
+        peer,
+        recipient: owner,
+      });
+    },
+  );
+  it("does not follow a returned conversation when runtime identity is ambiguous", async () => {
+    vi.stubEnv("CODEX_THREAD_ID", "44444444-4444-4444-8444-444444444444");
+    vi.stubEnv(
+      "CLAUDE_CODE_SESSION_ID",
+      "55555555-5555-4555-8555-555555555555",
+    );
+    setup();
+    const result = await run(args);
+    expect(result.failure).toBeUndefined();
+    expect(JSON.parse(result.stdout).id).toBe(
+      "22222222-2222-4222-8222-222222222222",
+    );
+    expect(
+      readConversationFollow(
+        {
+          configDir: join(directory, "primitive"),
+          scope: "scoped-wait-test",
+          recipient: owner,
+        },
+        "33333333-3333-4333-8333-333333333333",
+      ),
+    ).toBeNull();
   });
   it("allows missing optional raw sender header and validates a supplied receiving address", async () => {
     const fixture = setup();
