@@ -17,8 +17,9 @@ func TestEmailUnderstandingDecodesEveryField(t *testing.T) {
 			"id": "rule_1", "version": 2, "name": "Internship applicants",
 			"description": "college students looking for internships",
 			"explanation": "Cold outreach from a college student looking for an internship.",
-			"questions": [{"question": "Is the sender a student?", "answer": true, "confidence": 0.99}]
-		}]
+			"questions": [{"question": "Is the sender a student?", "answer": true, "confidence": 0.99}],
+			"through_share": "share_1"
+		}, {"id": "rule_2", "through_share": null}]
 	}`
 	var u EmailUnderstanding
 	if err := json.Unmarshal([]byte(raw), &u); err != nil {
@@ -30,8 +31,14 @@ func TestEmailUnderstandingDecodesEveryField(t *testing.T) {
 	if c := u.Facts["intent"].Confidence; c == nil || *c != 0.91 {
 		t.Fatalf("unexpected fact confidence %v", c)
 	}
-	if len(u.Rules) != 1 {
+	if len(u.Rules) != 2 {
 		t.Fatalf("unexpected rules %+v", u.Rules)
+	}
+	if s := u.Rules[0].ThroughShare; s == nil || *s != "share_1" {
+		t.Fatalf("unexpected through_share %v", s)
+	}
+	if u.Rules[1].ThroughShare != nil {
+		t.Fatalf("expected no share on a rule the key lists itself, got %v", *u.Rules[1].ThroughShare)
 	}
 	rule := u.Rules[0]
 	if rule.ID != "rule_1" || rule.Version != 2 || rule.Name != "Internship applicants" || rule.Description != "college students looking for internships" {

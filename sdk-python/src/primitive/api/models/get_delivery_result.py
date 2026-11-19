@@ -61,11 +61,12 @@ class GetDeliveryResult:
                 webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's
                 answer can restate its URL's credential.
             rules (list[GetDeliveryResultRulesType0Item] | None): The rules this attempt's payload named in
-                email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it
-                named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not
-                recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read
-                email rules or whose organization does not have them, below content depth, and once the message's content is
-                discarded.
+                email.analysis.understanding.rules, by id and name as sent, with through_share: the id of the share the receiver
+                reached the rule through, or null when it lists the rule itself. Lists only rules you can read now, and a rule
+                reached through a share while you can see that share and it has not ended; empty when it named none of those.
+                Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries,
+                records of no attempt, attempts before this field), for a caller that cannot read email rules or whose
+                organization does not have them, below content depth, and once the message's content is discarded.
             created_at (str):
             updated_at (str):
             email (GetDeliveryResultEmailType0 | None):

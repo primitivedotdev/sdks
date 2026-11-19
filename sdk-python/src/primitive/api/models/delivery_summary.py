@@ -61,11 +61,12 @@ class DeliverySummary:
                 webhook (GET /endpoints/{id}; a deleted webhook only for a caller who reads every webhook), since a receiver's
                 answer can restate its URL's credential.
             rules (list[DeliverySummaryRulesType0Item] | None): The rules this attempt's payload named in
-                email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it
-                named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not
-                recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read
-                email rules or whose organization does not have them, below content depth, and once the message's content is
-                discarded.
+                email.analysis.understanding.rules, by id and name as sent, with through_share: the id of the share the receiver
+                reached the rule through, or null when it lists the rule itself. Lists only rules you can read now, and a rule
+                reached through a share while you can see that share and it has not ended; empty when it named none of those.
+                Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries,
+                records of no attempt, attempts before this field), for a caller that cannot read email rules or whose
+                organization does not have them, below content depth, and once the message's content is discarded.
             latest_attempt (bool): Whether this is the latest attempt of its delivery: the one recorded last, where a record
                 of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is
                 recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an

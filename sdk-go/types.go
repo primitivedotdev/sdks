@@ -465,6 +465,10 @@ type UnderstandingRule struct {
 	Explanation string `json:"explanation,omitempty"`
 	// Questions are the rule's questions and their answers.
 	Questions []UnderstandingRuleQuestion `json:"questions,omitempty"`
+	// ThroughShare is the id of the share a colleague made with you that
+	// this rule reached you through; nil when the receiving key lists the
+	// rule itself.
+	ThroughShare *string `json:"through_share,omitempty"`
 }
 
 // UnderstandingRuleQuestion is a rule question and its answer.

@@ -1025,6 +1025,10 @@ explanation?: string
  * The rule's questions and their answers.
  */
 questions?: UnderstandingRuleQuestion[]
+/**
+ * The id of the share a colleague made with you that this rule reached you through; null when the receiving key lists the rule itself.
+ */
+through_share?: (string | null)
 }
 /**
  * A rule question and its answer.

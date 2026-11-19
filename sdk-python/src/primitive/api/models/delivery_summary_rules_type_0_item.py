@@ -8,6 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from typing import cast
 
 
 
@@ -24,10 +25,12 @@ class DeliverySummaryRulesType0Item:
         Attributes:
             id (str):
             name (str):
+            through_share (None | str): The share the receiver reached the rule through; null when it lists the rule itself.
      """
 
     id: str
     name: str
+    through_share: None | str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -39,12 +42,16 @@ class DeliverySummaryRulesType0Item:
 
         name = self.name
 
+        through_share: None | str
+        through_share = self.through_share
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "id": id,
             "name": name,
+            "through_share": through_share,
         })
 
         return field_dict
@@ -58,9 +65,18 @@ class DeliverySummaryRulesType0Item:
 
         name = d.pop("name")
 
+        def _parse_through_share(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        through_share = _parse_through_share(d.pop("through_share"))
+
+
         delivery_summary_rules_type_0_item = cls(
             id=id,
             name=name,
+            through_share=through_share,
         )
 
 

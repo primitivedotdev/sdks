@@ -30,11 +30,14 @@ class EmailDetailSharedThroughType0:
 
         Attributes:
             share_id (UUID): The share.
+            rule_id (UUID): The rule that was shared, as the share shows it to you while it is live. A key lists the share's
+                id, not this one.
             rule_name (str): The name of the rule that was shared.
             sharer (EmailDetailSharedThroughType0Sharer): Who shared it.
      """
 
     share_id: UUID
+    rule_id: UUID
     rule_name: str
     sharer: EmailDetailSharedThroughType0Sharer
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -47,6 +50,8 @@ class EmailDetailSharedThroughType0:
         from ..models.email_detail_shared_through_type_0_sharer import EmailDetailSharedThroughType0Sharer # noqa: PLC0415
         share_id = str(self.share_id)
 
+        rule_id = str(self.rule_id)
+
         rule_name = self.rule_name
 
         sharer = self.sharer.to_dict()
@@ -56,6 +61,7 @@ class EmailDetailSharedThroughType0:
         field_dict.update(self.additional_properties)
         field_dict.update({
             "share_id": share_id,
+            "rule_id": rule_id,
             "rule_name": rule_name,
             "sharer": sharer,
         })
@@ -73,6 +79,11 @@ class EmailDetailSharedThroughType0:
 
 
 
+        rule_id = UUID(d.pop("rule_id"))
+
+
+
+
         rule_name = d.pop("rule_name")
 
         sharer = EmailDetailSharedThroughType0Sharer.from_dict(d.pop("sharer"))
@@ -82,6 +93,7 @@ class EmailDetailSharedThroughType0:
 
         email_detail_shared_through_type_0 = cls(
             share_id=share_id,
+            rule_id=rule_id,
             rule_name=rule_name,
             sharer=sharer,
         )

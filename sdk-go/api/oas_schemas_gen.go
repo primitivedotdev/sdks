@@ -18086,7 +18086,9 @@ type CredentialsCreateKeyInputGrant1 struct {
 	// is read in full, so rules beside a domain, a retired address or the address of a member other than
 	// the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error,
 	//  details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes
-	// here by its share's id, from your dashboard session only.
+	// here by its share's id, from your dashboard session only; its rule's own id is refused (403
+	// grant_forbidden, details.reason rule_shared_with_you, with the share in details.share_id) unless
+	// you could put the rule itself on a key.
 	Rules []string `json:"rules"`
 	// Deprecated: every key that reaches mail reads the full email. Ignored, except that raw still adds
 	// mail.raw:read (Raw mail) to an address preset or a custom grant.
@@ -24578,7 +24580,9 @@ type CredentialsUpdateKeyInputGrant1 struct {
 	// is read in full, so rules beside a domain, a retired address or the address of a member other than
 	// the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error,
 	//  details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes
-	// here by its share's id, from your dashboard session only.
+	// here by its share's id, from your dashboard session only; its rule's own id is refused (403
+	// grant_forbidden, details.reason rule_shared_with_you, with the share in details.share_id) unless
+	// you could put the rule itself on a key.
 	Rules []string `json:"rules"`
 	// Deprecated: every key that reaches mail reads the full email. Ignored, except that raw still adds
 	// mail.raw:read (Raw mail) to an address preset or a custom grant.
@@ -26102,7 +26106,9 @@ type DecideSuspensionRequestGrant1 struct {
 	// is read in full, so rules beside a domain, a retired address or the address of a member other than
 	// the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error,
 	//  details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes
-	// here by its share's id, from your dashboard session only.
+	// here by its share's id, from your dashboard session only; its rule's own id is refused (403
+	// grant_forbidden, details.reason rule_shared_with_you, with the share in details.share_id) unless
+	// you could put the rule itself on a key.
 	Rules []string `json:"rules"`
 	// Deprecated: every key that reaches mail reads the full email. Ignored, except that raw still adds
 	// mail.raw:read (Raw mail) to an address preset or a custom grant.
@@ -28519,7 +28525,9 @@ type DeliverySummary struct {
 	// its URL's credential.
 	ResponseBody NilString `json:"response_body"`
 	// The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as
-	// sent, listing only rules you can read now; empty when it named none of those. Recorded for
+	// sent, with through_share: the id of the share the receiver reached the rule through, or null when
+	// it lists the rule itself. Lists only rules you can read now, and a rule reached through a share
+	// while you can see that share and it has not ended; empty when it named none of those. Recorded for
 	// deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries,
 	//  records of no attempt, attempts before this field), for a caller that cannot read email rules or
 	// whose organization does not have them, below content depth, and once the message's content is
@@ -28811,6 +28819,8 @@ func (s *DeliverySummaryEmail) SetSubject(val OptNilString) {
 type DeliverySummaryRulesItem struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+	// The share the receiver reached the rule through; null when it lists the rule itself.
+	ThroughShare NilString `json:"through_share"`
 }
 
 // GetID returns the value of ID.
@@ -28823,6 +28833,11 @@ func (s *DeliverySummaryRulesItem) GetName() string {
 	return s.Name
 }
 
+// GetThroughShare returns the value of ThroughShare.
+func (s *DeliverySummaryRulesItem) GetThroughShare() NilString {
+	return s.ThroughShare
+}
+
 // SetID sets the value of ID.
 func (s *DeliverySummaryRulesItem) SetID(val string) {
 	s.ID = val
@@ -28831,6 +28846,11 @@ func (s *DeliverySummaryRulesItem) SetID(val string) {
 // SetName sets the value of Name.
 func (s *DeliverySummaryRulesItem) SetName(val string) {
 	s.Name = val
+}
+
+// SetThroughShare sets the value of ThroughShare.
+func (s *DeliverySummaryRulesItem) SetThroughShare(val NilString) {
+	s.ThroughShare = val
 }
 
 // Delivery status. skipped_by_rules: the endpoint's rules filtered the event out. held: kept back,
@@ -33964,6 +33984,9 @@ func (s *EmailDetailSenderMember) SetName(val NilString) {
 type EmailDetailSharedThrough struct {
 	// The share.
 	ShareID uuid.UUID `json:"share_id"`
+	// The rule that was shared, as the share shows it to you while it is live. A key lists the share's
+	// id, not this one.
+	RuleID uuid.UUID `json:"rule_id"`
 	// The name of the rule that was shared.
 	RuleName string `json:"rule_name"`
 	// Who shared it.
@@ -33973,6 +33996,11 @@ type EmailDetailSharedThrough struct {
 // GetShareID returns the value of ShareID.
 func (s *EmailDetailSharedThrough) GetShareID() uuid.UUID {
 	return s.ShareID
+}
+
+// GetRuleID returns the value of RuleID.
+func (s *EmailDetailSharedThrough) GetRuleID() uuid.UUID {
+	return s.RuleID
 }
 
 // GetRuleName returns the value of RuleName.
@@ -33988,6 +34016,11 @@ func (s *EmailDetailSharedThrough) GetSharer() EmailDetailSharedThroughSharer {
 // SetShareID sets the value of ShareID.
 func (s *EmailDetailSharedThrough) SetShareID(val uuid.UUID) {
 	s.ShareID = val
+}
+
+// SetRuleID sets the value of RuleID.
+func (s *EmailDetailSharedThrough) SetRuleID(val uuid.UUID) {
+	s.RuleID = val
 }
 
 // SetRuleName sets the value of RuleName.
@@ -41189,9 +41222,12 @@ type EmailRuleShare struct {
 	// The rule's name, state and description; null once the share is not live, except for the member
 	// sharing their mail, and once the rule is deleted.
 	Rule NilEmailRuleShareRule `json:"rule"`
-	// The rule itself. Only for the member sharing their mail; null for anyone else. The member it is
-	// shared with lists this share's id in a key's grant.rules instead (from the dashboard), and their
-	// own webhooks receive what it shares.
+	// The rule itself, given with rule: to the member sharing their mail, and while the share is live to
+	// anyone shown the rule, the member it is shared with included. Null otherwise, and for a deleted
+	// rule. It names the rule in webhook deliveries (email.analysis.understanding.rules[].id) and in GET
+	// /v1/emails/{id} shared_through; it opens none of the rule routes to someone who is not its author.
+	// The member it is shared with lists this share's id, not the rule's, in a key's grant.rules (from
+	// the dashboard), and their own webhooks receive what it shares.
 	RuleID NilUUID `json:"rule_id"`
 }
 
@@ -56723,7 +56759,9 @@ type GetDeliveryResult struct {
 	// its URL's credential.
 	ResponseBody NilString `json:"response_body"`
 	// The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as
-	// sent, listing only rules you can read now; empty when it named none of those. Recorded for
+	// sent, with through_share: the id of the share the receiver reached the rule through, or null when
+	// it lists the rule itself. Lists only rules you can read now, and a rule reached through a share
+	// while you can see that share and it has not ended; empty when it named none of those. Recorded for
 	// deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries,
 	//  records of no attempt, attempts before this field), for a caller that cannot read email rules or
 	// whose organization does not have them, below content depth, and once the message's content is
@@ -57172,8 +57210,9 @@ func (s *GetDeliveryResultEmail) SetSubject(val NilString) {
 }
 
 type GetDeliveryResultRulesItem struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID           string    `json:"id"`
+	Name         string    `json:"name"`
+	ThroughShare NilString `json:"through_share"`
 }
 
 // GetID returns the value of ID.
@@ -57186,6 +57225,11 @@ func (s *GetDeliveryResultRulesItem) GetName() string {
 	return s.Name
 }
 
+// GetThroughShare returns the value of ThroughShare.
+func (s *GetDeliveryResultRulesItem) GetThroughShare() NilString {
+	return s.ThroughShare
+}
+
 // SetID sets the value of ID.
 func (s *GetDeliveryResultRulesItem) SetID(val string) {
 	s.ID = val
@@ -57194,6 +57238,11 @@ func (s *GetDeliveryResultRulesItem) SetID(val string) {
 // SetName sets the value of Name.
 func (s *GetDeliveryResultRulesItem) SetName(val string) {
 	s.Name = val
+}
+
+// SetThroughShare sets the value of ThroughShare.
+func (s *GetDeliveryResultRulesItem) SetThroughShare(val NilString) {
+	s.ThroughShare = val
 }
 
 type GetDeliveryTooManyRequests ErrorResponseHeaders

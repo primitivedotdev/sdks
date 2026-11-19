@@ -67,9 +67,12 @@ class EmailRuleShare:
                 name.
             rule (EmailRuleShareRuleType0 | None): The rule's name, state and description; null once the share is not live,
                 except for the member sharing their mail, and once the rule is deleted.
-            rule_id (None | UUID): The rule itself. Only for the member sharing their mail; null for anyone else. The member
-                it is shared with lists this share's id in a key's grant.rules instead (from the dashboard), and their own
-                webhooks receive what it shares.
+            rule_id (None | UUID): The rule itself, given with rule: to the member sharing their mail, and while the share
+                is live to anyone shown the rule, the member it is shared with included. Null otherwise, and for a deleted rule.
+                It names the rule in webhook deliveries (email.analysis.understanding.rules[].id) and in GET /v1/emails/{id}
+                shared_through; it opens none of the rule routes to someone who is not its author. The member it is shared with
+                lists this share's id, not the rule's, in a key's grant.rules (from the dashboard), and their own webhooks
+                receive what it shares.
      """
 
     id: UUID
