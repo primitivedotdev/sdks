@@ -35,10 +35,11 @@ function invocation(entry: string | undefined): string {
 export default class AgentEnrollCommand extends Command {
   static summary = "Give this coding session an address in your organization";
   static description =
-    `On this trusted machine, use the saved member OAuth login to create one address for the exact loaded session, claim its one-use invitation privately, answer the email challenge, and poll the owner's connection list for confirmed pairing. Native receiving starts when supported. With --receiver external in the exact Claude session, install a fail-open Stop hook and resume SessionStart hook in that runtime's settings after the verification reply; idle wake remains unverified until tested with real mail. With --contact-requests, the login conditionally enables first-contact intake for this exact address after verification, preserving existing policy rules. An explicit disable or uncertain policy update is reported separately without losing pairing or receiver setup. The server allocates a readable address. An uncertain creation resumes the same saved request; recovered results do not include another invitation. Use --continue-setup once to explicitly continue a recovered pending connection. An uncertain continuation is held for owner recovery, never repeated automatically. When a claim left no saved credential (it was never sent, was refused, or its answer was lost), a rerun signed in as the agent's owner in the same organization asks Primitive for one fresh invitation for the same address and claims it; without that login the refusal names the step that finishes it from the app. Each attempt is recorded, without secrets, in the profile's registration log, which agent connect --status reports. Requires a verified Primitive-managed domain. This command does not accept API keys, a connection profile, or an invitation argument. One address per session: if this session already has another connected Primitive address, nothing is created and the command exits ${ALREADY_CONNECTED_EXIT_CODE} with status already_connected; ask the user whether to keep the existing address or disconnect it first, then rerun with --keep-existing or --replace-existing. Never choose for the user.`;
+    `On this trusted machine, use the saved member OAuth login to create one address for the exact loaded session, claim its one-use invitation privately, answer the email challenge, and poll the owner's connection list for confirmed pairing. Native receiving starts when supported. With --receiver external in the exact Claude session, install a fail-open Stop hook and resume SessionStart hook in that runtime's settings after the verification reply; idle wake remains unverified until tested with real mail. With --contact-requests, the login conditionally enables first-contact intake for this exact address after verification, preserving existing policy rules. An explicit disable or uncertain policy update is reported separately without losing pairing or receiver setup. The server allocates a readable address. An uncertain creation resumes the same saved request; recovered results do not include another invitation. Use --continue-setup once to explicitly continue a recovered pending connection. An uncertain continuation is held for owner recovery, never repeated automatically. When a claim left no saved credential (it was never sent, was refused, or its answer was lost), a rerun signed in as the agent's owner in the same organization asks Primitive for one fresh invitation for the same address and claims it; without that login the refusal names the step that finishes it from the app. Each attempt is recorded, without secrets, in the profile's registration log, which agent connect --status reports. Requires a verified Primitive-managed domain. This command does not accept API keys, a connection profile, or an invitation argument. One address per session: if this session already has another connected Primitive address, nothing is created and the command exits ${ALREADY_CONNECTED_EXIT_CODE} with status already_connected; ask the user whether to keep the existing address or disconnect it first, then rerun with --keep-existing or --replace-existing. Never choose for the user. With --grant, the address is the one the owner chose in the Primitive app when connecting this session: the grant is bound to that owner, this machine and this session, works once, and expires after a few minutes. It is redeemed only from inside the session it names; a rerun without --grant resumes with the saved grant.`;
   static examples = [
     "<%= config.bin %> agent enroll --session 11111111-1111-4111-8111-111111111111 --name Research --contact-requests --json",
     "<%= config.bin %> agent enroll --session 11111111-1111-4111-8111-111111111111 --receiver external --name Research --json",
+    "<%= config.bin %> agent enroll --session 11111111-1111-4111-8111-111111111111 --grant 22222222-2222-4222-8222-222222222222 --json",
   ];
   static flags = {
     session: Flags.string({
@@ -47,6 +48,10 @@ export default class AgentEnrollCommand extends Command {
     }),
     name: Flags.string({
       description: "Short agent display name; defaults to Coding agent",
+    }),
+    grant: Flags.string({
+      description:
+        "Session grant id from the Primitive app's connect step for this exact session on this machine",
     }),
     "continue-setup": Flags.boolean({
       description:
@@ -124,6 +129,7 @@ export default class AgentEnrollCommand extends Command {
         receiverMode: flags.receiver as ReceiverMode | undefined,
         contactRequests: flags["contact-requests"],
         continueSetup: flags["continue-setup"],
+        ...(flags.grant === undefined ? {} : { sessionGrant: flags.grant }),
         ...(bound.length > 0
           ? {
               beforeCreate: async () => {
