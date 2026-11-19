@@ -22,6 +22,7 @@ import { dirname, join } from "node:path";
 import { Errors, Flags } from "@oclif/core";
 import { listDomains } from "@primitivedotdev/api-core";
 import { agentProfileDirectory } from "./connected-agent-profile.js";
+import { shownLine } from "./terminal-text.js";
 
 export const FOCUS_ENV = "PRIMITIVE_FOCUS_DOMAINS";
 
@@ -269,23 +270,38 @@ export type ReadableDomains = { orgId: string | null; domains: FocusDomain[] };
 export const DOMAINS_TIMEOUT_MS = 5_000;
 
 /**
+ * The server refused to list this credential's domains, and asking again will
+ * not change that (a 403): for example a key whose access lists only email
+ * rules, which reads no domain. Its code and message are the server's.
+ */
+export type DomainsRefusal = { code: string; message: string };
+
+/**
  * The verified domains this credential can read mail on, from GET /domains,
  * which lists only the domains a credential confined to some mailboxes
- * reaches. Null when they cannot be read.
+ * reaches, or why the server refused to list them for good. Neither when they
+ * could not be read this time.
  */
-export async function readReadableDomains(
+export async function readDomainsOrRefusal(
   client: DomainsClient,
   timeoutMs = DOMAINS_TIMEOUT_MS,
-): Promise<ReadableDomains | null> {
+): Promise<{
+  readable: ReadableDomains | null;
+  refusal: DomainsRefusal | null;
+}> {
   try {
     const result = await listDomains({
       client,
       responseStyle: "fields",
       signal: AbortSignal.timeout(timeoutMs),
     });
-    if (result.error) return null;
+    if (result.error)
+      return {
+        readable: null,
+        refusal: refusalOf(result.error, result.response?.status),
+      };
     const rows = (result.data as { data?: unknown } | undefined)?.data;
-    if (!Array.isArray(rows)) return null;
+    if (!Array.isArray(rows)) return { readable: null, refusal: null };
     let orgId: string | null = null;
     const domains: FocusDomain[] = [];
     for (const row of rows) {
@@ -296,10 +312,39 @@ export async function readReadableDomains(
       domains.push({ name: row.domain.toLowerCase(), id: row.id });
     }
     domains.sort((a, b) => a.name.localeCompare(b.name));
-    return { orgId, domains };
+    return { readable: { orgId, domains }, refusal: null };
   } catch {
-    return null;
+    return { readable: null, refusal: null };
   }
+}
+
+/** The most characters of the server's refusal shown. */
+const REFUSAL_MAX = 400;
+
+/**
+ * A refusal asking again will not change, from an error answer: a 403 with a
+ * code and message. Null for anything else, which may pass next time or has
+ * its own hint (a 401), or that cannot be read.
+ */
+function refusalOf(
+  error: unknown,
+  status: number | undefined,
+): DomainsRefusal | null {
+  if (status !== 403) return null;
+  const body = (error as { error?: { code?: unknown; message?: unknown } })
+    ?.error;
+  const code =
+    typeof body?.code === "string" && /^[a-z0-9_]{1,80}$/.test(body.code)
+      ? body.code
+      : null;
+  // One line, at most REFUSAL_MAX characters: it is the server's text.
+  const shown =
+    typeof body?.message === "string" ? shownLine(body.message).trim() : "";
+  const message =
+    shown.length > REFUSAL_MAX
+      ? `${shown.slice(0, REFUSAL_MAX - 3)}...`
+      : shown;
+  return code && message ? { code, message } : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -506,8 +551,10 @@ export async function resolveFocus(
   }
 
   const profile = focusProfile(params.configDir, params.auth);
-  const read = params.readDomains ?? readReadableDomains;
-  const readable = await read(params.client);
+  // A refusal is kept only when the domains came from the server itself.
+  const { readable, refusal } = params.readDomains
+    ? { readable: await params.readDomains(params.client), refusal: null }
+    : await readDomainsOrRefusal(params.client);
   const orgId =
     readable?.orgId ??
     params.auth.connectedAgent?.orgId ??
@@ -529,6 +576,20 @@ export async function resolveFocus(
     };
   }
   if (asked) {
+    // Refused for good: say so in the server's words, never suggest a retry.
+    // From the session's variable, it names where the names came from and how
+    // to list without them: a refusal never widens a listing on its own.
+    if (!readable && refusal) {
+      const fromEnv =
+        asked.source === "env"
+          ? ` The names come from ${FOCUS_ENV}: unset it, or pass --all-domains.`
+          : "";
+      throw focusError(
+        `Cannot look up ${joinNames(asked.names)}: ${refusal.message.replace(/\.?$/, ".")}${fromEnv}`,
+        refusal.code,
+        1,
+      );
+    }
     if (!readable) {
       throw focusError(
         `Could not read this credential's domains to look up ${joinNames(asked.names)}; retry, or pass --all-domains.`,
