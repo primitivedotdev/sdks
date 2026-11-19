@@ -47,7 +47,8 @@ class TestEmailRuleResultResultsItem:
             subject (None | str | Unset):
             attachments (list[EmailRuleRowAttachment] | None | Unset): On matched, near_miss and no_match: the email's named
                 attachments, in order, at most 10 (attachment_count counts them all), each with its one-line description where
-                one was read and you can open the email yourself. An empty list means it has none. Absent on other outcomes.
+                one was read and you can open the email yourself. An empty list means it has none; null means its content could
+                not be read, so whether it has any is not known. Absent on other outcomes.
             attachment_count (int | None | Unset): Given exactly when attachments is: how many named attachments the email
                 has in all.
             parts (list[TestEmailRuleResultResultsItemPartsItem] | Unset): How each top-level part of the rule decided.

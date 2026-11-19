@@ -81829,7 +81829,7 @@ export const openapiDocument: Record<string, unknown> = {
                   "items": {
                     "$ref": "#/components/schemas/EmailRuleRowAttachment"
                   },
-                  "description": "The email's named attachments, as its row in results gives them."
+                  "description": "The email's named attachments, as its row in results gives them: in order, at most 10 (attachment_count counts them all), [] for none, null when its content could not be read."
                 },
                 "attachment_count": {
                   "type": [
@@ -82311,7 +82311,7 @@ export const openapiDocument: Record<string, unknown> = {
                   "items": {
                     "$ref": "#/components/schemas/EmailRuleRowAttachment"
                   },
-                  "description": "On matched, near_miss and no_match: the email's named attachments, in order, at most 10 (attachment_count counts them all), each with its one-line description where one was read and you can open the email yourself. An empty list means it has none. Absent on other outcomes."
+                  "description": "On matched, near_miss and no_match: the email's named attachments, in order, at most 10 (attachment_count counts them all), each with its one-line description where one was read and you can open the email yourself. An empty list means it has none; null means its content could not be read, so whether it has any is not known. Absent on other outcomes."
                 },
                 "attachment_count": {
                   "type": [
@@ -84736,7 +84736,7 @@ export const openapiDocument: Record<string, unknown> = {
             "items": {
               "$ref": "#/components/schemas/EmailRuleRowAttachment"
             },
-            "description": "The email's named attachments, in order, at most 10 (attachment_count counts them all), each with its one-line description where one was read: the email every rule here decided on, so given once rather than on each rule. An empty list means it has none. Null when its content cannot be read (withheld, not parsed yet, failed to parse, or discarded)."
+            "description": "The email's named attachments, in order, at most 10 (attachment_count counts them all), each with its one-line description where one was read: the email every rule here decided on, so given once rather than on each rule. An empty list means it has none. Null when its content cannot be read (withheld, awaiting sender authentication, not parsed yet, failed to parse, or discarded): then whether it has any is not known to you."
           },
           "attachment_count": {
             "type": [

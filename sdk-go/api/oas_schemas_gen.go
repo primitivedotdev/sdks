@@ -36793,7 +36793,8 @@ type EmailRuleChangedEmailsEmailsItem struct {
 	Subject    NilString   `json:"subject"`
 	From       NilString   `json:"from"`
 	ReceivedAt NilDateTime `json:"received_at"`
-	// The email's named attachments, as its row in results gives them.
+	// The email's named attachments, as its row in results gives them: in order, at most 10
+	// (attachment_count counts them all), [] for none, null when its content could not be read.
 	Attachments []EmailRuleRowAttachment `json:"attachments"`
 	// How many named attachments the email has in all, listed or not. Null exactly when attachments is.
 	AttachmentCount NilInt `json:"attachment_count"`
@@ -70804,7 +70805,8 @@ type ListEmailRuleResultsResult struct {
 	// The email's named attachments, in order, at most 10 (attachment_count counts them all), each with
 	// its one-line description where one was read: the email every rule here decided on, so given once
 	// rather than on each rule. An empty list means it has none. Null when its content cannot be read
-	// (withheld, not parsed yet, failed to parse, or discarded).
+	// (withheld, awaiting sender authentication, not parsed yet, failed to parse, or discarded): then
+	// whether it has any is not known to you.
 	Attachments []EmailRuleRowAttachment `json:"attachments"`
 	// How many named attachments the email has in all, listed or not. Null exactly when attachments is.
 	AttachmentCount NilInt `json:"attachment_count"`
@@ -138836,7 +138838,8 @@ type TestEmailRuleResultResultsItem struct {
 	Subject   OptNilString `json:"subject"`
 	// On matched, near_miss and no_match: the email's named attachments, in order, at most 10
 	// (attachment_count counts them all), each with its one-line description where one was read and you
-	// can open the email yourself. An empty list means it has none. Absent on other outcomes.
+	// can open the email yourself. An empty list means it has none; null means its content could not be
+	// read, so whether it has any is not known. Absent on other outcomes.
 	Attachments OptNilEmailRuleRowAttachmentArray `json:"attachments"`
 	// Given exactly when attachments is: how many named attachments the email has in all.
 	AttachmentCount OptNilInt `json:"attachment_count"`

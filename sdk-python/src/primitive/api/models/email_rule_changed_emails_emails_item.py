@@ -32,7 +32,8 @@ class EmailRuleChangedEmailsEmailsItem:
             from_ (None | str):
             received_at (datetime.datetime | None):
             attachments (list[EmailRuleRowAttachment] | None): The email's named attachments, as its row in results gives
-                them.
+                them: in order, at most 10 (attachment_count counts them all), [] for none, null when its content could not be
+                read.
             attachment_count (int | None): How many named attachments the email has in all, listed or not. Null exactly when
                 attachments is.
      """
