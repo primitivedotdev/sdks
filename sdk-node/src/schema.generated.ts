@@ -964,6 +964,13 @@ export const emailReceivedEventJsonSchema = {
             "$ref": "#/definitions/UnderstandingRuleQuestion"
           },
           "description": "The rule's questions and their answers."
+        },
+        "through_share": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The id of the share a colleague made with you that this rule reached you through; null when the receiving key lists the rule itself."
         }
       },
       "required": [

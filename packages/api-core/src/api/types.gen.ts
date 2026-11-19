@@ -2006,6 +2006,10 @@ export type EmailDetail = {
          */
         share_id: string;
         /**
+         * The rule that was shared, as the share shows it to you while it is live. A key lists the share's id, not this one.
+         */
+        rule_id: string;
+        /**
          * The name of the rule that was shared.
          */
         rule_name: string;
@@ -4925,11 +4929,15 @@ export type DeliverySummary = {
      */
     response_body: string | null;
     /**
-     * The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded.
+     * The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, with through_share: the id of the share the receiver reached the rule through, or null when it lists the rule itself. Lists only rules you can read now, and a rule reached through a share while you can see that share and it has not ended; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded.
      */
     rules: Array<{
         id: string;
         name: string;
+        /**
+         * The share the receiver reached the rule through; null when it lists the rule itself.
+         */
+        through_share: string | null;
     }> | null;
     /**
      * Whether this is the latest attempt of its delivery: the one recorded last, where a record of no attempt (a rule skip or a held send, attempt_count 0) is latest only when no attempt was made. A retry is recorded as a new attempt with its own id and attempt_count (not always higher than the one before), so an earlier attempt never changes: follow the latest one, or read attempts on any of them.
@@ -8219,7 +8227,7 @@ export type EmailRuleShare = {
         updated_at: string;
     } | null;
     /**
-     * The rule itself. Only for the member sharing their mail; null for anyone else. The member it is shared with lists this share's id in a key's grant.rules instead (from the dashboard), and their own webhooks receive what it shares.
+     * The rule itself, given with rule: to the member sharing their mail, and while the share is live to anyone shown the rule, the member it is shared with included. Null otherwise, and for a deleted rule. It names the rule in webhook deliveries (email.analysis.understanding.rules[].id) and in GET /v1/emails/{id} shared_through; it opens none of the rule routes to someone who is not its author. The member it is shared with lists this share's id, not the rule's, in a key's grant.rules (from the dashboard), and their own webhooks receive what it shares.
      */
     rule_id: string | null;
 };
@@ -9468,11 +9476,12 @@ export type GetDeliveryResult = {
      */
     response_body: string | null;
     /**
-     * The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded.
+     * The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, with through_share: the id of the share the receiver reached the rule through, or null when it lists the rule itself. Lists only rules you can read now, and a rule reached through a share while you can see that share and it has not ended; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded.
      */
     rules: Array<{
         id: string;
         name: string;
+        through_share: string | null;
     }> | null;
     created_at: string;
     updated_at: string;
@@ -10294,7 +10303,7 @@ export type CredentialsCreateKeyInput = {
         addresses?: Array<string>;
         domains?: Array<string>;
         /**
-         * Email rule ids: the key also reads the emails these rules granted. An address listed beside them is read in full, so rules beside a domain, a retired address or the address of a member other than the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error, details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its share's id, from your dashboard session only.
+         * Email rule ids: the key also reads the emails these rules granted. An address listed beside them is read in full, so rules beside a domain, a retired address or the address of a member other than the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error, details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its share's id, from your dashboard session only; its rule's own id is refused (403 grant_forbidden, details.reason rule_shared_with_you, with the share in details.share_id) unless you could put the rule itself on a key.
          */
         rules?: Array<string>;
         /**
@@ -10405,7 +10414,7 @@ export type CredentialsUpdateKeyInput = {
         addresses?: Array<string>;
         domains?: Array<string>;
         /**
-         * Email rule ids: the key also reads the emails these rules granted. An address listed beside them is read in full, so rules beside a domain, a retired address or the address of a member other than the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error, details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its share's id, from your dashboard session only.
+         * Email rule ids: the key also reads the emails these rules granted. An address listed beside them is read in full, so rules beside a domain, a retired address or the address of a member other than the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error, details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its share's id, from your dashboard session only; its rule's own id is refused (403 grant_forbidden, details.reason rule_shared_with_you, with the share in details.share_id) unless you could put the rule itself on a key.
          */
         rules?: Array<string>;
         /**
@@ -11148,7 +11157,7 @@ export type DecideSuspensionRequest = {
         addresses?: Array<string>;
         domains?: Array<string>;
         /**
-         * Email rule ids: the key also reads the emails these rules granted. An address listed beside them is read in full, so rules beside a domain, a retired address or the address of a member other than the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error, details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its share's id, from your dashboard session only.
+         * Email rule ids: the key also reads the emails these rules granted. An address listed beside them is read in full, so rules beside a domain, a retired address or the address of a member other than the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error, details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its share's id, from your dashboard session only; its rule's own id is refused (403 grant_forbidden, details.reason rule_shared_with_you, with the share in details.share_id) unless you could put the rule itself on a key.
          */
         rules?: Array<string>;
         /**

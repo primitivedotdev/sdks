@@ -68207,11 +68207,16 @@ func (s *DeliverySummaryRulesItem) encodeFields(e *jx.Encoder) {
 		e.FieldStart("name")
 		e.Str(s.Name)
 	}
+	{
+		e.FieldStart("through_share")
+		s.ThroughShare.Encode(e)
+	}
 }
 
-var jsonFieldsNameOfDeliverySummaryRulesItem = [2]string{
+var jsonFieldsNameOfDeliverySummaryRulesItem = [3]string{
 	0: "id",
 	1: "name",
+	2: "through_share",
 }
 
 // Decode decodes DeliverySummaryRulesItem from json.
@@ -68247,6 +68252,16 @@ func (s *DeliverySummaryRulesItem) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"name\"")
 			}
+		case "through_share":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				if err := s.ThroughShare.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"through_share\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -68257,7 +68272,7 @@ func (s *DeliverySummaryRulesItem) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -76599,6 +76614,10 @@ func (s *EmailDetailSharedThrough) encodeFields(e *jx.Encoder) {
 		json.EncodeUUID(e, s.ShareID)
 	}
 	{
+		e.FieldStart("rule_id")
+		json.EncodeUUID(e, s.RuleID)
+	}
+	{
 		e.FieldStart("rule_name")
 		e.Str(s.RuleName)
 	}
@@ -76608,10 +76627,11 @@ func (s *EmailDetailSharedThrough) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailDetailSharedThrough = [3]string{
+var jsonFieldsNameOfEmailDetailSharedThrough = [4]string{
 	0: "share_id",
-	1: "rule_name",
-	2: "sharer",
+	1: "rule_id",
+	2: "rule_name",
+	3: "sharer",
 }
 
 // Decode decodes EmailDetailSharedThrough from json.
@@ -76635,8 +76655,20 @@ func (s *EmailDetailSharedThrough) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"share_id\"")
 			}
-		case "rule_name":
+		case "rule_id":
 			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.RuleID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rule_id\"")
+			}
+		case "rule_name":
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				v, err := d.Str()
 				s.RuleName = string(v)
@@ -76648,7 +76680,7 @@ func (s *EmailDetailSharedThrough) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"rule_name\"")
 			}
 		case "sharer":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				if err := s.Sharer.Decode(d); err != nil {
 					return err
@@ -76667,7 +76699,7 @@ func (s *EmailDetailSharedThrough) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000111,
+		0b00001111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -118173,11 +118205,16 @@ func (s *GetDeliveryResultRulesItem) encodeFields(e *jx.Encoder) {
 		e.FieldStart("name")
 		e.Str(s.Name)
 	}
+	{
+		e.FieldStart("through_share")
+		s.ThroughShare.Encode(e)
+	}
 }
 
-var jsonFieldsNameOfGetDeliveryResultRulesItem = [2]string{
+var jsonFieldsNameOfGetDeliveryResultRulesItem = [3]string{
 	0: "id",
 	1: "name",
+	2: "through_share",
 }
 
 // Decode decodes GetDeliveryResultRulesItem from json.
@@ -118213,6 +118250,16 @@ func (s *GetDeliveryResultRulesItem) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"name\"")
 			}
+		case "through_share":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				if err := s.ThroughShare.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"through_share\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -118223,7 +118270,7 @@ func (s *GetDeliveryResultRulesItem) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

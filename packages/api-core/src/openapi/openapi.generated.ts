@@ -70743,6 +70743,7 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "Only for a reader who has this email through a colleague's share of their mail, when that share is their only way to it: the share and who gave it. Null for everyone else, including on your own mail when a rule or share of yours gave it to someone: GET /v1/email-rule-shares/{id}/emails lists what a share you gave has given.",
             "required": [
               "share_id",
+              "rule_id",
               "rule_name",
               "sharer"
             ],
@@ -70751,6 +70752,11 @@ export const openapiDocument: Record<string, unknown> = {
                 "type": "string",
                 "format": "uuid",
                 "description": "The share."
+              },
+              "rule_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "The rule that was shared, as the share shows it to you while it is live. A key lists the share's id, not this one."
               },
               "rule_name": {
                 "type": "string",
@@ -76906,12 +76912,13 @@ export const openapiDocument: Record<string, unknown> = {
               "array",
               "null"
             ],
-            "description": "The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded.",
+            "description": "The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, with through_share: the id of the share the receiver reached the rule through, or null when it lists the rule itself. Lists only rules you can read now, and a rule reached through a share while you can see that share and it has not ended; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded.",
             "items": {
               "type": "object",
               "required": [
                 "id",
-                "name"
+                "name",
+                "through_share"
               ],
               "properties": {
                 "id": {
@@ -76919,6 +76926,13 @@ export const openapiDocument: Record<string, unknown> = {
                 },
                 "name": {
                   "type": "string"
+                },
+                "through_share": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The share the receiver reached the rule through; null when it lists the rule itself."
                 }
               }
             }
@@ -85796,7 +85810,7 @@ export const openapiDocument: Record<string, unknown> = {
               "null"
             ],
             "format": "uuid",
-            "description": "The rule itself. Only for the member sharing their mail; null for anyone else. The member it is shared with lists this share's id in a key's grant.rules instead (from the dashboard), and their own webhooks receive what it shares."
+            "description": "The rule itself, given with rule: to the member sharing their mail, and while the share is live to anyone shown the rule, the member it is shared with included. Null otherwise, and for a deleted rule. It names the rule in webhook deliveries (email.analysis.understanding.rules[].id) and in GET /v1/emails/{id} shared_through; it opens none of the rule routes to someone who is not its author. The member it is shared with lists this share's id, not the rule's, in a key's grant.rules (from the dashboard), and their own webhooks receive what it shares."
           }
         },
         "required": [
@@ -90195,14 +90209,21 @@ export const openapiDocument: Record<string, unknown> = {
                 },
                 "name": {
                   "type": "string"
+                },
+                "through_share": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               },
               "required": [
                 "id",
-                "name"
+                "name",
+                "through_share"
               ]
             },
-            "description": "The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, listing only rules you can read now; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded."
+            "description": "The rules this attempt's payload named in email.analysis.understanding.rules, by id and name as sent, with through_share: the id of the share the receiver reached the rule through, or null when it lists the rule itself. Lists only rules you can read now, and a rule reached through a share while you can see that share and it has not ended; empty when it named none of those. Recorded for deliveries Primitive's API sends and for replays. Null where it was not recorded (other deliveries, records of no attempt, attempts before this field), for a caller that cannot read email rules or whose organization does not have them, below content depth, and once the message's content is discarded."
           },
           "created_at": {
             "type": "string"
@@ -93833,7 +93854,7 @@ export const openapiDocument: Record<string, unknown> = {
                     }
                   },
                   "rules": {
-                    "description": "Email rule ids: the key also reads the emails these rules granted. An address listed beside them is read in full, so rules beside a domain, a retired address or the address of a member other than the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error, details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its share's id, from your dashboard session only.",
+                    "description": "Email rule ids: the key also reads the emails these rules granted. An address listed beside them is read in full, so rules beside a domain, a retired address or the address of a member other than the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error, details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its share's id, from your dashboard session only; its rule's own id is refused (403 grant_forbidden, details.reason rule_shared_with_you, with the share in details.share_id) unless you could put the rule itself on a key.",
                     "maxItems": 20,
                     "type": "array",
                     "items": {
@@ -94213,7 +94234,7 @@ export const openapiDocument: Record<string, unknown> = {
                     }
                   },
                   "rules": {
-                    "description": "Email rule ids: the key also reads the emails these rules granted. An address listed beside them is read in full, so rules beside a domain, a retired address or the address of a member other than the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error, details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its share's id, from your dashboard session only.",
+                    "description": "Email rule ids: the key also reads the emails these rules granted. An address listed beside them is read in full, so rules beside a domain, a retired address or the address of a member other than the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error, details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its share's id, from your dashboard session only; its rule's own id is refused (403 grant_forbidden, details.reason rule_shared_with_you, with the share in details.share_id) unless you could put the rule itself on a key.",
                     "maxItems": 20,
                     "type": "array",
                     "items": {
@@ -97162,7 +97183,7 @@ export const openapiDocument: Record<string, unknown> = {
                     }
                   },
                   "rules": {
-                    "description": "Email rule ids: the key also reads the emails these rules granted. An address listed beside them is read in full, so rules beside a domain, a retired address or the address of a member other than the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error, details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its share's id, from your dashboard session only.",
+                    "description": "Email rule ids: the key also reads the emails these rules granted. An address listed beside them is read in full, so rules beside a domain, a retired address or the address of a member other than the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error, details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its share's id, from your dashboard session only; its rule's own id is refused (403 grant_forbidden, details.reason rule_shared_with_you, with the share in details.share_id) unless you could put the rule itself on a key.",
                     "maxItems": 20,
                     "type": "array",
                     "items": {

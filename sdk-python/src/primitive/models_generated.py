@@ -903,6 +903,12 @@ class UnderstandingRule(BaseModel):
         list[UnderstandingRuleQuestion] | None,
         Field(description="The rule's questions and their answers."),
     ] = None
+    through_share: Annotated[
+        str | None,
+        Field(
+            description="The id of the share a colleague made with you that this rule reached you through; null when the receiving key lists the rule itself."
+        ),
+    ] = None
 
 
 class ForwardVerification(BaseModel):

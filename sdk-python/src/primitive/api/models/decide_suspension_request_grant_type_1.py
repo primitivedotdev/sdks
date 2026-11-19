@@ -38,7 +38,8 @@ class DecideSuspensionRequestGrantType1:
                 beside them is read in full, so rules beside a domain, a retired address or the address of a member other than
                 the key's holder (its creator, or whoever it was transferred to) are refused (400 validation_error,
                 details.reason rules_beside_domain or rules_beside_personal_mailbox). A rule shared with you goes here by its
-                share's id, from your dashboard session only.
+                share's id, from your dashboard session only; its rule's own id is refused (403 grant_forbidden, details.reason
+                rule_shared_with_you, with the share in details.share_id) unless you could put the rule itself on a key.
             depth (DecideSuspensionRequestGrantType1Depth | Unset): Deprecated: every key that reaches mail reads the full
                 email. Ignored, except that raw still adds mail.raw:read (Raw mail) to an address preset or a custom grant.
             resources (DecideSuspensionRequestGrantType1Resources | Unset):

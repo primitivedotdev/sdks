@@ -43,6 +43,7 @@ import {
   emptyRuleListHint,
   listEmailRulesErrorHint,
 } from "./email-rule-listings.js";
+import { EMAIL_RULE_SHARE_EXTENSIONS } from "./email-rule-shares.js";
 import {
   emptyEmailListHint,
   listFilters,
@@ -1726,6 +1727,7 @@ export const OPERATION_EXTRA_BODY_FLAGS: Record<
 export const OPERATION_EXTENSIONS: Record<string, OperationExtension> = {
   ...EMAIL_RULE_OPERATION_EXTENSIONS,
   ...EMAIL_RULE_LISTING_EXTENSIONS,
+  ...EMAIL_RULE_SHARE_EXTENSIONS,
   ...ENDPOINT_HEADER_EXTENSIONS,
   ...ANSWER_REPORT_EXTENSIONS,
 };
