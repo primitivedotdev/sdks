@@ -91,6 +91,32 @@ describe("shareListLines", () => {
     expect(lines[1]).toContain("to ashley@x.test");
   });
 
+  it("names both people for an admin on neither side, and keeps a granter's id once ended", () => {
+    const lines = shareListLines([
+      share({ is_granter: false, is_beneficiary: false }),
+      share({
+        is_granter: true,
+        is_beneficiary: false,
+        live: false,
+        ended_at: "2026-11-19T00:00:00Z",
+        end_reason: "removed_by_beneficiary",
+      }),
+    ]);
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toContain("Ben Lee to ashley@x.test");
+    expect(lines[2]).toContain(RULE);
+    expect(lines[2]).toMatch(
+      /to ashley@x\.test +ended \(removed_by_beneficiary\)$/,
+    );
+  });
+
+  it("adds no note when no received share shows a rule id", () => {
+    const lines = shareListLines([
+      share({ live: false, rule: null, rule_id: null }),
+    ]);
+    expect(lines).toHaveLength(2);
+  });
+
   it("prints nothing for an empty list, and keeps terminal control out", () => {
     expect(shareListLines([])).toEqual([]);
     expect(shareListLines(null)).toEqual([]);

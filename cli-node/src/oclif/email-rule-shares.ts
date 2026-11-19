@@ -69,8 +69,13 @@ export function shareListLines(data: unknown): string[] {
         shareState(share),
       ]),
     ]),
-    ...(rows.some((share) => share.is_beneficiary === true) ? [KEY_NOTE] : []),
+    ...(rows.some(showsReceivedRuleId) ? [KEY_NOTE] : []),
   ];
+}
+
+/** A share made with the caller that shows them its rule's id. */
+function showsReceivedRuleId(share: Record<string, unknown>): boolean {
+  return share.is_beneficiary === true && typeof share.rule_id === "string";
 }
 
 /** Said under a share made with the caller: which id goes where. */
@@ -83,7 +88,7 @@ export function shareLines(data: unknown): string[] {
   return [
     `Share ${shownLine(data.id) || "-"}: ${shareState(data)}, ${otherSide(data)}`,
     `Rule: ${ruleName(data)} (${typeof data.rule_id === "string" ? `id ${ruleId(data)}` : "id not shown to you"})`,
-    ...(data.is_beneficiary === true ? [KEY_NOTE] : []),
+    ...(showsReceivedRuleId(data) ? [KEY_NOTE] : []),
   ];
 }
 

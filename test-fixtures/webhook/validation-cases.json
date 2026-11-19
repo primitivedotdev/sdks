@@ -2186,7 +2186,8 @@
                       "answer": true,
                       "confidence": 0.99
                     }
-                  ]
+                  ],
+                  "through_share": "8d2f4a6b-1c3e-4f5a-9b7c-0d1e2f3a4b5c"
                 }
               ]
             }
@@ -2253,7 +2254,8 @@
                   "answer": true,
                   "confidence": 0.99
                 }
-              ]
+              ],
+              "through_share": "8d2f4a6b-1c3e-4f5a-9b7c-0d1e2f3a4b5c"
             }
           ]
         },
