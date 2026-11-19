@@ -995,6 +995,7 @@ func (s *Account) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Entitlements = nil
 				default:
 					s.Entitlements = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -42339,6 +42340,7 @@ func (s *CredentialsCreateKeyResultGrant) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Permissions = nil
 				default:
 					s.Permissions = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -45190,6 +45192,7 @@ func (s *CredentialsGetKeyResultGrant) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Permissions = nil
 				default:
 					s.Permissions = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -50311,6 +50314,7 @@ func (s *CredentialsListCredentialsResultItemsItemConditions) Decode(d *jx.Decod
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.IPAllowlist = nil
 				default:
 					s.IPAllowlist = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -50796,6 +50800,7 @@ func (s *CredentialsListCredentialsResultItemsItemGrant) Decode(d *jx.Decoder) e
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Permissions = nil
 				default:
 					s.Permissions = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -51999,6 +52004,7 @@ func (s *CredentialsListKeysResultItemsItemGrant) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Permissions = nil
 				default:
 					s.Permissions = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -54719,6 +54725,7 @@ func (s *CredentialsRotateKeyResultGrant) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Permissions = nil
 				default:
 					s.Permissions = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -67953,6 +67960,7 @@ func (s *DeliverySummary) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Rules = nil
 				default:
 					s.Rules = make([]DeliverySummaryRulesItem, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -81898,6 +81906,7 @@ func (s *EmailRuleChangedEmailsEmailsItem) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Attachments = nil
 				default:
 					s.Attachments = make([]EmailRuleRowAttachment, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -83502,6 +83511,7 @@ func (s *EmailRuleDecisionOnMyMail) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Attachments = nil
 				default:
 					s.Attachments = make([]EmailRuleRowAttachment, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -117865,6 +117875,7 @@ func (s *GetDeliveryResult) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Rules = nil
 				default:
 					s.Rules = make([]GetDeliveryResultRulesItem, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -125280,6 +125291,7 @@ func (s *GetFunctionRuntimeKeyResult) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Permissions = nil
 				default:
 					s.Permissions = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -125319,6 +125331,7 @@ func (s *GetFunctionRuntimeKeyResult) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.AttachedSecretKeys = nil
 				default:
 					s.AttachedSecretKeys = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -141312,6 +141325,7 @@ func (s *IncludedMessageHeaders) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.To = nil
 				default:
 					s.To = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -141339,6 +141353,7 @@ func (s *IncludedMessageHeaders) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Cc = nil
 				default:
 					s.Cc = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -141366,6 +141381,7 @@ func (s *IncludedMessageHeaders) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Bcc = nil
 				default:
 					s.Bcc = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -141393,6 +141409,7 @@ func (s *IncludedMessageHeaders) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.ReplyTo = nil
 				default:
 					s.ReplyTo = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -141420,6 +141437,7 @@ func (s *IncludedMessageHeaders) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.InReplyTo = nil
 				default:
 					s.InReplyTo = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -141447,6 +141465,7 @@ func (s *IncludedMessageHeaders) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.References = nil
 				default:
 					s.References = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -152682,6 +152701,7 @@ func (s *ListEmailRuleDecisionsResultItem) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Attachments = nil
 				default:
 					s.Attachments = make([]EmailRuleRowAttachment, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -153526,6 +153546,7 @@ func (s *ListEmailRuleResultsResult) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Attachments = nil
 				default:
 					s.Attachments = make([]EmailRuleRowAttachment, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -220730,6 +220751,7 @@ func (s *ReaffirmFunctionRuntimeKeyResult) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Permissions = nil
 				default:
 					s.Permissions = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -220769,6 +220791,7 @@ func (s *ReaffirmFunctionRuntimeKeyResult) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.AttachedSecretKeys = nil
 				default:
 					s.AttachedSecretKeys = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -248322,6 +248345,7 @@ func (s *SetFunctionRuntimeKeyResult) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Permissions = nil
 				default:
 					s.Permissions = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -248361,6 +248385,7 @@ func (s *SetFunctionRuntimeKeyResult) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.AttachedSecretKeys = nil
 				default:
 					s.AttachedSecretKeys = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -258812,6 +258837,7 @@ func (s *SuspendFunctionRuntimeKeyResult) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.Permissions = nil
 				default:
 					s.Permissions = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
@@ -258851,6 +258877,7 @@ func (s *SuspendFunctionRuntimeKeyResult) Decode(d *jx.Decoder) error {
 					if err := d.Skip(); err != nil {
 						return err
 					}
+					s.AttachedSecretKeys = nil
 				default:
 					s.AttachedSecretKeys = make([]string, 0)
 					if err := d.Arr(func(d *jx.Decoder) error {
