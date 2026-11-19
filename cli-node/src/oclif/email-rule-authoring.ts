@@ -40,6 +40,7 @@ import type {
   OperationReport,
 } from "./operation-extension.js";
 import { ruleNotesLines, ruleNotesReport } from "./rule-notes.js";
+import { attachmentsLines } from "./rule-row-attachments.js";
 import { shownLine, shownText, terminalLine } from "./terminal-text.js";
 
 const EMAIL_ID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -538,7 +539,10 @@ export function changesLines(changes: unknown, kind?: unknown): string[] {
     const shown = entry.emails.slice(0, CHANGES_LIST_LIMIT);
     lines.push(
       `  ${label[0]?.toUpperCase()}${label.slice(1)}${entry.count > shown.length ? ` (${shown.length} of ${entry.count} shown; the JSON lists up to 50)` : ""}:`,
-      ...shown.map(emailLine),
+      ...shown.flatMap((email) => [
+        emailLine(email),
+        ...attachmentsLines(email, "      ").map(terminalLine),
+      ]),
     );
   }
   return lines;
@@ -583,15 +587,11 @@ function notMatchedLine(result: TestResult): string[] {
 }
 
 /**
- * The file names a matched or near-miss result lists (attachment_names), on
- * one line under it: the names its questions are given, shown as shownText
- * shows a sender's text.
+ * What a decided result's email carried (attachments), on one line under it,
+ * as the decision listings show it (attachmentsSummary).
  */
 function attachmentsLine(result: TestResult): string[] {
-  const names = (result as { attachment_names?: unknown }).attachment_names;
-  if (!Array.isArray(names)) return [];
-  const shown = names.map(shownText).filter(Boolean);
-  return shown.length > 0 ? [`    attachments: ${shown.join(", ")}`] : [];
+  return attachmentsLines(result, "    ").map(terminalLine);
 }
 
 /**

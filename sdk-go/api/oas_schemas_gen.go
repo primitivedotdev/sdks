@@ -36793,6 +36793,10 @@ type EmailRuleChangedEmailsEmailsItem struct {
 	Subject    NilString   `json:"subject"`
 	From       NilString   `json:"from"`
 	ReceivedAt NilDateTime `json:"received_at"`
+	// The email's named attachments, as its row in results gives them.
+	Attachments []EmailRuleRowAttachment `json:"attachments"`
+	// How many named attachments the email has in all, listed or not. Null exactly when attachments is.
+	AttachmentCount NilInt `json:"attachment_count"`
 }
 
 // GetEmailID returns the value of EmailID.
@@ -36815,6 +36819,16 @@ func (s *EmailRuleChangedEmailsEmailsItem) GetReceivedAt() NilDateTime {
 	return s.ReceivedAt
 }
 
+// GetAttachments returns the value of Attachments.
+func (s *EmailRuleChangedEmailsEmailsItem) GetAttachments() []EmailRuleRowAttachment {
+	return s.Attachments
+}
+
+// GetAttachmentCount returns the value of AttachmentCount.
+func (s *EmailRuleChangedEmailsEmailsItem) GetAttachmentCount() NilInt {
+	return s.AttachmentCount
+}
+
 // SetEmailID sets the value of EmailID.
 func (s *EmailRuleChangedEmailsEmailsItem) SetEmailID(val uuid.UUID) {
 	s.EmailID = val
@@ -36833,6 +36847,16 @@ func (s *EmailRuleChangedEmailsEmailsItem) SetFrom(val NilString) {
 // SetReceivedAt sets the value of ReceivedAt.
 func (s *EmailRuleChangedEmailsEmailsItem) SetReceivedAt(val NilDateTime) {
 	s.ReceivedAt = val
+}
+
+// SetAttachments sets the value of Attachments.
+func (s *EmailRuleChangedEmailsEmailsItem) SetAttachments(val []EmailRuleRowAttachment) {
+	s.Attachments = val
+}
+
+// SetAttachmentCount sets the value of AttachmentCount.
+func (s *EmailRuleChangedEmailsEmailsItem) SetAttachmentCount(val NilInt) {
+	s.AttachmentCount = val
 }
 
 // Ref: #/components/schemas/EmailRuleCoverage
@@ -37559,6 +37583,13 @@ type EmailRuleDecisionOnMyMail struct {
 	// When the email arrived. Null, with from_address, subject and recipient, when you are not shown the
 	// email (it awaits sender authentication).
 	ReceivedAt NilDateTime `json:"received_at"`
+	// The email's named attachments, in order, at most 10 (attachment_count counts them all). An empty
+	// list means the email has none. Null when you cannot read the email's content (withheld, awaiting
+	// sender authentication, failed to parse, or discarded), or are not shown the email: then whether it
+	// has any is not known to you. A part with no file name is not listed or counted.
+	Attachments []EmailRuleRowAttachment `json:"attachments"`
+	// How many named attachments the email has in all, listed or not. Null exactly when attachments is.
+	AttachmentCount NilInt `json:"attachment_count"`
 }
 
 // GetID returns the value of ID.
@@ -37631,6 +37662,16 @@ func (s *EmailRuleDecisionOnMyMail) GetReceivedAt() NilDateTime {
 	return s.ReceivedAt
 }
 
+// GetAttachments returns the value of Attachments.
+func (s *EmailRuleDecisionOnMyMail) GetAttachments() []EmailRuleRowAttachment {
+	return s.Attachments
+}
+
+// GetAttachmentCount returns the value of AttachmentCount.
+func (s *EmailRuleDecisionOnMyMail) GetAttachmentCount() NilInt {
+	return s.AttachmentCount
+}
+
 // SetID sets the value of ID.
 func (s *EmailRuleDecisionOnMyMail) SetID(val uuid.UUID) {
 	s.ID = val
@@ -37699,6 +37740,16 @@ func (s *EmailRuleDecisionOnMyMail) SetRecipient(val NilString) {
 // SetReceivedAt sets the value of ReceivedAt.
 func (s *EmailRuleDecisionOnMyMail) SetReceivedAt(val NilDateTime) {
 	s.ReceivedAt = val
+}
+
+// SetAttachments sets the value of Attachments.
+func (s *EmailRuleDecisionOnMyMail) SetAttachments(val []EmailRuleRowAttachment) {
+	s.Attachments = val
+}
+
+// SetAttachmentCount sets the value of AttachmentCount.
+func (s *EmailRuleDecisionOnMyMail) SetAttachmentCount(val NilInt) {
+	s.AttachmentCount = val
 }
 
 // Whose mail it runs over, as stored (GET /email-rules/{id}/scope: what that is now).
@@ -40096,6 +40147,36 @@ func (s *EmailRuleRequestTarget) SetEmail(val NilString) {
 // SetActive sets the value of Active.
 func (s *EmailRuleRequestTarget) SetActive(val bool) {
 	s.Active = val
+}
+
+// Ref: #/components/schemas/EmailRuleRowAttachment
+type EmailRuleRowAttachment struct {
+	// The file name the email gives it, cut at 255 characters.
+	Name string `json:"name"`
+	// The one-line description read from the file where the organization has attachment reading on, as
+	// GET /v1/emails/{id} gives it; null when none was read, it could not be read, reading is off, or
+	// you cannot open the email yourself.
+	Description NilString `json:"description"`
+}
+
+// GetName returns the value of Name.
+func (s *EmailRuleRowAttachment) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *EmailRuleRowAttachment) GetDescription() NilString {
+	return s.Description
+}
+
+// SetName sets the value of Name.
+func (s *EmailRuleRowAttachment) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *EmailRuleRowAttachment) SetDescription(val NilString) {
+	s.Description = val
 }
 
 // Ref: #/components/schemas/EmailRuleSampleDetail
@@ -70167,6 +70248,13 @@ type ListEmailRuleDecisionsResultItem struct {
 	// When the decided email arrived. Null, with from_address, subject and recipient, when you are not
 	// shown the email (it awaits sender authentication).
 	ReceivedAt NilDateTime `json:"received_at"`
+	// The email's named attachments, in order, at most 10 (attachment_count counts them all). An empty
+	// list means the email has none. Null when you cannot read the email's content (withheld, awaiting
+	// sender authentication, failed to parse, or discarded), or are not shown the email: then whether it
+	// has any is not known to you. A part with no file name is not listed or counted.
+	Attachments []EmailRuleRowAttachment `json:"attachments"`
+	// How many named attachments the email has in all, listed or not. Null exactly when attachments is.
+	AttachmentCount NilInt `json:"attachment_count"`
 }
 
 // GetID returns the value of ID.
@@ -70249,6 +70337,16 @@ func (s *ListEmailRuleDecisionsResultItem) GetReceivedAt() NilDateTime {
 	return s.ReceivedAt
 }
 
+// GetAttachments returns the value of Attachments.
+func (s *ListEmailRuleDecisionsResultItem) GetAttachments() []EmailRuleRowAttachment {
+	return s.Attachments
+}
+
+// GetAttachmentCount returns the value of AttachmentCount.
+func (s *ListEmailRuleDecisionsResultItem) GetAttachmentCount() NilInt {
+	return s.AttachmentCount
+}
+
 // SetID sets the value of ID.
 func (s *ListEmailRuleDecisionsResultItem) SetID(val uuid.UUID) {
 	s.ID = val
@@ -70327,6 +70425,16 @@ func (s *ListEmailRuleDecisionsResultItem) SetRecipient(val NilString) {
 // SetReceivedAt sets the value of ReceivedAt.
 func (s *ListEmailRuleDecisionsResultItem) SetReceivedAt(val NilDateTime) {
 	s.ReceivedAt = val
+}
+
+// SetAttachments sets the value of Attachments.
+func (s *ListEmailRuleDecisionsResultItem) SetAttachments(val []EmailRuleRowAttachment) {
+	s.Attachments = val
+}
+
+// SetAttachmentCount sets the value of AttachmentCount.
+func (s *ListEmailRuleDecisionsResultItem) SetAttachmentCount(val NilInt) {
+	s.AttachmentCount = val
 }
 
 type ListEmailRuleDecisionsTooManyRequests ErrorResponseHeaders
@@ -70693,6 +70801,13 @@ func (*ListEmailRuleResultsOK) listEmailRuleResultsRes() {}
 
 // Ref: #/components/schemas/ListEmailRuleResultsResult
 type ListEmailRuleResultsResult struct {
+	// The email's named attachments, in order, at most 10 (attachment_count counts them all), each with
+	// its one-line description where one was read: the email every rule here decided on, so given once
+	// rather than on each rule. An empty list means it has none. Null when its content cannot be read
+	// (withheld, failed to parse, or discarded).
+	Attachments []EmailRuleRowAttachment `json:"attachments"`
+	// How many named attachments the email has in all, listed or not. Null exactly when attachments is.
+	AttachmentCount NilInt `json:"attachment_count"`
 	// Rules you can see, and read_only ones: matched first, then not matched, then not run; newest first
 	// within each.
 	Rules []ListEmailRuleResultsResultRulesItem `json:"rules"`
@@ -70700,6 +70815,16 @@ type ListEmailRuleResultsResult struct {
 	Hidden int `json:"hidden"`
 	// Rules you can see past the 50 listed.
 	NotListed int `json:"not_listed"`
+}
+
+// GetAttachments returns the value of Attachments.
+func (s *ListEmailRuleResultsResult) GetAttachments() []EmailRuleRowAttachment {
+	return s.Attachments
+}
+
+// GetAttachmentCount returns the value of AttachmentCount.
+func (s *ListEmailRuleResultsResult) GetAttachmentCount() NilInt {
+	return s.AttachmentCount
 }
 
 // GetRules returns the value of Rules.
@@ -70715,6 +70840,16 @@ func (s *ListEmailRuleResultsResult) GetHidden() int {
 // GetNotListed returns the value of NotListed.
 func (s *ListEmailRuleResultsResult) GetNotListed() int {
 	return s.NotListed
+}
+
+// SetAttachments sets the value of Attachments.
+func (s *ListEmailRuleResultsResult) SetAttachments(val []EmailRuleRowAttachment) {
+	s.Attachments = val
+}
+
+// SetAttachmentCount sets the value of AttachmentCount.
+func (s *ListEmailRuleResultsResult) SetAttachmentCount(val NilInt) {
+	s.AttachmentCount = val
 }
 
 // SetRules sets the value of Rules.
@@ -99277,6 +99412,69 @@ func (o OptNilEmailRuleReceivers) Get() (v EmailRuleReceivers, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilEmailRuleReceivers) Or(d EmailRuleReceivers) EmailRuleReceivers {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEmailRuleRowAttachmentArray returns new OptNilEmailRuleRowAttachmentArray with value set to v.
+func NewOptNilEmailRuleRowAttachmentArray(v []EmailRuleRowAttachment) OptNilEmailRuleRowAttachmentArray {
+	return OptNilEmailRuleRowAttachmentArray{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailRuleRowAttachmentArray is optional nullable []EmailRuleRowAttachment.
+type OptNilEmailRuleRowAttachmentArray struct {
+	Value []EmailRuleRowAttachment
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailRuleRowAttachmentArray was set.
+func (o OptNilEmailRuleRowAttachmentArray) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailRuleRowAttachmentArray) Reset() {
+	var v []EmailRuleRowAttachment
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailRuleRowAttachmentArray) SetTo(v []EmailRuleRowAttachment) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailRuleRowAttachmentArray) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailRuleRowAttachmentArray) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v []EmailRuleRowAttachment
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailRuleRowAttachmentArray) Get() (v []EmailRuleRowAttachment, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailRuleRowAttachmentArray) Or(d []EmailRuleRowAttachment) []EmailRuleRowAttachment {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -138636,14 +138834,12 @@ type TestEmailRuleResultResultsItem struct {
 	// received_at, from_address and subject, so absent for not_found.
 	Recipient OptString    `json:"recipient"`
 	Subject   OptNilString `json:"subject"`
-	// On matched and near_miss: the file names the email lists, in order, at most 10 (the names its
-	// questions are given). Parts with no name are left out; absent when there are none.
-	// attachment_descriptions says what each file is, where one was read.
-	AttachmentNames []string `json:"attachment_names"`
-	// Given exactly when attachment_names is, aligned with it by position: the one-line description read
-	// from each file where the organization has attachment reading on, else null (not read, could not be
-	// read, reading off, or an email you cannot open yourself).
-	AttachmentDescriptions []NilString `json:"attachment_descriptions"`
+	// On matched, near_miss and no_match: the email's named attachments, in order, at most 10
+	// (attachment_count counts them all), each with its one-line description where one was read and you
+	// can open the email yourself. An empty list means it has none. Absent on other outcomes.
+	Attachments OptNilEmailRuleRowAttachmentArray `json:"attachments"`
+	// Given exactly when attachments is: how many named attachments the email has in all.
+	AttachmentCount OptNilInt `json:"attachment_count"`
 	// How each top-level part of the rule decided. Present for matched, near_miss and no_match.
 	Parts []TestEmailRuleResultResultsItemPartsItem `json:"parts"`
 	// Facts the rule reads that this email's classification left out, so the rule did not match.
@@ -138702,14 +138898,14 @@ func (s *TestEmailRuleResultResultsItem) GetSubject() OptNilString {
 	return s.Subject
 }
 
-// GetAttachmentNames returns the value of AttachmentNames.
-func (s *TestEmailRuleResultResultsItem) GetAttachmentNames() []string {
-	return s.AttachmentNames
+// GetAttachments returns the value of Attachments.
+func (s *TestEmailRuleResultResultsItem) GetAttachments() OptNilEmailRuleRowAttachmentArray {
+	return s.Attachments
 }
 
-// GetAttachmentDescriptions returns the value of AttachmentDescriptions.
-func (s *TestEmailRuleResultResultsItem) GetAttachmentDescriptions() []NilString {
-	return s.AttachmentDescriptions
+// GetAttachmentCount returns the value of AttachmentCount.
+func (s *TestEmailRuleResultResultsItem) GetAttachmentCount() OptNilInt {
+	return s.AttachmentCount
 }
 
 // GetParts returns the value of Parts.
@@ -138777,14 +138973,14 @@ func (s *TestEmailRuleResultResultsItem) SetSubject(val OptNilString) {
 	s.Subject = val
 }
 
-// SetAttachmentNames sets the value of AttachmentNames.
-func (s *TestEmailRuleResultResultsItem) SetAttachmentNames(val []string) {
-	s.AttachmentNames = val
+// SetAttachments sets the value of Attachments.
+func (s *TestEmailRuleResultResultsItem) SetAttachments(val OptNilEmailRuleRowAttachmentArray) {
+	s.Attachments = val
 }
 
-// SetAttachmentDescriptions sets the value of AttachmentDescriptions.
-func (s *TestEmailRuleResultResultsItem) SetAttachmentDescriptions(val []NilString) {
-	s.AttachmentDescriptions = val
+// SetAttachmentCount sets the value of AttachmentCount.
+func (s *TestEmailRuleResultResultsItem) SetAttachmentCount(val OptNilInt) {
+	s.AttachmentCount = val
 }
 
 // SetParts sets the value of Parts.

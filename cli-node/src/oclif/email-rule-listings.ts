@@ -1,11 +1,16 @@
 // Readable stderr tables for the email rule listings: the rules a caller can
-// see (list, with --all every rule in the organization) and a
+// see (list, with --all every rule in the organization), a
 // rule's decisions (list-decisions, and the decisions about your
-// own mail, list-decisions-on-my-mail). stdout keeps the JSON.
+// own mail, list-decisions-on-my-mail), and what an email carried on the
+// rule results for it (list-results). stdout keeps the JSON.
 //
 // This module does not import api-command.ts, which imports it.
 
 import type { OperationExtension } from "./operation-extension.js";
+import {
+  attachmentsLines,
+  attachmentsSummary,
+} from "./rule-row-attachments.js";
 import { shownLine, shownText, terminalLine } from "./terminal-text.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -51,14 +56,16 @@ function decisionOutcome(decision: Record<string, unknown>): string {
 /**
  * A table of a rule's decisions (listEmailRuleDecisions and
  * listEmailRuleDecisionsOnMyMail): when each was decided, what it decided,
- * the email, the mailbox it was received in, its sender and subject. An email
- * you are not shown shows `-` for those. Nothing for an empty list.
+ * the email, the mailbox it was received in, its sender and subject, and
+ * under each row what the email carried (attachmentsSummary). An email you
+ * are not shown shows `-` for those and no attachments line. Nothing for an
+ * empty list.
  */
 export function decisionLines(data: unknown): string[] {
   const rows = Array.isArray(data) ? data.filter(isRecord) : [];
   if (rows.length === 0) return [];
   const cell = (value: unknown) => shownText(value) || "-";
-  return tableLines([
+  const [header = "", ...table] = tableLines([
     ["DECIDED", "OUTCOME", "EMAIL", "RECIPIENT", "FROM", "SUBJECT"],
     ...rows.map((row) => [
       minuteUtc(row.decided_at),
@@ -69,6 +76,22 @@ export function decisionLines(data: unknown): string[] {
       cell(row.subject),
     ]),
   ]);
+  return [
+    header,
+    ...table.flatMap((line, i) => [
+      line,
+      ...attachmentsLines(rows[i], "  ").map(terminalLine),
+    ]),
+  ];
+}
+
+/**
+ * The rule results on one email (listEmailRuleResults): what the email
+ * carried, once for every rule listed. Nothing when the answer does not say.
+ */
+export function ruleResultsLines(data: unknown): string[] {
+  const summary = attachmentsSummary(data);
+  return summary === undefined ? [] : [terminalLine(`Email: ${summary}.`)];
 }
 
 // Rules
@@ -259,5 +282,9 @@ export const EMAIL_RULE_LISTING_EXTENSIONS: Record<string, OperationExtension> =
     listEmailRuleDecisionsOnMyMail: {
       flags: {},
       report: (data) => ({ lines: decisionLines(data) }),
+    },
+    listEmailRuleResults: {
+      flags: {},
+      report: (data) => ({ lines: ruleResultsLines(data) }),
     },
   };

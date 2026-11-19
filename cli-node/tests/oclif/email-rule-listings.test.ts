@@ -10,6 +10,7 @@ import {
   emptyRuleListHint,
   listEmailRulesErrorHint,
   ruleListLines,
+  ruleResultsLines,
 } from "../../src/oclif/email-rule-listings.js";
 
 const auth = vi.hoisted(() => ({ create: vi.fn() }));
@@ -165,6 +166,77 @@ describe("decisionLines", () => {
     expect(lines[2]).toMatch(/^2026-11-16 10:06 UTC +near miss +e2 +- +- +-$/);
     expect(lines.join("\n")).not.toContain("\u001b");
     expect(decisionLines([])).toEqual([]);
+  });
+
+  it("says under each row what its email carried: its files, none, or nothing when not known", () => {
+    const row = (
+      email_id: string,
+      attachments: unknown,
+      attachment_count: unknown,
+    ) => ({
+      email_id,
+      matched: true,
+      decided_at: "2026-11-16T10:05:59Z",
+      recipient: "ceo@x.test",
+      from_address: "billing@vendor.test",
+      subject: "Invoice",
+      attachments,
+      attachment_count,
+    });
+    const lines = decisionLines([
+      row(
+        "e1",
+        [
+          {
+            name: "rate-card-2026.pdf",
+            description: "Contractor pay rates by role",
+          },
+          { name: "invoice\u001b[31m.pdf", description: null },
+        ],
+        2,
+      ),
+      row("e2", [], 0),
+      row("e3", null, null),
+    ]);
+    expect(lines).toHaveLength(6);
+    expect(lines[1]).toMatch(/ e1 /);
+    expect(lines[2]).toBe(
+      "  2 attachments: rate-card-2026.pdf (Contractor pay rates by role), invoice.pdf",
+    );
+    expect(lines[3]).toMatch(/ e2 /);
+    expect(lines[4]).toBe("  no attachments");
+    // Not known to the caller: no line, never "no attachments".
+    expect(lines[5]).toMatch(/ e3 /);
+  });
+});
+
+describe("ruleResultsLines", () => {
+  it("says once what the email carried, and nothing when the answer does not know", () => {
+    expect(
+      ruleResultsLines({
+        attachments: [
+          {
+            name: "rate-card-2026.pdf",
+            description: "Contractor pay rates by role",
+          },
+        ],
+        attachment_count: 1,
+        rules: [],
+      }),
+    ).toEqual([
+      "Email: 1 attachment: rate-card-2026.pdf (Contractor pay rates by role).",
+    ]);
+    expect(
+      ruleResultsLines({ attachments: [], attachment_count: 0, rules: [] }),
+    ).toEqual(["Email: no attachments."]);
+    expect(
+      ruleResultsLines({
+        attachments: null,
+        attachment_count: null,
+        rules: [],
+      }),
+    ).toEqual([]);
+    expect(ruleResultsLines(null)).toEqual([]);
   });
 });
 
@@ -334,5 +406,43 @@ describe("email-rules list", () => {
     const printed = stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
     expect(printed).not.toContain("(no results)");
     expect(printed).toContain("Scanned part of the rules");
+  });
+});
+
+describe("email-rules list-results", () => {
+  it("prints what the email carried on stderr and keeps the answer as it came on stdout", async () => {
+    const data = {
+      attachments: [
+        {
+          name: "rate-card-2026.pdf",
+          description: "Contractor pay rates by role",
+        },
+      ],
+      attachment_count: 1,
+      rules: [],
+      hidden: 0,
+      not_listed: 0,
+    };
+    fixture({ body: { success: true, data } });
+    const out: string[] = [];
+    vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+      out.push(String(chunk));
+      return true;
+    });
+    vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+      out.push(`${args.map(String).join(" ")}\n`);
+    });
+    const stderr = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+    await command("listEmailRuleResults").run(
+      ["--email-id", "00000000-0000-4000-8000-000000000001"],
+      { root },
+    );
+    const printed = stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
+    expect(printed).toContain(
+      "Email: 1 attachment: rate-card-2026.pdf (Contractor pay rates by role).",
+    );
+    expect(JSON.parse(out.join(""))).toEqual(data);
   });
 });

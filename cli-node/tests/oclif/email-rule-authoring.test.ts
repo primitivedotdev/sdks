@@ -1107,7 +1107,7 @@ describe("email-rules test: which mail was tested (--same-emails-as)", () => {
 });
 
 describe("email-rules test: the matched emails and their attachments", () => {
-  it("lists each matched email with its sender, subject and file names, and a near miss's file names", async () => {
+  it("lists each matched email with its sender, subject and files, and a not matched email's files", async () => {
     const data = testResult();
     answer({
       ...data,
@@ -1118,19 +1118,23 @@ describe("email-rules test: the matched emails and their attachments", () => {
           parts: [],
           from_address: "billing@kestruvo.example",
           subject: "Invoice NV-118",
-          attachment_names: [
-            "NV-118.pdf",
-            "rates\u001b[31m.xlsx",
-            "inv\u202egpj.exe",
+          attachments: [
+            { name: "NV-118.pdf", description: "An invoice from Kestruvo" },
+            { name: "rates\u001b[31m.xlsx", description: null },
+            { name: "inv\u202egpj.exe", description: null },
+            { name: "logo.png", description: null },
           ],
+          attachment_count: 5,
         },
-        ...data.results
-          .slice(1)
-          .map((result) =>
-            result.outcome === "near_miss"
-              ? { ...result, attachment_names: ["contract.pdf"] }
-              : result,
-          ),
+        ...data.results.slice(1).map((result) =>
+          result.outcome === "near_miss"
+            ? {
+                ...result,
+                attachments: [{ name: "contract.pdf", description: null }],
+                attachment_count: 1,
+              }
+            : { ...result, attachments: [], attachment_count: 0 },
+        ),
       ],
     });
     const result = await run("email-rules:test", ["--rule-id", RULE]);
@@ -1139,9 +1143,31 @@ describe("email-rules test: the matched emails and their attachments", () => {
     expect(lines.slice(at, at + 3)).toEqual([
       "Matched (1):",
       `  ${A} billing@kestruvo.example "Invoice NV-118"`,
-      "    attachments: NV-118.pdf, rates.xlsx, invgpj.exe",
+      "    5 attachments: NV-118.pdf (An invoice from Kestruvo), rates.xlsx, invgpj.exe, +2 more",
     ]);
-    expect(lines).toContain("    attachments: contract.pdf");
+    expect(lines).toContain("    1 attachment: contract.pdf");
+    expect(lines.join("\n")).not.toContain("\u001b");
+  });
+
+  it("says an email had none, and says nothing where the answer does not know", async () => {
+    const data = testResult();
+    answer({
+      ...data,
+      results: [
+        { ...data.results[0], attachments: [], attachment_count: 0 },
+        ...data.results.slice(1).map((result) => ({
+          ...result,
+          attachments: null,
+          attachment_count: null,
+        })),
+      ],
+    });
+    const lines = stderrLines(
+      await run("email-rules:test", ["--rule-id", RULE]),
+    );
+    expect(lines.filter((line) => line.includes("attachment"))).toEqual([
+      "    no attachments",
+    ]);
   });
 });
 
@@ -2654,6 +2680,49 @@ describe("the test report: changes against the current version and close calls",
       from: `${id}@sender.example`,
       received_at: "2026-11-16T00:00:00Z",
     })),
+  });
+
+  it("says under each changed email what it carried, as the results do", () => {
+    const withFiles = (id: string, attachments: unknown, count: unknown) => ({
+      email_id: id,
+      subject: `Subject ${id}`,
+      from: `${id}@sender.example`,
+      received_at: "2026-11-16T00:00:00Z",
+      attachments,
+      attachment_count: count,
+    });
+    expect(
+      changesLines({
+        compared_to_version: 3,
+        newly_matched: {
+          count: 2,
+          emails: [
+            withFiles(
+              "a",
+              [
+                {
+                  name: "rate-card-2026.pdf",
+                  description: "Contractor pay rates by role",
+                },
+              ],
+              1,
+            ),
+            withFiles("b", [], 0),
+          ],
+        },
+        stops_matching: { count: 1, emails: [withFiles("c", null, null)] },
+        undecided: 0,
+      }),
+    ).toEqual([
+      "Against version 3: 2 newly matched, 1 stops matching.",
+      "  Newly matched:",
+      '    "Subject a" from a@sender.example (a)',
+      "      1 attachment: rate-card-2026.pdf (Contractor pay rates by role)",
+      '    "Subject b" from b@sender.example (b)',
+      "      no attachments",
+      "  Stops matching:",
+      '    "Subject c" from c@sender.example (c)',
+    ]);
   });
 
   it("counts what the tree would change and names a few emails each way", () => {
