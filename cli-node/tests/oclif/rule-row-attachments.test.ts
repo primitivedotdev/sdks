@@ -67,6 +67,28 @@ describe("attachmentsSummary", () => {
     }
   });
 
+  it("quotes a name that could pass for more files, and keeps descriptions in their parentheses", () => {
+    expect(
+      attachmentsSummary({
+        attachments: [
+          file('a.pdf (Signed W-9), "payroll".xlsx', "Rates (draft), by role"),
+        ],
+        attachment_count: 1,
+      }),
+    ).toBe(
+      "1 attachment: \"a.pdf (Signed W-9), 'payroll'.xlsx\" (Rates [draft], by role)",
+    );
+  });
+
+  it("never cuts inside a character", () => {
+    const summary =
+      attachmentsSummary({
+        attachments: [file(`${"a".repeat(36)}\u{1F4CE}\u{1F4CE}b.pdf`)],
+        attachment_count: 1,
+      }) ?? "";
+    expect(summary).toBe(`1 attachment: ${"a".repeat(36)}\u{1F4CE}...`);
+  });
+
   it("counts at least the files it lists, whatever attachment_count says", () => {
     expect(
       attachmentsSummary({ attachments: [file("a.pdf"), file("b.pdf")] }),

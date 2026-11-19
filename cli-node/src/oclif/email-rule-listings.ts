@@ -7,6 +7,7 @@
 // This module does not import api-command.ts, which imports it.
 
 import type { OperationExtension } from "./operation-extension.js";
+import { ruleNotesLines } from "./rule-notes.js";
 import {
   attachmentsLines,
   attachmentsSummary,
@@ -87,11 +88,15 @@ export function decisionLines(data: unknown): string[] {
 
 /**
  * The rule results on one email (listEmailRuleResults): what the email
- * carried, once for every rule listed. Nothing when the answer does not say.
+ * carried, once for every rule listed, after any notes the answer carries.
+ * Nothing when the answer says neither.
  */
 export function ruleResultsLines(data: unknown): string[] {
   const summary = attachmentsSummary(data);
-  return summary === undefined ? [] : [terminalLine(`Email: ${summary}.`)];
+  return [
+    ...ruleNotesLines(data),
+    ...(summary === undefined ? [] : [terminalLine(`Email: ${summary}`)]),
+  ];
 }
 
 // Rules

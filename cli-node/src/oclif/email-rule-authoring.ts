@@ -595,9 +595,9 @@ function attachmentsLine(result: TestResult): string[] {
 }
 
 /**
- * The matched emails, each with who sent it, its subject and its attachments'
- * file names, so a match can be judged without opening it; cut as the not
- * matched list is.
+ * The matched emails, each with who sent it, its subject and what it carried
+ * (how many files, the first few names and descriptions), so a match can be
+ * judged without opening it; cut as the not matched list is.
  */
 function matchedLines(
   results: readonly TestResult[],

@@ -19,10 +19,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-/** Text a sender or a file reader wrote, on one line, cut at `max`. */
+/** Text a sender or a file reader wrote, on one line, cut at `max` characters (never inside one). */
 function cut(value: unknown, max: number): string {
-  const line = shownLine(value);
-  return line.length > max ? `${line.slice(0, max - 3)}...` : line;
+  const chars = Array.from(shownLine(value));
+  return chars.length > max
+    ? `${chars
+        .slice(0, max - 3)
+        .join("")
+        .trimEnd()}...`
+    : chars.join("");
+}
+
+/**
+ * A file name as the line shows it: in double quotes when it holds a comma or
+ * a parenthesis, so a name cannot pass for more files or a description.
+ */
+function fileName(value: unknown): string {
+  const name = cut(value, ATTACHMENT_NAME_SHOWN_MAX);
+  if (name === "") return "(no name)";
+  return /[,()"]/.test(name) ? `"${name.replaceAll('"', "'")}"` : name;
 }
 
 /**
@@ -41,8 +56,10 @@ export function attachmentsSummary(row: unknown): string | undefined {
       : listed.length;
   if (count === 0) return "no attachments";
   const shown = listed.slice(0, ATTACHMENTS_LINE_NAMES).map((file) => {
-    const name = cut(file.name, ATTACHMENT_NAME_SHOWN_MAX) || "(no name)";
-    const description = cut(file.description, ATTACHMENT_DESCRIPTION_SHOWN_MAX);
+    const name = fileName(file.name);
+    const description = cut(file.description, ATTACHMENT_DESCRIPTION_SHOWN_MAX)
+      .replaceAll("(", "[")
+      .replaceAll(")", "]");
     return description ? `${name} (${description})` : name;
   });
   const more = count - shown.length;

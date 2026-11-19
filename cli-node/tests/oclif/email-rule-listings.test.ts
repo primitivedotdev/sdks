@@ -224,11 +224,11 @@ describe("ruleResultsLines", () => {
         rules: [],
       }),
     ).toEqual([
-      "Email: 1 attachment: rate-card-2026.pdf (Contractor pay rates by role).",
+      "Email: 1 attachment: rate-card-2026.pdf (Contractor pay rates by role)",
     ]);
     expect(
       ruleResultsLines({ attachments: [], attachment_count: 0, rules: [] }),
-    ).toEqual(["Email: no attachments."]);
+    ).toEqual(["Email: no attachments"]);
     expect(
       ruleResultsLines({
         attachments: null,
@@ -237,6 +237,14 @@ describe("ruleResultsLines", () => {
       }),
     ).toEqual([]);
     expect(ruleResultsLines(null)).toEqual([]);
+    // Notes the answer carries are printed first, never dropped by this report.
+    const noted = ruleResultsLines({
+      warnings: ["A note from the server."],
+      attachments: [],
+      attachment_count: 0,
+    });
+    expect(noted.at(-1)).toBe("Email: no attachments");
+    expect(noted.join("\n")).toContain("A note from the server.");
   });
 });
 
@@ -441,7 +449,7 @@ describe("email-rules list-results", () => {
     );
     const printed = stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
     expect(printed).toContain(
-      "Email: 1 attachment: rate-card-2026.pdf (Contractor pay rates by role).",
+      "Email: 1 attachment: rate-card-2026.pdf (Contractor pay rates by role)",
     );
     expect(JSON.parse(out.join(""))).toEqual(data);
   });
