@@ -4,7 +4,7 @@ from http import HTTPStatus
 from io import BytesIO
 from uuid import UUID
 
-import httpx
+import httpx2
 
 from .client import AuthenticatedClient, Client
 from .errors import UnexpectedStatus
@@ -21,7 +21,7 @@ def _request_kwargs(id: UUID, token: str | Unset = UNSET) -> tuple[str, dict[str
 
 def _parse_download_response(
     client: AuthenticatedClient | Client,
-    response: httpx.Response,
+    response: httpx2.Response,
 ) -> ErrorResponse | File | None:
     if response.status_code == 200:
         return File(payload=BytesIO(response.content))
@@ -40,7 +40,7 @@ def _parse_download_response(
 
 def _build_response(
     client: AuthenticatedClient | Client,
-    response: httpx.Response,
+    response: httpx2.Response,
 ) -> Response[ErrorResponse | File]:
     return Response(
         status_code=HTTPStatus(response.status_code),
