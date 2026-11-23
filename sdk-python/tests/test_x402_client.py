@@ -616,3 +616,11 @@ class TestPayEmailChallenge:
             client.pay_email_challenge(
                 X402EmailChallenge.from_dict(data), signer=SIGNER
             )
+
+
+def test_x402_client_rejects_legacy_httpx_client() -> None:
+    class _Legacy:
+        pass
+
+    with pytest.raises(TypeError, match="httpx2.Client"):
+        X402Client(api_key="k", http_client=_Legacy())  # type: ignore[arg-type]

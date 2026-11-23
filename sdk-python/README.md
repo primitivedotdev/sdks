@@ -18,6 +18,13 @@ available for advanced use cases.
 
 - Python `>=3.11`
 
+### HTTP client (`httpx2`)
+
+The SDK uses `httpx2`, not `httpx`. Custom clients passed to `set_httpx_client`,
+`set_async_httpx_client`, or the x402 `http_client` argument must be
+`httpx2.Client` / `httpx2.AsyncClient`, and transport errors surface as
+`httpx2` exceptions. `httpx` is no longer a dependency.
+
 ## Installation
 
 ```bash

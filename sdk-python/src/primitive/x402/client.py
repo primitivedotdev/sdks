@@ -516,6 +516,12 @@ class X402Client:
         timeout: float | None = None,
         http_client: httpx2.Client | None = None,
     ) -> None:
+        if http_client is not None and not isinstance(http_client, httpx2.Client):
+            raise TypeError(
+                "http_client must be an httpx2.Client; the SDK moved from httpx "
+                f"to httpx2 (got {type(http_client).__module__}."
+                f"{type(http_client).__qualname__})"
+            )
         self._api_key = (
             api_key if api_key is not None else os.environ.get("PRIMITIVE_API_KEY", "")
         )
