@@ -45,8 +45,8 @@ importers:
         specifier: ^4.0.5
         version: 4.0.5(supports-color@8.1.1)
       viem:
-        specifier: ^2.57.16
-        version: 2.57.16(typescript@5.9.3)
+        specifier: ^2.57.19
+        version: 2.57.19(typescript@5.9.3)
       ws:
         specifier: ^8.22.1
         version: 8.22.1
@@ -127,8 +127,8 @@ importers:
         specifier: ^13.15.35
         version: 13.15.35
       viem:
-        specifier: ^2.57.16
-        version: 2.57.16(typescript@5.9.3)
+        specifier: ^2.57.19
+        version: 2.57.19(typescript@5.9.3)
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.6.5
@@ -2052,8 +2052,8 @@ packages:
     resolution: {integrity: sha512-smsWv2LzFjP03xmvFoJ331ss6h+jixfA4UUV/Bsiyuu4YJPfN+FIQGOIiv4w9/+MoHkfkJ22UIaQWRVFRfH6Vw==}
     engines: {node: '>=20'}
 
-  ox@0.14.59:
-    resolution: {integrity: sha512-Y+DPEQScTEGKteQATjtytE1JRQ5cg1R2+DvYQ/lbhUCm/xS9n0Jnkkf2AqQyIntefQxs8xY6dZ+kyNZ7zf2FzA==}
+  ox@0.14.65:
+    resolution: {integrity: sha512-K7oj+jvEP4Gf78ZOYuWAWzKEX/g5z7p6ukj84gdbFnezmFSt6SpprEp9tH5tymXsywSqRdeqk+8JL4+9o0Schw==}
     peerDependencies:
       typescript: '>=5.4.0'
     peerDependenciesMeta:
@@ -2438,8 +2438,8 @@ packages:
     resolution: {integrity: sha512-u4J1hr6Y+C/hit34GwL3eIcUf3wngT8TlYUjK7tk0jxydKLAq3sYvifjdTDA6U3KCKRcQCQDGf/srjxfZF3l7g==}
     engines: {node: '>=18.12.0'}
 
-  viem@2.57.16:
-    resolution: {integrity: sha512-+4uaUw3NfkqjaqsZp8Zci94K33oc9rv7mIUgvPduJxsY/tI0ASi2YkaXoUVSBGfdIw/QPWuVnIf9LTFf35IoMg==}
+  viem@2.57.19:
+    resolution: {integrity: sha512-ULAHSwef42oL1reV41Os40iR34PF9BFNIX/RBapHLAJL1X6VmrgQikS4q4ulZ7/8GqlFLqrRI5GoNms3hcxsHw==}
     peerDependencies:
       mppx: '>=0.17.0'
       typescript: '>=5.0.4'
@@ -4450,7 +4450,7 @@ snapshots:
       powershell-utils: 0.1.0
       wsl-utils: 0.3.1
 
-  ox@0.14.59(typescript@5.9.3):
+  ox@0.14.65(typescript@5.9.3):
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
       '@noble/ciphers': 1.3.0
@@ -4832,7 +4832,7 @@ snapshots:
 
   verkit@0.5.0: {}
 
-  viem@2.57.16(typescript@5.9.3):
+  viem@2.57.19(typescript@5.9.3):
     dependencies:
       '@noble/curves': 1.9.1
       '@noble/hashes': 1.8.0
@@ -4840,7 +4840,7 @@ snapshots:
       '@scure/bip39': 1.6.0
       abitype: 1.2.3(typescript@5.9.3)
       isows: 1.0.7(ws@8.21.0)
-      ox: 0.14.59(typescript@5.9.3)
+      ox: 0.14.65(typescript@5.9.3)
       ws: 8.21.0
     optionalDependencies:
       typescript: 5.9.3
