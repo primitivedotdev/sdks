@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from typing import Any, NoReturn
 from urllib.parse import quote
 
-import httpx
+import httpx2
 from dateutil.parser import isoparse
 
 from .sign import (
@@ -514,7 +514,7 @@ class X402Client:
         api_key: str | None = None,
         base_url: str | None = None,
         timeout: float | None = None,
-        http_client: httpx.Client | None = None,
+        http_client: httpx2.Client | None = None,
     ) -> None:
         self._api_key = (
             api_key if api_key is not None else os.environ.get("PRIMITIVE_API_KEY", "")
@@ -556,19 +556,19 @@ class X402Client:
                     timeout=self._timeout,
                 )
             else:
-                response = httpx.request(
+                response = httpx2.request(
                     method,
                     url,
                     headers=headers,
                     json=body,
                     timeout=self._timeout,
                 )
-        except httpx.TimeoutException as cause:
+        except httpx2.TimeoutException as cause:
             raise X402Error(
                 f"request to {path} timed out after {self._timeout}s",
                 0,
             ) from cause
-        except httpx.HTTPError as cause:
+        except httpx2.HTTPError as cause:
             # A failed request (DNS, connection refused, TLS) must not escape as
             # a raw httpx error: callers rely on isinstance(err, X402Error), and
             # on pay() a status-0 error signals an indeterminate request.
@@ -583,7 +583,7 @@ class X402Client:
         if text:
             try:
                 json_body = response.json()
-            except (ValueError, httpx.DecodingError) as cause:
+            except (ValueError, httpx2.DecodingError) as cause:
                 raise X402Error(
                     f"non-JSON response ({response.status_code}) from {path}: "
                     f"{text[:200]}",
@@ -1047,7 +1047,7 @@ def create_x402_client(
     api_key: str | None = None,
     base_url: str | None = None,
     timeout: float | None = None,
-    http_client: httpx.Client | None = None,
+    http_client: httpx2.Client | None = None,
 ) -> X402Client:
     return X402Client(
         api_key=api_key,

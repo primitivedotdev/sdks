@@ -1,7 +1,7 @@
 import asyncio
 from uuid import UUID
 
-import httpx
+import httpx2
 import pytest
 
 from primitive.api.api.emails import search_emails
@@ -14,12 +14,12 @@ def test_unavailable_reply_parent_is_a_parsed_error(asynchronous: bool) -> None:
     parent = UUID("11111111-1111-4111-8111-111111111111")
     requests = 0
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         nonlocal requests
         requests += 1
         assert request.url.path == "/emails/search"
         assert request.url.params["reply_to_sent_email_id"] == str(parent)
-        return httpx.Response(
+        return httpx2.Response(
             404,
             json={
                 "success": False,
@@ -31,7 +31,7 @@ def test_unavailable_reply_parent_is_a_parsed_error(asynchronous: bool) -> None:
         return Client(
             base_url="https://example.test",
             raise_on_unexpected_status=True,
-            httpx_args={"transport": httpx.MockTransport(handler)},
+            httpx_args={"transport": httpx2.MockTransport(handler)},
         )
 
     async def run_async() -> ErrorResponse:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from uuid import UUID
 
-import httpx
+import httpx2
 import pytest
 
 from primitive.api.api.endpoints import (
@@ -31,15 +31,15 @@ EVENT_ID = UUID("22222222-2222-4222-8222-222222222222")
 
 
 def test_named_subscription_resume_does_not_send_unrequested_settings() -> None:
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         assert request.method == "POST"
         assert request.url.path == "/endpoints"
         assert json.loads(request.content) == {"kind": "pull", "name": "my-agent"}
-        return httpx.Response(200, json={"success": True})
+        return httpx2.Response(200, json={"success": True})
 
     with Client(
         base_url="https://example.test",
-        httpx_args={"transport": httpx.MockTransport(handler)},
+        httpx_args={"transport": httpx2.MockTransport(handler)},
     ) as client:
         result = create_endpoint.sync(
             client=client,
@@ -84,10 +84,10 @@ def test_pull_preserves_exact_body_headers_and_nullable_delivery(empty: bool) ->
         }
     )
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         assert request.url.path == f"/endpoints/{ENDPOINT_ID}/pull"
         assert json.loads(request.content) == {"wait_seconds": 0}
-        return httpx.Response(
+        return httpx2.Response(
             200,
             json={
                 "success": True,
@@ -104,7 +104,7 @@ def test_pull_preserves_exact_body_headers_and_nullable_delivery(empty: bool) ->
 
     with Client(
         base_url="https://example.test",
-        httpx_args={"transport": httpx.MockTransport(handler)},
+        httpx_args={"transport": httpx2.MockTransport(handler)},
     ) as client:
         result = pull_webhook_event.sync(
             ENDPOINT_ID, client=client, body=PullWebhookInput(wait_seconds=0)
@@ -140,8 +140,8 @@ def test_pull_preserves_exact_body_headers_and_nullable_delivery(empty: bool) ->
 def test_receiving_returns_typed_operational_errors(
     operation: str, status: int, code: str
 ) -> None:
-    def handler(_request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
+    def handler(_request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(
             status,
             json={
                 "success": False,
@@ -152,7 +152,7 @@ def test_receiving_returns_typed_operational_errors(
     with Client(
         base_url="https://example.test",
         raise_on_unexpected_status=True,
-        httpx_args={"transport": httpx.MockTransport(handler)},
+        httpx_args={"transport": httpx2.MockTransport(handler)},
     ) as client:
         if operation == "create":
             result = create_endpoint.sync_detailed(

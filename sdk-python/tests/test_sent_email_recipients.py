@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from uuid import UUID
 
-import httpx
+import httpx2
 import pytest
 
 from primitive.api.api.sending import get_sent_email
@@ -24,13 +24,13 @@ KEY = "-".join(["fixture", "credential"])
 
 
 def fetch_detail(data: dict[str, object]) -> SentEmailDetail:
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         assert request.url.path == f"/sent-emails/{SENT_FIXTURE['data']['id']}"
-        return httpx.Response(200, json={"success": True, "data": data})
+        return httpx2.Response(200, json={"success": True, "data": data})
 
     client = AuthenticatedClient(base_url="https://example.test", token=KEY)
-    with httpx.Client(
-        base_url="https://example.test", transport=httpx.MockTransport(handler)
+    with httpx2.Client(
+        base_url="https://example.test", transport=httpx2.MockTransport(handler)
     ) as http:
         client.set_httpx_client(http)
         result = get_sent_email.sync(UUID(SENT_FIXTURE["data"]["id"]), client=client)

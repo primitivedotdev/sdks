@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-import httpx
+import httpx2
 import pytest
 from test_client import RECEIVED_EMAIL
 
@@ -25,7 +25,7 @@ MAIL_ID = UUID("11111111-1111-4111-8111-111111111111")
 def test_delete_routes(kind: str) -> None:
     calls = 0
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         nonlocal calls
         calls += 1
         assert request.method == ("DELETE" if kind == "sent" else "POST")
@@ -35,12 +35,12 @@ def test_delete_routes(kind: str) -> None:
             else "/agent-connections/agent+demo@example.com/remove"
         )
         assert request.content == b""
-        return httpx.Response(200, json={"success": True, "data": {"deleted": True}})
+        return httpx2.Response(200, json={"success": True, "data": {"deleted": True}})
 
     with AuthenticatedClient(
         base_url="https://example.test",
         token="test",
-        httpx_args={"transport": httpx.MockTransport(handler)},
+        httpx_args={"transport": httpx2.MockTransport(handler)},
     ) as client:
         result = (
             delete_sent_email.sync(MAIL_ID, client=client)
@@ -60,10 +60,10 @@ def test_delete_routes(kind: str) -> None:
 def test_delete_preserves_errors(status: int, code: str) -> None:
     calls = 0
 
-    def handler(_request: httpx.Request) -> httpx.Response:
+    def handler(_request: httpx2.Request) -> httpx2.Response:
         nonlocal calls
         calls += 1
-        return httpx.Response(
+        return httpx2.Response(
             status,
             json={
                 "success": False,
@@ -73,7 +73,7 @@ def test_delete_preserves_errors(status: int, code: str) -> None:
 
     with Client(
         base_url="https://example.test",
-        httpx_args={"transport": httpx.MockTransport(handler)},
+        httpx_args={"transport": httpx2.MockTransport(handler)},
     ) as client:
         result = delete_sent_email.sync_detailed(MAIL_ID, client=client)
     assert result.status_code == status
@@ -86,11 +86,11 @@ def test_delete_preserves_errors(status: int, code: str) -> None:
 def test_deleted_send_is_not_retried(kind: str) -> None:
     calls = 0
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         nonlocal calls
         calls += 1
         assert request.headers["Idempotency-Key"] == "existing-key"
-        return httpx.Response(
+        return httpx2.Response(
             410,
             json={
                 "success": False,
@@ -104,7 +104,7 @@ def test_deleted_send_is_not_retried(kind: str) -> None:
 
     client = PrimitiveClient(
         "fixture" + "-credential",
-        httpx_args={"transport": httpx.MockTransport(handler)},
+        httpx_args={"transport": httpx2.MockTransport(handler)},
     )
     with pytest.raises(PrimitiveAPIError) as caught:
         if kind == "send":

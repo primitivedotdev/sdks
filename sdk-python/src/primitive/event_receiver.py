@@ -15,7 +15,7 @@ from email.utils import parsedate_to_datetime
 from typing import Literal, Protocol, TypeVar, cast
 from urllib.parse import urlsplit, urlunsplit
 
-import httpx
+import httpx2
 from websockets.asyncio.client import connect
 from websockets.exceptions import ConnectionClosed
 from websockets.typing import Subprotocol
@@ -136,7 +136,7 @@ async def _retry(
             } or not (error.status in {0, 408, 429} or error.status >= 500):
                 raise
             retry_after = error.retry_after
-        except (TimeoutError, httpx.TransportError, OSError, ConnectionClosed):
+        except (TimeoutError, httpx2.TransportError, OSError, ConnectionClosed):
             pass
         if status:
             status(EventStatus("reconnecting"))
@@ -152,7 +152,7 @@ async def _retry(
 class _Connection:
     def __init__(
         self,
-        client: httpx.AsyncClient,
+        client: httpx2.AsyncClient,
         token: str,
         endpoint: str,
         transport: Transport,

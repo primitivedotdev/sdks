@@ -9,7 +9,7 @@ from http import HTTPStatus
 from typing import Any, Literal, TypedDict, cast
 from uuid import UUID
 
-import httpx
+import httpx2
 from dateutil.parser import isoparse
 
 from .api import (
@@ -82,7 +82,7 @@ class _PerCallOptions:
 class _ClientDefaults:
     """Defaults set via with_options; per-call kwargs override these."""
 
-    timeout: httpx.Timeout | None = None
+    timeout: httpx2.Timeout | None = None
     extra_headers: dict[str, str] = field(default_factory=dict)
 
 
@@ -91,8 +91,8 @@ _per_call_options_var: contextvars.ContextVar[_PerCallOptions | None] = (
 )
 
 
-def _apply_per_call_options_to_request(request: httpx.Request) -> None:
-    """Mutate an in-flight httpx.Request to apply the active per-call options.
+def _apply_per_call_options_to_request(request: httpx2.Request) -> None:
+    """Mutate an in-flight httpx2.Request to apply the active per-call options.
 
     Reads from the contextvar so the same request hook works for sync and async.
     Idempotent: if no options are set in the current context, this is a no-op.
@@ -106,14 +106,14 @@ def _apply_per_call_options_to_request(request: httpx.Request) -> None:
     if opts.idempotency_key is not None:
         request.headers["Idempotency-Key"] = opts.idempotency_key
     if opts.timeout is not None:
-        request.extensions["timeout"] = httpx.Timeout(opts.timeout).as_dict()
+        request.extensions["timeout"] = httpx2.Timeout(opts.timeout).as_dict()
 
 
-def _sync_request_hook(request: httpx.Request) -> None:
+def _sync_request_hook(request: httpx2.Request) -> None:
     _apply_per_call_options_to_request(request)
 
 
-async def _async_request_hook(request: httpx.Request) -> None:
+async def _async_request_hook(request: httpx2.Request) -> None:
     _apply_per_call_options_to_request(request)
 
 
@@ -166,7 +166,7 @@ def _compose_options(
     if timeout is not None:
         final_timeout = timeout
     elif defaults.timeout is not None:
-        # Pull a single read timeout out of the httpx.Timeout for the hook.
+        # Pull a single read timeout out of the httpx2.Timeout for the hook.
         # An all-None Timeout (from with_options(timeout=None)) is treated
         # as "no per-call override" because there is nothing to apply.
         read_value = defaults.timeout.read
@@ -826,9 +826,9 @@ class PrimitiveClient:
         if isinstance(timeout, _NotGiven):
             merged_timeout = self._defaults.timeout
         elif timeout is None:
-            merged_timeout = httpx.Timeout(None)
+            merged_timeout = httpx2.Timeout(None)
         else:
-            merged_timeout = httpx.Timeout(timeout)
+            merged_timeout = httpx2.Timeout(timeout)
 
         merged_headers = dict(self._defaults.extra_headers)
         if extra_headers:
