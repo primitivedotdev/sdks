@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from uuid import UUID
 
-import httpx
+import httpx2
 import pytest
 
 from primitive.api.api.emails import download_email_attachment_part
@@ -29,10 +29,10 @@ def test_original_attachment_bytes_sync_and_async(outbound: bool) -> None:
     )
     path = "sent-emails" if outbound else "emails"
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         assert request.url.path == f"/{path}/{FIXTURE['id']}/attachments/7"
         assert request.headers["authorization"] == f"Bearer {KEY}"
-        return httpx.Response(
+        return httpx2.Response(
             200,
             content=bytes(FIXTURE["bytes"]),
             headers={
@@ -44,10 +44,10 @@ def test_original_attachment_bytes_sync_and_async(outbound: bool) -> None:
         )
 
     client = AuthenticatedClient(base_url="https://example.test", token=KEY)
-    with httpx.Client(
+    with httpx2.Client(
         base_url="https://example.test",
         headers={"Authorization": f"Bearer {KEY}"},
-        transport=httpx.MockTransport(handler),
+        transport=httpx2.MockTransport(handler),
     ) as http:
         client.set_httpx_client(http)
         result = operation.sync_detailed(
@@ -61,10 +61,10 @@ def test_original_attachment_bytes_sync_and_async(outbound: bool) -> None:
         assert result.headers["cache-control"] == "private, no-store"
 
     async def check_async() -> None:
-        async with httpx.AsyncClient(
+        async with httpx2.AsyncClient(
             base_url="https://example.test",
             headers={"Authorization": f"Bearer {KEY}"},
-            transport=httpx.MockTransport(handler),
+            transport=httpx2.MockTransport(handler),
         ) as http:
             client.set_async_httpx_client(http)
             result = await operation.asyncio(
@@ -94,16 +94,16 @@ def test_original_attachment_bytes_sync_and_async(outbound: bool) -> None:
 def test_download_errors_preserve_code_status_and_retry_after(
     status: int, code: str
 ) -> None:
-    def handler(_: httpx.Request) -> httpx.Response:
-        return httpx.Response(
+    def handler(_: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(
             status,
             json={"success": False, "error": {"code": code, "message": "Unavailable"}},
             headers={"retry-after": "3"},
         )
 
     client = AuthenticatedClient(base_url="https://example.test", token=KEY)
-    with httpx.Client(
-        base_url="https://example.test", transport=httpx.MockTransport(handler)
+    with httpx2.Client(
+        base_url="https://example.test", transport=httpx2.MockTransport(handler)
     ) as http:
         client.set_httpx_client(http)
         for operation in (
@@ -124,15 +124,15 @@ SENT_FIXTURE = json.loads((Path(__file__).parents[2] / "test-fixtures/sent-email
 def test_discover_sent_attachment_then_download(available: bool) -> None:
     paths: list[str] = []
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         paths.append(request.url.path)
         if request.url.path == f"/sent-emails/{FIXTURE['id']}":
-            return httpx.Response(200, json={**SENT_FIXTURE, "data": {**SENT_FIXTURE["data"], "attachments_download_available": available}})
+            return httpx2.Response(200, json={**SENT_FIXTURE, "data": {**SENT_FIXTURE["data"], "attachments_download_available": available}})
         assert request.url.path == f"/sent-emails/{FIXTURE['id']}/attachments/7"
-        return httpx.Response(200, content=bytes(FIXTURE["bytes"]), headers={"content-type": "application/octet-stream"})
+        return httpx2.Response(200, content=bytes(FIXTURE["bytes"]), headers={"content-type": "application/octet-stream"})
 
     client = AuthenticatedClient(base_url="https://example.test", token=KEY)
-    with httpx.Client(base_url="https://example.test", transport=httpx.MockTransport(handler)) as http:
+    with httpx2.Client(base_url="https://example.test", transport=httpx2.MockTransport(handler)) as http:
         client.set_httpx_client(http)
         result = get_sent_email.sync(UUID(FIXTURE["id"]), client=client)
         assert isinstance(result, GetSentEmailResponse200)
@@ -186,12 +186,12 @@ def test_sent_attachment_completeness(item: dict[str, object]) -> None:
     assert isinstance(fields, dict)
     data = {**SENT_FIXTURE["data"], **fields}
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         assert request.url.path == f"/sent-emails/{FIXTURE['id']}"
-        return httpx.Response(200, json={"success": True, "data": data})
+        return httpx2.Response(200, json={"success": True, "data": data})
 
     client = AuthenticatedClient(base_url="https://example.test", token=KEY)
-    with httpx.Client(base_url="https://example.test", transport=httpx.MockTransport(handler)) as http:
+    with httpx2.Client(base_url="https://example.test", transport=httpx2.MockTransport(handler)) as http:
         client.set_httpx_client(http)
         result = get_sent_email.sync(UUID(FIXTURE["id"]), client=client)
     assert isinstance(result, GetSentEmailResponse200)

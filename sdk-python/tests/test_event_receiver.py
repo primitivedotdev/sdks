@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import cast
 
-import httpx
+import httpx2
 import pytest
 
 from primitive import EventContext, EventReceiverError, LocalEvent, PrimitiveClient
@@ -25,7 +25,7 @@ def anyio_backend() -> str:
 async def test_receipt_and_subscription_lifecycle() -> None:
     completions: list[object] = []
 
-    async def fetch(request: httpx.Request) -> httpx.Response:
+    async def fetch(request: httpx2.Request) -> httpx2.Response:
         if request.url.path.endswith("/pull"):
             data = {
                 "delivery": FIXTURE["delivery"],
@@ -47,10 +47,10 @@ async def test_receipt_and_subscription_lifecycle() -> None:
                     "stream_protocols": ["primitive.events.v1"],
                 },
             }
-        return httpx.Response(200, json={"success": True, "data": data})
+        return httpx2.Response(200, json={"success": True, "data": data})
 
-    async with httpx.AsyncClient(
-        base_url="https://api.example.test/v1/", transport=httpx.MockTransport(fetch)
+    async with httpx2.AsyncClient(
+        base_url="https://api.example.test/v1/", transport=httpx2.MockTransport(fetch)
     ) as http:
         client = PrimitiveClient("pconn_test")
         client.api_client.set_async_httpx_client(http)
@@ -81,14 +81,14 @@ async def test_receipt_and_subscription_lifecycle() -> None:
 
 @pytest.mark.anyio
 async def test_account_key_is_refused_before_any_request() -> None:
-    requests: list[httpx.Request] = []
+    requests: list[httpx2.Request] = []
 
-    async def fetch(request: httpx.Request) -> httpx.Response:
+    async def fetch(request: httpx2.Request) -> httpx2.Response:
         requests.append(request)
-        return httpx.Response(500)
+        return httpx2.Response(500)
 
-    async with httpx.AsyncClient(
-        base_url="https://api.example.test/v1/", transport=httpx.MockTransport(fetch)
+    async with httpx2.AsyncClient(
+        base_url="https://api.example.test/v1/", transport=httpx2.MockTransport(fetch)
     ) as http:
         client = PrimitiveClient("prim_account")
         client.api_client.set_async_httpx_client(http)
@@ -104,8 +104,8 @@ async def test_account_key_is_refused_before_any_request() -> None:
 
 @pytest.mark.anyio
 async def test_server_refusal_is_explained() -> None:
-    async def fetch(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
+    async def fetch(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(
             403,
             json={
                 "success": False,
@@ -116,8 +116,8 @@ async def test_server_refusal_is_explained() -> None:
             },
         )
 
-    async with httpx.AsyncClient(
-        base_url="https://api.example.test/v1/", transport=httpx.MockTransport(fetch)
+    async with httpx2.AsyncClient(
+        base_url="https://api.example.test/v1/", transport=httpx2.MockTransport(fetch)
     ) as http:
         client = PrimitiveClient("pconn_test")
         client.api_client.set_async_httpx_client(http)
@@ -128,10 +128,10 @@ async def test_server_refusal_is_explained() -> None:
 
 @pytest.mark.anyio
 async def test_timeout_and_cancellation_release_subscription() -> None:
-    async def fetch(request: httpx.Request) -> httpx.Response:
+    async def fetch(request: httpx2.Request) -> httpx2.Response:
         if request.url.path.endswith("/pull"):
             await asyncio.Event().wait()
-        return httpx.Response(
+        return httpx2.Response(
             200,
             json={
                 "success": True,
@@ -146,8 +146,8 @@ async def test_timeout_and_cancellation_release_subscription() -> None:
             },
         )
 
-    async with httpx.AsyncClient(
-        base_url="https://api.example.test/v1/", transport=httpx.MockTransport(fetch)
+    async with httpx2.AsyncClient(
+        base_url="https://api.example.test/v1/", transport=httpx2.MockTransport(fetch)
     ) as http:
         client = PrimitiveClient("pconn_test")
         client.api_client.set_async_httpx_client(http)
@@ -177,7 +177,7 @@ async def test_listener_accepts_only_after_handler_and_gracefully_closes() -> No
     started, finish = asyncio.Event(), asyncio.Event()
     completions: list[object] = []
 
-    async def fetch(request: httpx.Request) -> httpx.Response:
+    async def fetch(request: httpx2.Request) -> httpx2.Response:
         if request.url.path.endswith("/pull"):
             data = {
                 "delivery": FIXTURE["delivery"],
@@ -199,7 +199,7 @@ async def test_listener_accepts_only_after_handler_and_gracefully_closes() -> No
                     "stream_protocols": [],
                 },
             }
-        return httpx.Response(200, json={"success": True, "data": data})
+        return httpx2.Response(200, json={"success": True, "data": data})
 
     async def handler(event: LocalEvent, context: EventContext) -> None:
         assert event.type == "future.event"
@@ -207,8 +207,8 @@ async def test_listener_accepts_only_after_handler_and_gracefully_closes() -> No
         started.set()
         await finish.wait()
 
-    async with httpx.AsyncClient(
-        base_url="https://api.example.test/v1/", transport=httpx.MockTransport(fetch)
+    async with httpx2.AsyncClient(
+        base_url="https://api.example.test/v1/", transport=httpx2.MockTransport(fetch)
     ) as http:
         client = PrimitiveClient("pconn_test")
         client.api_client.set_async_httpx_client(http)
@@ -273,9 +273,9 @@ async def test_websocket_reconnect_retries_receipt_without_receiving_again() -> 
         finally:
             await socket.close()
 
-    async def fetch(request: httpx.Request) -> httpx.Response:
+    async def fetch(request: httpx2.Request) -> httpx2.Response:
         if request.url.path.endswith("/account"):
-            return httpx.Response(
+            return httpx2.Response(
                 403,
                 json={
                     "success": False,
@@ -294,7 +294,7 @@ async def test_websocket_reconnect_retries_receipt_without_receiving_again() -> 
                 },
             }
         )
-        return httpx.Response(200, json={"success": True, "data": data})
+        return httpx2.Response(200, json={"success": True, "data": data})
 
     async with serve(
         socket_handler,
@@ -303,9 +303,9 @@ async def test_websocket_reconnect_retries_receipt_without_receiving_again() -> 
         subprotocols=[Subprotocol("primitive.events.v1")],
     ) as server:
         port = server.sockets[0].getsockname()[1]
-        async with httpx.AsyncClient(
+        async with httpx2.AsyncClient(
             base_url=f"http://127.0.0.1:{port}/v1/",
-            transport=httpx.MockTransport(fetch),
+            transport=httpx2.MockTransport(fetch),
         ) as http:
             client = PrimitiveClient("pconn_test")
             client.api_client.set_async_httpx_client(http)

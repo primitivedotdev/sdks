@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from uuid import UUID
 
-import httpx
+import httpx2
 
 from primitive.api.api.emails import search_emails
 from primitive.api.client import Client
@@ -18,20 +18,20 @@ PAGES = json.loads((FIXTURES / "email-search-pages.json").read_text())
 THREAD = UUID("5c1e9a7d-3b2f-4e8a-b6d4-9f0c2a1e7b35")
 
 
-def _client(page: str, seen: list[httpx.Request]) -> Client:
-    def handler(request: httpx.Request) -> httpx.Response:
+def _client(page: str, seen: list[httpx2.Request]) -> Client:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         seen.append(request)
-        return httpx.Response(200, json=PAGES[page])
+        return httpx2.Response(200, json=PAGES[page])
 
     return Client(
         base_url="https://example.test",
         raise_on_unexpected_status=True,
-        httpx_args={"transport": httpx.MockTransport(handler)},
+        httpx_args={"transport": httpx2.MockTransport(handler)},
     )
 
 
 def test_sends_thread_id_prefix_and_count() -> None:
-    seen: list[httpx.Request] = []
+    seen: list[httpx2.Request] = []
     with _client("uncounted", seen) as connection:
         search_emails.sync_detailed(
             client=connection,
@@ -49,7 +49,7 @@ def test_sends_thread_id_prefix_and_count() -> None:
 
 
 def test_omits_thread_id_when_not_asked_for() -> None:
-    seen: list[httpx.Request] = []
+    seen: list[httpx2.Request] = []
     with _client("counted", seen) as connection:
         search_emails.sync_detailed(client=connection, q="invoice")
     params = seen[0].url.params
@@ -60,7 +60,7 @@ def test_omits_thread_id_when_not_asked_for() -> None:
 
 
 def test_decodes_thread_id_direction_and_counted_total() -> None:
-    seen: list[httpx.Request] = []
+    seen: list[httpx2.Request] = []
     with _client("counted", seen) as connection:
         page = search_emails.sync(client=connection, q="invoice")
     assert isinstance(page, SearchEmailsResponse200)
@@ -70,7 +70,7 @@ def test_decodes_thread_id_direction_and_counted_total() -> None:
 
 
 def test_decodes_null_total_and_null_thread_id() -> None:
-    seen: list[httpx.Request] = []
+    seen: list[httpx2.Request] = []
     with _client("uncounted", seen) as connection:
         page = search_emails.sync(
             client=connection, q="invoi", count=SearchEmailsCount.FALSE

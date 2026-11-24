@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-import httpx
+import httpx2
 
 from primitive.api.api.agent_connections import (
     create_agent_connection,
@@ -19,11 +19,11 @@ from primitive.api.models.list_agent_connections_response_200 import (
 
 
 def test_public_connection_list_preserves_inactive_owner_status() -> None:
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         assert request.method == "GET"
         assert request.url.path == "/agent-connections"
         assert request.url.params["limit"] == "50"
-        return httpx.Response(
+        return httpx2.Response(
             200,
             json={
                 "success": True,
@@ -49,7 +49,7 @@ def test_public_connection_list_preserves_inactive_owner_status() -> None:
     with AuthenticatedClient(
         base_url="https://example.test",
         token="test-token",
-        httpx_args={"transport": httpx.MockTransport(handler)},
+        httpx_args={"transport": httpx2.MockTransport(handler)},
     ) as client:
         result = list_agent_connections.sync(client=client)
 
@@ -60,7 +60,7 @@ def test_public_connection_list_preserves_inactive_owner_status() -> None:
 
 
 def test_public_connection_create_serializes_explicit_ownership() -> None:
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         assert request.method == "POST"
         assert request.url.path == "/agent-connections"
         assert request.headers["Idempotency-Key"] == "compatibility-key"
@@ -68,7 +68,7 @@ def test_public_connection_create_serializes_explicit_ownership() -> None:
             "name": "Agent",
             "ownership_kind": "personal",
         }
-        return httpx.Response(
+        return httpx2.Response(
             400,
             json={
                 "success": False,
@@ -79,7 +79,7 @@ def test_public_connection_create_serializes_explicit_ownership() -> None:
     with AuthenticatedClient(
         base_url="https://example.test",
         token="test-token",
-        httpx_args={"transport": httpx.MockTransport(handler)},
+        httpx_args={"transport": httpx2.MockTransport(handler)},
     ) as client:
         result = create_agent_connection.sync(
             client=client,
@@ -119,14 +119,14 @@ def test_recovered_connection_response_keeps_null_invitation() -> None:
         "data": {"connection": connection, "recovered": True, "invitation": None},
     }
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         assert request.method == "POST"
-        return httpx.Response(200, json=payload)
+        return httpx2.Response(200, json=payload)
 
     with AuthenticatedClient(
         base_url="https://example.test",
         token="test-token",
-        httpx_args={"transport": httpx.MockTransport(handler)},
+        httpx_args={"transport": httpx2.MockTransport(handler)},
     ) as client:
         result = create_agent_connection.sync(
             client=client, body=CreateAgentConnectionBody(name="Agent")

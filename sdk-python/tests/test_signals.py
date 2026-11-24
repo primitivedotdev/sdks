@@ -8,7 +8,7 @@ from email.policy import default
 from pathlib import Path
 from typing import Any
 
-import httpx
+import httpx2
 import pytest
 
 from primitive.api.api.sending.send_email import asyncio_detailed
@@ -144,12 +144,12 @@ def test_retry_scope_and_expiry(kind: str) -> None:
 @pytest.mark.parametrize("kind", ["read", "typing"])
 def test_generated_ordinary_send_adapter(kind: str) -> None:
     prepared = _prepared(kind)
-    requests: list[httpx.Request] = []
+    requests: list[httpx2.Request] = []
 
-    def transport(request: httpx.Request) -> httpx.Response:
+    def transport(request: httpx2.Request) -> httpx2.Response:
         requests.append(request)
         # A real non-success response must remain visible to the caller.
-        return httpx.Response(
+        return httpx2.Response(
             400,
             json={
                 "success": False,
@@ -161,9 +161,9 @@ def test_generated_ordinary_send_adapter(kind: str) -> None:
         base_url="https://api.example.test/v1", token="fixture" + "-only"
     )
     client.set_async_httpx_client(
-        httpx.AsyncClient(
+        httpx2.AsyncClient(
             base_url="https://api.example.test/v1",
-            transport=httpx.MockTransport(transport),
+            transport=httpx2.MockTransport(transport),
         )
     )
 

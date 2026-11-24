@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import httpx
+import httpx2
 import pytest
 
 from primitive import (
@@ -72,25 +72,25 @@ def _challenge(**overrides: Any) -> X402Challenge:
 
 class _Recorder:
     def __init__(self, handler: Any) -> None:
-        self.calls: list[httpx.Request] = []
+        self.calls: list[httpx2.Request] = []
         self._handler = handler
 
-    def __call__(self, request: httpx.Request) -> httpx.Response:
+    def __call__(self, request: httpx2.Request) -> httpx2.Response:
         self.calls.append(request)
         return self._handler(request)
 
 
 def _client(handler: Any) -> tuple[X402Client, _Recorder]:
     recorder = _Recorder(handler)
-    transport = httpx.MockTransport(recorder)
-    http = httpx.Client(transport=transport)
+    transport = httpx2.MockTransport(recorder)
+    http = httpx2.Client(transport=transport)
     client = X402Client(api_key="k", base_url="https://api.example", http_client=http)
     return client, recorder
 
 
 def _json_response(body: Any, status: int = 200, headers: dict | None = None):
-    def handler(_request: httpx.Request) -> httpx.Response:
-        return httpx.Response(status, json=body, headers=headers or {})
+    def handler(_request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(status, json=body, headers=headers or {})
 
     return handler
 
@@ -270,8 +270,8 @@ class TestPay:
 
 class TestHardening:
     def test_wraps_a_transport_error_as_x402error_status_0(self) -> None:
-        def handler(_request: httpx.Request) -> httpx.Response:
-            raise httpx.ConnectError("connection refused")
+        def handler(_request: httpx2.Request) -> httpx2.Response:
+            raise httpx2.ConnectError("connection refused")
 
         client, _ = _client(handler)
         with pytest.raises(X402Error) as exc:
@@ -279,8 +279,8 @@ class TestHardening:
         assert exc.value.status == 0
 
     def test_throws_on_a_non_json_2xx_body(self) -> None:
-        def handler(_request: httpx.Request) -> httpx.Response:
-            return httpx.Response(
+        def handler(_request: httpx2.Request) -> httpx2.Response:
+            return httpx2.Response(
                 200, content=b"<html>nope</html>", headers={"content-type": "text/html"}
             )
 
@@ -308,7 +308,7 @@ class TestHardening:
 
     def test_rejects_a_missing_api_key_before_making_a_request(self) -> None:
         recorder = _Recorder(_json_response({"success": True, "data": {}}))
-        http = httpx.Client(transport=httpx.MockTransport(recorder))
+        http = httpx2.Client(transport=httpx2.MockTransport(recorder))
         client = X402Client(
             api_key="", base_url="https://api.example", http_client=http
         )
@@ -351,10 +351,10 @@ class TestCompletenessMethods:
         assert body["signature"].startswith("0x")
 
     def test_register_payout_address_auto_resolves_org_from_account(self) -> None:
-        def handler(request: httpx.Request) -> httpx.Response:
+        def handler(request: httpx2.Request) -> httpx2.Response:
             if request.url.path == "/v1/account":
-                return httpx.Response(200, json={"success": True, "data": {"id": ORG}})
-            return httpx.Response(
+                return httpx2.Response(200, json={"success": True, "data": {"id": ORG}})
+            return httpx2.Response(
                 200,
                 json={
                     "success": True,
@@ -385,10 +385,10 @@ class TestCompletenessMethods:
         assert json.loads(register_req.content)["signature"] == signed
 
     def test_register_payout_address_errors_when_account_has_no_id(self) -> None:
-        def handler(request: httpx.Request) -> httpx.Response:
+        def handler(request: httpx2.Request) -> httpx2.Response:
             if request.url.path == "/v1/account":
-                return httpx.Response(200, json={"success": True, "data": {}})
-            return httpx.Response(200, json={"success": True, "data": {}})
+                return httpx2.Response(200, json={"success": True, "data": {}})
+            return httpx2.Response(200, json={"success": True, "data": {}})
 
         client, rec = _client(handler)
         with pytest.raises(X402Error, match="could not resolve your organization id"):
@@ -616,3 +616,11 @@ class TestPayEmailChallenge:
             client.pay_email_challenge(
                 X402EmailChallenge.from_dict(data), signer=SIGNER
             )
+
+
+def test_x402_client_rejects_legacy_httpx_client() -> None:
+    class _Legacy:
+        pass
+
+    with pytest.raises(TypeError, match="httpx2.Client"):
+        X402Client(api_key="k", http_client=_Legacy())  # type: ignore[arg-type]

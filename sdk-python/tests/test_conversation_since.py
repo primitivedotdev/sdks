@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-import httpx
+import httpx2
 
 from primitive.api.api.emails import get_conversation
 from primitive.api.client import AuthenticatedClient
@@ -69,20 +69,20 @@ def read_data(result: object) -> Conversation:
 
 
 def test_since_reads_send_the_cursor_back_verbatim() -> None:
-    requests: list[httpx.Request] = []
+    requests: list[httpx2.Request] = []
     bodies = [
         conversation([INBOUND, outbound("queued")], FIRST_CURSOR),
         conversation([outbound("delivered")], NEXT_CURSOR),
     ]
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         requests.append(request)
-        return httpx.Response(200, json=bodies[len(requests) - 1])
+        return httpx2.Response(200, json=bodies[len(requests) - 1])
 
     with AuthenticatedClient(
         base_url="https://example.test",
         token="test",
-        httpx_args={"transport": httpx.MockTransport(handler)},
+        httpx_args={"transport": httpx2.MockTransport(handler)},
     ) as client:
         first = read_data(get_conversation.sync(EMAIL_ID, client=client, since="start"))
         assert requests[0].url.path == f"/emails/{EMAIL_ID}/conversation"
@@ -110,16 +110,16 @@ def test_since_reads_send_the_cursor_back_verbatim() -> None:
 
 
 def test_read_without_since_sends_no_parameter() -> None:
-    requests: list[httpx.Request] = []
+    requests: list[httpx2.Request] = []
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         requests.append(request)
-        return httpx.Response(200, json=conversation([INBOUND]))
+        return httpx2.Response(200, json=conversation([INBOUND]))
 
     with AuthenticatedClient(
         base_url="https://example.test",
         token="test",
-        httpx_args={"transport": httpx.MockTransport(handler)},
+        httpx_args={"transport": httpx2.MockTransport(handler)},
     ) as client:
         result = read_data(get_conversation.sync(EMAIL_ID, client=client))
 
