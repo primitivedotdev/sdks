@@ -222,6 +222,7 @@
     "@oclif/plugin-autocomplete": "^4.0.6",
     "@oclif/plugin-help": "^7.0.6",
     "@oclif/plugin-warn-if-update-available": "^4.0.5",
+    "@vercel/board": "0.56.1",
     "viem": "^2.57.19",
     "ws": "^8.22.1"
   },

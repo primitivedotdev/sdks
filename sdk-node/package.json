@@ -55,6 +55,11 @@
       "types": "./dist/interactions/index.d.ts",
       "import": "./dist/interactions/index.js",
       "default": "./dist/interactions/index.js"
+    },
+    "./board": {
+      "types": "./dist/board/index.d.ts",
+      "import": "./dist/board/index.js",
+      "default": "./dist/board/index.js"
     }
   },
   "sideEffects": false,
@@ -71,8 +76,8 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "pnpm generate && tsc --noEmit -p tsconfig.typecheck.json",
-    "lint": "biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/api/events.ts src/api/event-transport.ts src/x402 src/openapi/index.ts src/payloads src/interactions tests/",
-    "lint:fix": "biome check --write --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/api/events.ts src/api/event-transport.ts src/x402 src/openapi/index.ts src/payloads src/interactions tests/",
+    "lint": "biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/api/events.ts src/api/event-transport.ts src/x402 src/openapi/index.ts src/payloads src/interactions src/board tests/",
+    "lint:fix": "biome check --write --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/api/events.ts src/api/event-transport.ts src/x402 src/openapi/index.ts src/payloads src/interactions src/board tests/",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [
@@ -101,6 +106,7 @@
     "node": ">=22"
   },
   "dependencies": {
+    "@vercel/board": "0.56.1",
     "ajv": "^8.17.1",
     "mailparser": "^3.9.40",
     "nodemailer": "^10.6.1",
