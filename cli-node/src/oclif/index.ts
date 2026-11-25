@@ -32,6 +32,7 @@ import {
   AgentWorkingGetCommand,
   AgentWorkingSetCommand,
 } from "./commands/agent-working.js";
+import BoardCommand from "./commands/board.js";
 import ChatCommand, { ChatReplyCommand } from "./commands/chat.js";
 import {
   ConfigCommand,
@@ -571,6 +572,8 @@ const generatedCommandAliases = Object.fromEntries(
 
 export const COMMANDS: Record<string, typeof Command> = {
   completion: CompletionCommand,
+  // Every vb command on the Primitive board, as the Primitive login.
+  board: BoardCommand,
   // Interactive one-command upgrade (start claim -> prompt for code -> verify),
   // on top of the generated agent:claim / agent:claim-verify operations.
   "agent:upgrade": AgentUpgradeCommand,

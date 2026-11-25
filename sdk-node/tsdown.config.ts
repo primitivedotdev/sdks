@@ -12,6 +12,7 @@ export default defineConfig({
     "src/x402/index.ts",
     "src/payloads/index.ts",
     "src/interactions/index.ts",
+    "src/board/index.ts",
   ],
   format: ["esm"],
   // Keep `.js` / `.d.ts` extensions so the existing `package.json` exports map
